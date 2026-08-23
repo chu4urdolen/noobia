@@ -1,0 +1,20 @@
+[Unit]
+Description=Noobia Council web gateway for Noob
+After=network-online.target noobia-council.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=noobia-council
+Group=noobia-council
+EnvironmentFile=/etc/noobia-council/service.conf
+ExecStart=/usr/local/bin/council-web --bind ${web_bind} --port ${web_port} --hub ${web_hub_host} --hub-port ${web_hub_port} --name ${web_identity} --key-file ${web_key_file} --password-file ${web_password_file}
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,58 @@
+#include "web_page.h"
+
+const char council_web_page_layout[] =
+"<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+"<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+"<title>Noobia Council</title><style>"
+":root{color-scheme:dark;--ink:#e9e2d0;--dim:#9da8a0;--panel:#17201e;--line:#34433d;--gold:#e1bb62;--green:#74c69d}"
+"*{box-sizing:border-box}body{margin:0;background:#0d1413;color:var(--ink);font:16px system-ui,sans-serif}"
+"main{max-width:1050px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;gap:20px;align-items:end}"
+"h1{margin:0;color:var(--gold);font-family:Georgia,serif}.small{color:var(--dim);font-size:.9rem}"
+"#presence{display:flex;gap:8px;flex-wrap:wrap}.person{border:1px solid var(--line);border-radius:20px;padding:5px 10px}"
+".online{color:var(--green)}#log{height:58vh;overflow:auto;background:var(--panel);border:1px solid var(--line);"
+"border-radius:10px;margin:15px 0;padding:12px}.entry{padding:8px;border-bottom:1px solid #26322e}"
+".meta{color:var(--dim);font-size:.8rem}.speaker{color:var(--gold);font-weight:700}.event{color:#9ec5b5}"
+"textarea,input{width:100%;background:#111a18;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:10px}"
+"textarea{height:90px;resize:vertical}.actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}"
+"button{background:#294239;color:var(--ink);border:1px solid #4e6d61;border-radius:7px;padding:9px 15px;cursor:pointer}"
+"button:disabled{opacity:.4;cursor:not-allowed}.danger{background:#4a3030}#notice{min-height:1.5em;color:var(--gold)}"
+"</style></head><body><main><header><div><h1>Council of Noobia</h1>"
+"<div class=\"small\">You are Noob. The machine is merely the doorway.</div></div>"
+"<div><div id=\"turn\">Turn: loading…</div><div id=\"closure\" class=\"small\"></div></div></header>"
+"<div id=\"presence\"></div><section id=\"log\" aria-live=\"polite\"></section>"
+"<div id=\"notice\"></div><textarea id=\"message\" maxlength=\"7900\" placeholder=\"Address someone by name, or speak to the whole Council…\"></textarea>"
+"<div class=\"actions\"><button id=\"send\">Send</button><button id=\"close\">Vote close</button>"
+"<button id=\"continue\" class=\"danger\">Vote continue</button></div>"
+"<input id=\"reason\" maxlength=\"1000\" placeholder=\"Reason for your closure vote or what remains to discuss\">";
+
+const size_t council_web_page_layout_size=sizeof(council_web_page_layout)-1;
+
+const char council_web_page_controller[] =
+"<script>"
+"let cursor=0,turn='none',closure=false,busy=false;"
+"const q=s=>document.querySelector(s),log=q('#log'),notice=q('#notice');"
+"function escRecord(line){const p=line.split('\\t');if(p.length<4)return;"
+"const e=document.createElement('div');e.className='entry';"
+"const m=document.createElement('div');m.className='meta';m.textContent=p[0]+' · ';"
+"const s=document.createElement('span');s.className='speaker';s.textContent=p[1];m.appendChild(s);"
+"const v=document.createElement('span');v.className='event';v.textContent=' · '+p[2];m.appendChild(v);"
+"const b=document.createElement('div');b.textContent=p.slice(3).join(' ');e.append(m,b);log.appendChild(e);log.scrollTop=log.scrollHeight;}"
+"function state(){q('#turn').textContent='Turn: '+(turn==='none'?'open for initiation':turn);"
+"q('#closure').textContent=closure?'Closure vote is open':'';q('#send').disabled=closure||(turn!=='none'&&turn!=='Noob');"
+"q('#close').disabled=!closure;q('#continue').disabled=!closure;}"
+"async function events(){try{const r=await fetch('/api/events?cursor='+cursor);if(!r.ok)throw Error(await r.text());"
+"for(const line of (await r.text()).split('\\n')){if(line.startsWith('EVENT '))escRecord(line.slice(6));"
+"else if(line.startsWith('CURSOR '))cursor=Number(line.slice(7));else if(line.startsWith('TURN '))turn=line.slice(5);"
+"else if(line.startsWith('CLOSURE '))closure=line.startsWith('CLOSURE open ');}state();notice.textContent='';}catch(e){notice.textContent='Disconnected: '+e.message;}}"
+"async function presence(){try{const r=await fetch('/api/status'),box=q('#presence');if(!r.ok)return;box.textContent='';"
+"for(const line of (await r.text()).split('\\n'))if(line.startsWith('PRESENCE ')){const p=line.split(' '),d=document.createElement('span');"
+"d.className='person '+p[2];d.textContent=p[1]+' · '+p[2];box.appendChild(d);}}catch(e){}}"
+"async function post(path,body){if(busy)return;busy=true;try{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'text/plain'},body});"
+"const t=await r.text();notice.textContent=r.ok?t:'Rejected: '+t;if(r.ok)q('#message').value='';await events();}catch(e){notice.textContent=e.message;}busy=false;}"
+"q('#send').onclick=()=>{const m=q('#message').value.trim();if(m)post(turn==='none'?'/api/initiate':'/api/say',m)};"
+"q('#close').onclick=()=>post('/api/vote','close '+(q('#reason').value.trim()||'nothing further'));"
+"q('#continue').onclick=()=>{const r=q('#reason').value.trim();if(r)post('/api/vote','continue '+r)};"
+"state();events();presence();setInterval(events,1200);setInterval(presence,5000);"
+"</script></main></body></html>";
+
+const size_t council_web_page_controller_size=sizeof(council_web_page_controller)-1;

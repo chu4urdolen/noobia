@@ -1,0 +1,25 @@
+[Unit]
+Description=Noobia Council Codex bridge for %i
+After=network-online.target noobia-council.service
+Wants=network-online.target
+Requires=noobia-council.service
+
+[Service]
+Type=simple
+User=%i
+Group=%i
+SupplementaryGroups=noobia-council
+EnvironmentFile=/etc/noobia-council/service.conf
+Environment=HOME=/home/%i
+Environment=PATH=/home/%i/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/local/bin/council-codex-bridge --host ${bridge_host} --port ${bridge_port} --name ${name} --key-file ${bridge_key_file} --work-dir ${work_directory} --state-dir ${bridge_state_dir}
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/noobia/council-agent-state /home/%i/.codex
+
+[Install]
+WantedBy=multi-user.target

@@ -189,7 +189,7 @@ struct pipeline {
     const contact *piper_worker;
     const contact *sox_worker;
     const contact *envelope_worker;
-    const char *local_name;
+    const contact *sender;
     pthread_mutex_t mutex;
     pthread_cond_t changed;
     bool failed;
@@ -212,7 +212,7 @@ static void *piper_worker(void *argument)
         pthread_mutex_unlock(&pipeline->mutex);
         if (failed) break;
         int stage_result = pipeline->piper_worker != NULL ?
-            voice_remote_run(pipeline->piper_worker, pipeline->local_name, VOICE_TASK_PIPER,
+            voice_remote_run(pipeline->piper_worker, pipeline->sender, VOICE_TASK_PIPER,
                              pipeline->items[i].text_path, pipeline->items[i].dry_path) : -1;
         if (stage_result != 0)
             stage_result = voice_stage_piper(pipeline->items[i].text_path,
@@ -240,7 +240,7 @@ static void *sox_worker(void *argument)
         pthread_mutex_unlock(&pipeline->mutex);
         if (failed) break;
         int stage_result = pipeline->sox_worker != NULL ?
-            voice_remote_run(pipeline->sox_worker, pipeline->local_name, VOICE_TASK_SOX,
+            voice_remote_run(pipeline->sox_worker, pipeline->sender, VOICE_TASK_SOX,
                              pipeline->items[i].dry_path, pipeline->items[i].wet_path) : -1;
         if (stage_result != 0)
             stage_result = voice_stage_sox(pipeline->items[i].dry_path,
@@ -268,7 +268,7 @@ static void *envelope_worker(void *argument)
         pthread_mutex_unlock(&pipeline->mutex);
         if (failed) break;
         int stage_result = pipeline->envelope_worker != NULL ?
-            voice_remote_run(pipeline->envelope_worker, pipeline->local_name,
+            voice_remote_run(pipeline->envelope_worker, pipeline->sender,
                              VOICE_TASK_ENVELOPE, pipeline->items[i].dry_path,
                              pipeline->items[i].envelope_path) : -1;
         if (stage_result != 0)
@@ -284,12 +284,12 @@ static void *envelope_worker(void *argument)
 }
 
 static const contact *preferred_worker(const contact_book *contacts, const char *name,
-                                       const char *local_name)
+                                       const contact *sender)
 {
     const contact *worker = contact_book_find(contacts, name);
-    if (worker == NULL || worker->role != CONTACT_AI || !strcmp(worker->name, local_name))
+    if (worker == NULL || worker->role != CONTACT_AI || !strcmp(worker->name, sender->name))
         return NULL;
-    return voice_remote_available(worker, local_name) ? worker : NULL;
+    return voice_remote_available(worker, sender) ? worker : NULL;
 }
 
 int main(int argc, char **argv)
@@ -328,11 +328,16 @@ int main(int argc, char **argv)
     pipeline.items = calloc(sentence_count, sizeof(*pipeline.items));
     if (pipeline.items == NULL) goto cleanup;
     pipeline.count = sentence_count;
-    pipeline.local_name = local_name;
     if (contact_book_load(contacts_path, &contacts, contact_error, sizeof(contact_error)) == 0) {
-        pipeline.piper_worker = preferred_worker(&contacts, "Aria", local_name);
-        pipeline.sox_worker = preferred_worker(&contacts, "Rose", local_name);
-        pipeline.envelope_worker = preferred_worker(&contacts, "Argus", local_name);
+        pipeline.sender = contact_book_find(&contacts, local_name);
+        if (pipeline.sender != NULL && pipeline.sender->role == CONTACT_AI) {
+            pipeline.piper_worker = preferred_worker(&contacts, "Aria", pipeline.sender);
+            pipeline.sox_worker = preferred_worker(&contacts, "Rose", pipeline.sender);
+            pipeline.envelope_worker = preferred_worker(&contacts, "Argus", pipeline.sender);
+        } else {
+            fprintf(stderr, "distributed workers unavailable: local identity %s is absent\n",
+                    local_name);
+        }
     } else {
         fprintf(stderr, "distributed workers unavailable: %s\n", contact_error);
     }

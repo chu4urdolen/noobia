@@ -9,8 +9,8 @@ typedef enum {
     VOICE_TASK_ENVELOPE
 } voice_task;
 
-int voice_remote_available(const contact *worker, const char *local_name);
-int voice_remote_run(const contact *worker, const char *local_name, voice_task task,
+int voice_remote_available(const contact *worker, const contact *sender);
+int voice_remote_run(const contact *worker, const contact *sender, voice_task task,
                      const char *input_path, const char *output_path);
 
 #endif

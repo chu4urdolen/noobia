@@ -7,24 +7,26 @@
 #include <stdio.h>
 #include <string.h>
 
-static int destination_for_worker(const contact *worker, contact *destination)
+static int destination_for_worker(const contact *worker, const contact *sender,
+                                  contact *destination)
 {
     *destination = *worker;
     if (worker->port > 64535) return -1;
     destination->port = (uint16_t)(worker->port + 1000);
+    memcpy(destination->shared_key, sender->shared_key, sizeof(destination->shared_key));
     return 0;
 }
 
-int voice_remote_available(const contact *worker, const char *local_name)
+int voice_remote_available(const contact *worker, const contact *sender)
 {
     contact destination;
     char reply[64];
-    if (destination_for_worker(worker, &destination) != 0) return 0;
-    return protocol_send_command(&destination, local_name, "PING", reply, sizeof(reply)) == 0 &&
+    if (destination_for_worker(worker, sender, &destination) != 0) return 0;
+    return protocol_send_command(&destination, sender->name, "PING", reply, sizeof(reply)) == 0 &&
            strcmp(reply, "PONG") == 0;
 }
 
-int voice_remote_run(const contact *worker, const char *local_name, voice_task task,
+int voice_remote_run(const contact *worker, const contact *sender, voice_task task,
                      const char *input_path, const char *output_path)
 {
     static const char *names[] = {"PIPER", "SOX", "ENVELOPE"};
@@ -35,9 +37,9 @@ int voice_remote_run(const contact *worker, const char *local_name, voice_task t
     uint64_t input_size;
     char output_digest[65];
     if (task < VOICE_TASK_PIPER || task > VOICE_TASK_ENVELOPE ||
-        destination_for_worker(worker, &destination) != 0 ||
+        destination_for_worker(worker, sender, &destination) != 0 ||
         file_transfer_describe(input_path, input_name, &input_size, digest) != 0 ||
-        protocol_connect_identity(&destination, local_name, &socket) != 0) return -1;
+        protocol_connect_identity(&destination, sender->name, &socket) != 0) return -1;
     snprintf(line, sizeof(line), "VOICE %s %llu %s\n", names[task],
              (unsigned long long)input_size, digest);
     if (network_send(socket, line) || network_read_line(socket, line, sizeof(line)) < 0 ||

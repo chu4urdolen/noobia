@@ -30,7 +30,7 @@ static bool stale_lock(void)
     FILE *file = fopen(lock_path(), "r");
     long owner = 0;
     if (file == NULL) return false;
-    (void)fscanf(file, "%ld", &owner);
+    if (fscanf(file, "%ld", &owner) != 1) owner = 0;
     fclose(file);
     return owner > 1 && kill((pid_t)owner, 0) != 0 && errno == ESRCH;
 }

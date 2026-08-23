@@ -1,0 +1,35 @@
+[Unit]
+Description=Noobia Linux health monitor
+Documentation=file:/usr/local/share/doc/noobia-health/README.md
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/noobia-health
+Restart=on-failure
+RestartSec=5s
+
+# Optional thresholds and sampling interval:
+Environment=HEALTH_INTERVAL_SECONDS=60
+Environment=HEALTH_DISK_WARN_PERCENT=90
+Environment=HEALTH_MEMORY_WARN_PERCENT=90
+Environment=HEALTH_TEMP_WARN_C=80
+
+DynamicUser=yes
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+[Install]
+WantedBy=multi-user.target

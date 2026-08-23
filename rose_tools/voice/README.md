@@ -25,3 +25,13 @@ voice are used by default. Configuration can be overridden with:
 The `rose-say` launcher keeps these paths and the local SoX runtime configuration
 in one place. After the one-time user installation, speaking requires only the
 command and quoted text.
+
+If `~/.config/rose-tools/hue.conf` exists, `rose-say` also animates the configured
+Hue light from the speech envelope. Set `ROSE_HUE_ENABLED=0` for audio only, or
+set `ROSE_HUE_COLOR=red,green,blue` to change the default green light color.
+
+Text is split at sentence-ending punctuation and processed through three ordered,
+independent stages. Piper may generate later dry WAVs while SoX processes an
+earlier sentence and PipeWire plays the sentence before that. Playback remains in
+text order. Completion waits for both producer stages, darkens the Hue target,
+releases the shared lock, and removes every temporary WAV.

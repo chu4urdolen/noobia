@@ -1,0 +1,4 @@
+# Copy to ~/.config/rose-tools/hue.conf and chmod 600.
+HUE_BRIDGE_IP=192.168.100.4
+HUE_USERNAME=replace-with-your-Hue-API-username
+HUE_TARGET=lights/1/state

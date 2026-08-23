@@ -1,6 +1,7 @@
 CC ?= cc
 CFLAGS ?= -O2
 CFLAGS += -std=c11 -Wall -Wextra -Wpedantic -Werror
+LDLIBS += -lm -pthread
 
 USER_PREFIX ?= $(HOME)/.local
 
@@ -8,8 +9,8 @@ USER_PREFIX ?= $(HOME)/.local
 
 all: rose-voice
 
-rose-voice: rose_voice.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+rose-voice: rose_voice.c ../hue/hue_client.c ../hue/hue_client.h
+	$(CC) $(CFLAGS) -I../hue $(LDFLAGS) -o $@ rose_voice.c ../hue/hue_client.c $(LDLIBS)
 
 install-user: rose-voice
 	install -d $(USER_PREFIX)/bin $(USER_PREFIX)/libexec

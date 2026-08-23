@@ -2,7 +2,9 @@
 
 A small Linux health monitor written in C. Once per interval it logs root-filesystem
 usage, available memory, system load, and temperatures exposed through Linux thermal
-zones. Readings and warnings appear in the systemd journal.
+zones. It also checks the declared TCP endpoint of every AI contact with a private
+or local numeric IP in the Council contacts file. Readings and warnings appear in
+the systemd journal.
 
 ## Build and inspect
 
@@ -30,6 +32,7 @@ Environment=HEALTH_INTERVAL_SECONDS=30
 Environment=HEALTH_DISK_WARN_PERCENT=85
 Environment=HEALTH_MEMORY_WARN_PERCENT=90
 Environment=HEALTH_TEMP_WARN_C=75
+Environment=HEALTH_CONTACTS_FILE=/etc/noobia-council/contacts.json
 ```
 
 Run `sudo systemctl edit noobia-health.service`, add the desired values, then run

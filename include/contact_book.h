@@ -18,6 +18,7 @@ typedef struct {
     uint16_t port;
     char shared_key[COUNCIL_KEY_LENGTH];
     int arbiter_priority;
+    unsigned int ram_gb;
 } contact;
 
 typedef struct {

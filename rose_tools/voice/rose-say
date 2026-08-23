@@ -34,5 +34,8 @@ export ROSE_PIPER_VOICE="$PIPER_VOICE"
 export ROSE_SOX_BIN="$SOX_BIN"
 export ROSE_AUDIO_SINK="$AUDIO_SINK"
 export ROSE_HUE_ENABLED="${ROSE_HUE_ENABLED:-1}"
+if [ -z "${ROSE_CONTACTS_FILE:-}" ] && [ -r "$HOME/.config/rose-tools/contacts.json" ]; then
+    export ROSE_CONTACTS_FILE="$HOME/.config/rose-tools/contacts.json"
+fi
 
 exec "$VOICE_BIN" "$@"

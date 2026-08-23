@@ -45,6 +45,7 @@ int contact_book_load(const char *path, contact_book *book, char *error, size_t 
             char key[32], value[COUNCIL_HOST_LENGTH];
             if (json_string(&p, key, sizeof(key)) || expect(&p, ':')) goto invalid;
             if (!strcmp(key, "port")) { char *end; long port; p = skip_space(p); port = strtol(p, &end, 10); if (end == p || port < 1 || port > 65535) goto invalid; item.port = (uint16_t)port; p = end; fields |= 8; }
+            else if (!strcmp(key, "RAM")) { char *end; unsigned long ram; p = skip_space(p); ram = strtoul(p, &end, 10); if (end == p || ram > 1048576) goto invalid; item.ram_gb = (unsigned int)ram; p = end; }
             else if (!strcmp(key, "arbiter_priority")) { char *end; long priority; p = skip_space(p); priority = strtol(p, &end, 10); if (end == p || priority < 0 || priority > 1000000) goto invalid; item.arbiter_priority = (int)priority; p = end; }
             else { if (json_string(&p, value, sizeof(value))) goto invalid;
                 if (!strcmp(key, "name")) { if (copy_value(item.name, sizeof(item.name), value)) goto invalid; fields |= 1; }

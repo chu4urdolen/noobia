@@ -5,9 +5,13 @@
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #else
+#include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
+#include <poll.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #endif
 int network_start(void){
 #ifdef _WIN32
@@ -29,6 +33,20 @@ close(s);
 #endif
 }
 int network_connect(const char*h,uint16_t p,network_socket*out){struct addrinfo q,*a,*i;char ps[16];memset(&q,0,sizeof(q));q.ai_family=AF_UNSPEC;q.ai_socktype=SOCK_STREAM;snprintf(ps,sizeof(ps),"%u",p);if(getaddrinfo(h,ps,&q,&a))return -1;for(i=a;i;i=i->ai_next){*out=socket(i->ai_family,i->ai_socktype,i->ai_protocol);if(*out!=INVALID_NETWORK_SOCKET&&!connect(*out,i->ai_addr,(int)i->ai_addrlen))break;if(*out!=INVALID_NETWORK_SOCKET)network_close(*out);}freeaddrinfo(a);return i?0:-1;}
+int network_set_io_timeout(network_socket s,unsigned int ms){
+#ifdef _WIN32
+DWORD value=(DWORD)ms;return setsockopt(s,SOL_SOCKET,SO_RCVTIMEO,(const char*)&value,sizeof(value))||setsockopt(s,SOL_SOCKET,SO_SNDTIMEO,(const char*)&value,sizeof(value))?-1:0;
+#else
+struct timeval value;value.tv_sec=(time_t)(ms/1000U);value.tv_usec=(suseconds_t)((ms%1000U)*1000U);return setsockopt(s,SOL_SOCKET,SO_RCVTIMEO,&value,sizeof(value))||setsockopt(s,SOL_SOCKET,SO_SNDTIMEO,&value,sizeof(value))?-1:0;
+#endif
+}
+int network_connect_timeout(const char*h,uint16_t p,unsigned int ms,network_socket*out){
+#ifdef _WIN32
+if(network_connect(h,p,out))return -1;return network_set_io_timeout(*out,ms);
+#else
+struct addrinfo q,*a,*i;char ps[16];memset(&q,0,sizeof(q));q.ai_family=AF_UNSPEC;q.ai_socktype=SOCK_STREAM;snprintf(ps,sizeof(ps),"%u",p);if(getaddrinfo(h,ps,&q,&a))return -1;for(i=a;i;i=i->ai_next){int flags,error=0;socklen_t length=sizeof(error);struct pollfd wait_socket;*out=socket(i->ai_family,i->ai_socktype,i->ai_protocol);if(*out==INVALID_NETWORK_SOCKET)continue;flags=fcntl(*out,F_GETFL,0);if(flags<0||fcntl(*out,F_SETFL,flags|O_NONBLOCK)<0){network_close(*out);continue;}if(connect(*out,i->ai_addr,(socklen_t)i->ai_addrlen)<0&&errno!=EINPROGRESS){network_close(*out);continue;}wait_socket.fd=*out;wait_socket.events=POLLOUT;wait_socket.revents=0;if(poll(&wait_socket,1,(int)ms)>0&&getsockopt(*out,SOL_SOCKET,SO_ERROR,&error,&length)==0&&error==0){(void)fcntl(*out,F_SETFL,flags);if(network_set_io_timeout(*out,ms)==0)break;}network_close(*out);}freeaddrinfo(a);return i?0:-1;
+#endif
+}
 network_socket network_listen(const char*h,uint16_t p){struct addrinfo q,*a,*i;char ps[16];network_socket s=INVALID_NETWORK_SOCKET;int yes=1;memset(&q,0,sizeof(q));q.ai_family=AF_UNSPEC;q.ai_socktype=SOCK_STREAM;q.ai_flags=AI_PASSIVE;snprintf(ps,sizeof(ps),"%u",p);if(getaddrinfo(h,ps,&q,&a))return s;for(i=a;i;i=i->ai_next){s=socket(i->ai_family,i->ai_socktype,i->ai_protocol);if(s==INVALID_NETWORK_SOCKET)continue;setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(const char*)&yes,sizeof(yes));if(!bind(s,i->ai_addr,(int)i->ai_addrlen)&&!listen(s,32))break;network_close(s);s=INVALID_NETWORK_SOCKET;}freeaddrinfo(a);return s;}
 int network_send_bytes(network_socket s,const void*data,size_t n){const char*d=data;while(n){int z=send(s,d,(int)n,0);if(z<=0)return -1;d+=z;n-=(size_t)z;}return 0;}
 int network_read_bytes(network_socket s,void*data,size_t n){char*d=data;while(n){int z=recv(s,d,(int)n,0);if(z<=0)return -1;d+=z;n-=(size_t)z;}return 0;}

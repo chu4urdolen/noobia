@@ -4,10 +4,12 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=simple
+Type=notify
 ExecStart=%h/.local/bin/rose-voice-worker-launch %i
 Restart=on-failure
 RestartSec=3s
+WatchdogSec=30s
+Environment=ROSE_STAGE_TIMEOUT_SECONDS=120
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict

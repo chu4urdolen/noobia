@@ -5,7 +5,11 @@
 #include "protocol.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#define VOICE_CONNECT_TIMEOUT_MS 5000U
+#define VOICE_IO_TIMEOUT_MS 120000U
 
 static int destination_for_worker(const contact *worker, const contact *sender,
                                   contact *destination)
@@ -22,7 +26,8 @@ int voice_remote_available(const contact *worker, const contact *sender)
     contact destination;
     char reply[64];
     if (destination_for_worker(worker, sender, &destination) != 0) return 0;
-    return protocol_send_command(&destination, sender->name, "PING", reply, sizeof(reply)) == 0 &&
+    return protocol_send_command_timeout(&destination, sender->name, "PING", reply,
+                                         sizeof(reply), 3000U) == 0 &&
            strcmp(reply, "PONG") == 0;
 }
 
@@ -39,7 +44,12 @@ int voice_remote_run(const contact *worker, const contact *sender, voice_task ta
     if (task < VOICE_TASK_PIPER || task > VOICE_TASK_ENVELOPE ||
         destination_for_worker(worker, sender, &destination) != 0 ||
         file_transfer_describe(input_path, input_name, &input_size, digest) != 0 ||
-        protocol_connect_identity(&destination, sender->name, &socket) != 0) return -1;
+        protocol_connect_identity_timeout(&destination, sender->name,
+                                          VOICE_CONNECT_TIMEOUT_MS, &socket) != 0) return -1;
+    if (network_set_io_timeout(socket, VOICE_IO_TIMEOUT_MS) != 0) {
+        network_close(socket);
+        return -1;
+    }
     snprintf(line, sizeof(line), "VOICE %s %llu %s\n", names[task],
              (unsigned long long)input_size, digest);
     if (network_send(socket, line) || network_read_line(socket, line, sizeof(line)) < 0 ||

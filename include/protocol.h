@@ -8,7 +8,11 @@ int protocol_accept_identity(network_socket socket, const contact_book *book,
                              const contact **identity);
 int protocol_connect_identity(const contact *destination, const char *local_name,
                               network_socket *socket);
+int protocol_connect_identity_timeout(const contact *destination, const char *local_name,
+                                      unsigned int timeout_ms, network_socket *socket);
 int protocol_send_command(const contact *destination, const char *local_name,
                           const char *command, char *reply, size_t reply_size);
+int protocol_send_command_timeout(const contact *destination, const char *local_name,
+                                  const char *command, char *reply, size_t reply_size,
+                                  unsigned int timeout_ms);
 #endif
-

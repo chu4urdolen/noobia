@@ -57,3 +57,14 @@ systemctl --user enable --now rose-voice-worker@Rose.service
 The launcher prefers `~/.config/rose-tools/contacts.json` and falls back to the
 installed Council contacts. Contact entries may include numeric `RAM` in GiB;
 the shared inventory uses Aria `64`, Rose `16`, and Argus `8`.
+
+Voice-worker connects time out after 5 seconds, idle network operations after
+120 seconds, and Piper/SoX stages after 120 seconds. Override the local process
+deadline with `ROSE_STAGE_TIMEOUT_SECONDS` (1–3600). Workers isolate requests in
+child processes, accept at most four concurrent tasks, and send a systemd
+watchdog heartbeat every five seconds. Initiators log one structured timing line
+per sentence and stage to stderr, for example:
+
+```text
+[voice] stage=piper sentence=2 executor=Aria status=complete duration_ms=1874
+```

@@ -15,9 +15,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/wait.h>
+#include <poll.h>
 #include <unistd.h>
 
+#define VOICE_REQUEST_TIMEOUT_MS 120000U
+
 static volatile sig_atomic_t running = 1;
+static volatile sig_atomic_t active_children = 0;
 static network_socket active_listener = INVALID_NETWORK_SOCKET;
 static void stop_worker(int signal_number)
 {
@@ -25,6 +31,35 @@ static void stop_worker(int signal_number)
     running = 0;
     if (active_listener != INVALID_NETWORK_SOCKET) network_close(active_listener);
     active_listener = INVALID_NETWORK_SOCKET;
+}
+
+static void reap_workers(int signal_number)
+{
+    int saved = errno;
+    (void)signal_number;
+    while (waitpid(-1, NULL, WNOHANG) > 0)
+        if (active_children > 0) active_children--;
+    errno = saved;
+}
+
+static void notify_systemd(const char *message)
+{
+    const char *path = getenv("NOTIFY_SOCKET");
+    struct sockaddr_un address;
+    int socket_fd;
+    size_t length;
+    if (path == NULL || *path == '\0' || strlen(path) >= sizeof(address.sun_path)) return;
+    memset(&address, 0, sizeof(address));
+    address.sun_family = AF_UNIX;
+    snprintf(address.sun_path, sizeof(address.sun_path), "%s", path);
+    length = strlen(path);
+    if (address.sun_path[0] == '@') address.sun_path[0] = '\0';
+    socket_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    if (socket_fd < 0) return;
+    (void)sendto(socket_fd, message, strlen(message), MSG_NOSIGNAL,
+                 (struct sockaddr *)&address,
+                 (socklen_t)(offsetof(struct sockaddr_un, sun_path) + length + 1));
+    close(socket_fd);
 }
 
 static int make_output(const char *task, char path[1024])
@@ -98,19 +133,48 @@ int main(int argc, char **argv)
         fprintf(stderr, "worker configuration failed: %s\n", error);
         return 2;
     }
-    signal(SIGINT, stop_worker); signal(SIGTERM, stop_worker);
+    signal(SIGINT, stop_worker); signal(SIGTERM, stop_worker); signal(SIGCHLD, reap_workers);
     if (network_start() != 0 ||
         (listener = network_listen("0.0.0.0", (uint16_t)(self->port + 1000))) == INVALID_NETWORK_SOCKET) {
         fprintf(stderr, "cannot listen on voice worker port\n"); return 1;
     }
     active_listener = listener;
     fprintf(stderr, "%s voice worker listening on %u\n", name, self->port + 1000);
+    notify_systemd("READY=1\nSTATUS=Listening for authenticated voice tasks");
     while (running) {
+        struct pollfd ready = {listener, POLLIN, 0};
+        int poll_result = poll(&ready, 1, 5000);
+        if (poll_result == 0) { notify_systemd("WATCHDOG=1"); continue; }
+        if (poll_result < 0) { if (errno == EINTR) continue; break; }
         network_socket socket = accept(listener, NULL, NULL);
         if (socket == INVALID_NETWORK_SOCKET) { if (errno == EINTR) continue; break; }
-        handle(socket, &contacts);
+        if (active_children >= 4) { network_close(socket); continue; }
+        if (network_set_io_timeout(socket, VOICE_REQUEST_TIMEOUT_MS) != 0) {
+            network_close(socket);
+            continue;
+        }
+        sigset_t child_signal, previous_signals;
+        sigemptyset(&child_signal);
+        sigaddset(&child_signal, SIGCHLD);
+        (void)sigprocmask(SIG_BLOCK, &child_signal, &previous_signals);
+        pid_t child = fork();
+        if (child < 0) {
+            (void)sigprocmask(SIG_SETMASK, &previous_signals, NULL);
+            network_close(socket);
+            continue;
+        }
+        if (child == 0) {
+            (void)sigprocmask(SIG_SETMASK, &previous_signals, NULL);
+            network_close(listener);
+            handle(socket, &contacts);
+            network_close(socket);
+            _exit(0);
+        }
+        active_children++;
+        (void)sigprocmask(SIG_SETMASK, &previous_signals, NULL);
         network_close(socket);
     }
+    notify_systemd("STOPPING=1");
     if (active_listener != INVALID_NETWORK_SOCKET) network_close(active_listener);
     active_listener = INVALID_NETWORK_SOCKET;
     network_stop(); return 0;

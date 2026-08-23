@@ -28,6 +28,20 @@ static const char *env_or_default(const char *name, const char *fallback)
     return value != NULL && *value != '\0' ? value : fallback;
 }
 
+static long long monotonic_milliseconds(void)
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (long long)now.tv_sec * 1000LL + now.tv_nsec / 1000000L;
+}
+
+static void stage_log(const char *stage, size_t sentence, const char *executor,
+                      const char *status, long long started)
+{
+    fprintf(stderr, "[voice] stage=%s sentence=%zu executor=%s status=%s duration_ms=%lld\n",
+            stage, sentence + 1, executor, status, monotonic_milliseconds() - started);
+}
+
 static int wait_for_child(pid_t pid, const char *name)
 {
     int status;
@@ -190,6 +204,7 @@ struct pipeline {
     const contact *sox_worker;
     const contact *envelope_worker;
     const contact *sender;
+    const char *local_name;
     pthread_mutex_t mutex;
     pthread_cond_t changed;
     bool failed;
@@ -211,16 +226,22 @@ static void *piper_worker(void *argument)
         bool failed = pipeline->failed;
         pthread_mutex_unlock(&pipeline->mutex);
         if (failed) break;
+        long long started = monotonic_milliseconds();
+        const char *executor = pipeline->piper_worker ? pipeline->piper_worker->name : pipeline->local_name;
         int stage_result = pipeline->piper_worker != NULL ?
             voice_remote_run(pipeline->piper_worker, pipeline->sender, VOICE_TASK_PIPER,
                              pipeline->items[i].text_path, pipeline->items[i].dry_path) : -1;
-        if (stage_result != 0)
+        if (stage_result != 0) {
+            executor = pipeline->local_name;
             stage_result = voice_stage_piper(pipeline->items[i].text_path,
                                              pipeline->items[i].dry_path);
+        }
         if (stage_result != 0) {
+            stage_log("piper", i, executor, "failed", started);
             pipeline_fail(pipeline);
             break;
         }
+        stage_log("piper", i, executor, "complete", started);
         pthread_mutex_lock(&pipeline->mutex);
         pipeline->items[i].dry_ready = true;
         pthread_cond_broadcast(&pipeline->changed);
@@ -239,16 +260,22 @@ static void *sox_worker(void *argument)
         bool failed = pipeline->failed;
         pthread_mutex_unlock(&pipeline->mutex);
         if (failed) break;
+        long long started = monotonic_milliseconds();
+        const char *executor = pipeline->sox_worker ? pipeline->sox_worker->name : pipeline->local_name;
         int stage_result = pipeline->sox_worker != NULL ?
             voice_remote_run(pipeline->sox_worker, pipeline->sender, VOICE_TASK_SOX,
                              pipeline->items[i].dry_path, pipeline->items[i].wet_path) : -1;
-        if (stage_result != 0)
+        if (stage_result != 0) {
+            executor = pipeline->local_name;
             stage_result = voice_stage_sox(pipeline->items[i].dry_path,
                                            pipeline->items[i].wet_path);
+        }
         if (stage_result != 0) {
+            stage_log("sox", i, executor, "failed", started);
             pipeline_fail(pipeline);
             break;
         }
+        stage_log("sox", i, executor, "complete", started);
         pthread_mutex_lock(&pipeline->mutex);
         pipeline->items[i].wet_ready = true;
         pthread_cond_broadcast(&pipeline->changed);
@@ -267,14 +294,23 @@ static void *envelope_worker(void *argument)
         bool failed = pipeline->failed;
         pthread_mutex_unlock(&pipeline->mutex);
         if (failed) break;
+        long long started = monotonic_milliseconds();
+        const char *executor = pipeline->envelope_worker ? pipeline->envelope_worker->name : pipeline->local_name;
         int stage_result = pipeline->envelope_worker != NULL ?
             voice_remote_run(pipeline->envelope_worker, pipeline->sender,
                              VOICE_TASK_ENVELOPE, pipeline->items[i].dry_path,
                              pipeline->items[i].envelope_path) : -1;
-        if (stage_result != 0)
+        if (stage_result != 0) {
+            executor = pipeline->local_name;
             stage_result = voice_stage_envelope(pipeline->items[i].dry_path,
                                                 pipeline->items[i].envelope_path);
-        if (stage_result != 0) { pipeline_fail(pipeline); break; }
+        }
+        if (stage_result != 0) {
+            stage_log("envelope", i, executor, "failed", started);
+            pipeline_fail(pipeline);
+            break;
+        }
+        stage_log("envelope", i, executor, "complete", started);
         pthread_mutex_lock(&pipeline->mutex);
         pipeline->items[i].envelope_ready = true;
         pthread_cond_broadcast(&pipeline->changed);
@@ -328,6 +364,7 @@ int main(int argc, char **argv)
     pipeline.items = calloc(sentence_count, sizeof(*pipeline.items));
     if (pipeline.items == NULL) goto cleanup;
     pipeline.count = sentence_count;
+    pipeline.local_name = local_name;
     if (contact_book_load(contacts_path, &contacts, contact_error, sizeof(contact_error)) == 0) {
         pipeline.sender = contact_book_find(&contacts, local_name);
         if (pipeline.sender != NULL && pipeline.sender->role == CONTACT_AI) {

@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <math.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,11 +25,38 @@ static const char *setting(const char *name, const char *fallback)
     return value != NULL && *value != '\0' ? value : fallback;
 }
 
+static unsigned int stage_timeout_seconds(void)
+{
+    const char *text = setting("ROSE_STAGE_TIMEOUT_SECONDS", "120");
+    char *end;
+    unsigned long value = strtoul(text, &end, 10);
+    return end != text && *end == '\0' && value >= 1 && value <= 3600 ?
+           (unsigned int)value : 120U;
+}
+
 static int wait_child(pid_t pid)
 {
     int status;
-    while (waitpid(pid, &status, 0) < 0) if (errno != EINTR) return -1;
-    return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
+    struct timespec start, now, pause = {0, 50000000L};
+    unsigned int timeout = stage_timeout_seconds();
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (;;) {
+        pid_t result = waitpid(pid, &status, WNOHANG);
+        if (result == pid)
+            return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
+        if (result < 0 && errno != EINTR) return -1;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        long long elapsed_ms = (long long)(now.tv_sec - start.tv_sec) * 1000LL +
+                               (now.tv_nsec - start.tv_nsec) / 1000000L;
+        if (elapsed_ms >= (long long)timeout * 1000LL) {
+            fprintf(stderr, "voice stage timed out after %u seconds\n", timeout);
+            (void)kill(-pid, SIGKILL);
+            (void)kill(pid, SIGKILL);
+            while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+            return -1;
+        }
+        nanosleep(&pause, NULL);
+    }
 }
 
 static int run(char *const argv[], int input_fd)
@@ -36,6 +64,7 @@ static int run(char *const argv[], int input_fd)
     pid_t pid = fork();
     if (pid < 0) return -1;
     if (pid == 0) {
+        (void)setpgid(0, 0);
         if (input_fd >= 0 && dup2(input_fd, STDIN_FILENO) < 0) _exit(126);
         execv(argv[0], argv);
         _exit(127);

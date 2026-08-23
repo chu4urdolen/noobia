@@ -68,3 +68,18 @@ per sentence and stage to stderr, for example:
 ```text
 [voice] stage=piper sentence=2 executor=Aria status=complete duration_ms=1874
 ```
+
+## JBL keepalive
+
+`rose-jbl-keepalive` maintains a silent 48 kHz stereo stream to the JBL's stable
+PipeWire node. PipeWire mixes ordinary speech over this stream, so the keepalive
+does not claim exclusive playback or alter speech volume. Install and enable it
+with:
+
+```sh
+make install-user
+systemctl --user daemon-reload
+systemctl --user enable --now rose-jbl-keepalive.service
+```
+
+Set `ROSE_JBL_TARGET` in a service override if the Bluetooth node name changes.

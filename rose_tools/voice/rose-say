@@ -1,0 +1,37 @@
+#!/bin/sh
+set -eu
+
+# Everything machine-specific lives here so using the voice stays simple.
+PIPER_BIN="${ROSE_PIPER_BIN:-$HOME/piper/bin/piper-tts/piper}"
+PIPER_VOICE="${ROSE_PIPER_VOICE:-$HOME/piper/voices/en_GB/cori/high/en_GB-cori-high.onnx}"
+VOICE_BIN="${ROSE_VOICE_BIN:-$HOME/.local/libexec/rose-voice}"
+LOCAL_SOX_ROOT="${ROSE_SOX_ROOT:-$HOME/.local/lib/rose-voice/sox/usr}"
+AUDIO_SINK="${ROSE_AUDIO_SINK:-@DEFAULT_AUDIO_SINK@}"
+
+if [ "$#" -eq 0 ]; then
+    printf 'Usage: rose-say "Stuff to say"\n' >&2
+    exit 2
+fi
+
+if [ ! -x "$VOICE_BIN" ]; then
+    printf 'rose-say: voice engine missing; run make install-user in rose_tools/voice\n' >&2
+    exit 1
+fi
+
+if command -v sox >/dev/null 2>&1; then
+    SOX_BIN=$(command -v sox)
+elif [ -x "$LOCAL_SOX_ROOT/bin/sox" ]; then
+    SOX_BIN="$LOCAL_SOX_ROOT/bin/sox"
+    LD_LIBRARY_PATH="$LOCAL_SOX_ROOT/lib/aarch64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export LD_LIBRARY_PATH
+else
+    printf 'rose-say: SoX missing; install it or provision the local SoX runtime\n' >&2
+    exit 1
+fi
+
+export ROSE_PIPER_BIN="$PIPER_BIN"
+export ROSE_PIPER_VOICE="$PIPER_VOICE"
+export ROSE_SOX_BIN="$SOX_BIN"
+export ROSE_AUDIO_SINK="$AUDIO_SINK"
+
+exec "$VOICE_BIN" "$@"

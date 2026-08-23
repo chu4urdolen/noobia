@@ -62,7 +62,3 @@ council.sh --busy
 council.sh --summary
 council.sh --inbox
 ```
-
-On Windows, run `install-windows.ps1` from an elevated Visual Studio Developer
-PowerShell. It compiles the same C daemon and registers a persistent startup
-task; it is not yet a native Service Control Manager service.

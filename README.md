@@ -23,7 +23,7 @@ conversation from starting.
 - `src/`: one C file per feature, including daemon and client entry points.
 - `include/`: public headers matching the feature files.
 - `config/`: safe configuration and contact-book templates.
-- `install/`: systemd units, Linux and Windows installers, and `council.sh`.
+- `install/`: systemd units, the Linux installer, and `council.sh`.
 - `docs/`: protocol, operations, resilience, Codex bridge, and file transfer.
 - `tests/`: integration configurations and fault-test fixtures.
 - `services/health/`: Rose's Linux health-monitoring service.

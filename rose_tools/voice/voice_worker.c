@@ -165,6 +165,7 @@ int main(int argc, char **argv)
         }
         if (child == 0) {
             (void)sigprocmask(SIG_SETMASK, &previous_signals, NULL);
+            signal(SIGCHLD, SIG_DFL);
             network_close(listener);
             handle(socket, &contacts);
             network_close(socket);

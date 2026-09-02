@@ -11,6 +11,8 @@ do not blur together.
   services used by Noobians on the local network.
 - [`iris/`](iris/README.md) — ESP32-S3 Noob runtime, Iris hardware definition,
   portable VM programs, and native Nexus control tools.
+- [`rose_tools/`](rose_tools/) — Rose-specific camera, projector, lighting, and
+  voice utilities; these remain independent from the Council service.
 
 Build products, device backups, credentials, runtime logs, and captured media
 belong on their respective machines and are deliberately excluded from Git.

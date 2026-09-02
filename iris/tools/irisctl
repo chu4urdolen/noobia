@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TOOLS=/noobia/iris/tools
+STATE=/noobia/iris/run/ble-bridge.state
+PROGRAMS=/noobia/iris/programs
+
+usage() {
+  echo "usage:"
+  echo "  irisctl bridge"
+  echo "  irisctl status"
+  echo "  irisctl ping | info | caps | capture | scan"
+  echo "  irisctl rssi-on | rssi-off | watch"
+  echo "  irisctl mic-level | led RED GREEN BLUE | led-off | signal-led 0|1"
+  echo "  irisctl programs | vm-load NAME | vm-run | vm-stop | vm-status"
+  echo "  irisctl delete SEQUENCE"
+  echo "  irisctl ble REQUEST_ID COMMAND [ARGS...]"
+  echo "  irisctl fetch SEQUENCE OUTPUT.jpg"
+  echo "  irisctl uart REQUEST_ID COMMAND [ARGS...]"
+}
+
+load_bridge() {
+  [[ -r $STATE ]] || { echo "BLE bridge is not running; use: irisctl bridge" >&2; exit 1; }
+  unset pid fd log
+  source "$STATE"
+  [[ -n ${pid:-} && -d /proc/$pid && -n ${fd:-} && -e /proc/$pid/fd/$fd ]] ||
+    { echo "Iris is not connected to the BLE bridge yet" >&2; exit 1; }
+}
+
+case ${1:-} in
+  bridge)
+    exec "$TOOLS/nexus_ble_bridge.sh"
+    ;;
+  status)
+    if [[ -r $STATE ]]; then
+      source "$STATE"
+      if [[ -n ${pid:-} && -d /proc/$pid ]]; then
+        echo "bridge=running pid=$pid notify_fd=${fd:-waiting} log=${log:-unknown}"
+        exit 0
+      fi
+    fi
+    echo "bridge=stopped"
+    ;;
+  ping|info|caps)
+    command=${1^^}
+    exec "$0" ble "ctl$$" "$command"
+    ;;
+  capture)
+    exec "$0" ble "ctl$$" CALL CAMERA_CAPTURE
+    ;;
+  scan)
+    exec "$0" ble "ctl$$" CALL WIFI_SCAN
+    ;;
+  rssi-on)
+    exec "$0" ble "ctl$$" CALL RSSI_ON
+    ;;
+  rssi-off)
+    exec "$0" ble "ctl$$" CALL RSSI_OFF
+    ;;
+  mic-level)
+    exec "$0" ble "ctl$$" CALL MIC_LEVEL
+    ;;
+  led)
+    (( $# == 4 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL LED_RGB "$2" "$3" "$4"
+    ;;
+  led-off)
+    exec "$0" ble "ctl$$" CALL LED_RGB 0 0 0
+    ;;
+  signal-led)
+    (( $# == 2 && ($2 == 0 || $2 == 1) )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL LED_SIGNAL "$2"
+    ;;
+  programs)
+    for program in "$PROGRAMS"/*.hex; do
+      basename "$program" .hex
+    done
+    ;;
+  vm-load)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    [[ $2 =~ ^[a-z0-9_-]+$ && -r $PROGRAMS/$2.hex ]] ||
+      { echo "unknown VM program: $2" >&2; exit 2; }
+    hex=$(tr -d [:space:] < "$PROGRAMS/$2.hex")
+    exec "$0" ble "ctl$$" LOAD "$hex"
+    ;;
+  vm-run)
+    exec "$0" ble "ctl$$" RUN
+    ;;
+  vm-stop)
+    exec "$0" ble "ctl$$" STOP
+    ;;
+  vm-status)
+    exec "$0" ble "ctl$$" STATUS
+    ;;
+  delete)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL SD_DELETE "$2"
+    ;;
+  watch)
+    load_bridge
+    payload=
+    active=
+    tail -n 0 -F "$log" | while IFS= read -r line; do
+      if [[ $line == *"WriteValue:"* ]]; then
+        [[ -n $active && -n $payload ]] && printf "%s\\n" "$payload"
+        payload=; active=1
+        continue
+      fi
+      [[ -n $active && $line == *"#   "* ]] || continue
+      dump=${line#*#   }
+      # BlueZ reserves 48 columns for the hex side of its dump. Restrict
+      # parsing to that field so SSID/channel text cannot resemble a byte.
+      dump=${dump:0:48}
+      hex=
+      count=0
+      for token in $dump; do
+        [[ $token =~ ^[0-9a-f][0-9a-f]$ ]] || break
+        hex+="$token"; count=$((count + 1))
+        (( count == 16 )) && break
+      done
+      payload+="$(printf "%s" "$hex" | xxd -r -p)"
+      if (( count < 16 )); then
+        printf "%s\\n" "$payload"
+        payload=; active=
+      fi
+    done
+    ;;
+  ble)
+    (( $# >= 3 )) || { usage >&2; exit 2; }
+    load_bridge
+    shift
+    request_id=$1
+    frame="NRP/1 $*"
+    before=$(stat -c %s "$log")
+    pkexec "$TOOLS/noob_ble_fd" "$pid" "$fd" "$frame" >/dev/null
+    scratch=$(mktemp)
+    trap "rm -f \"$scratch\"" EXIT
+    previous_size=-1
+    for _ in $(seq 1 100); do
+      tail -c "+$((before + 1))" "$log" > "$scratch"
+      current_size=$(stat -c %s "$scratch")
+      hex=$(sed -n "s/.*#   \\(\\([0-9a-f][0-9a-f] \\)\\{1,16\\}\\).*/\\1/p" \
+        "$scratch" | tr -d " \\r\\n")
+      response=$(printf "%s" "$hex" | xxd -r -p 2>/dev/null || true)
+      if [[ $response == *"NRP/1 $request_id "* &&
+            $current_size == $previous_size ]]; then
+        response="NRP/1 $request_id ${response#*"NRP/1 $request_id "}"
+        printf "%s\\n" "$response"
+        exit 0
+      fi
+      previous_size=$current_size
+      sleep 0.1
+    done
+    echo "timed out waiting for Iris reply" >&2
+    exit 1
+    ;;
+  fetch)
+    (( $# == 3 )) || { usage >&2; exit 2; }
+    load_bridge
+    export NOOB_BLE_LOG=$log
+    exec "$TOOLS/iris_ble_fetch.sh" "$pid" "$fd" "$2" "$3"
+    ;;
+  uart)
+    (( $# >= 3 )) || { usage >&2; exit 2; }
+    shift
+    exec sg dialout -c "$TOOLS/noobctl /dev/ttyUSB0 $*"
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac

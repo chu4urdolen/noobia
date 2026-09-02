@@ -1,5 +1,7 @@
 /build/
 /build-*/
+**/build/
+**/build-*/
 /CMakeCache.txt
 /CMakeFiles/
 /cmake_install.cmake
@@ -16,4 +18,9 @@
 /web-password
 /state/
 /council-agent-state/
-
+/iris/run/
+/iris/backups/
+/iris/captured/
+/iris/*.jpg
+/iris/tools/noobctl
+/iris/tools/noob_ble_fd

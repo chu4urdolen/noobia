@@ -1,0 +1,19 @@
+[connection]
+id=Wisp Ethernet
+uuid=6eec4b1d-0749-4dc3-9a38-d4c6ac010501
+type=ethernet
+interface-name=eth0
+autoconnect=true
+autoconnect-priority=100
+
+[ethernet]
+cloned-mac-address=02:57:49:53:50:01
+
+[ipv4]
+method=auto
+
+[ipv6]
+addr-gen-mode=stable-privacy
+method=auto
+
+[proxy]

@@ -30,7 +30,6 @@
 #define FILE_MAX (1024u * 1024u)
 #define HISTORY_MAX (256u * 1024u)
 #define SSE_MAX 16
-#define CODEX_OUTPUT_MAX (512u * 1024u)
 
 static int pty_fd = -1;
 static pid_t shell_pid = -1;
@@ -42,10 +41,6 @@ static pthread_mutex_t stream_lock = PTHREAD_MUTEX_INITIALIZER;
 static int streams[SSE_MAX];
 static unsigned char history[HISTORY_MAX];
 static size_t history_len;
-static pthread_mutex_t codex_lock = PTHREAD_MUTEX_INITIALIZER;
-static unsigned char codex_output[CODEX_OUTPUT_MAX];
-static size_t codex_output_len;
-static bool codex_running;
 
 static void logmsg(const char *fmt, ...) {
     va_list ap;
@@ -378,7 +373,6 @@ static bool start_stream(int fd) {
     return true;
 }
 
-#include "codex_web.inc"
 static void *client_thread(void *arg) {
     int fd = (int)(intptr_t)arg; char *req=NULL; size_t hlen=0, blen=0;
     struct timeval tv={.tv_sec=10}; setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof tv);
@@ -387,8 +381,6 @@ static void *client_thread(void *arg) {
     char method[8], target[2048];
     if(sscanf(req,"%7s %2047s",method,target)!=2){json_error(fd,400,"malformed request");goto done;}
     char *body=req+hlen;
-    if(!strcmp(method,"GET")&&!strncmp(target,"/connector/poll?",16)){connector_poll(fd,target);goto done;}
-    if(!strcmp(method,"POST")&&!strcmp(target,"/connector/result")){connector_result(fd,body);goto done;}
     if(!strcmp(method,"GET") && !strcmp(target,"/")){serve_file(fd,"index.html","text/html; charset=utf-8");goto done;}
     if(!strcmp(method,"POST") && !strcmp(target,"/api/login")){
         char *given=json_string(body,"password",NULL); bool ok=given && !strcmp(given,password); free(given);
@@ -397,12 +389,6 @@ static void *client_thread(void *arg) {
         goto done;
     }
     if(!authenticated(req)){json_error(fd,401,"authentication required");goto done;}
-    if(!strcmp(method,"GET")&&!strcmp(target,"/api/connector/status")){connector_status(fd);goto done;}
-    if(!strcmp(method,"GET")&&!strcmp(target,"/api/connector/download")){connector_download(fd);goto done;}
-    if(!strcmp(method,"DELETE")&&!strcmp(target,"/api/connector")){connector_reset(fd);goto done;}
-    if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/run")){codex_run(fd,body);goto done;}
-    if(!strcmp(method,"GET")&&!strcmp(target,"/api/codex/result")){codex_result(fd);goto done;}
-    if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/stop")){codex_stop(fd);goto done;}
     if(!strcmp(method,"GET") && !strcmp(target,"/events")){free(req);if(start_stream(fd))return NULL;return NULL;}
     if(!strcmp(method,"GET") && !strcmp(target,"/api/cwd")){
         char cwd[PATH_MAX],response[PATH_MAX+32]; if(shell_cwd(cwd)<0){json_error(fd,500,"shell unavailable");goto done;}
@@ -441,7 +427,6 @@ int main(int argc,char **argv){
     password=getenv("WISP_PASSWORD");
     if(!password||strlen(password)<4){fprintf(stderr,"WISP_PASSWORD must contain at least 4 characters\n");return 2;}
     if(random_hex(session,32)<0){perror("random session");return 1;}
-    if(random_hex(connector_token,32)<0){perror("random connector token");return 1;}
     for(int i=0;i<SSE_MAX;i++)streams[i]=-1;
     signal(SIGPIPE,SIG_IGN);signal(SIGTERM,shutdown_handler);signal(SIGINT,shutdown_handler);
     struct winsize win={.ws_row=30,.ws_col=120};

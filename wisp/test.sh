@@ -12,14 +12,4 @@ wget -qO- --save-cookies "$cookie" --keep-session-cookies --header="Content-Type
 wget -qO- --load-cookies "$cookie" "http://127.0.0.1:$port/api/cwd" | grep -q '"cwd"'
 wget -qO- --load-cookies "$cookie" --header="Content-Type: application/json" --post-data='{"cmd":"printf wisp-test"}' "http://127.0.0.1:$port/api/run" | grep -q '"ok":true'
 if wget -qO /dev/null "http://127.0.0.1:$port/api/cwd"; then echo 'unauthorized request unexpectedly succeeded' >&2; exit 1; fi
-script=$(wget -qO- --load-cookies "$cookie" "http://127.0.0.1:$port/api/connector/download")
-printf "%s" "$script" | grep -q "Wisp Connector is running"
-token=$(printf "%s" "$script" | sed -n "s/.*\$t='\([^']*\)'.*/\1/p")
-[ "${#token}" -eq 64 ]
-wget -qO- "http://127.0.0.1:$port/connector/poll?token=$token" | grep -q '"job":false'
-wget -qO- --load-cookies "$cookie" --header="Content-Type: application/json" --post-data='{"prompt":"hello connector"}' "http://127.0.0.1:$port/api/codex/run" | grep -q '"ok":true'
-job=$(wget -qO- "http://127.0.0.1:$port/connector/poll?token=$token")
-printf "%s" "$job" | grep -q '"job":true'
-wget -qO- --header="Content-Type: application/json" --post-data="{\"token\":\"$token\",\"id\":\"1\",\"output\":\"connector-ok\"}" "http://127.0.0.1:$port/connector/result" | grep -q '"ok":true'
-wget -qO- --load-cookies "$cookie" "http://127.0.0.1:$port/api/codex/result" | grep -q connector-ok
 echo 'wisp-web smoke test: ok'

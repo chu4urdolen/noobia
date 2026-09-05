@@ -49,18 +49,3 @@ sudo systemctl enable --now wisp-web
 Adjust `User=` and `WorkingDirectory=` in the unit if Wisp uses another account.
 The example service intentionally leaves the home directory visible because the
 shell and editor are meant to work there.
-
-## Codex connector
-
-Wisp cannot run the official Codex CLI on ARMv7. The Codex tab therefore offers
-a small Windows connector that talks outward to Wisp over HTTP. It needs no SSH
-server, keys, firewall rule, IP address, username, or administrator setup.
-
-Open Wisp from the Windows laptop, download `Start-Wisp-Connector.cmd`, and run
-it while using Codex. The connector uses the laptop user's existing `codex`
-command and authentication. Closing its window disconnects the laptop. The
-**Disconnect Clover** button rotates Wisp's connector token, invalidating old
-downloads. Only one Codex task runs at a time.
-
-The current HTTP deployment is for a trusted LAN only; use HTTPS and a stronger
-web password before exposing it elsewhere.

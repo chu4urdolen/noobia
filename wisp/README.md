@@ -56,3 +56,17 @@ The official Codex CLI has no ARMv7 build. `codex-relay` provides a configurable
 `codex.conf.example` to `~/.config/wisp/codex.conf`, set the remote host and
 user, then authorize Wisp's dedicated public key on that machine. No destination
 is hard-coded and the relay safely refuses to run until configured.
+
+## Codex web page
+
+The Codex tab keeps OpenAI authentication and execution on a supported remote
+computer. Wisp stores only an SSH destination, workspace, and dedicated key.
+Use **Create key**, add the displayed public key to the Windows OpenSSH account,
+fill in the connection fields, and use **Test** before sending a task.
+
+Tasks run remotely as `codex exec --json` and their event stream is displayed in
+the browser. Only one task runs at a time. **Remove local config and key** erases
+Wisp's private key and destination; if the remote computer is unavailable, its
+copy of the public key must still be removed from `authorized_keys` manually.
+The current HTTP deployment is intended only for a trusted LAN; put it behind
+HTTPS and replace the bootstrap web password before exposing it elsewhere.

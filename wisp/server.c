@@ -30,6 +30,7 @@
 #define FILE_MAX (1024u * 1024u)
 #define HISTORY_MAX (256u * 1024u)
 #define SSE_MAX 16
+#define CODEX_OUTPUT_MAX (512u * 1024u)
 
 static int pty_fd = -1;
 static pid_t shell_pid = -1;
@@ -41,6 +42,11 @@ static pthread_mutex_t stream_lock = PTHREAD_MUTEX_INITIALIZER;
 static int streams[SSE_MAX];
 static unsigned char history[HISTORY_MAX];
 static size_t history_len;
+static pthread_mutex_t codex_lock = PTHREAD_MUTEX_INITIALIZER;
+static unsigned char codex_output[CODEX_OUTPUT_MAX];
+static size_t codex_output_len;
+static bool codex_running;
+static pid_t codex_pid = -1;
 
 static void logmsg(const char *fmt, ...) {
     va_list ap;
@@ -373,6 +379,7 @@ static bool start_stream(int fd) {
     return true;
 }
 
+#include "codex_web.inc"
 static void *client_thread(void *arg) {
     int fd = (int)(intptr_t)arg; char *req=NULL; size_t hlen=0, blen=0;
     struct timeval tv={.tv_sec=10}; setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof tv);
@@ -389,6 +396,14 @@ static void *client_thread(void *arg) {
         goto done;
     }
     if(!authenticated(req)){json_error(fd,401,"authentication required");goto done;}
+    if(!strcmp(method,"GET")&&!strcmp(target,"/api/codex/status")){codex_status(fd);goto done;}
+    if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/config")){codex_save(fd,body);goto done;}
+    if(!strcmp(method,"DELETE")&&!strcmp(target,"/api/codex/config")){codex_forget(fd);goto done;}
+    if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/run")){codex_run(fd,body);goto done;}
+    if(!strcmp(method,"GET")&&!strcmp(target,"/api/codex/result")){codex_result(fd);goto done;}
+    if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/stop")){codex_stop(fd);goto done;}
+    if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/key")){codex_keygen(fd);goto done;}
+    if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/test")){codex_test(fd);goto done;}
     if(!strcmp(method,"GET") && !strcmp(target,"/events")){free(req);if(start_stream(fd))return NULL;return NULL;}
     if(!strcmp(method,"GET") && !strcmp(target,"/api/cwd")){
         char cwd[PATH_MAX],response[PATH_MAX+32]; if(shell_cwd(cwd)<0){json_error(fd,500,"shell unavailable");goto done;}

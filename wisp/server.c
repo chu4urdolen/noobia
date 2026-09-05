@@ -46,7 +46,6 @@ static pthread_mutex_t codex_lock = PTHREAD_MUTEX_INITIALIZER;
 static unsigned char codex_output[CODEX_OUTPUT_MAX];
 static size_t codex_output_len;
 static bool codex_running;
-static pid_t codex_pid = -1;
 
 static void logmsg(const char *fmt, ...) {
     va_list ap;
@@ -388,6 +387,8 @@ static void *client_thread(void *arg) {
     char method[8], target[2048];
     if(sscanf(req,"%7s %2047s",method,target)!=2){json_error(fd,400,"malformed request");goto done;}
     char *body=req+hlen;
+    if(!strcmp(method,"GET")&&!strncmp(target,"/connector/poll?",16)){connector_poll(fd,target);goto done;}
+    if(!strcmp(method,"POST")&&!strcmp(target,"/connector/result")){connector_result(fd,body);goto done;}
     if(!strcmp(method,"GET") && !strcmp(target,"/")){serve_file(fd,"index.html","text/html; charset=utf-8");goto done;}
     if(!strcmp(method,"POST") && !strcmp(target,"/api/login")){
         char *given=json_string(body,"password",NULL); bool ok=given && !strcmp(given,password); free(given);
@@ -396,14 +397,12 @@ static void *client_thread(void *arg) {
         goto done;
     }
     if(!authenticated(req)){json_error(fd,401,"authentication required");goto done;}
-    if(!strcmp(method,"GET")&&!strcmp(target,"/api/codex/status")){codex_status(fd);goto done;}
-    if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/config")){codex_save(fd,body);goto done;}
-    if(!strcmp(method,"DELETE")&&!strcmp(target,"/api/codex/config")){codex_forget(fd);goto done;}
+    if(!strcmp(method,"GET")&&!strcmp(target,"/api/connector/status")){connector_status(fd);goto done;}
+    if(!strcmp(method,"GET")&&!strcmp(target,"/api/connector/download")){connector_download(fd);goto done;}
+    if(!strcmp(method,"DELETE")&&!strcmp(target,"/api/connector")){connector_reset(fd);goto done;}
     if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/run")){codex_run(fd,body);goto done;}
     if(!strcmp(method,"GET")&&!strcmp(target,"/api/codex/result")){codex_result(fd);goto done;}
     if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/stop")){codex_stop(fd);goto done;}
-    if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/key")){codex_keygen(fd);goto done;}
-    if(!strcmp(method,"POST")&&!strcmp(target,"/api/codex/test")){codex_test(fd);goto done;}
     if(!strcmp(method,"GET") && !strcmp(target,"/events")){free(req);if(start_stream(fd))return NULL;return NULL;}
     if(!strcmp(method,"GET") && !strcmp(target,"/api/cwd")){
         char cwd[PATH_MAX],response[PATH_MAX+32]; if(shell_cwd(cwd)<0){json_error(fd,500,"shell unavailable");goto done;}
@@ -442,6 +441,7 @@ int main(int argc,char **argv){
     password=getenv("WISP_PASSWORD");
     if(!password||strlen(password)<4){fprintf(stderr,"WISP_PASSWORD must contain at least 4 characters\n");return 2;}
     if(random_hex(session,32)<0){perror("random session");return 1;}
+    if(random_hex(connector_token,32)<0){perror("random connector token");return 1;}
     for(int i=0;i<SSE_MAX;i++)streams[i]=-1;
     signal(SIGPIPE,SIG_IGN);signal(SIGTERM,shutdown_handler);signal(SIGINT,shutdown_handler);
     struct winsize win={.ws_row=30,.ws_col=120};

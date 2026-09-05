@@ -49,24 +49,18 @@ sudo systemctl enable --now wisp-web
 Adjust `User=` and `WorkingDirectory=` in the unit if Wisp uses another account.
 The example service intentionally leaves the home directory visible because the
 shell and editor are meant to work there.
-\n## Codex relay
 
-The official Codex CLI has no ARMv7 build. `codex-relay` provides a configurable
-`codex` command that opens Codex on a supported computer over SSH. Copy
-`codex.conf.example` to `~/.config/wisp/codex.conf`, set the remote host and
-user, then authorize Wisp's dedicated public key on that machine. No destination
-is hard-coded and the relay safely refuses to run until configured.
+## Codex connector
 
-## Codex web page
+Wisp cannot run the official Codex CLI on ARMv7. The Codex tab therefore offers
+a small Windows connector that talks outward to Wisp over HTTP. It needs no SSH
+server, keys, firewall rule, IP address, username, or administrator setup.
 
-The Codex tab keeps OpenAI authentication and execution on a supported remote
-computer. Wisp stores only an SSH destination, workspace, and dedicated key.
-Use **Create key**, add the displayed public key to the Windows OpenSSH account,
-fill in the connection fields, and use **Test** before sending a task.
+Open Wisp from the Windows laptop, download `Start-Wisp-Connector.cmd`, and run
+it while using Codex. The connector uses the laptop user's existing `codex`
+command and authentication. Closing its window disconnects the laptop. The
+**Disconnect Clover** button rotates Wisp's connector token, invalidating old
+downloads. Only one Codex task runs at a time.
 
-Tasks run remotely as `codex exec --json` and their event stream is displayed in
-the browser. Only one task runs at a time. **Remove local config and key** erases
-Wisp's private key and destination; if the remote computer is unavailable, its
-copy of the public key must still be removed from `authorized_keys` manually.
-The current HTTP deployment is intended only for a trusted LAN; put it behind
-HTTPS and replace the bootstrap web password before exposing it elsewhere.
+The current HTTP deployment is for a trusted LAN only; use HTTPS and a stronger
+web password before exposing it elsewhere.

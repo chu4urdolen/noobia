@@ -73,6 +73,7 @@ String CommandDispatcher::dispatch(const NoobRequest &request) {
     return NoobProtocol::ok(request.requestId, vm_.status());
   }
   if (request.command == "CALL") return callNative(request);
+  if (request.command == "CALL_TEXT") return callTextNative(request);
   if (request.command == "STATUS") {
     return NoobProtocol::ok(request.requestId, vm_.status());
   }
@@ -124,6 +125,10 @@ String CommandDispatcher::callNative(const NoobRequest &request) {
   if (!entry) {
     return NoobProtocol::fail(request.requestId, "NO_FUNCTION", selector);
   }
+  if (!entry->function) {
+    return NoobProtocol::fail(request.requestId, "FUNCTION_KIND",
+                              "use CALL_TEXT for " + selector);
+  }
   int32_t arguments[NoobVm::REGISTER_COUNT] = {};
   uint8_t count = 0;
   while (position < request.arguments.length() &&
@@ -135,6 +140,25 @@ String CommandDispatcher::callNative(const NoobRequest &request) {
   if (!result.ok) {
     return NoobProtocol::fail(request.requestId, "NATIVE_ERROR",
                               result.detail);
+  }
+  String payload = "value=" + String(result.value);
+  if (!result.detail.isEmpty()) payload += " detail=" + result.detail;
+  return NoobProtocol::ok(request.requestId, payload);
+}
+
+String CommandDispatcher::callTextNative(const NoobRequest &request) {
+  int position = 0;
+  const String selector = tokenAt(request.arguments, position);
+  const NativeEntry *entry = natives_.find(selector);
+  if (!entry || !entry->textFunction) {
+    return NoobProtocol::fail(request.requestId, "NO_TEXT_FUNCTION", selector);
+  }
+  while (position < request.arguments.length() && request.arguments[position] == 32)
+    ++position;
+  const NativeResult result =
+      entry->textFunction(request.arguments.substring(position));
+  if (!result.ok) {
+    return NoobProtocol::fail(request.requestId, "NATIVE_ERROR", result.detail);
   }
   String payload = "value=" + String(result.value);
   if (!result.detail.isEmpty()) payload += " detail=" + result.detail;

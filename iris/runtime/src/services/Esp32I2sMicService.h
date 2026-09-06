@@ -10,4 +10,5 @@ bool begin(int bclkPin, int wsPin, int dataPin, uint32_t sampleRate = 16000);
 bool ready();
 NativeResult level(const int32_t *arguments, uint8_t argumentCount);
 NativeResult above(const int32_t *arguments, uint8_t argumentCount);
+NativeResult recordWav(const int32_t *arguments, uint8_t argumentCount);
 }

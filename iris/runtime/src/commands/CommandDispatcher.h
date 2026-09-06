@@ -17,6 +17,7 @@ class CommandDispatcher {
   bool decodeHex(const String &text, uint8_t *output, size_t capacity,
                  size_t &length, String &error);
   String callNative(const NoobRequest &request);
+  String callTextNative(const NoobRequest &request);
 
   const char *noobName_;
   const char *firmwareVersion_;

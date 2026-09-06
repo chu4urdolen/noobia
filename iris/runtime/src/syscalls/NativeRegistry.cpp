@@ -5,7 +5,16 @@ bool NativeRegistry::add(uint16_t id, const char *name,
   if (!name || !function || count_ >= MAX_FUNCTIONS || find(id) || find(name)) {
     return false;
   }
-  entries_[count_++] = {id, name, function};
+  entries_[count_++] = {id, name, function, nullptr};
+  return true;
+}
+
+bool NativeRegistry::addText(uint16_t id, const char *name,
+                             NativeTextFunction function) {
+  if (!name || !function || count_ >= MAX_FUNCTIONS || find(id) || find(name)) {
+    return false;
+  }
+  entries_[count_++] = {id, name, nullptr, function};
   return true;
 }
 

@@ -29,6 +29,13 @@ bool begin(const Config &config) {
 
 bool ready() { return storageReady && SD_MMC.cardType() != CARD_NONE; }
 
+fs::FS &fs() { return SD_MMC; }
+
+bool validPath(const String &path) {
+  return path.length() > 1 && path.length() < 192 && path[0] == 47 &&
+         path.indexOf("..") < 0 && path.indexOf(92) < 0;
+}
+
 String capturePath(int32_t sequence) {
   if (sequence < 0 || !active.captureDirectory || !active.capturePrefix)
     return String();
@@ -103,5 +110,43 @@ NativeResult remove(const int32_t *arguments, uint8_t count) {
     return {false, 0, "capture not found"};
   if (!SD_MMC.remove(path)) return {false, 0, "delete failed"};
   return {true, arguments[0], "deleted=" + path};
+}
+
+NativeResult removePath(const String &arguments) {
+  String path = arguments;
+  path.trim();
+  if (!ready()) return {false, 0, "SD unavailable"};
+  if (!validPath(path)) return {false, 0, "invalid absolute SD path"};
+  File target = SD_MMC.open(path);
+  if (!target) return {false, 0, "path not found"};
+  const bool directory = target.isDirectory();
+  target.close();
+  const bool removed = directory ? SD_MMC.rmdir(path) : SD_MMC.remove(path);
+  if (!removed) return {false, 0, "delete failed or directory not empty"};
+  return {true, 1, "deleted=" + path};
+}
+
+NativeResult listPath(const String &arguments) {
+  String path = arguments;
+  path.trim();
+  if (path.isEmpty()) path = "/";
+  if (!ready()) return {false, 0, "SD unavailable"};
+  if (path[0] != 47 || path.indexOf("..") >= 0)
+    return {false, 0, "invalid absolute SD path"};
+  File directory = SD_MMC.open(path);
+  if (!directory || !directory.isDirectory())
+    return {false, 0, "directory unavailable"};
+  String names;
+  int32_t count = 0;
+  File entry;
+  while ((entry = directory.openNextFile()) && count < 20) {
+    if (names.length()) names += ",";
+    names += entry.name();
+    if (entry.isDirectory()) names += "/";
+    ++count;
+    entry.close();
+  }
+  directory.close();
+  return {true, count, "path=" + path + " entries=" + names};
 }
 }

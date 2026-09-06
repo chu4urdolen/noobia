@@ -95,6 +95,9 @@ int32_t NoobVm::reg(uint8_t index) const {
   return index < REGISTER_COUNT ? registers_[index] : 0;
 }
 
+const uint8_t *NoobVm::programData() const { return program_; }
+size_t NoobVm::programLength() const { return programLength_; }
+
 bool NoobVm::need(size_t bytes) {
   if (pc_ + bytes <= programLength_) return true;
   fault("truncated instruction");
@@ -175,7 +178,7 @@ void NoobVm::executeOne() {
     for (uint8_t i=0;i<count;++i) { uint8_t r=read8(); if (!validRegister(r)) return; args[i]=registers_[r]; }
     // Hardware never appears in the VM switch. A numeric ID resolves through
     // the registry populated by the physical Noob during initialization.
-    const NativeEntry *entry=natives_.find(id); if (!entry) { fault("unknown syscall"); return; }
+    const NativeEntry *entry=natives_.find(id); if (!entry || !entry->function) { fault("unknown numeric syscall"); return; }
     NativeResult result=entry->function(args,count); if (!result.ok) { fault("syscall "+String(id)+": "+result.detail); return; }
     registers_[d]=result.value; return;
   }

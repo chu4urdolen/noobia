@@ -24,3 +24,4 @@
 /iris/*.jpg
 /iris/tools/noobctl
 /iris/tools/noob_ble_fd
+/iris/tools/noobctl_batch

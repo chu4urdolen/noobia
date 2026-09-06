@@ -11,12 +11,23 @@ usage() {
   echo "  irisctl status"
   echo "  irisctl ping | info | caps | capture | scan"
   echo "  irisctl rssi-on | rssi-off | watch"
+  echo "  irisctl wifi-connect [TIMEOUT_MS] | wifi-disconnect | wifi-status"
+  echo "  irisctl wifi-set SSID PASSWORD"
+  echo "  irisctl ble-scan [SECONDS] | ble-peer MAC | ble-status"
+  echo "  irisctl i2c-scan | audio-record [SECONDS] | video-record [SECONDS] [FPS]"
+  echo "  irisctl gpio-audit [PAGE] | gpio-inspect PIN | gpio-pull-test PIN"
   echo "  irisctl mic-level | led RED GREEN BLUE | led-off | signal-led 0|1"
   echo "  irisctl programs | vm-load NAME | vm-run | vm-stop | vm-status"
-  echo "  irisctl delete SEQUENCE"
+  echo "  irisctl vm-save NAME | vm-load-saved NAME | vm-list-saved | vm-delete-saved NAME"
+  echo "  irisctl sd-list [PATH] | sd-delete PATH | capture-delete SEQUENCE"
   echo "  irisctl ble REQUEST_ID COMMAND [ARGS...]"
   echo "  irisctl fetch SEQUENCE OUTPUT.jpg"
   echo "  irisctl uart REQUEST_ID COMMAND [ARGS...]"
+  echo "  Commands can also be piped to: noobctl_batch /dev/ttyUSB0"
+}
+
+hex_text() {
+  printf "%s" "$1" | xxd -p -c 256 | tr -d "\n"
 }
 
 load_bridge() {
@@ -57,6 +68,56 @@ case ${1:-} in
   rssi-off)
     exec "$0" ble "ctl$$" CALL RSSI_OFF
     ;;
+  wifi-connect)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL WIFI_CONNECT "${2:-15000}"
+    ;;
+  wifi-disconnect)
+    exec "$0" ble "ctl$$" CALL WIFI_DISCONNECT
+    ;;
+  wifi-status)
+    exec "$0" ble "ctl$$" CALL WIFI_STATUS
+    ;;
+  wifi-set)
+    (( $# == 3 )) || { usage >&2; exit 2; }
+    ssid_hex=$(hex_text "$2")
+    password_hex=$(hex_text "$3")
+    exec "$0" ble "ctl$$" CALL_TEXT WIFI_CREDENTIALS_SET "$ssid_hex" "$password_hex"
+    ;;
+  ble-scan)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL BLE_SCAN "${2:-3}"
+    ;;
+  ble-peer)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL_TEXT BLE_PEER_SET "$2"
+    ;;
+  ble-status)
+    exec "$0" ble "ctl$$" CALL BLE_STATUS
+    ;;
+  i2c-scan)
+    exec "$0" ble "ctl$$" CALL I2C_SCAN
+    ;;
+  gpio-audit)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL GPIO_AUDIT "${2:-0}"
+    ;;
+  gpio-inspect)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL GPIO_INSPECT "$2"
+    ;;
+  gpio-pull-test)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL GPIO_PULL_TEST "$2"
+    ;;
+  audio-record)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL AUDIO_RECORD "${2:-1}"
+    ;;
+  video-record)
+    (( $# <= 3 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL CAMERA_VIDEO "${2:-3}" "${3:-5}"
+    ;;
   mic-level)
     exec "$0" ble "ctl$$" CALL MIC_LEVEL
     ;;
@@ -92,9 +153,32 @@ case ${1:-} in
   vm-status)
     exec "$0" ble "ctl$$" STATUS
     ;;
-  delete)
+  vm-save)
     (( $# == 2 )) || { usage >&2; exit 2; }
-    exec "$0" ble "ctl$$" CALL SD_DELETE "$2"
+    exec "$0" ble "ctl$$" CALL_TEXT VM_SAVE "$2"
+    ;;
+  vm-load-saved)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL_TEXT VM_LOAD_SAVED "$2"
+    ;;
+  vm-list-saved)
+    exec "$0" ble "ctl$$" CALL_TEXT VM_LIST_SAVED
+    ;;
+  vm-delete-saved)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL_TEXT VM_DELETE_SAVED "$2"
+    ;;
+  sd-list)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL_TEXT SD_LIST "${2:-/}"
+    ;;
+  sd-delete)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL_TEXT SD_DELETE "$2"
+    ;;
+  capture-delete)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL CAPTURE_DELETE "$2"
     ;;
   watch)
     load_bridge

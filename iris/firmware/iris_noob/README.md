@@ -17,6 +17,18 @@ Registered native functions:
 - `100 CAMERA_CAPTURE`: capture an SVGA JPEG to the next sequential path in
   `/captured`; returns the sequence number.
 - `101 STORAGE_STATUS`: return SD capacity and usage.
+
+The current runtime also exposes generic path-based SD deletion/listing,
+Wi-Fi connection and credential updates, BLE discovery/peer updates, I2C,
+WAV recording, raw MJPEG recording, and persistent named VM programs. Run
+`CAPS` for the authoritative IDs and names compiled into a device.
+
+GPIO diagnostics live separately in `esp32_common/NoobEsp32Diagnostics`.
+Iris only supplies that library with her reserved-pin map and the explicit
+allowlist for pull-only tests.
+
+Before compiling a local image, set `WIFI_PASSWORD` in `iris_secrets.h`.
+Credentials changed through `WIFI_CREDENTIALS_SET` are persisted in NVS.
 - `120 MIC_LEVEL`: return the current microphone RMS level.
 - `121 MIC_ABOVE`: compare microphone level with a VM-provided threshold.
 - `130 LED_RGB`: set the onboard SK6812 RGB pixel.

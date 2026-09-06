@@ -1,9 +1,11 @@
 #include "transport/BleClientTransport.h"
 #include <BLEDevice.h>
 #include <BLEScan.h>
+#include <Preferences.h>
 
 namespace {
 BleClientTransport *activeTransport = nullptr;
+Preferences blePreferences;
 class ClientCallbacks : public BLEClientCallbacks {
   void onDisconnect(BLEClient *) override {
     if (activeTransport) activeTransport->handleDisconnect();
@@ -14,7 +16,15 @@ void notificationCallback(BLERemoteCharacteristic *, uint8_t *data,
   if (activeTransport) activeTransport->handleNotification(data, length);
 }
 bool macConfigured(const String &mac) {
-  return mac.length() == 17 && mac != "00:00:00:00:00:00";
+  if (mac.length() != 17 || mac == "00:00:00:00:00:00") return false;
+  for (int index = 0; index < 17; ++index) {
+    if ((index + 1) % 3 == 0) {
+      if (mac[index] != 58) return false;
+    } else if (!isHexadecimalDigit(mac[index])) {
+      return false;
+    }
+  }
+  return true;
 }
 }
 
@@ -29,12 +39,59 @@ BleClientTransport::BleClientTransport(const char *peerMac,
 }
 
 bool BleClientTransport::begin(const char *localName) {
+  blePreferences.begin("noob-ble", false);
+  String savedPeer = blePreferences.getString("peer", "");
+  if (macConfigured(savedPeer)) peerMac_ = savedPeer;
   if (!macConfigured(peerMac_)) return false;
   BLEDevice::init(localName ? localName : "Noob");
   activeTransport = this;
   initialized_ = true;
   nextAttemptAt_ = millis();
   return true;
+}
+
+NativeResult BleClientTransport::scan(const int32_t *arguments, uint8_t count) {
+  if (!activeTransport || !activeTransport->initialized_)
+    return {false, 0, "BLE unavailable"};
+  const uint8_t seconds = count
+      ? static_cast<uint8_t>(constrain(arguments[0], 1, 10)) : 3;
+  BLEScan *scanner = BLEDevice::getScan();
+  scanner->setActiveScan(true);
+  BLEScanResults *results = scanner->start(seconds, false);
+  if (!results) return {false, 0, "BLE scan failed"};
+  String detail = "devices=" + String(results->getCount());
+  const int shown = min(results->getCount(), 8);
+  for (int index = 0; index < shown; ++index) {
+    BLEAdvertisedDevice device = results->getDevice(index);
+    detail += " [" + String(index) + "]=" +
+              String(device.getAddress().toString().c_str()) + "," +
+              String(device.getRSSI());
+  }
+  const int total = results->getCount();
+  scanner->clearResults();
+  activeTransport->nextAttemptAt_ = millis() +
+                                    activeTransport->retryIntervalMs_;
+  return {true, total, detail};
+}
+
+NativeResult BleClientTransport::setPeer(const String &arguments) {
+  if (!activeTransport) return {false, 0, "BLE unavailable"};
+  String mac = arguments;
+  mac.trim();
+  mac.toLowerCase();
+  if (!macConfigured(mac)) return {false, 0, "invalid BLE MAC"};
+  if (activeTransport->client_ && activeTransport->client_->isConnected())
+    activeTransport->client_->disconnect();
+  activeTransport->peerMac_ = mac;
+  blePreferences.putString("peer", mac);
+  activeTransport->nextAttemptAt_ = millis();
+  return {true, 1, "peer=" + mac + " reconnect_scheduled=1"};
+}
+
+NativeResult BleClientTransport::nativeStatus(const int32_t *, uint8_t) {
+  if (!activeTransport) return {false, 0, "BLE unavailable"};
+  return {true, activeTransport->connected() ? 1 : 0,
+          activeTransport->status()};
 }
 const char *BleClientTransport::name() const { return "ble-client"; }
 bool BleClientTransport::receive(String &message) {

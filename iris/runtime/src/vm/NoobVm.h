@@ -22,6 +22,8 @@ class NoobVm {
   VmState state() const;
   String status() const;
   int32_t reg(uint8_t index) const;
+  const uint8_t *programData() const;
+  size_t programLength() const;
 
  private:
   bool need(size_t bytes);

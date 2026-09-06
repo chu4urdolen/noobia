@@ -1,5 +1,6 @@
 #pragma once
 #include "transport/Transport.h"
+#include "syscalls/NativeRegistry.h"
 #include <BLEClient.h>
 
 // Reusable outbound BLE transport. A Noob supplies peer identity and retry
@@ -16,6 +17,10 @@ class BleClientTransport : public NoobTransport {
   void send(const String &message) override;
   bool connected() const;
   String status() const;
+  static NativeResult scan(const int32_t *arguments, uint8_t argumentCount);
+  static NativeResult setPeer(const String &arguments);
+  static NativeResult nativeStatus(const int32_t *arguments,
+                                   uint8_t argumentCount);
   void handleNotification(const uint8_t *data, size_t length);
   void handleDisconnect();
 

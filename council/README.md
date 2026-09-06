@@ -9,7 +9,7 @@ grants turns, forwards missed context, and coordinates conversation closure.
 | Participant | Address | Human port | AI port | Arbiter priority |
 | --- | --- | ---: | ---: | ---: |
 | Aria on Nexus | `192.168.100.6` | `47100` | `47101` | `10` |
-| Argus | `192.168.100.5` | `47200` | `47201` | `20` |
+| Argus | `192.168.100.105` | `47200` | `47201` | `20` |
 | Rose | `192.168.100.7` | `47300` | `47301` | `30` |
 | Clover | not deployed yet | configurable | configurable | `40` reserved |
 

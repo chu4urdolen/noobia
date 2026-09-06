@@ -1,6 +1,6 @@
 [
   {"name":"Noob","role":"human","host":"192.168.100.6","port":47100,"shared_key":"CHANGE-ME-NOOB","arbiter_priority":0},
   {"name":"Aria","role":"ai","host":"192.168.100.6","port":47101,"shared_key":"CHANGE-ME-ARIA","arbiter_priority":10,"RAM":64},
-  {"name":"Argus","role":"ai","host":"192.168.100.5","port":47201,"shared_key":"CHANGE-ME-ARGUS","arbiter_priority":20,"RAM":8},
+  {"name":"Argus","role":"ai","host":"192.168.100.105","port":47201,"shared_key":"CHANGE-ME-ARGUS","arbiter_priority":20,"RAM":8},
   {"name":"Rose","role":"ai","host":"192.168.100.7","port":47301,"shared_key":"CHANGE-ME-ROSE","arbiter_priority":30,"RAM":16}
 ]

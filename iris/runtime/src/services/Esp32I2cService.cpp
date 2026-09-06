@@ -3,7 +3,9 @@
 #include <Wire.h>
 
 namespace {
-TwoWire noobI2c(1);
+// Use controller 0 for external devices. The esp32-camera component claims
+// controller 1 for SCCB on boards such as Iris when its sensor is present.
+TwoWire noobI2c(0);
 bool i2cReady = false;
 
 bool validAddress(int32_t address) { return address >= 1 && address <= 126; }

@@ -5,10 +5,11 @@
 namespace {
 // Use controller 0 for external devices. The esp32-camera component claims
 // controller 1 for SCCB on boards such as Iris when its sensor is present.
-TwoWire noobI2c(0);
+TwoWire &noobI2c = Wire;
 bool i2cReady = false;
 
 bool validAddress(int32_t address) { return address >= 1 && address <= 126; }
+
 
 NativeResult receiveBytes(int32_t address, int32_t wanted) {
   if (wanted < 1 || wanted > 4) return {false, 0, "read length must be 1..4"};
@@ -79,4 +80,5 @@ NativeResult writeRead(const int32_t *arguments, uint8_t count) {
   if (error) return {false, error, "I2C register select error"};
   return receiveBytes(arguments[0], arguments[2]);
 }
+
 }

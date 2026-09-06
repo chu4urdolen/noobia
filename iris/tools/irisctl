@@ -14,7 +14,8 @@ usage() {
   echo "  irisctl wifi-connect [TIMEOUT_MS] | wifi-disconnect | wifi-status"
   echo "  irisctl wifi-set SSID PASSWORD"
   echo "  irisctl ble-scan [SECONDS] | ble-peer MAC | ble-status"
-  echo "  irisctl i2c-scan | audio-record [SECONDS] | video-record [SECONDS] [FPS]"
+  echo "  irisctl i2c-scan | i2c-soft-scan | audio-record [SECONDS] | video-record [SECONDS] [FPS]"
+  echo "  irisctl oled-test"
   echo "  irisctl gpio-audit [PAGE] | gpio-inspect PIN | gpio-pull-test PIN"
   echo "  irisctl mic-level | led RED GREEN BLUE | led-off | signal-led 0|1"
   echo "  irisctl programs | vm-load NAME | vm-run | vm-stop | vm-status"
@@ -97,6 +98,12 @@ case ${1:-} in
     ;;
   i2c-scan)
     exec "$0" ble "ctl$$" CALL I2C_SCAN
+    ;;
+  i2c-soft-scan)
+    exec "$0" ble "ctl$$" CALL I2C_SOFT_SCAN
+    ;;
+  oled-test)
+    exec "$0" ble "ctl$$" CALL OLED_TEST
     ;;
   gpio-audit)
     (( $# <= 2 )) || { usage >&2; exit 2; }

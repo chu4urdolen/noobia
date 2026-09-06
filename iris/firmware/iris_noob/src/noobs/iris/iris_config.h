@@ -18,8 +18,8 @@ constexpr int CAMERA_XCLK = 10;
 constexpr int SD_CLK = 42;
 constexpr int SD_CMD = 39;
 constexpr int SD_D0 = 41;
-constexpr int I2C_SDA = 17;
-constexpr int I2C_SCL = 18;
+constexpr int I2C_SDA = 1;
+constexpr int I2C_SCL = 40;
 
 // MSM261D3526H1CPM digital microphone. Although the part is marketed as a
 // PDM microphone, this board wires it to the ESP32-S3 as standard I2S: the
@@ -61,10 +61,12 @@ constexpr unsigned I2C_SCAN = 150;
 constexpr unsigned I2C_WRITE = 151;
 constexpr unsigned I2C_READ = 152;
 constexpr unsigned I2C_WRITE_READ = 153;
+constexpr unsigned I2C_SOFT_SCAN = 154;
 constexpr unsigned BLE_SCAN = 160;
 constexpr unsigned BLE_PEER_SET = 161;
 constexpr unsigned BLE_STATUS = 162;
 constexpr unsigned GPIO_AUDIT = 170;
 constexpr unsigned GPIO_INSPECT = 171;
 constexpr unsigned GPIO_PULL_TEST = 172;
+constexpr unsigned OLED_TEST = 180;
 }

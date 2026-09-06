@@ -11,6 +11,8 @@
 #include <services/Esp32I2cService.h>
 #include <services/Esp32VmProgramStore.h>
 #include <Esp32GpioInspector.h>
+#include <Esp32SoftI2cDiagnostics.h>
+#include <services/Esp32Sh1107Service.h>
 
 void irisRegisterCapabilities(CapabilityRegistry &capabilities);
 
@@ -24,6 +26,9 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= Esp32RgbLedService::begin(IrisPins::RGB_LED);
   ok &= Esp32SignalLedService::begin(IrisPins::SIGNAL_LED);
   ok &= Esp32I2cService::begin(IrisPins::I2C_SDA, IrisPins::I2C_SCL);
+  ok &= Esp32SoftI2cDiagnostics::begin(IrisPins::I2C_SDA, IrisPins::I2C_SCL);
+  // Absence of an optional display must not prevent the rest of Iris starting.
+  Esp32Sh1107Service::begin(IrisPins::I2C_SDA, IrisPins::I2C_SCL, 0x3c);
   ok &= Esp32WifiService::begin(IrisSecrets::WIFI_SSID,
                                 IrisSecrets::WIFI_PASSWORD);
   ok &= Esp32VmProgramStore::begin(runtime.vm());
@@ -35,8 +40,8 @@ bool irisRegister(NoobRuntime &runtime) {
   for (uint8_t pin : sdPins) ok &= Esp32GpioInspector::reserve(pin, "sd");
   const uint8_t micPins[] = {35, 36, 37};
   for (uint8_t pin : micPins) ok &= Esp32GpioInspector::reserve(pin, "mic");
-  ok &= Esp32GpioInspector::reserve(17, "i2c-sda");
-  ok &= Esp32GpioInspector::reserve(18, "i2c-scl");
+  ok &= Esp32GpioInspector::reserve(1, "i2c-sda");
+  ok &= Esp32GpioInspector::reserve(40, "i2c-scl");
   ok &= Esp32GpioInspector::reserve(19, "usb-dminus");
   ok &= Esp32GpioInspector::reserve(20, "usb-dplus");
   ok &= Esp32GpioInspector::reserve(33, "rgb-led");
@@ -46,7 +51,7 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= Esp32GpioInspector::reserve(0, "boot-strap");
   ok &= Esp32GpioInspector::reserve(45, "strap");
   ok &= Esp32GpioInspector::reserve(46, "strap-input-only");
-  const uint8_t pullTestPins[] = {1, 15, 16, 40, 47, 48};
+  const uint8_t pullTestPins[] = {15, 16, 47, 48};
   for (uint8_t pin : pullTestPins) ok &= Esp32GpioInspector::allowPullTest(pin);
 
   // Iris selects capabilities and IDs here; every implementation below is a
@@ -80,12 +85,14 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().add(IrisFunctions::I2C_WRITE, "I2C_WRITE", Esp32I2cService::write);
   ok &= runtime.natives().add(IrisFunctions::I2C_READ, "I2C_READ", Esp32I2cService::read);
   ok &= runtime.natives().add(IrisFunctions::I2C_WRITE_READ, "I2C_WRITE_READ", Esp32I2cService::writeRead);
+  ok &= runtime.natives().add(IrisFunctions::I2C_SOFT_SCAN, "I2C_SOFT_SCAN", Esp32SoftI2cDiagnostics::scan);
   ok &= runtime.natives().add(IrisFunctions::BLE_SCAN, "BLE_SCAN", BleClientTransport::scan);
   ok &= runtime.natives().addText(IrisFunctions::BLE_PEER_SET, "BLE_PEER_SET", BleClientTransport::setPeer);
   ok &= runtime.natives().add(IrisFunctions::BLE_STATUS, "BLE_STATUS", BleClientTransport::nativeStatus);
   ok &= runtime.natives().add(IrisFunctions::GPIO_AUDIT, "GPIO_AUDIT", Esp32GpioInspector::audit);
   ok &= runtime.natives().add(IrisFunctions::GPIO_INSPECT, "GPIO_INSPECT", Esp32GpioInspector::inspect);
   ok &= runtime.natives().add(IrisFunctions::GPIO_PULL_TEST, "GPIO_PULL_TEST", Esp32GpioInspector::pullTest);
+  ok &= runtime.natives().add(IrisFunctions::OLED_TEST, "OLED_TEST", Esp32Sh1107Service::testPattern);
   ok &= runtime.addService(Esp32WifiService::rssiService());
   return ok;
 }

@@ -28,6 +28,22 @@ errors become VM faults instead of invented readings.
 
 ## Hardware result
 
+### Retest after wiring correction
+
+After the user corrected swapped VCC/GND wiring, three BLE reads passed:
+
+| Temperature | Humidity | Raw bytes (checksum included) |
+| --- | --- | --- |
+| 26.0 C | 62.6% | 3e061a005e |
+| 25.8 C | 58.8% | 3a08190863 |
+| 25.8 C | 58.8% | 3a08190863 |
+
+The same nine-byte VM then completed with `state=HALTED pc=9` and `r0=258`
+(25.8 C). Both LEDs on GPIO16/40 were left on as requested. These tests
+verify sensor communication and checksum validation, not measurement accuracy.
+
+### Initial test before wiring correction
+
 The build passed (1,365,799 bytes, 43% of the app partition); flashing over
 USB UART verified all hashes. BLE INFO confirms `0.2.9-dht11`.
 Both LED commands report their requested output levels on GPIO16/40.

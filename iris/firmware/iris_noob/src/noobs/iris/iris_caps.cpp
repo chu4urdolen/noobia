@@ -10,6 +10,8 @@ void irisRegisterCapabilities(CapabilityRegistry &capabilities) {
 #endif
   capabilities.add("EXTERNAL_LEDS");
   capabilities.add("DHT11");
+  capabilities.add("ADC");
+  capabilities.add("LIGHT_SENSOR");
 #if IRIS_ENABLE_OLED
   capabilities.add("OLED_SH1107_128X128");
 #endif

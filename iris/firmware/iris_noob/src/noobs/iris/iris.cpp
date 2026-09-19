@@ -10,6 +10,7 @@
 #include <services/Esp32SignalLedService.h>
 #include <services/Esp32DigitalOutputService.h>
 #include <services/Esp32Dht11Service.h>
+#include <services/Esp32AdcService.h>
 #if IRIS_ENABLE_I2C
 #include <services/Esp32I2cService.h>
 #endif
@@ -22,6 +23,11 @@
 void irisRegisterCapabilities(CapabilityRegistry &capabilities);
 
 namespace {
+NativeResult irisLightRead(const int32_t *arguments, uint8_t count) {
+  if (count > 1) return {false, 0, "usage: [samples(1..64)]"};
+  const int32_t args[] = {0, count ? arguments[0] : 16};
+  return Esp32AdcService::read(args, 2);
+}
 bool initService(const char *name, bool (*begin)()) {
   Serial.printf("NRP/1 0 EVENT INIT service=%s\n", name);
   const bool ready = begin();
@@ -63,6 +69,9 @@ bool irisRegister(NoobRuntime &runtime) {
   // supports only through these registries, never through board-name checks.
   irisRegisterCapabilities(runtime.capabilities());
   bool ok = true;
+  ok &= Esp32AdcService::configure(0, IrisPins::PHOTORESISTOR);
+  ok &= runtime.natives().add(IrisFunctions::ADC_READ, "ADC_READ", Esp32AdcService::read);
+  ok &= runtime.natives().add(IrisFunctions::LIGHT_READ, "LIGHT_READ", irisLightRead);
   ok &= Esp32Dht11Service::begin(IrisPins::DHT11_DATA);
   ok &= runtime.natives().add(IrisFunctions::TEMP_HUMIDITY_READ, "TEMP_HUMIDITY_READ", Esp32Dht11Service::read);
 #if IRIS_ENABLE_CAMERA

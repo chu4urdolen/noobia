@@ -54,6 +54,7 @@ constexpr int SD_D0 = 41;
 constexpr int I2C_SDA = 17;
 constexpr int I2C_SCL = 18;
 constexpr int DHT11_DATA = 15;
+constexpr int PHOTORESISTOR = 1;
 constexpr int EXTERNAL_LED_0 = 16;
 constexpr int EXTERNAL_LED_2 = 40;
 static_assert(I2C_SDA != EXTERNAL_LED_0 && I2C_SCL != EXTERNAL_LED_0 &&
@@ -113,4 +114,6 @@ constexpr unsigned GPIO_INSPECT = 171;
 constexpr unsigned GPIO_PULL_TEST = 172;
 constexpr unsigned OLED_TEST = 180;
 constexpr unsigned TEMP_HUMIDITY_READ = 190;
+constexpr unsigned ADC_READ = 191;
+constexpr unsigned LIGHT_READ = 192;
 }

@@ -17,6 +17,7 @@ usage() {
   echo "  irisctl i2c-lines | i2c-start [HZ] | i2c-scan | i2c-close | audio-record [SECONDS] | video-record [SECONDS] [FPS]"
   echo "  irisctl oled-test"
   echo "  irisctl dht-read [0=temperature|1=humidity]"
+  echo "  irisctl light-read [SAMPLES]"
   echo "  irisctl gpio-audit [PAGE] | gpio-inspect PIN | gpio-pull-test PIN"
   echo "  irisctl mic-level | led RED GREEN BLUE | led-off | signal-led 0|1 | external-led 0|2 0|1"
   echo "  irisctl programs | vm-load NAME | vm-run | vm-stop | vm-status"
@@ -100,6 +101,10 @@ case ${1:-} in
   dht-read)
     (( $# <= 2 )) || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL TEMP_HUMIDITY_READ "${2:-0}"
+    ;;
+  light-read)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL LIGHT_READ "${2:-16}"
     ;;
   i2c-scan)
     exec "$0" ble "ctl$$" CALL I2C_SCAN

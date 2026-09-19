@@ -5,6 +5,9 @@
 
 namespace Esp32I2cService {
 bool begin(int sdaPin, int sclPin, uint32_t frequency = 100000);
+NativeResult configure(const int32_t *arguments, uint8_t count);
+NativeResult close(const int32_t *arguments, uint8_t count);
+NativeResult lines(int sdaPin, int sclPin);
 NativeResult scan(const int32_t *arguments, uint8_t count);
 NativeResult write(const int32_t *arguments, uint8_t count);
 NativeResult read(const int32_t *arguments, uint8_t count);

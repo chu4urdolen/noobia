@@ -14,10 +14,11 @@ usage() {
   echo "  irisctl wifi-connect [TIMEOUT_MS] | wifi-disconnect | wifi-status"
   echo "  irisctl wifi-set SSID PASSWORD"
   echo "  irisctl ble-scan [SECONDS] | ble-peer MAC | ble-status"
-  echo "  irisctl i2c-scan | i2c-soft-scan | audio-record [SECONDS] | video-record [SECONDS] [FPS]"
+  echo "  irisctl i2c-lines | i2c-start [HZ] | i2c-scan | i2c-close | audio-record [SECONDS] | video-record [SECONDS] [FPS]"
   echo "  irisctl oled-test"
+  echo "  irisctl dht-read [0=temperature|1=humidity]"
   echo "  irisctl gpio-audit [PAGE] | gpio-inspect PIN | gpio-pull-test PIN"
-  echo "  irisctl mic-level | led RED GREEN BLUE | led-off | signal-led 0|1"
+  echo "  irisctl mic-level | led RED GREEN BLUE | led-off | signal-led 0|1 | external-led 0|2 0|1"
   echo "  irisctl programs | vm-load NAME | vm-run | vm-stop | vm-status"
   echo "  irisctl vm-save NAME | vm-load-saved NAME | vm-list-saved | vm-delete-saved NAME"
   echo "  irisctl sd-list [PATH] | sd-delete PATH | capture-delete SEQUENCE"
@@ -96,11 +97,23 @@ case ${1:-} in
   ble-status)
     exec "$0" ble "ctl$$" CALL BLE_STATUS
     ;;
+  dht-read)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL TEMP_HUMIDITY_READ "${2:-0}"
+    ;;
   i2c-scan)
     exec "$0" ble "ctl$$" CALL I2C_SCAN
     ;;
-  i2c-soft-scan)
-    exec "$0" ble "ctl$$" CALL I2C_SOFT_SCAN
+  i2c-lines)
+    exec "$0" ble "ctl$$" CALL I2C_LINES
+    ;;
+  i2c-start)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    if (( $# == 2 )); then exec "$0" ble "ctl$$" CALL I2C_CONFIG "$2"; fi
+    exec "$0" ble "ctl$$" CALL I2C_CONFIG
+    ;;
+  i2c-close)
+    exec "$0" ble "ctl$$" CALL I2C_CLOSE
     ;;
   oled-test)
     exec "$0" ble "ctl$$" CALL OLED_TEST
@@ -138,6 +151,10 @@ case ${1:-} in
   signal-led)
     (( $# == 2 && ($2 == 0 || $2 == 1) )) || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL LED_SIGNAL "$2"
+    ;;
+  external-led)
+    (( $# == 3 && ($2 == 0 || $2 == 2) && ($3 == 0 || $3 == 1) )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL LED_EXTERNAL "$2" "$3"
     ;;
   programs)
     for program in "$PROGRAMS"/*.hex; do
@@ -193,7 +210,7 @@ case ${1:-} in
     active=
     tail -n 0 -F "$log" | while IFS= read -r line; do
       if [[ $line == *"WriteValue:"* ]]; then
-        [[ -n $active && -n $payload ]] && printf "%s\\n" "$payload"
+        [[ -n $active && -n $payload ]] && printf "%s\n" "$payload"
         payload=; active=1
         continue
       fi
@@ -211,7 +228,7 @@ case ${1:-} in
       done
       payload+="$(printf "%s" "$hex" | xxd -r -p)"
       if (( count < 16 )); then
-        printf "%s\\n" "$payload"
+        printf "%s\n" "$payload"
         payload=; active=
       fi
     done
@@ -236,7 +253,8 @@ case ${1:-} in
       if [[ $response == *"NRP/1 $request_id "* &&
             $current_size == $previous_size ]]; then
         response="NRP/1 $request_id ${response#*"NRP/1 $request_id "}"
-        printf "%s\\n" "$response"
+        printf "%s\n" "$response"
+        [[ $response != "NRP/1 $request_id ERR "* ]] || exit 1
         exit 0
       fi
       previous_size=$current_size
@@ -254,7 +272,8 @@ case ${1:-} in
   uart)
     (( $# >= 3 )) || { usage >&2; exit 2; }
     shift
-    exec sg dialout -c "$TOOLS/noobctl /dev/ttyUSB0 $*"
+    printf -v uart_command '%q ' "$TOOLS/noobctl" /dev/ttyUSB0 "$@"
+    exec sg dialout -c "$uart_command"
     ;;
   *)
     usage >&2

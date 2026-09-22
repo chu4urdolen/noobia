@@ -32,12 +32,12 @@ usage() {
   echo "  irisctl bridge"
   echo "  irisctl status"
   echo "  irisctl ping | info | caps | capture | scan"
+  echo "  irisctl time-now"
   echo "  irisctl rssi-on | rssi-off | watch"
   echo "  irisctl wifi-connect [TIMEOUT_MS] | wifi-disconnect | wifi-status"
   echo "  irisctl wifi-set SSID PASSWORD"
   echo "  irisctl ble-scan [SECONDS] | ble-peer MAC | ble-status"
-  echo "  irisctl i2c-lines | i2c-start [HZ] | i2c-scan | i2c-close | audio-record [SECONDS] | video-record [SECONDS] [FPS]"
-  echo "  irisctl oled-test"
+  echo "  irisctl audio-record [SECONDS] | video-record [SECONDS] [FPS]"
   echo "  irisctl dht-read [0=temperature|1=humidity]"
   echo "  irisctl light-read [SAMPLES]"
   echo "  irisctl ultrasonic-read [SAMPLES] [TIMEOUT_US]"
@@ -88,6 +88,9 @@ case ${1:-} in
     ;;
   scan)
     exec "$0" ble "ctl$$" CALL WIFI_SCAN
+    ;;
+  time-now)
+    exec "$0" ble "ctl$$" CALL TIME_NOW
     ;;
   rssi-on)
     exec "$0" ble "ctl$$" CALL RSSI_ON
@@ -145,23 +148,6 @@ case ${1:-} in
   ir-test)
     (( $# <= 2 )) || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL IR_LOOPBACK "${2:-20}"
-    ;;
-  i2c-scan)
-    exec "$0" ble "ctl$$" CALL I2C_SCAN
-    ;;
-  i2c-lines)
-    exec "$0" ble "ctl$$" CALL I2C_LINES
-    ;;
-  i2c-start)
-    (( $# <= 2 )) || { usage >&2; exit 2; }
-    if (( $# == 2 )); then exec "$0" ble "ctl$$" CALL I2C_CONFIG "$2"; fi
-    exec "$0" ble "ctl$$" CALL I2C_CONFIG
-    ;;
-  i2c-close)
-    exec "$0" ble "ctl$$" CALL I2C_CLOSE
-    ;;
-  oled-test)
-    exec "$0" ble "ctl$$" CALL OLED_TEST
     ;;
   gpio-audit)
     (( $# <= 2 )) || { usage >&2; exit 2; }

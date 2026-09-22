@@ -26,7 +26,7 @@ ARDUINO_CONFIG=${IRIS_ARDUINO_CONFIG:-"$IRIS_ROOT/.arduino-cli/arduino-cli.yaml"
 NM=${IRIS_NM:-xtensa-esp-elf-nm}
 FQBN=${OPT_FQBN:-${IRIS_FQBN:-'esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=huge_app,PSRAM=enabled,FlashMode=qio,CDCOnBoot=default,USBMode=hwcdc,UploadSpeed=921600'}}
 JOBS=${OPT_JOBS:-${IRIS_BUILD_JOBS:-4}}
-EXTRA_FLAGS=${OPT_EXTRA_FLAGS:-${IRIS_BUILD_EXTRA_FLAGS:-'-DNOOB_ENABLE_EXTERNAL_I2C=1 -DNOOB_ENABLE_SH1107=0 -DNOOB_ENABLE_SOFT_I2C_DIAGNOSTICS=0'}}
+EXTRA_FLAGS=${OPT_EXTRA_FLAGS:-${IRIS_BUILD_EXTRA_FLAGS:-'-DNOOB_ENABLE_EXTERNAL_I2C=0 -DNOOB_ENABLE_SH1107=0 -DNOOB_ENABLE_SOFT_I2C_DIAGNOSTICS=0'}}
 
 mkdir -p "$BUILD_DIR"
 # A second build must not clean files used by the first.
@@ -41,14 +41,11 @@ test -s "$BUILD_DIR/iris_noob.ino.elf"
 test -s "$BUILD_DIR/iris_noob.ino.bin"
 test -s "$BUILD_DIR/iris_noob.ino.partitions.bin"
 "$NM" --defined-only -C "$BUILD_DIR/iris_noob.ino.elf" > "$BUILD_DIR/symbols.txt"
-if rg -q 'Esp32SoftI2cDiagnostics::|Esp32Sh1107Service::|u8g2_' "$BUILD_DIR/symbols.txt"; then
-  echo 'Unexpected software-I2C/OLED code linked' >&2
+if rg -q 'Esp32I2cService::|Esp32SoftI2cDiagnostics::|Esp32Sh1107Service::|u8g2_' "$BUILD_DIR/symbols.txt"; then
+  echo 'Unexpected external-I2C/OLED code linked' >&2
   exit 1
 fi
-if rg -q '^#define IRIS_ENABLE_I2C 1$' \
-    "$IRIS_ROOT/sketchbook/iris_noob/src/noobs/iris/iris_config.h"; then
-  rg -q 'Esp32I2cService::scan' "$BUILD_DIR/symbols.txt" || {
-    echo 'Hardware I2C service is missing' >&2; exit 1;
-  }
-fi
+rg -q 'MonotonicTimeService::now' "$BUILD_DIR/symbols.txt" || {
+  echo 'Common TIME_NOW service is missing' >&2; exit 1;
+}
 echo "Verified firmware: $BUILD_DIR/iris_noob.ino.bin"

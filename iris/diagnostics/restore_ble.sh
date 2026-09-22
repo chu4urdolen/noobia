@@ -5,6 +5,7 @@ ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 CTL="$ROOT/tools/irisctl"
 "$CTL" ble verify_ping PING
 "$CTL" ble verify_info INFO
+"$CTL" ble verify_time CALL TIME_NOW
 "$CTL" ble verify_sd CALL STORAGE_STATUS
 "$CTL" ble verify_mic CALL MIC_LEVEL
 "$CTL" ble verify_load LOAD 0100070000000101050000000302000100

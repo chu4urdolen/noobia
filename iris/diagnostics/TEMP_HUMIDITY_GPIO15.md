@@ -1,5 +1,9 @@
 # DHT11 on Iris — 2026-09-19
 
+> GPIO15 remains the current DHT11 assignment. References below to LEDs on
+> GPIO16/40 and lazy I2C describe older wiring; current LEDs are GPIO17/47,
+> GPIO16 is ultrasonic trigger, and GPIO40 is IR transmit.
+
 Confirmed wiring: DHT11 data GPIO15; LEDs GPIO16 (channel 0) and GPIO40
 (channel 2). The earlier note incorrectly assumed the old LED wiring.
 

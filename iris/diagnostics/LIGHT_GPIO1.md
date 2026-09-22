@@ -1,5 +1,8 @@
 # Photoresistor on GPIO1
 
+> GPIO1 remains the current photoresistor assignment. References below to LEDs
+> on GPIO16/40 describe older wiring; current LEDs are GPIO17/47.
+
 The user connected a three-pin light module with S on GPIO1. Exact module
 model and light-to-voltage direction are unconfirmed. GPIO47 is no longer
 the signal connection. Use 3.3V module power and a common ground.

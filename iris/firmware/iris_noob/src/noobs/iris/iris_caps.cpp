@@ -5,9 +5,6 @@ void irisRegisterCapabilities(CapabilityRegistry &capabilities) {
 #if IRIS_ENABLE_GPIO_DIAGNOSTICS
   capabilities.add("GPIO_DIAGNOSTICS");
 #endif
-#if IRIS_ENABLE_I2C
-  capabilities.add("I2C");
-#endif
   capabilities.add("EXTERNAL_LEDS");
   capabilities.add("DHT11");
   capabilities.add("ADC");
@@ -16,9 +13,6 @@ void irisRegisterCapabilities(CapabilityRegistry &capabilities) {
 #if IRIS_ENABLE_IR
   capabilities.add("IR_TX");
   capabilities.add("IR_RX");
-#endif
-#if IRIS_ENABLE_OLED
-  capabilities.add("OLED_SH1107_128X128");
 #endif
   capabilities.add("UART");
   capabilities.add("VM");

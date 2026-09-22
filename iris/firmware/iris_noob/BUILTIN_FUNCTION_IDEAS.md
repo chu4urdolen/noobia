@@ -6,15 +6,23 @@ specific work belongs in native services.
 
 ## Already present
 
-- GPIO, ADC, PWM, I2C, camera, SD/storage
+- Common VM/runtime: `TIME_NOW`, load/run/stop/reset, calls, arithmetic, memory,
+  jumps, subroutines, and nonblocking waits
+- Iris hardware: camera, SD/storage, microphone, DHT11, ADC/light sensor,
+  ultrasonic ranging, IR transmit/receive, and board/external LEDs
 - Wi-Fi connect/disconnect/scan/RSSI and RSSI event gathering
 - BLE scan/connect and credential updates
-- microphone level and audio recording
-- VM load/run/stop/reset and persistent program storage
+- audio recording, camera MJPEG recording, and persistent VM storage
+
+Iris currently has **no external I2C or OLED capability**. GPIO17 and GPIO18
+are occupied by the blue LED and IR receiver. The reusable runtime retains an
+I2C implementation for a future Noob or a future Iris wiring profile, but Iris
+does not register it and `CAPS` must not report it. There is also no unrestricted
+VM GPIO/PWM syscall yet; Iris exposes only named, bounded hardware functions.
 
 ## High-value reusable additions
 
-- `TIME_NOW`, `DELAY_UNTIL`, and monotonic timestamp access
+- `DELAY_UNTIL` using the monotonic clock, with wrap-safe deadlines
 - watchdog arm/kick/status and brownout/reset-cause reporting
 - structured event queue with timestamps and source IDs
 - ring-buffer files and atomic append/rename for crash-safe storage
@@ -22,7 +30,7 @@ specific work belongs in native services.
 - configuration namespaces with validation and rollback
 - UART device channels and framed serial bridging
 - SPI transactions with selectable mode, frequency, and chip-select
-- I2C bus recovery/status (without guessing device protocols)
+- I2C bus recovery/status for a Noob that actually registers an I2C bus
 - generic sensor polling scheduler with min/max intervals
 - battery/USB voltage and temperature telemetry where hardware exposes it
 - BLE GATT notifications for logs, status, and event streams

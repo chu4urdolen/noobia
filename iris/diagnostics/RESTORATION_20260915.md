@@ -1,5 +1,9 @@
 # Iris restoration — 2026-09-15
 
+> Historical restoration record. Later sections describe temporary I2C/OLED
+> firmware that is no longer current. As of 2026-09-22 Iris registers no
+> external I2C or OLED capability.
+
 Firmware: `0.2.1-no-external-i2c`, flashed and tested over UART.
 Build: `bash /noobia/iris/tools/build_iris.sh`.
 Artifact: `build/iris-restored-no-external-i2c/iris_noob.ino.bin`.

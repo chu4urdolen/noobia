@@ -6,6 +6,9 @@ and red LED GPIO47. External I2C/OLED is disabled in this profile because its
 former GPIO17/18 pair is occupied. Historical OLED probes remain under
 `diagnostics/` and take their pins from `diagnostic_config.h`.
 
+This is not a dormant I2C profile: Iris does not register I2C/OLED functions or
+capabilities at all. The generic source remains reusable by other Noobs.
+
 Iris is the first physical Noob using the common runtime. Her implementation is
 under `src/noobs/iris` and contains all verified pin assignments, hardware
 initialization, capability registration, and native functions.
@@ -30,6 +33,8 @@ The current profile includes these native services:
 - BLE scanning, peer configuration/status, and onboard LED controls.
 - DHT11, ADC/light, IR carrier/read/loopback, ultrasonic ranging, and external
   digital LEDs. VM bytecode invokes these by native function ID.
+- Common `TIME_NOW` monotonic milliseconds, registered by `NoobRuntime` rather
+  than by Iris.
 
 `CAPS` reports compiled capabilities and registered function names/IDs. Check
 native results for hardware readiness; registration alone does not prove it.
@@ -37,9 +42,9 @@ native results for hardware readiness; registration alone does not prove it.
 ## Restored build
 
 Run `tools/build_iris.sh --build-dir DIR`. It selects 16 MB flash, QSPI PSRAM,
-and a 3 MB application partition. Its symbol checks require hardware I2C and
-reject the SH1107/U8g2 and software-I2C diagnostic code. Camera-internal SCCB
-remains necessary for the camera.
+and a 3 MB application partition. Its symbol checks require `TIME_NOW` and
+reject all external-I2C, SH1107/U8g2, and software-I2C code. Camera-internal
+SCCB remains necessary for the camera.
 
 Hardware selection and tuning stay in `src/noobs/iris/iris_config.h`; reusable
 native implementations stay in `NoobRuntime`. Real provisioning credentials go

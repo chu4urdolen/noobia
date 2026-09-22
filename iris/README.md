@@ -23,7 +23,8 @@ knowledge:
   GPIO16/echo GPIO48, blue LED GPIO17, IR receiver GPIO18/transmitter GPIO40,
   and red LED GPIO47.
 
-The current profile leaves external I2C disabled because GPIO17/18 are in use.
+The current profile has no external I2C bus because GPIO17/18 are in use.
+I2C is not reported by `CAPS` and its native commands are not registered.
 Pins and electrical assignments live only in `iris_config.h`; reusable runtime
 services receive configuration and contain no Iris pin knowledge.
 
@@ -34,6 +35,10 @@ Host defaults live in `tools/iris-tools.conf`; `irisctl --help` lists path and
 device overrides. Firmware build defaults live in `tools/iris-build.conf`.
 Copy `iris_secrets.local.h.example` to `iris_secrets.local.h` for local Wi-Fi
 provisioning. The local file is ignored and must never be committed.
+
+Common syscall ID `1` is `TIME_NOW`, a monotonic 32-bit millisecond counter
+registered by `NoobRuntime` for every Noob. `irisctl time-now` calls it directly;
+`programs/time_now.hex` demonstrates calling it from VM bytecode.
 
 The installed workspace build can be run with:
 

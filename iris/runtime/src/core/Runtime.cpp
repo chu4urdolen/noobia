@@ -1,8 +1,14 @@
 #include "core/Runtime.h"
+#include "core/CommonFunctionIds.h"
+#include "services/MonotonicTimeService.h"
 
 NoobRuntime::NoobRuntime(const char *noobName, const char *firmwareVersion)
     : vm_(natives_),
-      dispatcher_(noobName, firmwareVersion, vm_, natives_, capabilities_) {}
+      dispatcher_(noobName, firmwareVersion, vm_, natives_, capabilities_) {
+  natives_.add(CommonFunctionIds::TIME_NOW, "TIME_NOW",
+               MonotonicTimeService::now);
+  capabilities_.add("TIME_MONOTONIC");
+}
 
 bool NoobRuntime::addTransport(NoobTransport &transport) {
   if (transportCount_ >= MAX_TRANSPORTS) return false;

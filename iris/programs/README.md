@@ -23,6 +23,8 @@ observing the installed enclosure noise floor.
 ## Included programs
 
 - `arithmetic`: computes 7 + 5 into register 2 and halts.
+- `time_now`: calls common native `TIME_NOW` (ID 1), stores monotonic
+  milliseconds in register 0, and halts.
 - `camera_once`: captures one photograph and halts; register 0 receives its
   sequence number.
 - `rssi_ten_seconds`: starts the native RSSI event service for ten seconds,

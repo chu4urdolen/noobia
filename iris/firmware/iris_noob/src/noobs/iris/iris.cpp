@@ -13,14 +13,8 @@
 #include <services/Esp32AdcService.h>
 #include <services/Esp32IrService.h>
 #include <services/Esp32UltrasonicService.h>
-#if IRIS_ENABLE_I2C
-#include <services/Esp32I2cService.h>
-#endif
 #include <services/Esp32VmProgramStore.h>
 #include <Esp32GpioInspector.h>
-#if IRIS_ENABLE_OLED
-#include <services/Esp32Sh1107Service.h>
-#endif
 
 void irisRegisterCapabilities(CapabilityRegistry &capabilities);
 
@@ -36,25 +30,6 @@ bool initService(const char *name, bool (*begin)()) {
   Serial.printf("NRP/1 0 EVENT INIT_DONE service=%s ok=%d\n", name, ready);
   return ready;
 }
-#if IRIS_ENABLE_I2C
-NativeResult irisI2cConfigure(const int32_t *arguments, uint8_t count) {
-  if (count > 1) return {false, 0, "usage: [frequency]"};
-  const uint32_t frequency = count ? uint32_t(arguments[0]) : IrisHardware::I2C_DEFAULT_HZ;
-  if (frequency < 10000 || frequency > 400000)
-    return {false, 0, "frequency must be 10000..400000"};
-  return Esp32I2cService::begin(IrisPins::I2C_SDA, IrisPins::I2C_SCL,
-                                frequency)
-      ? NativeResult{true, int32_t(frequency),
-                     "sda=" + String(IrisPins::I2C_SDA) +
-                     " scl=" + String(IrisPins::I2C_SCL) +
-                     " frequency=" + String(frequency)}
-      : NativeResult{false, 0, "I2C begin failed"};
-}
-NativeResult irisI2cLines(const int32_t *, uint8_t count) {
-  if (count) return {false, 0, "usage: no arguments"};
-  return Esp32I2cService::lines(IrisPins::I2C_SDA, IrisPins::I2C_SCL);
-}
-#endif
 NativeResult irisExternalLed(const int32_t *arguments, uint8_t count) {
   if (count != 2 || (arguments[0] != 0 && arguments[0] != 2) ||
       arguments[1] < 0 || arguments[1] > 1)
@@ -104,12 +79,6 @@ bool irisRegister(NoobRuntime &runtime) {
 #endif
   ok &= Esp32RgbLedService::begin(IrisPins::RGB_LED);
   ok &= Esp32SignalLedService::begin(IrisPins::SIGNAL_LED);
-#if IRIS_ENABLE_I2C
-  // Deliberately no begin call: a remote command starts the external bus.
-#endif
-#if IRIS_ENABLE_OLED
-  Esp32Sh1107Service::begin(IrisPins::I2C_SDA, IrisPins::I2C_SCL, 0x3c);
-#endif
 #if IRIS_ENABLE_WIFI
   Serial.println("NRP/1 0 EVENT INIT service=WIFI");
   ok &= Esp32WifiService::begin(IrisSecrets::WIFI_SSID, IrisSecrets::WIFI_PASSWORD);
@@ -126,8 +95,6 @@ bool irisRegister(NoobRuntime &runtime) {
   for (uint8_t pin : sdPins) ok &= Esp32GpioInspector::reserve(pin, "sd");
   const uint8_t micPins[] = {35, 36, 37};
   for (uint8_t pin : micPins) ok &= Esp32GpioInspector::reserve(pin, "mic");
-  ok &= Esp32GpioInspector::reserve(IrisPins::I2C_SDA, "i2c-sda");
-  ok &= Esp32GpioInspector::reserve(IrisPins::I2C_SCL, "i2c-scl");
   ok &= Esp32GpioInspector::reserve(19, "usb-dminus");
   ok &= Esp32GpioInspector::reserve(20, "usb-dplus");
   ok &= Esp32GpioInspector::reserve(33, "rgb-led");
@@ -184,15 +151,6 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().addText(IrisFunctions::VM_LIST_SAVED, "VM_LIST_SAVED", Esp32VmProgramStore::list);
   ok &= runtime.natives().addText(IrisFunctions::VM_DELETE_SAVED, "VM_DELETE_SAVED", Esp32VmProgramStore::remove);
 #endif
-#if IRIS_ENABLE_I2C
-  ok &= runtime.natives().add(IrisFunctions::I2C_SCAN, "I2C_SCAN", Esp32I2cService::scan);
-  ok &= runtime.natives().add(IrisFunctions::I2C_CONFIG, "I2C_CONFIG", irisI2cConfigure);
-  ok &= runtime.natives().add(IrisFunctions::I2C_WRITE, "I2C_WRITE", Esp32I2cService::write);
-  ok &= runtime.natives().add(IrisFunctions::I2C_READ, "I2C_READ", Esp32I2cService::read);
-  ok &= runtime.natives().add(IrisFunctions::I2C_WRITE_READ, "I2C_WRITE_READ", Esp32I2cService::writeRead);
-  ok &= runtime.natives().add(IrisFunctions::I2C_CLOSE, "I2C_CLOSE", Esp32I2cService::close);
-  ok &= runtime.natives().add(IrisFunctions::I2C_LINES, "I2C_LINES", irisI2cLines);
-#endif
 #if IRIS_ENABLE_BLE
   ok &= runtime.natives().add(IrisFunctions::BLE_SCAN, "BLE_SCAN", BleClientTransport::scan);
   ok &= runtime.natives().addText(IrisFunctions::BLE_PEER_SET, "BLE_PEER_SET", BleClientTransport::setPeer);
@@ -202,9 +160,6 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().add(IrisFunctions::GPIO_AUDIT, "GPIO_AUDIT", Esp32GpioInspector::audit);
   ok &= runtime.natives().add(IrisFunctions::GPIO_INSPECT, "GPIO_INSPECT", Esp32GpioInspector::inspect);
   ok &= runtime.natives().add(IrisFunctions::GPIO_PULL_TEST, "GPIO_PULL_TEST", Esp32GpioInspector::pullTest);
-#endif
-#if IRIS_ENABLE_OLED
-  ok &= runtime.natives().add(IrisFunctions::OLED_TEST, "OLED_TEST", Esp32Sh1107Service::testPattern);
 #endif
 #if IRIS_ENABLE_WIFI
   ok &= runtime.addService(Esp32WifiService::rssiService());

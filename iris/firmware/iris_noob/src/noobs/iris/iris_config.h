@@ -10,30 +10,17 @@
 #ifndef IRIS_ENABLE_MIC
 #define IRIS_ENABLE_MIC 1
 #endif
-#ifndef IRIS_ENABLE_I2C
-#define IRIS_ENABLE_I2C 0
-#endif
 #ifndef IRIS_ENABLE_WIFI
 #define IRIS_ENABLE_WIFI 1
 #endif
 #ifndef IRIS_ENABLE_BLE
 #define IRIS_ENABLE_BLE 1
 #endif
-#ifndef IRIS_ENABLE_OLED
-#define IRIS_ENABLE_OLED 0
-#endif
 #ifndef IRIS_ENABLE_GPIO_DIAGNOSTICS
 #define IRIS_ENABLE_GPIO_DIAGNOSTICS 0
 #endif
 #ifndef IRIS_ENABLE_IR
 #define IRIS_ENABLE_IR 1
-#endif
-
-#if IRIS_ENABLE_OLED && !IRIS_ENABLE_I2C
-#error "OLED requires external I2C"
-#endif
-#if defined(NOOB_ENABLE_EXTERNAL_I2C) && !NOOB_ENABLE_EXTERNAL_I2C && IRIS_ENABLE_I2C
-#error "External I2C excluded by build profile"
 #endif
 
 namespace IrisPins {
@@ -54,8 +41,6 @@ constexpr int CAMERA_XCLK = 10;
 constexpr int SD_CLK = 42;
 constexpr int SD_CMD = 39;
 constexpr int SD_D0 = 41;
-constexpr int I2C_SDA = 17;
-constexpr int I2C_SCL = 18;
 constexpr int IR_TX = 40;
 constexpr int IR_RX = 18;
 constexpr int DHT11_DATA = 15;
@@ -64,11 +49,6 @@ constexpr int ULTRASONIC_TRIG = 16;
 constexpr int ULTRASONIC_ECHO = 48;
 constexpr int EXTERNAL_LED_0 = 47;
 constexpr int EXTERNAL_LED_2 = 17;
-#if IRIS_ENABLE_I2C
-static_assert(I2C_SDA != EXTERNAL_LED_0 && I2C_SCL != EXTERNAL_LED_0 &&
-              I2C_SDA != EXTERNAL_LED_2 && I2C_SCL != EXTERNAL_LED_2,
-              "LED and I2C pins must be distinct");
-#endif
 
 // MSM261D3526H1CPM digital microphone. Although the part is marketed as a
 // PDM microphone, this board wires it to the ESP32-S3 as standard I2S: the
@@ -81,7 +61,6 @@ constexpr int SIGNAL_LED = 34;
 }
 
 namespace IrisHardware {
-constexpr uint32_t I2C_DEFAULT_HZ = 100000;
 constexpr uint32_t CAMERA_XCLK_HZ = 10000000;
 constexpr int CAMERA_JPEG_QUALITY = 12;
 constexpr int CAMERA_FRAME_BUFFERS = 2;
@@ -129,21 +108,12 @@ constexpr unsigned VM_SAVE = 140;
 constexpr unsigned VM_LOAD_SAVED = 141;
 constexpr unsigned VM_LIST_SAVED = 142;
 constexpr unsigned VM_DELETE_SAVED = 143;
-constexpr unsigned I2C_SCAN = 150;
-constexpr unsigned I2C_CONFIG = 155;
-constexpr unsigned I2C_WRITE = 151;
-constexpr unsigned I2C_READ = 152;
-constexpr unsigned I2C_WRITE_READ = 153;
-constexpr unsigned I2C_SOFT_SCAN = 154;
-constexpr unsigned I2C_CLOSE = 156;
-constexpr unsigned I2C_LINES = 157;
 constexpr unsigned BLE_SCAN = 160;
 constexpr unsigned BLE_PEER_SET = 161;
 constexpr unsigned BLE_STATUS = 162;
 constexpr unsigned GPIO_AUDIT = 170;
 constexpr unsigned GPIO_INSPECT = 171;
 constexpr unsigned GPIO_PULL_TEST = 172;
-constexpr unsigned OLED_TEST = 180;
 constexpr unsigned TEMP_HUMIDITY_READ = 190;
 constexpr unsigned ADC_READ = 191;
 constexpr unsigned LIGHT_READ = 192;

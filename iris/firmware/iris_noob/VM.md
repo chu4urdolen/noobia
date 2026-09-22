@@ -28,10 +28,16 @@ Verified programs:
 - Waiting loop with `r0=42`: `01002a00000021e803100600`
 - Compute `7+5` into `r2`: `0100070000000101050000000302000100`
 - Iris camera syscall 100: `200064000000`
+- Common `TIME_NOW` syscall 1 into r0: `200001000000`
+
+Common native IDs occupy 1–99 and are registered by `NoobRuntime`. Physical
+Noob functions begin at 100. `TIME_NOW` returns monotonic milliseconds as the
+raw 32-bit value in the signed VM register; arithmetic should treat wraparound
+normally rather than interpreting the sign as wall-clock time.
 
 The Nexus-side named program store lives in `/noobia/iris/programs`. It
-contains wire-ready examples for arithmetic, one-shot capture, timed RSSI
-gathering, and sound-triggered capture.
+contains wire-ready examples for time, arithmetic, one-shot capture, timed
+RSSI gathering, and sound-triggered capture.
 
 Native failures and invalid bytecode place the VM in `FAULT`. `RESET_VM` clears
 program memory, data memory, registers, call stack, and fault state.

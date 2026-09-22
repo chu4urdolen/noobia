@@ -22,6 +22,11 @@
 /iris/backups/
 /iris/captured/
 /iris/*.jpg
+/iris/firmware/iris_noob/src/noobs/iris/iris_secrets.local.h
+/iris/diagnostics/results/
+/iris/diagnostics/backups/
+/iris/diagnostics/serial_console
+/iris/tools/iris-build.local.conf
 /iris/tools/noobctl
 /iris/tools/noob_ble_fd
 /iris/tools/noobctl_batch

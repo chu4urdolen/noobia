@@ -10,6 +10,7 @@ knowledge:
   and all verified Iris pin assignments.
 - `programs/` — named, wire-ready Noob VM bytecode programs.
 - `tools/` — native C and shell tools used by Nexus over UART and BLE.
+- `diagnostics/` — configurable source tests and historical hardware probes.
 
 ## Verified Iris hardware
 
@@ -18,16 +19,26 @@ knowledge:
 - SK6812 RGB LED on GPIO33.
 - Green signal LED on GPIO34.
 - Native USB GPIO19/20 and USB-UART GPIO43/44.
+- Current attachments: photoresistor GPIO1, DHT11 GPIO15, ultrasonic trigger
+  GPIO16/echo GPIO48, blue LED GPIO17, IR receiver GPIO18/transmitter GPIO40,
+  and red LED GPIO47.
+
+The current profile leaves external I2C disabled because GPIO17/18 are in use.
+Pins and electrical assignments live only in `iris_config.h`; reusable runtime
+services receive configuration and contain no Iris pin knowledge.
 
 See [`firmware/iris_noob/README.md`](firmware/iris_noob/README.md) for firmware operation and
 [`programs/README.md`](programs/README.md) for VM program controls.
 
-From the repository root, compile with Arduino CLI using `iris/` as an
-additional library search directory:
+Host defaults live in `tools/iris-tools.conf`; `irisctl --help` lists path and
+device overrides. Firmware build defaults live in `tools/iris-build.conf`.
+Copy `iris_secrets.local.h.example` to `iris_secrets.local.h` for local Wi-Fi
+provisioning. The local file is ignored and must never be committed.
+
+The installed workspace build can be run with:
 
 ```sh
-arduino-cli compile --fqbn esp32:esp32:esp32s3 \
-  --libraries iris iris/firmware/iris_noob
+./iris/tools/build_iris.sh --build-dir ./build/iris
 ```
 
 Production builds should also select 16 MB flash, the huge-app partition,

@@ -31,3 +31,10 @@ observing the installed enclosure noise floor.
 - `sound_capture_test`: same control flow with threshold 1, intended only for
   deterministic integration testing.
 - `led_blink`: softly blinks the onboard addressable status LED.
+- `storage_mic`: SD capacity in r0, microphone RMS in r1, then halt.
+- `audio_one_second`: record a one-second WAV to SD; sample count in r1.
+- `video_one_second`: save two JPEG frames as a one-second MJPEG; count in r2.
+- `radio_status`: Wi-Fi status in r0 and BLE connection state in r1.
+
+Run `diagnostics/restore_smoke.nrp` with `tools/noobctl_batch` to test native
+calls and following PINGs over the same UART connection.

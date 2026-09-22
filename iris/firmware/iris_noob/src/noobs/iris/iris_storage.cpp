@@ -6,6 +6,7 @@
 bool irisStorageBegin() {
   const Esp32SdMmcService::Config config = {
       IrisPins::SD_CLK, IrisPins::SD_CMD, IrisPins::SD_D0,
-      "/sdcard", "/captured", "capture_"};
+      IrisHardware::SD_MOUNT, IrisHardware::CAPTURE_DIRECTORY,
+      IrisHardware::CAPTURE_PREFIX};
   return Esp32SdMmcService::begin(config);
 }

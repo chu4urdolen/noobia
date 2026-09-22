@@ -11,6 +11,8 @@
 #include <services/Esp32DigitalOutputService.h>
 #include <services/Esp32Dht11Service.h>
 #include <services/Esp32AdcService.h>
+#include <services/Esp32IrService.h>
+#include <services/Esp32UltrasonicService.h>
 #if IRIS_ENABLE_I2C
 #include <services/Esp32I2cService.h>
 #endif
@@ -37,7 +39,7 @@ bool initService(const char *name, bool (*begin)()) {
 #if IRIS_ENABLE_I2C
 NativeResult irisI2cConfigure(const int32_t *arguments, uint8_t count) {
   if (count > 1) return {false, 0, "usage: [frequency]"};
-  const uint32_t frequency = count ? uint32_t(arguments[0]) : 100000;
+  const uint32_t frequency = count ? uint32_t(arguments[0]) : IrisHardware::I2C_DEFAULT_HZ;
   if (frequency < 10000 || frequency > 400000)
     return {false, 0, "frequency must be 10000..400000"};
   return Esp32I2cService::begin(IrisPins::I2C_SDA, IrisPins::I2C_SCL,
@@ -56,7 +58,7 @@ NativeResult irisI2cLines(const int32_t *, uint8_t count) {
 NativeResult irisExternalLed(const int32_t *arguments, uint8_t count) {
   if (count != 2 || (arguments[0] != 0 && arguments[0] != 2) ||
       arguments[1] < 0 || arguments[1] > 1)
-    return {false, 0, "usage: led(0=GPIO16|2=GPIO40) state(0|1)"};
+    return {false, 0, "usage: led(0=GPIO47|2=GPIO17) state(0|1)"};
   // Preserve channel IDs for the two LEDs still attached.
   const int pin = arguments[0] == 0 ? IrisPins::EXTERNAL_LED_0
                                   : IrisPins::EXTERNAL_LED_2;
@@ -72,8 +74,25 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= Esp32AdcService::configure(0, IrisPins::PHOTORESISTOR);
   ok &= runtime.natives().add(IrisFunctions::ADC_READ, "ADC_READ", Esp32AdcService::read);
   ok &= runtime.natives().add(IrisFunctions::LIGHT_READ, "LIGHT_READ", irisLightRead);
+  ok &= Esp32UltrasonicService::begin({
+      IrisPins::ULTRASONIC_TRIG, IrisPins::ULTRASONIC_ECHO,
+      IrisHardware::ULTRASONIC_SETTLE_US, IrisHardware::ULTRASONIC_PULSE_US,
+      IrisHardware::ULTRASONIC_INTER_SAMPLE_MS,
+      IrisHardware::ULTRASONIC_SOUND_SPEED_MM_S,
+      IrisHardware::ULTRASONIC_DEFAULT_SAMPLES,
+      IrisHardware::ULTRASONIC_DEFAULT_TIMEOUT_US});
+  ok &= runtime.natives().add(IrisFunctions::ULTRASONIC_READ,
+                              "ULTRASONIC_READ",
+                              Esp32UltrasonicService::measure);
   ok &= Esp32Dht11Service::begin(IrisPins::DHT11_DATA);
   ok &= runtime.natives().add(IrisFunctions::TEMP_HUMIDITY_READ, "TEMP_HUMIDITY_READ", Esp32Dht11Service::read);
+#if IRIS_ENABLE_IR
+  ok &= Esp32IrService::begin({
+      IrisPins::IR_TX, IrisPins::IR_RX, IrisHardware::IR_CARRIER_HZ,
+      IrisHardware::IR_SAMPLE_INTERVAL_US, IrisHardware::IR_LOOPBACK_BURST_US,
+      IrisHardware::IR_LOOPBACK_PAUSE_MS, IrisHardware::IR_PWM_RESOLUTION_BITS,
+      IrisHardware::IR_PWM_DUTY});
+#endif
 #if IRIS_ENABLE_CAMERA
   ok &= initService("CAMERA", irisCameraBegin);
 #endif
@@ -154,6 +173,11 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().add(IrisFunctions::LED_RGB, "LED_RGB", Esp32RgbLedService::set);
   ok &= runtime.natives().add(IrisFunctions::LED_SIGNAL, "LED_SIGNAL", Esp32SignalLedService::set);
   ok &= runtime.natives().add(IrisFunctions::LED_EXTERNAL, "LED_EXTERNAL", irisExternalLed);
+#if IRIS_ENABLE_IR
+  ok &= runtime.natives().add(IrisFunctions::IR_SEND, "IR_SEND", Esp32IrService::send);
+  ok &= runtime.natives().add(IrisFunctions::IR_READ, "IR_READ", Esp32IrService::read);
+  ok &= runtime.natives().add(IrisFunctions::IR_LOOPBACK, "IR_LOOPBACK", Esp32IrService::loopback);
+#endif
 #if IRIS_ENABLE_SD
   ok &= runtime.natives().addText(IrisFunctions::VM_SAVE, "VM_SAVE", Esp32VmProgramStore::save);
   ok &= runtime.natives().addText(IrisFunctions::VM_LOAD_SAVED, "VM_LOAD_SAVED", Esp32VmProgramStore::load);

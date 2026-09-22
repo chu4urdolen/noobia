@@ -1,0 +1,4 @@
+# Copy to iris-build.local.conf for machine-specific paths.
+IRIS_ARDUINO_CLI=/path/to/arduino-cli
+IRIS_ARDUINO_CONFIG=/path/to/arduino-cli.yaml
+IRIS_NM=/path/to/xtensa-esp-elf-nm

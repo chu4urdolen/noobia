@@ -5,6 +5,7 @@ if (( $# < 4 )); then
   exit 2
 fi
 bridge_pid=$1; notify_fd=$2; sequence=$3; output=$4
+TOOLS=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 offset=0; part="${output}.part"; scratch=$(mktemp)
 trap "rm -f \"$scratch\"" EXIT
 [[ $sequence =~ ^[0-9]+$ ]] || { echo "invalid sequence" >&2; exit 2; }
@@ -18,7 +19,7 @@ request=0
 while :; do
   request=$((request + 1)); request_id="fetch${request}"
   before=$(stat -c %s "$NOOB_BLE_LOG")
-  /noobia/iris/tools/noob_ble_fd "$bridge_pid" "$notify_fd" \
+  "$TOOLS/noob_ble_fd" "$bridge_pid" "$notify_fd" \
     "NRP/1 $request_id CALL SD_READ_CHUNK $sequence $offset 32" >/dev/null
   found=
   for _ in $(seq 1 100); do

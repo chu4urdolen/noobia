@@ -1,8 +1,12 @@
 #pragma once
 
-// Provision locally before compiling. Runtime updates are stored in ESP32 NVS.
-// Never commit a real network password here.
+// Safe provisioning defaults. Put real values in iris_secrets.local.h; runtime
+// updates are stored in ESP32 NVS.
 namespace IrisSecrets {
-constexpr char WIFI_SSID[] = "Noobia";
+#if __has_include("iris_secrets.local.h")
+#include "iris_secrets.local.h"
+#else
+constexpr char WIFI_SSID[] = "";
 constexpr char WIFI_PASSWORD[] = "";
+#endif
 }

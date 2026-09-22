@@ -23,11 +23,11 @@ bool irisCameraBegin() {
   config.pin_sccb_scl = IrisPins::CAMERA_SCL;
   config.pin_pwdn = -1;
   config.pin_reset = -1;
-  config.xclk_freq_hz = 10000000;
+  config.xclk_freq_hz = IrisHardware::CAMERA_XCLK_HZ;
   config.pixel_format = PIXFORMAT_JPEG;
   config.frame_size = FRAMESIZE_SVGA;
-  config.jpeg_quality = 12;
-  config.fb_count = 2;
+  config.jpeg_quality = IrisHardware::CAMERA_JPEG_QUALITY;
+  config.fb_count = IrisHardware::CAMERA_FRAME_BUFFERS;
   config.fb_location = CAMERA_FB_IN_PSRAM;
   config.grab_mode = CAMERA_GRAB_LATEST;
   return Esp32CameraService::begin(config, "iris-capture");

@@ -11,7 +11,7 @@
 #define IRIS_ENABLE_MIC 1
 #endif
 #ifndef IRIS_ENABLE_I2C
-#define IRIS_ENABLE_I2C 1
+#define IRIS_ENABLE_I2C 0
 #endif
 #ifndef IRIS_ENABLE_WIFI
 #define IRIS_ENABLE_WIFI 1
@@ -24,6 +24,9 @@
 #endif
 #ifndef IRIS_ENABLE_GPIO_DIAGNOSTICS
 #define IRIS_ENABLE_GPIO_DIAGNOSTICS 0
+#endif
+#ifndef IRIS_ENABLE_IR
+#define IRIS_ENABLE_IR 1
 #endif
 
 #if IRIS_ENABLE_OLED && !IRIS_ENABLE_I2C
@@ -53,13 +56,19 @@ constexpr int SD_CMD = 39;
 constexpr int SD_D0 = 41;
 constexpr int I2C_SDA = 17;
 constexpr int I2C_SCL = 18;
+constexpr int IR_TX = 40;
+constexpr int IR_RX = 18;
 constexpr int DHT11_DATA = 15;
 constexpr int PHOTORESISTOR = 1;
-constexpr int EXTERNAL_LED_0 = 16;
-constexpr int EXTERNAL_LED_2 = 40;
+constexpr int ULTRASONIC_TRIG = 16;
+constexpr int ULTRASONIC_ECHO = 48;
+constexpr int EXTERNAL_LED_0 = 47;
+constexpr int EXTERNAL_LED_2 = 17;
+#if IRIS_ENABLE_I2C
 static_assert(I2C_SDA != EXTERNAL_LED_0 && I2C_SCL != EXTERNAL_LED_0 &&
               I2C_SDA != EXTERNAL_LED_2 && I2C_SCL != EXTERNAL_LED_2,
               "LED and I2C pins must be distinct");
+#endif
 
 // MSM261D3526H1CPM digital microphone. Although the part is marketed as a
 // PDM microphone, this board wires it to the ESP32-S3 as standard I2S: the
@@ -69,6 +78,28 @@ constexpr int MIC_BCLK = 36;
 constexpr int MIC_WS = 37;
 constexpr int RGB_LED = 33;
 constexpr int SIGNAL_LED = 34;
+}
+
+namespace IrisHardware {
+constexpr uint32_t I2C_DEFAULT_HZ = 100000;
+constexpr uint32_t CAMERA_XCLK_HZ = 10000000;
+constexpr int CAMERA_JPEG_QUALITY = 12;
+constexpr int CAMERA_FRAME_BUFFERS = 2;
+constexpr char SD_MOUNT[] = "/sdcard";
+constexpr char CAPTURE_DIRECTORY[] = "/captured";
+constexpr char CAPTURE_PREFIX[] = "capture_";
+constexpr uint32_t IR_CARRIER_HZ = 38000;
+constexpr uint32_t IR_SAMPLE_INTERVAL_US = 25;
+constexpr uint32_t IR_LOOPBACK_BURST_US = 1000;
+constexpr uint32_t IR_LOOPBACK_PAUSE_MS = 2;
+constexpr uint8_t IR_PWM_RESOLUTION_BITS = 8;
+constexpr uint32_t IR_PWM_DUTY = 128;
+constexpr uint32_t ULTRASONIC_SETTLE_US = 2;
+constexpr uint32_t ULTRASONIC_PULSE_US = 10;
+constexpr uint32_t ULTRASONIC_INTER_SAMPLE_MS = 60;
+constexpr uint32_t ULTRASONIC_SOUND_SPEED_MM_S = 343000;
+constexpr uint8_t ULTRASONIC_DEFAULT_SAMPLES = 3;
+constexpr uint32_t ULTRASONIC_DEFAULT_TIMEOUT_US = 30000;
 }
 
 namespace IrisFunctions {
@@ -116,4 +147,8 @@ constexpr unsigned OLED_TEST = 180;
 constexpr unsigned TEMP_HUMIDITY_READ = 190;
 constexpr unsigned ADC_READ = 191;
 constexpr unsigned LIGHT_READ = 192;
+constexpr unsigned IR_SEND = 193;
+constexpr unsigned IR_READ = 194;
+constexpr unsigned IR_LOOPBACK = 195;
+constexpr unsigned ULTRASONIC_READ = 196;
 }

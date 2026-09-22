@@ -1,12 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TOOLS=/noobia/iris/tools
-STATE=/noobia/iris/run/ble-bridge.state
-PROGRAMS=/noobia/iris/programs
+TOOLS=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+IRIS_ROOT=$(cd -- "$TOOLS/.." && pwd)
+CONFIG=${IRIS_CONFIG_FILE:-"$TOOLS/iris-tools.conf"}
+OPT_STATE=
+OPT_PROGRAMS=
+OPT_UART=
+
+while (( $# )); do
+  case $1 in
+    --config) CONFIG=$2; shift 2 ;;
+    --state) OPT_STATE=$2; shift 2 ;;
+    --programs) OPT_PROGRAMS=$2; shift 2 ;;
+    --uart-device) OPT_UART=$2; shift 2 ;;
+    --help|-h) set -- help; break ;;
+    --) shift; break ;;
+    -*) echo "unknown option: $1" >&2; exit 2 ;;
+    *) break ;;
+  esac
+done
+[[ ! -r $CONFIG ]] || source "$CONFIG"
+export IRIS_CONFIG_FILE=$CONFIG
+STATE=${OPT_STATE:-${IRIS_STATE_FILE:-"$IRIS_ROOT/run/ble-bridge.state"}}
+PROGRAMS=${OPT_PROGRAMS:-${IRIS_PROGRAMS_DIR:-"$IRIS_ROOT/programs"}}
+UART_DEVICE=${OPT_UART:-${IRIS_UART_DEVICE:-/dev/ttyUSB0}}
 
 usage() {
   echo "usage:"
+  echo "  irisctl [--config FILE] [--state FILE] [--programs DIR] [--uart-device DEVICE] COMMAND"
   echo "  irisctl bridge"
   echo "  irisctl status"
   echo "  irisctl ping | info | caps | capture | scan"
@@ -18,6 +40,8 @@ usage() {
   echo "  irisctl oled-test"
   echo "  irisctl dht-read [0=temperature|1=humidity]"
   echo "  irisctl light-read [SAMPLES]"
+  echo "  irisctl ultrasonic-read [SAMPLES] [TIMEOUT_US]"
+  echo "  irisctl ir-send [MILLISECONDS] [HZ] | ir-read [MILLISECONDS] | ir-test [BURSTS]"
   echo "  irisctl gpio-audit [PAGE] | gpio-inspect PIN | gpio-pull-test PIN"
   echo "  irisctl mic-level | led RED GREEN BLUE | led-off | signal-led 0|1 | external-led 0|2 0|1"
   echo "  irisctl programs | vm-load NAME | vm-run | vm-stop | vm-status"
@@ -26,7 +50,7 @@ usage() {
   echo "  irisctl ble REQUEST_ID COMMAND [ARGS...]"
   echo "  irisctl fetch SEQUENCE OUTPUT.jpg"
   echo "  irisctl uart REQUEST_ID COMMAND [ARGS...]"
-  echo "  Commands can also be piped to: noobctl_batch /dev/ttyUSB0"
+  echo "  Commands can also be piped to: noobctl_batch DEVICE"
 }
 
 hex_text() {
@@ -43,7 +67,7 @@ load_bridge() {
 
 case ${1:-} in
   bridge)
-    exec "$TOOLS/nexus_ble_bridge.sh"
+    exec "$TOOLS/nexus_ble_bridge.sh" --config "$CONFIG"
     ;;
   status)
     if [[ -r $STATE ]]; then
@@ -105,6 +129,22 @@ case ${1:-} in
   light-read)
     (( $# <= 2 )) || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL LIGHT_READ "${2:-16}"
+    ;;
+  ultrasonic-read)
+    (( $# <= 3 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL ULTRASONIC_READ "${2:-3}" "${3:-30000}"
+    ;;
+  ir-send)
+    (( $# <= 3 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_SEND "${2:-10}" "${3:-38000}"
+    ;;
+  ir-read)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_READ "${2:-100}"
+    ;;
+  ir-test)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_LOOPBACK "${2:-20}"
     ;;
   i2c-scan)
     exec "$0" ble "ctl$$" CALL I2C_SCAN
@@ -277,8 +317,11 @@ case ${1:-} in
   uart)
     (( $# >= 3 )) || { usage >&2; exit 2; }
     shift
-    printf -v uart_command '%q ' "$TOOLS/noobctl" /dev/ttyUSB0 "$@"
+    printf -v uart_command '%q ' "$TOOLS/noobctl" "$UART_DEVICE" "$@"
     exec sg dialout -c "$uart_command"
+    ;;
+  help)
+    usage
     ;;
   *)
     usage >&2

@@ -12,6 +12,11 @@ void irisRegisterCapabilities(CapabilityRegistry &capabilities) {
   capabilities.add("DHT11");
   capabilities.add("ADC");
   capabilities.add("LIGHT_SENSOR");
+  capabilities.add("ULTRASONIC");
+#if IRIS_ENABLE_IR
+  capabilities.add("IR_TX");
+  capabilities.add("IR_RX");
+#endif
 #if IRIS_ENABLE_OLED
   capabilities.add("OLED_SH1107_128X128");
 #endif

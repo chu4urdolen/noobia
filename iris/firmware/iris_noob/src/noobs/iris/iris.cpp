@@ -169,6 +169,9 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().add(IrisFunctions::ULTRASONIC_CHANGE_POP,
                               "ULTRASONIC_CHANGE_POP",
                               irisUltrasonicChangePop());
+  ok &= runtime.natives().add(IrisFunctions::ULTRASONIC_CHANGE_POLL,
+                              "ULTRASONIC_CHANGE_POLL",
+                              irisUltrasonicChangePoll());
 #if IRIS_ENABLE_IR
   ok &= runtime.natives().add(IrisFunctions::IR_SEND, "IR_SEND", Esp32IrService::send);
   ok &= runtime.natives().add(IrisFunctions::IR_READ, "IR_READ", Esp32IrService::read);

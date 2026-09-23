@@ -15,6 +15,7 @@ Program controls include:
     irisctl thread-stop
     irisctl blue-blink 0
     irisctl police-sequence 0
+    irisctl motion-police
     irisctl sequence-status
     irisctl sequence-pop 0
     irisctl sequence-busy 0
@@ -25,6 +26,10 @@ Program controls include:
 
 The final argument to the LED sequence commands is `0` for one pass or `1`
 for repetition.
+
+`motion-police` loads and runs the VM that starts the 250 ms ultrasonic
+change thread and triggers one two-second police-light sequence for each new
+motion episode.
 
 `noobctl` is a native C utility for serial NRP/1 commands. It deasserts DTR
 and RTS, disables hangup-on-close and hardware flow control, and waits through

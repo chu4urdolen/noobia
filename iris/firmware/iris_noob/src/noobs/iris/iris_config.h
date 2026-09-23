@@ -79,6 +79,10 @@ constexpr uint32_t ULTRASONIC_INTER_SAMPLE_MS = 60;
 constexpr uint32_t ULTRASONIC_SOUND_SPEED_MM_S = 343000;
 constexpr uint8_t ULTRASONIC_DEFAULT_SAMPLES = 3;
 constexpr uint32_t ULTRASONIC_DEFAULT_TIMEOUT_US = 30000;
+constexpr uint32_t ULTRASONIC_CHANGE_INTERVAL_MS = 250;
+constexpr int32_t ULTRASONIC_CHANGE_THRESHOLD_MM = 100;
+constexpr uint8_t ULTRASONIC_CHANGE_REARM_SAMPLES = 4;
+constexpr uint32_t POLICE_STEP_MS = 200;
 }
 
 namespace IrisFunctions {
@@ -130,4 +134,5 @@ constexpr unsigned ULTRASONIC_CHANGE_START = 202;
 constexpr unsigned ULTRASONIC_CHANGE_STOP = 203;
 constexpr unsigned ULTRASONIC_CHANGE_STATUS = 204;
 constexpr unsigned ULTRASONIC_CHANGE_POP = 205;
+constexpr unsigned ULTRASONIC_CHANGE_POLL = 206;
 }

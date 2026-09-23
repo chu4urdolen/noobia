@@ -53,7 +53,8 @@ usage() {
   echo "  irisctl sequence-busy SLOT"
   echo "  irisctl blue-blink [0|1] | police-sequence [0|1] | police-lights | police-stop"
   echo "  irisctl ultrasonic-change-start [MM] [INTERVAL_MS]"
-  echo "  irisctl ultrasonic-change-stop | ultrasonic-change-status | ultrasonic-change-pop"
+  echo "  irisctl ultrasonic-change-stop | ultrasonic-change-status"
+  echo "  irisctl ultrasonic-change-pop | ultrasonic-change-poll | motion-police"
   echo "  irisctl vm-save NAME | vm-load-saved NAME | vm-list-saved | vm-delete-saved NAME"
   echo "  irisctl sd-list [PATH] | sd-delete PATH | capture-delete SEQUENCE"
   echo "  irisctl ble REQUEST_ID COMMAND [ARGS...]"
@@ -305,6 +306,12 @@ case ${1:-} in
     ;;
   ultrasonic-change-pop)
     exec "$0" ble "ctl$$" CALL ULTRASONIC_CHANGE_POP
+    ;;
+  ultrasonic-change-poll)
+    exec "$0" ble "ctl$$" CALL ULTRASONIC_CHANGE_POLL
+    ;;
+  motion-police)
+    exec "$0" thread-start police_on_ultrasonic_change
     ;;
   vm-save)
     (( $# == 2 )) || { usage >&2; exit 2; }

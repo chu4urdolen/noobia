@@ -7,3 +7,4 @@ NoobThreadProgram &irisUltrasonicChangeThread();
 NoobFunction &irisUltrasonicChangeStop();
 NoobFunction &irisUltrasonicChangeStatus();
 NoobFunction &irisUltrasonicChangePop();
+NoobFunction &irisUltrasonicChangePoll();

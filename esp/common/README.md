@@ -28,6 +28,9 @@ Current modules:
 
 ## Functions and programs
 
+The complete execution and data-flow guide is in
+[`PROGRAM_MODEL.md`](PROGRAM_MODEL.md).
+
 `NoobFunction` is the single callable interface. BLE `CALL`, VM `SYS`,
 threads, and sequences all resolve an ID through `NativeRegistry` and invoke
 the same object. Existing callback-based services are wrapped by adapters, so
@@ -36,7 +39,8 @@ services can migrate to classes independently.
 `NoobProgram` adds a program type:
 
 - `NoobThreadProgram` runs a cooperative step continuously until its stopper
-  function is called.
+  function is called. Strict `POP` and nonblocking VM-friendly `POLL`
+  adapters consume its event queue.
 - `NoobSequenceProgram` owns one to four channel definitions and starts the
   common timed sequencer. Each channel has its own interval and bit array.
 

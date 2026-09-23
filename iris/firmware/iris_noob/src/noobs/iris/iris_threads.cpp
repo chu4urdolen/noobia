@@ -1,11 +1,13 @@
 #include "iris_threads.h"
 
 #include "iris_config.h"
+#include <services/MonotonicTimeService.h>
 
 namespace {
 class IrisUltrasonicChangeThread final : public NoobThreadProgram {
  public:
-  IrisUltrasonicChangeThread() : NoobThreadProgram(250) {}
+  IrisUltrasonicChangeThread()
+      : NoobThreadProgram(IrisHardware::ULTRASONIC_CHANGE_INTERVAL_MS) {}
 
   void begin(NativeRegistry &registry) {
     registry_ = &registry;
@@ -25,7 +27,9 @@ class IrisUltrasonicChangeThread final : public NoobThreadProgram {
 
  protected:
   void onStart() override {
-    haveBaseline_ = false;
+    havePrevious_ = false;
+    armed_ = true;
+    stableSamples_ = 0;
     distance_.configure(IrisFunctions::DISTANCE_MM, nullptr, 0);
   }
 
@@ -39,35 +43,49 @@ class IrisUltrasonicChangeThread final : public NoobThreadProgram {
     }
     int32_t current = 0;
     if (!distance_.results().pop(current)) return false;
-    if (!haveBaseline_) {
-      baselineMm_ = current;
-      haveBaseline_ = true;
+    if (!havePrevious_) {
+      previousMm_ = current;
+      havePrevious_ = true;
       return false;
     }
     const int32_t delta =
-        current > baselineMm_ ? current - baselineMm_ : baselineMm_ - current;
+        current > previousMm_ ? current - previousMm_ : previousMm_ - current;
+    previousMm_ = current;
+    if (!armed_) {
+      const int32_t rearmMargin = thresholdMm_ / 4 > 5
+                                      ? thresholdMm_ / 4
+                                      : 5;
+      stableSamples_ = delta <= rearmMargin ? stableSamples_ + 1 : 0;
+      if (stableSamples_ >= IrisHardware::ULTRASONIC_CHANGE_REARM_SAMPLES) {
+        armed_ = true;
+        stableSamples_ = 0;
+      }
+      return false;
+    }
     if (delta < thresholdMm_) return false;
-    const int32_t previous = baselineMm_;
-    baselineMm_ = current;
-    publish(current);
-    event = "NRP/1 0 EVENT ULTRASONIC_CHANGE distance_mm=" +
-            String(current) + " previous_mm=" + String(previous) +
-            " delta_mm=" + String(delta);
+    const uint32_t detectedAt = MonotonicTimeService::milliseconds();
+    publish(static_cast<int32_t>(detectedAt));
+    armed_ = false;
+    stableSamples_ = 0;
+    event = "NRP/1 0 EVENT ULTRASONIC_CHANGE time_ms=" + String(detectedAt);
     return true;
   }
 
  private:
   NativeRegistry *registry_ = nullptr;
   NoobProgramChannel distance_;
-  int32_t thresholdMm_ = 100;
-  int32_t baselineMm_ = 0;
-  bool haveBaseline_ = false;
+  int32_t thresholdMm_ = IrisHardware::ULTRASONIC_CHANGE_THRESHOLD_MM;
+  int32_t previousMm_ = 0;
+  bool havePrevious_ = false;
+  bool armed_ = true;
+  uint8_t stableSamples_ = 0;
 };
 
 IrisUltrasonicChangeThread ultrasonicChange;
 NoobThreadStopFunction ultrasonicChangeStop(ultrasonicChange);
 NoobThreadStatusFunction ultrasonicChangeStatus(ultrasonicChange);
 NoobThreadPopFunction ultrasonicChangePop(ultrasonicChange);
+NoobThreadPollFunction ultrasonicChangePoll(ultrasonicChange);
 }
 
 void irisThreadsBegin(NativeRegistry &registry) {
@@ -80,3 +98,4 @@ NoobThreadProgram &irisUltrasonicChangeThread() {
 NoobFunction &irisUltrasonicChangeStop() { return ultrasonicChangeStop; }
 NoobFunction &irisUltrasonicChangeStatus() { return ultrasonicChangeStatus; }
 NoobFunction &irisUltrasonicChangePop() { return ultrasonicChangePop; }
+NoobFunction &irisUltrasonicChangePoll() { return ultrasonicChangePoll; }

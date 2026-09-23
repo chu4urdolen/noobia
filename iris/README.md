@@ -28,6 +28,9 @@ I2C is not reported by `CAPS` and its native commands are not registered.
 Pins and electrical assignments live only in `iris_config.h`; reusable runtime
 services receive configuration and contain no Iris pin knowledge.
 
+The common thread, sequence, queue, and `channel_busy` flow is documented in
+[`../esp/common/PROGRAM_MODEL.md`](../esp/common/PROGRAM_MODEL.md).
+
 See [`firmware/iris_noob/README.md`](firmware/iris_noob/README.md) for firmware operation and
 [`programs/README.md`](programs/README.md) for VM program controls.
 

@@ -64,6 +64,9 @@ rg -q 'SequenceService::start' "$BUILD_DIR/symbols.txt" || {
 rg -q 'NoobThreadProgram::tick' "$BUILD_DIR/symbols.txt" || {
   echo 'Common thread program is missing' >&2; exit 1;
 }
+rg -q 'NoobThreadProgram::poll' "$BUILD_DIR/symbols.txt" || {
+  echo 'Common thread poll function is missing' >&2; exit 1;
+}
 rg -q 'IrisUltrasonicChangeThread::step' "$BUILD_DIR/symbols.txt" || {
   echo 'Iris ultrasonic-change thread is missing' >&2; exit 1;
 }

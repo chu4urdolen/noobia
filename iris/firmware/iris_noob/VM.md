@@ -50,6 +50,12 @@ results, read queue size, clear a queue, and inspect `channel_busy`.
 red channels entirely from VM registers and then halting while the common
 sequencer completes the physical work.
 
+`police_on_ultrasonic_change.hex` starts the compiled 250 ms ultrasonic
+thread, polls function 206 for detection timestamps, and calls the compiled
+police sequence (function 201) whenever a meaningful change arrives. It waits
+for common `SEQUENCE_STATUS` to become idle before accepting another event.
+The corresponding `.asm` file is a readable annotated listing.
+
 Common native IDs occupy 1–99 and are registered by `NoobRuntime`. Physical
 Noob functions begin at 100. `TIME_NOW` returns monotonic milliseconds as the
 raw 32-bit value in the signed VM register; arithmetic should treat wraparound

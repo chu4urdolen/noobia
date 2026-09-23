@@ -12,6 +12,7 @@ class NoobThreadProgram : public NoobProgram,
   NativeResult stop() override;
   NativeResult status() const;
   NativeResult pop();
+  NativeResult poll();
   bool tick(String &event) override;
 
  protected:
@@ -65,6 +66,21 @@ class NoobThreadPopFunction final : public NoobFunction {
   NativeResult call(const int32_t *, uint8_t count) override {
     return count ? NativeResult{false, 0, "usage: no arguments"}
                  : thread_.pop();
+  }
+
+ private:
+  NoobThreadProgram &thread_;
+};
+
+// Poll is VM-friendly: an empty queue is normal and returns zero.
+class NoobThreadPollFunction final : public NoobFunction {
+ public:
+  explicit NoobThreadPollFunction(NoobThreadProgram &thread)
+      : thread_(thread) {}
+  bool acceptsNumbers() const override { return true; }
+  NativeResult call(const int32_t *, uint8_t count) override {
+    return count ? NativeResult{false, 0, "usage: no arguments"}
+                 : thread_.poll();
   }
 
  private:

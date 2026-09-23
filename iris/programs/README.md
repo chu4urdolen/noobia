@@ -32,11 +32,17 @@ observing the installed enclosure noise floor.
 - `led_blink`: softly blinks the onboard addressable status LED.
 - `police_lights`: alternates Iris's blue and red external LEDs every 125 ms,
   producing four complete blue/red cycles per second until the VM is stopped.
-- `police_sequence_vm`: defines two 250 ms sequencer channels from VM
-  registers, using packed patterns `1010101010` and `0101010101`, starts
-  the finite sequence, and halts while the common sequencer finishes it.
+- `police_sequence_vm`: defines two 200 ms sequencer channels from VM
+  registers, using packed patterns `10101010100` and `01010101010`, starts
+  ten alternating flashes in two seconds, and halts while the common sequencer
+  finishes it with both LEDs off.
 - `ultrasonic_change_start`: starts Iris's ultrasonic change-detection
-  thread with a 100 mm threshold and a 250 ms sampling interval.
+  thread with a 100 mm threshold and a 250 ms sampling interval. Events contain
+  logical detection times, not distance values.
+- `police_on_ultrasonic_change`: continuously polls those timestamp events
+  and starts the compiled police sequence after each detected change. Events
+  accumulated during a light burst are coalesced instead of replayed. The
+  adjacent `.asm` file documents every bytecode instruction.
 - `storage_mic`: SD capacity in r0, microphone RMS in r1, then halt.
 - `audio_one_second`: record a one-second WAV to SD; sample count in r1.
 - `video_one_second`: save two JPEG frames as a one-second MJPEG; count in r2.

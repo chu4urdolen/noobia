@@ -36,6 +36,13 @@ NativeResult NoobThreadProgram::pop() {
                            " dropped=" + String(results_.dropped())};
 }
 
+NativeResult NoobThreadProgram::poll() {
+  int32_t value = 0;
+  if (!results_.pop(value)) return {true, 0, "event=0 queued=0"};
+  return {true, value, "event=1 remaining=" + String(results_.size()) +
+                           " dropped=" + String(results_.dropped())};
+}
+
 bool NoobThreadProgram::tick(String &event) {
   if (!running_ || static_cast<int32_t>(millis() - nextAt_) < 0)
     return false;

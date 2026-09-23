@@ -14,7 +14,12 @@
 #include <services/Esp32IrService.h>
 #include <services/Esp32UltrasonicService.h>
 #include <services/Esp32VmProgramStore.h>
+#include "iris_functions.h"
+#include "iris_sequences.h"
+#include "iris_threads.h"
+#if IRIS_ENABLE_GPIO_DIAGNOSTICS
 #include <Esp32GpioInspector.h>
+#endif
 
 void irisRegisterCapabilities(CapabilityRegistry &capabilities);
 
@@ -59,6 +64,8 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().add(IrisFunctions::ULTRASONIC_READ,
                               "ULTRASONIC_READ",
                               Esp32UltrasonicService::measure);
+  ok &= runtime.natives().add(IrisFunctions::DISTANCE_MM, "DISTANCE_MM",
+                              irisDistanceFunction());
   ok &= Esp32Dht11Service::begin(IrisPins::DHT11_DATA);
   ok &= runtime.natives().add(IrisFunctions::TEMP_HUMIDITY_READ, "TEMP_HUMIDITY_READ", Esp32Dht11Service::read);
 #if IRIS_ENABLE_IR
@@ -140,6 +147,28 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().add(IrisFunctions::LED_RGB, "LED_RGB", Esp32RgbLedService::set);
   ok &= runtime.natives().add(IrisFunctions::LED_SIGNAL, "LED_SIGNAL", Esp32SignalLedService::set);
   ok &= runtime.natives().add(IrisFunctions::LED_EXTERNAL, "LED_EXTERNAL", irisExternalLed);
+  ok &= runtime.natives().add(IrisFunctions::LED_BLUE, "LED_BLUE",
+                              irisBlueLedFunction());
+  ok &= runtime.natives().add(IrisFunctions::LED_RED, "LED_RED",
+                              irisRedLedFunction());
+  ok &= runtime.natives().add(IrisFunctions::BLUE_BLINK_SEQUENCE,
+                              "BLUE_BLINK_SEQUENCE",
+                              irisBlueBlinkSequence());
+  ok &= runtime.natives().add(IrisFunctions::POLICE_SEQUENCE,
+                              "POLICE_SEQUENCE", irisPoliceSequence());
+  irisThreadsBegin(runtime.natives());
+  ok &= runtime.natives().add(IrisFunctions::ULTRASONIC_CHANGE_START,
+                              "ULTRASONIC_CHANGE_START",
+                              irisUltrasonicChangeThread());
+  ok &= runtime.natives().add(IrisFunctions::ULTRASONIC_CHANGE_STOP,
+                              "ULTRASONIC_CHANGE_STOP",
+                              irisUltrasonicChangeStop());
+  ok &= runtime.natives().add(IrisFunctions::ULTRASONIC_CHANGE_STATUS,
+                              "ULTRASONIC_CHANGE_STATUS",
+                              irisUltrasonicChangeStatus());
+  ok &= runtime.natives().add(IrisFunctions::ULTRASONIC_CHANGE_POP,
+                              "ULTRASONIC_CHANGE_POP",
+                              irisUltrasonicChangePop());
 #if IRIS_ENABLE_IR
   ok &= runtime.natives().add(IrisFunctions::IR_SEND, "IR_SEND", Esp32IrService::send);
   ok &= runtime.natives().add(IrisFunctions::IR_READ, "IR_READ", Esp32IrService::read);
@@ -164,5 +193,6 @@ bool irisRegister(NoobRuntime &runtime) {
 #if IRIS_ENABLE_WIFI
   ok &= runtime.addService(Esp32WifiService::rssiService());
 #endif
+  ok &= runtime.addService(irisUltrasonicChangeThread());
   return ok;
 }

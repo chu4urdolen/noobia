@@ -1,9 +1,9 @@
 # Noob VM program store
 
-This directory is the local, inspectable store for portable Noob VM programs.
-Each `.hex` file contains VM version-1 bytecode in wire-ready hexadecimal.
-Programs call capabilities by registered function ID; physical pin assignments
-remain in each Noob-specific module.
+This directory stores Iris-oriented VM programs. Hardware-independent examples
+live in `../../esp/common/programs`. Each `.hex` file contains VM version-1
+bytecode in wire-ready hexadecimal. Programs call capabilities by registered
+function ID; physical pin assignments remain in each Noob-specific module.
 
 Use the Nexus controller:
 
@@ -22,9 +22,6 @@ observing the installed enclosure noise floor.
 
 ## Included programs
 
-- `arithmetic`: computes 7 + 5 into register 2 and halts.
-- `time_now`: calls common native `TIME_NOW` (ID 1), stores monotonic
-  milliseconds in register 0, and halts.
 - `camera_once`: captures one photograph and halts; register 0 receives its
   sequence number.
 - `rssi_ten_seconds`: starts the native RSSI event service for ten seconds,
@@ -33,6 +30,13 @@ observing the installed enclosure noise floor.
 - `sound_capture_test`: same control flow with threshold 1, intended only for
   deterministic integration testing.
 - `led_blink`: softly blinks the onboard addressable status LED.
+- `police_lights`: alternates Iris's blue and red external LEDs every 125 ms,
+  producing four complete blue/red cycles per second until the VM is stopped.
+- `police_sequence_vm`: defines two 250 ms sequencer channels from VM
+  registers, using packed patterns `1010101010` and `0101010101`, starts
+  the finite sequence, and halts while the common sequencer finishes it.
+- `ultrasonic_change_start`: starts Iris's ultrasonic change-detection
+  thread with a 100 mm threshold and a 250 ms sampling interval.
 - `storage_mic`: SD capacity in r0, microphone RMS in r1, then halt.
 - `audio_one_second`: record a one-second WAV to SD; sample count in r1.
 - `video_one_second`: save two JPEG frames as a one-second MJPEG; count in r2.

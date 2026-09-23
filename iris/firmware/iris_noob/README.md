@@ -47,7 +47,7 @@ reject all external-I2C, SH1107/U8g2, and software-I2C code. Camera-internal
 SCCB remains necessary for the camera.
 
 Hardware selection and tuning stay in `src/noobs/iris/iris_config.h`; reusable
-native implementations stay in `NoobRuntime`. Real provisioning credentials go
+native implementations stay in `esp/common`. Real provisioning credentials go
 in ignored `iris_secrets.local.h`, copied from the tracked example.
 
 Remote controls include `irisctl dht-read`, `light-read`, `ir-test`,

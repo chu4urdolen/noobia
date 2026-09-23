@@ -9,8 +9,11 @@ do not blur together.
 
 - [`council/`](council/README.md) — authenticated, turn-based communication
   services used by Noobians on the local network.
-- [`iris/`](iris/README.md) — ESP32-S3 Noob runtime, Iris hardware definition,
-  portable VM programs, and native Nexus control tools.
+- [`esp/common/`](esp/common/README.md) — shared embedded runtime, protocol,
+  transports, VM, native registry, reusable ESP services, and portable programs.
+- [`esp/diagnostics/`](esp/diagnostics/) — reusable ESP32 diagnostic libraries.
+- [`iris/`](iris/README.md) — Iris hardware definition, composition, local VM
+  programs, diagnostics, and Nexus control tools.
 - [`rose_tools/`](rose_tools/) — Rose-specific camera, projector, lighting, and
   voice utilities; these remain independent from the Council service.
 

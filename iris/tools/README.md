@@ -1,5 +1,31 @@
 # Nexus Noob tools
 
+`irisctl` derives paths from its own location and reads `iris-tools.conf`.
+Portable VM programs are discovered in `../../esp/common/programs`; Iris-only
+programs remain in `../programs`.
+
+`build_iris.sh` compiles `../firmware/iris_noob` directly against the shared
+Arduino library at `../../esp/common`. It accepts `--build-dir`, `--jobs`,
+`--fqbn`, `--extra-flags`, `--common-library`, and `--sketch`; machine-specific
+toolchain paths remain in ignored `iris-build.local.conf`.
+
+Program controls include:
+
+    irisctl thread-start police_lights
+    irisctl thread-stop
+    irisctl blue-blink 0
+    irisctl police-sequence 0
+    irisctl sequence-status
+    irisctl sequence-pop 0
+    irisctl sequence-busy 0
+    irisctl ultrasonic-change-start 100 250
+    irisctl ultrasonic-change-status
+    irisctl ultrasonic-change-pop
+    irisctl ultrasonic-change-stop
+
+The final argument to the LED sequence commands is `0` for one pass or `1`
+for repetition.
+
 `noobctl` is a native C utility for serial NRP/1 commands. It deasserts DTR
 and RTS, disables hangup-on-close and hardware flow control, and waits through
 possible USB-UART reset:

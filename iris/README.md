@@ -4,8 +4,8 @@ Iris is the first ESP32-S3 implementation of the common Noob embedded runtime.
 The design keeps portable execution machinery separate from physical-board
 knowledge:
 
-- `runtime/` — transports, NRP/1 protocol, command dispatcher, VM, native
-  registry, and reusable ESP32 services.
+- `../esp/common/` — transports, NRP/1 protocol, command dispatcher, VM,
+  native registry, reusable ESP32 services, and portable VM examples.
 - `firmware/iris_noob/` — the Iris composition root, capability registration,
   and all verified Iris pin assignments.
 - `programs/` — named, wire-ready Noob VM bytecode programs.
@@ -38,7 +38,22 @@ provisioning. The local file is ignored and must never be committed.
 
 Common syscall ID `1` is `TIME_NOW`, a monotonic 32-bit millisecond counter
 registered by `NoobRuntime` for every Noob. `irisctl time-now` calls it directly;
-`programs/time_now.hex` demonstrates calling it from VM bytecode.
+`../esp/common/programs/time_now.hex` demonstrates calling it from VM bytecode.
+Common syscall ID `2` is `TIME_RESET`; `irisctl time-reset` establishes a new
+logical zero without resetting Iris or disturbing hardware timers.
+
+Iris-specific behavior is split further:
+
+- `iris_functions.*`: bound primitive functions such as blue LED, red LED,
+  and ultrasonic distance.
+- `iris_sequences.*`: finite/repeating multi-channel LED programs.
+- `iris_threads.*`: continuous programs with explicit stop/status/result
+  functions, currently ultrasonic change detection.
+
+`BLUE_BLINK_SEQUENCE` and `POLICE_SEQUENCE` are callable from BLE or VM.
+`ULTRASONIC_CHANGE_START` samples continuously, queues distances only when
+the configured change threshold is crossed, and stops through
+`ULTRASONIC_CHANGE_STOP`.
 
 The installed workspace build can be run with:
 

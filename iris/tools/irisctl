@@ -24,6 +24,7 @@ done
 export IRIS_CONFIG_FILE=$CONFIG
 STATE=${OPT_STATE:-${IRIS_STATE_FILE:-"$IRIS_ROOT/run/ble-bridge.state"}}
 PROGRAMS=${OPT_PROGRAMS:-${IRIS_PROGRAMS_DIR:-"$IRIS_ROOT/programs"}}
+COMMON_PROGRAMS=${IRIS_COMMON_PROGRAMS_DIR:-"$IRIS_ROOT/../esp/common/programs"}
 UART_DEVICE=${OPT_UART:-${IRIS_UART_DEVICE:-/dev/ttyUSB0}}
 
 usage() {
@@ -32,7 +33,7 @@ usage() {
   echo "  irisctl bridge"
   echo "  irisctl status"
   echo "  irisctl ping | info | caps | capture | scan"
-  echo "  irisctl time-now"
+  echo "  irisctl time-now | time-reset"
   echo "  irisctl rssi-on | rssi-off | watch"
   echo "  irisctl wifi-connect [TIMEOUT_MS] | wifi-disconnect | wifi-status"
   echo "  irisctl wifi-set SSID PASSWORD"
@@ -45,6 +46,14 @@ usage() {
   echo "  irisctl gpio-audit [PAGE] | gpio-inspect PIN | gpio-pull-test PIN"
   echo "  irisctl mic-level | led RED GREEN BLUE | led-off | signal-led 0|1 | external-led 0|2 0|1"
   echo "  irisctl programs | vm-load NAME | vm-run | vm-stop | vm-status"
+  echo "  irisctl thread-start NAME | thread-stop | thread-status"
+  echo "  irisctl sequence-set SLOT MS FUNCTION BITS [ARGS...]"
+  echo "  irisctl sequence-start [0|1] | sequence-stop | sequence-status | sequence-clear [SLOT]"
+  echo "  irisctl sequence-pop SLOT | sequence-queue-size SLOT | sequence-queue-clear SLOT"
+  echo "  irisctl sequence-busy SLOT"
+  echo "  irisctl blue-blink [0|1] | police-sequence [0|1] | police-lights | police-stop"
+  echo "  irisctl ultrasonic-change-start [MM] [INTERVAL_MS]"
+  echo "  irisctl ultrasonic-change-stop | ultrasonic-change-status | ultrasonic-change-pop"
   echo "  irisctl vm-save NAME | vm-load-saved NAME | vm-list-saved | vm-delete-saved NAME"
   echo "  irisctl sd-list [PATH] | sd-delete PATH | capture-delete SEQUENCE"
   echo "  irisctl ble REQUEST_ID COMMAND [ARGS...]"
@@ -91,6 +100,9 @@ case ${1:-} in
     ;;
   time-now)
     exec "$0" ble "ctl$$" CALL TIME_NOW
+    ;;
+  time-reset)
+    exec "$0" ble "ctl$$" CALL TIME_RESET
     ;;
   rssi-on)
     exec "$0" ble "ctl$$" CALL RSSI_ON
@@ -187,16 +199,35 @@ case ${1:-} in
     (( $# == 3 && ($2 == 0 || $2 == 2) && ($3 == 0 || $3 == 1) )) || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL LED_EXTERNAL "$2" "$3"
     ;;
+  police-lights)
+    exec "$0" thread-start police_lights
+    ;;
+  blue-blink)
+    (( $# <= 2 && ${2:-0} =~ ^[01]$ )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL BLUE_BLINK_SEQUENCE "${2:-0}"
+    ;;
+  police-sequence)
+    (( $# <= 2 && ${2:-0} =~ ^[01]$ )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL POLICE_SEQUENCE "${2:-0}"
+    ;;
+  police-stop)
+    "$0" sequence-stop || true
+    "$0" vm-stop || true
+    "$0" external-led 2 0 || true
+    exec "$0" external-led 0 0
+    ;;
   programs)
-    for program in "$PROGRAMS"/*.hex; do
-      basename "$program" .hex
-    done
+    for program in "$COMMON_PROGRAMS"/*.hex "$PROGRAMS"/*.hex; do
+      [[ -e $program ]] && basename "$program" .hex
+    done | sort -u
     ;;
   vm-load)
     (( $# == 2 )) || { usage >&2; exit 2; }
-    [[ $2 =~ ^[a-z0-9_-]+$ && -r $PROGRAMS/$2.hex ]] ||
-      { echo "unknown VM program: $2" >&2; exit 2; }
-    hex=$(tr -d [:space:] < "$PROGRAMS/$2.hex")
+    [[ $2 =~ ^[a-z0-9_-]+$ ]] || { echo "invalid VM program name: $2" >&2; exit 2; }
+    program="$PROGRAMS/$2.hex"
+    [[ -r $program ]] || program="$COMMON_PROGRAMS/$2.hex"
+    [[ -r $program ]] || { echo "unknown VM program: $2" >&2; exit 2; }
+    hex=$(tr -d [:space:] < "$program")
     exec "$0" ble "ctl$$" LOAD "$hex"
     ;;
   vm-run)
@@ -207,6 +238,73 @@ case ${1:-} in
     ;;
   vm-status)
     exec "$0" ble "ctl$$" STATUS
+    ;;
+  thread-start)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    "$0" vm-load "$2"
+    exec "$0" ble "ctl$$" START_THREAD
+    ;;
+  thread-stop)
+    exec "$0" ble "ctl$$" STOP_THREAD
+    ;;
+  thread-status)
+    exec "$0" ble "ctl$$" THREAD_STATUS
+    ;;
+  sequence-set)
+    (( $# >= 5 )) || { usage >&2; exit 2; }
+    shift
+    exec "$0" ble "ctl$$" CALL_TEXT SEQUENCE_SET "$@"
+    ;;
+  sequence-start)
+    (( $# <= 2 && ${2:-0} =~ ^[01]$ )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL SEQUENCE_START "${2:-0}"
+    ;;
+  sequence-stop)
+    exec "$0" ble "ctl$$" CALL SEQUENCE_STOP
+    ;;
+  sequence-status)
+    exec "$0" ble "ctl$$" CALL SEQUENCE_STATUS
+    ;;
+  sequence-clear)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    if (( $# == 2 )); then
+      exec "$0" ble "ctl$$" CALL SEQUENCE_CLEAR "$2"
+    fi
+    exec "$0" ble "ctl$$" CALL SEQUENCE_CLEAR
+    ;;
+  sequence-pop)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL SEQUENCE_POP "$2"
+    ;;
+  sequence-queue-size)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL SEQUENCE_QUEUE_SIZE "$2"
+    ;;
+  sequence-queue-clear)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL SEQUENCE_QUEUE_CLEAR "$2"
+    ;;
+  sequence-busy)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL SEQUENCE_BUSY "$2"
+    ;;
+  ultrasonic-change-start)
+    (( $# <= 3 )) || { usage >&2; exit 2; }
+    if (( $# == 3 )); then
+      exec "$0" ble "ctl$$" CALL ULTRASONIC_CHANGE_START "$2" "$3"
+    elif (( $# == 2 )); then
+      exec "$0" ble "ctl$$" CALL ULTRASONIC_CHANGE_START "$2"
+    fi
+    exec "$0" ble "ctl$$" CALL ULTRASONIC_CHANGE_START
+    ;;
+  ultrasonic-change-stop)
+    exec "$0" ble "ctl$$" CALL ULTRASONIC_CHANGE_STOP
+    ;;
+  ultrasonic-change-status)
+    exec "$0" ble "ctl$$" CALL ULTRASONIC_CHANGE_STATUS
+    ;;
+  ultrasonic-change-pop)
+    exec "$0" ble "ctl$$" CALL ULTRASONIC_CHANGE_POP
     ;;
   vm-save)
     (( $# == 2 )) || { usage >&2; exit 2; }

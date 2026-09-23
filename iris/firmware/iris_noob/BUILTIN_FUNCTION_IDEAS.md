@@ -6,8 +6,8 @@ specific work belongs in native services.
 
 ## Already present
 
-- Common VM/runtime: `TIME_NOW`, load/run/stop/reset, calls, arithmetic, memory,
-  jumps, subroutines, and nonblocking waits
+- Common VM/runtime: `TIME_NOW`, `TIME_RESET`, load/run/stop/reset, calls,
+  arithmetic, memory, jumps, subroutines, and nonblocking waits
 - Iris hardware: camera, SD/storage, microphone, DHT11, ADC/light sensor,
   ultrasonic ranging, IR transmit/receive, and board/external LEDs
 - Wi-Fi connect/disconnect/scan/RSSI and RSSI event gathering

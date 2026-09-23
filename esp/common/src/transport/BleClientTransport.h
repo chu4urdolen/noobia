@@ -3,6 +3,9 @@
 #include "syscalls/NativeRegistry.h"
 #include <BLEClient.h>
 
+class BLEAdvertisedDevice;
+class BLEScanResults;
+
 // Reusable outbound BLE transport. A Noob supplies peer identity and retry
 // policy; the runtime continues to consume ordinary NRP/1 message frames.
 class BleClientTransport : public NoobTransport {
@@ -23,17 +26,21 @@ class BleClientTransport : public NoobTransport {
                                    uint8_t argumentCount);
   void handleNotification(const uint8_t *data, size_t length);
   void handleDisconnect();
+  void handleScanComplete(BLEScanResults results);
 
  private:
   void maintainConnection();
-  bool scanAndConnect();
+  bool startScan();
+  bool connectMatch();
   String peerMac_;
   BLEUUID serviceUuid_, downlinkUuid_, uplinkUuid_;
   BLEClient *client_ = nullptr;
+  BLEAdvertisedDevice *pendingMatch_ = nullptr;
   BLERemoteCharacteristic *downlink_ = nullptr;
   BLERemoteCharacteristic *uplink_ = nullptr;
   String pendingFrame_;
   uint32_t retryIntervalMs_, nextAttemptAt_ = 0;
   uint8_t scanDurationSeconds_;
   bool initialized_ = false;
+  bool scanRunning_ = false;
 };

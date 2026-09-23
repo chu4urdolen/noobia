@@ -5,6 +5,8 @@ CONFIG=${1:-"$ROOT/tools/iris-tools.conf"}
 CTL="$ROOT/tools/irisctl"
 "$CTL" --config "$CONFIG" ping
 "$CTL" --config "$CONFIG" time-now
+"$CTL" --config "$CONFIG" time-reset
+"$CTL" --config "$CONFIG" time-now
 "$CTL" --config "$CONFIG" external-led 0 1
 "$CTL" --config "$CONFIG" external-led 2 1
 "$ROOT/diagnostics/dht11_ble.sh" "$CONFIG"

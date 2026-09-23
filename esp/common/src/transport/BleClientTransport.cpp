@@ -15,6 +15,9 @@ void notificationCallback(BLERemoteCharacteristic *, uint8_t *data,
                           size_t length, bool) {
   if (activeTransport) activeTransport->handleNotification(data, length);
 }
+void scanCompleteCallback(BLEScanResults results) {
+  if (activeTransport) activeTransport->handleScanComplete(results);
+}
 bool macConfigured(const String &mac) {
   if (mac.length() != 17 || mac == "00:00:00:00:00:00") return false;
   for (int index = 0; index < 17; ++index) {
@@ -122,29 +125,44 @@ void BleClientTransport::handleDisconnect() {
   uplink_ = nullptr;
   nextAttemptAt_ = millis() + retryIntervalMs_;
 }
-void BleClientTransport::maintainConnection() {
-  if (!initialized_ || connected()) return;
-  if (static_cast<int32_t>(millis() - nextAttemptAt_) < 0) return;
-  scanAndConnect();
-  if (!connected()) nextAttemptAt_ = millis() + retryIntervalMs_;
-}
-bool BleClientTransport::scanAndConnect() {
-  BLEScan *scanner = BLEDevice::getScan();
-  scanner->setActiveScan(true);
-  BLEScanResults *results = scanner->start(scanDurationSeconds_, false);
-  BLEAdvertisedDevice *match = nullptr;
-  if (results) {
-    for (int index = 0; index < results->getCount(); ++index) {
-      BLEAdvertisedDevice device = results->getDevice(index);
-      String found = device.getAddress().toString();
-      found.toLowerCase();
-      if (found == peerMac_) {
-        match = new BLEAdvertisedDevice(device);
-        break;
-      }
+void BleClientTransport::handleScanComplete(BLEScanResults results) {
+  scanRunning_ = false;
+  if (pendingMatch_) {
+    delete pendingMatch_;
+    pendingMatch_ = nullptr;
+  }
+  for (int index = 0; index < results.getCount(); ++index) {
+    BLEAdvertisedDevice device = results.getDevice(index);
+    String found = device.getAddress().toString();
+    found.toLowerCase();
+    if (found == peerMac_) {
+      pendingMatch_ = new BLEAdvertisedDevice(device);
+      break;
     }
   }
-  scanner->clearResults();
+  BLEDevice::getScan()->clearResults();
+  if (!pendingMatch_) nextAttemptAt_ = millis() + retryIntervalMs_;
+}
+void BleClientTransport::maintainConnection() {
+  if (!initialized_ || connected()) return;
+  if (pendingMatch_) {
+    if (!connectMatch()) nextAttemptAt_ = millis() + retryIntervalMs_;
+    return;
+  }
+  if (scanRunning_) return;
+  if (static_cast<int32_t>(millis() - nextAttemptAt_) < 0) return;
+  if (!startScan()) nextAttemptAt_ = millis() + retryIntervalMs_;
+}
+bool BleClientTransport::startScan() {
+  BLEScan *scanner = BLEDevice::getScan();
+  scanner->setActiveScan(true);
+  scanRunning_ =
+      scanner->start(scanDurationSeconds_, scanCompleteCallback, false);
+  return scanRunning_;
+}
+bool BleClientTransport::connectMatch() {
+  BLEAdvertisedDevice *match = pendingMatch_;
+  pendingMatch_ = nullptr;
   if (!match) return false;
   if (!client_) {
     client_ = BLEDevice::createClient();

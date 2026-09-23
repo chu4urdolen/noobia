@@ -6,6 +6,8 @@ BUILD_DIR=
 OPT_JOBS=
 OPT_FQBN=
 OPT_EXTRA_FLAGS=
+OPT_COMMON_LIBRARY=
+OPT_SKETCH=
 while (( $# )); do
   case $1 in
     --config) CONFIG=$2; shift 2 ;;
@@ -13,7 +15,9 @@ while (( $# )); do
     --jobs) OPT_JOBS=$2; shift 2 ;;
     --fqbn) OPT_FQBN=$2; shift 2 ;;
     --extra-flags) OPT_EXTRA_FLAGS=$2; shift 2 ;;
-    --help|-h) echo "usage: $0 [--config FILE] [--build-dir DIR] [--jobs N] [--fqbn FQBN] [--extra-flags FLAGS]"; exit 0 ;;
+    --common-library) OPT_COMMON_LIBRARY=$2; shift 2 ;;
+    --sketch) OPT_SKETCH=$2; shift 2 ;;
+    --help|-h) echo "usage: $0 [--config FILE] [--build-dir DIR] [--jobs N] [--fqbn FQBN] [--extra-flags FLAGS] [--common-library DIR] [--sketch DIR]"; exit 0 ;;
     *) [[ -z $BUILD_DIR ]] && BUILD_DIR=$1 && shift || { echo "unexpected argument: $1" >&2; exit 2; } ;;
   esac
 done
@@ -27,6 +31,8 @@ NM=${IRIS_NM:-xtensa-esp-elf-nm}
 FQBN=${OPT_FQBN:-${IRIS_FQBN:-'esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=huge_app,PSRAM=enabled,FlashMode=qio,CDCOnBoot=default,USBMode=hwcdc,UploadSpeed=921600'}}
 JOBS=${OPT_JOBS:-${IRIS_BUILD_JOBS:-4}}
 EXTRA_FLAGS=${OPT_EXTRA_FLAGS:-${IRIS_BUILD_EXTRA_FLAGS:-'-DNOOB_ENABLE_EXTERNAL_I2C=0 -DNOOB_ENABLE_SH1107=0 -DNOOB_ENABLE_SOFT_I2C_DIAGNOSTICS=0'}}
+COMMON_LIBRARY=${OPT_COMMON_LIBRARY:-${IRIS_COMMON_LIBRARY:-"$IRIS_ROOT/../esp/common"}}
+SKETCH=${OPT_SKETCH:-${IRIS_SKETCH:-"$IRIS_ROOT/firmware/iris_noob"}}
 
 mkdir -p "$BUILD_DIR"
 # A second build must not clean files used by the first.
@@ -35,8 +41,9 @@ flock -n 9 || { echo 'Another Iris build is running' >&2; exit 1; }
 "$CLI" compile --jobs "$JOBS" \
   --config-file "$ARDUINO_CONFIG" \
   --fqbn "$FQBN" --build-path "$BUILD_DIR" \
+  --library "$COMMON_LIBRARY" \
   --build-property "compiler.cpp.extra_flags=$EXTRA_FLAGS" \
-  "$IRIS_ROOT/sketchbook/iris_noob"
+  "$SKETCH"
 test -s "$BUILD_DIR/iris_noob.ino.elf"
 test -s "$BUILD_DIR/iris_noob.ino.bin"
 test -s "$BUILD_DIR/iris_noob.ino.partitions.bin"
@@ -47,5 +54,17 @@ if rg -q 'Esp32I2cService::|Esp32SoftI2cDiagnostics::|Esp32Sh1107Service::|u8g2_
 fi
 rg -q 'MonotonicTimeService::now' "$BUILD_DIR/symbols.txt" || {
   echo 'Common TIME_NOW service is missing' >&2; exit 1;
+}
+rg -q 'MonotonicTimeService::reset' "$BUILD_DIR/symbols.txt" || {
+  echo 'Common TIME_RESET service is missing' >&2; exit 1;
+}
+rg -q 'SequenceService::start' "$BUILD_DIR/symbols.txt" || {
+  echo 'Common sequence service is missing' >&2; exit 1;
+}
+rg -q 'NoobThreadProgram::tick' "$BUILD_DIR/symbols.txt" || {
+  echo 'Common thread program is missing' >&2; exit 1;
+}
+rg -q 'IrisUltrasonicChangeThread::step' "$BUILD_DIR/symbols.txt" || {
+  echo 'Iris ultrasonic-change thread is missing' >&2; exit 1;
 }
 echo "Verified firmware: $BUILD_DIR/iris_noob.ino.bin"

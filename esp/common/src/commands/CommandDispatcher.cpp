@@ -57,14 +57,14 @@ String CommandDispatcher::dispatch(const NoobRequest &request) {
     return NoobProtocol::ok(request.requestId,
                             "loaded=" + String(length));
   }
-  if (request.command == "RUN") {
+  if (request.command == "RUN" || request.command == "START_THREAD") {
     String error;
     if (!vm_.run(error)) {
       return NoobProtocol::fail(request.requestId, "VM_STATE", error);
     }
     return NoobProtocol::ok(request.requestId, "started");
   }
-  if (request.command == "STOP") {
+  if (request.command == "STOP" || request.command == "STOP_THREAD") {
     vm_.stop();
     return NoobProtocol::ok(request.requestId, vm_.status());
   }
@@ -74,7 +74,7 @@ String CommandDispatcher::dispatch(const NoobRequest &request) {
   }
   if (request.command == "CALL") return callNative(request);
   if (request.command == "CALL_TEXT") return callTextNative(request);
-  if (request.command == "STATUS") {
+  if (request.command == "STATUS" || request.command == "THREAD_STATUS") {
     return NoobProtocol::ok(request.requestId, vm_.status());
   }
   return NoobProtocol::fail(request.requestId, "UNKNOWN_COMMAND",
@@ -125,7 +125,7 @@ String CommandDispatcher::callNative(const NoobRequest &request) {
   if (!entry) {
     return NoobProtocol::fail(request.requestId, "NO_FUNCTION", selector);
   }
-  if (!entry->function) {
+  if (!entry->implementation || !entry->implementation->acceptsNumbers()) {
     return NoobProtocol::fail(request.requestId, "FUNCTION_KIND",
                               "use CALL_TEXT for " + selector);
   }
@@ -136,7 +136,7 @@ String CommandDispatcher::callNative(const NoobRequest &request) {
     String token = tokenAt(request.arguments, position);
     if (!token.isEmpty()) arguments[count++] = token.toInt();
   }
-  const NativeResult result = entry->function(arguments, count);
+  const NativeResult result = natives_.call(*entry, arguments, count);
   if (!result.ok) {
     return NoobProtocol::fail(request.requestId, "NATIVE_ERROR",
                               result.detail);
@@ -150,13 +150,14 @@ String CommandDispatcher::callTextNative(const NoobRequest &request) {
   int position = 0;
   const String selector = tokenAt(request.arguments, position);
   const NativeEntry *entry = natives_.find(selector);
-  if (!entry || !entry->textFunction) {
+  if (!entry || !entry->implementation ||
+      !entry->implementation->acceptsText()) {
     return NoobProtocol::fail(request.requestId, "NO_TEXT_FUNCTION", selector);
   }
   while (position < request.arguments.length() && request.arguments[position] == 32)
     ++position;
   const NativeResult result =
-      entry->textFunction(request.arguments.substring(position));
+      natives_.callText(*entry, request.arguments.substring(position));
   if (!result.ok) {
     return NoobProtocol::fail(request.requestId, "NATIVE_ERROR", result.detail);
   }

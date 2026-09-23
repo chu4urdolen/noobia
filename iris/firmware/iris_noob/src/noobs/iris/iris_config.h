@@ -121,4 +121,13 @@ constexpr unsigned IR_SEND = 193;
 constexpr unsigned IR_READ = 194;
 constexpr unsigned IR_LOOPBACK = 195;
 constexpr unsigned ULTRASONIC_READ = 196;
+constexpr unsigned LED_BLUE = 197;
+constexpr unsigned LED_RED = 198;
+constexpr unsigned DISTANCE_MM = 199;
+constexpr unsigned BLUE_BLINK_SEQUENCE = 200;
+constexpr unsigned POLICE_SEQUENCE = 201;
+constexpr unsigned ULTRASONIC_CHANGE_START = 202;
+constexpr unsigned ULTRASONIC_CHANGE_STOP = 203;
+constexpr unsigned ULTRASONIC_CHANGE_STATUS = 204;
+constexpr unsigned ULTRASONIC_CHANGE_POP = 205;
 }

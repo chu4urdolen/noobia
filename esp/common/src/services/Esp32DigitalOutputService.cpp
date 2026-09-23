@@ -13,3 +13,10 @@ NativeResult set(int pin, bool high) {
       : NativeResult{false, actual, detail + " output_mismatch=1"};
 }
 }
+
+NativeResult Esp32DigitalOutputFunction::call(const int32_t *arguments,
+                                              uint8_t count) {
+  if (count != 1 || arguments[0] < 0 || arguments[0] > 1)
+    return {false, 0, "usage: state(0|1)"};
+  return Esp32DigitalOutputService::set(pin_, arguments[0] != 0);
+}

@@ -55,6 +55,10 @@ observing the installed enclosure noise floor.
   mean is at least twice the older mean and at least RMS 20.
 - `police_on_loudness_rise`: keeps that detector running and starts one police
   sequence for each rearmed loudness-rise event.
+- `police_on_any_change`: starts the ultrasonic, photoresistor, and microphone
+  detector threads together. Any timestamp starts one police sequence. Light
+  samples pause while its LEDs are busy, microphone repeats use the native
+  rearm gate, and ultrasonic events from the blink interval are coalesced.
 - `storage_mic`: SD capacity in r0, microphone RMS in r1, then halt.
 - `audio_one_second`: record a one-second WAV to SD; sample count in r1.
 - `video_one_second`: save two JPEG frames as a one-second MJPEG; count in r2.

@@ -69,6 +69,10 @@ The thread takes a fresh light baseline when both LED channels finish.
 minimum RMS 20. `police_on_loudness_rise.hex` polls its timestamp queue and
 runs the same finite police sequence. Raw sound is reduced immediately into one
 integer per second; only ten integers remain in the rolling frame.
+`police_on_any_change.hex` starts all three native detector threads. Any
+ultrasonic, light, or microphone timestamp starts the finite police sequence.
+Light sampling pauses on LED busy, microphone repeats use its rearm gate, and
+ultrasonic events accumulated during the sequence are drained.
 Common native IDs occupy 1–99 and are registered by `NoobRuntime`. Physical
 Noob functions begin at 100. `TIME_NOW` returns monotonic milliseconds as the
 raw 32-bit value in the signed VM register; arithmetic should treat wraparound

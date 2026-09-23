@@ -58,7 +58,7 @@ usage() {
   echo "  irisctl light-change-start [DELTA] [INTERVAL_MS]"
   echo "  irisctl light-change-stop | light-change-status | light-change-pop | light-change-poll"
   echo "  irisctl mic-rise-start [RATIO_PERCENT] [MIN_RMS] | mic-rise-stop | mic-rise-status"
-  echo "  irisctl mic-rise-pop | mic-rise-poll | sound-police"
+  echo "  irisctl mic-rise-pop | mic-rise-poll | sound-police | all-police"
   echo "  irisctl vm-save NAME | vm-load-saved NAME | vm-list-saved | vm-delete-saved NAME"
   echo "  irisctl sd-list [PATH] | sd-delete PATH | capture-delete SEQUENCE"
   echo "  irisctl ble REQUEST_ID COMMAND [ARGS...]"
@@ -364,6 +364,9 @@ case ${1:-} in
     ;;
   sound-police)
     exec "$0" thread-start police_on_loudness_rise
+    ;;
+  all-police)
+    exec "$0" thread-start police_on_any_change
     ;;
   vm-save)
     (( $# == 2 )) || { usage >&2; exit 2; }

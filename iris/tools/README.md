@@ -22,6 +22,7 @@ Program controls include:
     irisctl mic-rise-start 200 20
     irisctl mic-rise-status
     irisctl sound-police
+    irisctl all-police
     irisctl sequence-status
     irisctl sequence-pop 0
     irisctl sequence-busy 0
@@ -45,6 +46,8 @@ is a percentage ratio and the second is a minimum new-half RMS. `sound-police`
 uses 200% and RMS 20, then runs the finite police sequence on each event.
 `sensor-police` combines both detectors. Light sampling pauses for the
 entire LED sequence while the detector thread keeps running, avoiding feedback.
+`all-police` runs ultrasonic, photoresistor, and microphone detection together;
+an event from any detector starts one finite police sequence.
 
 `noobctl` is a native C utility for serial NRP/1 commands. It deasserts DTR
 and RTS, disables hangup-on-close and hardware flow control, and waits through

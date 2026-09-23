@@ -39,10 +39,17 @@ observing the installed enclosure noise floor.
 - `ultrasonic_change_start`: starts Iris's ultrasonic change-detection
   thread with a 100 mm threshold and a 250 ms sampling interval. Events contain
   logical detection times, not distance values.
+- `light_change_start`: starts the photoresistor change thread with a
+  200-count ADC delta and 250 ms sampling. Its baseline is the light reading at
+  runtime, not a compiled brightness level.
 - `police_on_ultrasonic_change`: continuously polls those timestamp events
   and starts the compiled police sequence after each detected change. Events
   accumulated during a light burst are coalesced instead of replayed. The
   adjacent `.asm` file documents every bytecode instruction.
+- `police_on_sensor_change`: polls both ultrasonic and photoresistor
+  timestamp queues. The light thread remains running during a blink, but skips
+  samples while LED sequence channels are busy and resumes with a fresh baseline.
+  This prevents the police LEDs from triggering their own event.
 - `storage_mic`: SD capacity in r0, microphone RMS in r1, then halt.
 - `audio_one_second`: record a one-second WAV to SD; sample count in r1.
 - `video_one_second`: save two JPEG frames as a one-second MJPEG; count in r2.

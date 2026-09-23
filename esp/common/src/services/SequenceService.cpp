@@ -90,7 +90,10 @@ String stateDetail() {
 
 void stopAll() {
   running = false;
-  for (Track &track : tracks) track.active = false;
+  for (uint8_t slot = 0; slot < MAX_TRACKS; ++slot) {
+    tracks[slot].active = false;
+    channelBusy[slot] = false;
+  }
 }
 
 class SequenceRunner : public NoobBackgroundService {
@@ -104,10 +107,8 @@ class SequenceRunner : public NoobBackgroundService {
       if (!track.active || static_cast<int32_t>(now - track.nextAt) < 0)
         continue;
 
-      channelBusy[slot] = true;
       track.channel.invoke(*nativeRegistry,
                            track.bits[track.position] == '1');
-      channelBusy[slot] = false;
       invoked = true;
       if (!track.channel.lastOk()) {
         stopAll();
@@ -121,8 +122,10 @@ class SequenceRunner : public NoobBackgroundService {
       if (track.position >= track.bitCount) {
         if (repeating)
           track.position = 0;
-        else
+        else {
           track.active = false;
+          channelBusy[slot] = false;
+        }
       }
       track.nextAt = now + track.intervalMs;
     }
@@ -309,6 +312,8 @@ NativeResult start(const int32_t *arguments, uint8_t count) {
     track.position = 0;
     track.nextAt = now;
   }
+  for (uint8_t slot = 0; slot < MAX_TRACKS; ++slot)
+    channelBusy[slot] = tracks[slot].active;
   running = true;
   return {true, configuredCount(), stateDetail()};
 }
@@ -372,6 +377,13 @@ NativeResult busy(const int32_t *arguments, uint8_t count) {
   return {true, isBusy ? 1 : 0,
           "slot=" + String(arguments[0]) +
               " channel_busy=" + String(isBusy ? 1 : 0)};
+}
+
+uint8_t busyMask() {
+  uint8_t mask = 0;
+  for (uint8_t slot = 0; slot < MAX_TRACKS; ++slot)
+    if (channelBusy[slot]) mask |= uint8_t(1U << slot);
+  return mask;
 }
 
 NoobBackgroundService &backgroundService() { return runner; }

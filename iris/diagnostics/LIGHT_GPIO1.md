@@ -9,8 +9,9 @@ the signal connection. Use 3.3V module power and a common ground.
 
 `0.2.10-light` adds a reusable ESP32 ADC service. Iris registers channel 0 as
 GPIO1; other ADC channels remain unregistered. Registration does not start
-the ADC. Each call creates a oneshot unit, reads 1..64 samples and releases
-it; failures report the SDK error. No internal pull-up/down biases the input.
+the ADC. A persistent oneshot handle is retained per ADC unit and each channel
+configuration is cached. Each call performs 1..64 reads; failures report the SDK
+error.
 
 - `CALL ADC_READ 0 [samples]`: native 191, raw mean of registered channel 0.
 - `CALL LIGHT_READ [samples]`: native 192, Iris's light channel convenience call.
@@ -40,3 +41,11 @@ before the photoresistor was attached. The cause is not established. Neither
 reading establishes a working photoresistor: a near-ground signal can result
 from lighting, wiring, power or the sensor. Next test is a controlled change
 in illumination and a check of the shared module supply/ground connections.
+## Current dynamic detector
+
+Firmware 0.4.6 samples GPIO1 every 250 ms through the reusable common change
+thread. Its first reading is a runtime baseline and the default event threshold
+is a 200-count delta. While LED sequence channels 0 or 1 are busy, the thread
+remains running but performs no ADC sample. The first post-sequence reading is a
+fresh baseline. Live verification observed no queued light event after a full
+police sequence.

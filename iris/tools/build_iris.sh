@@ -67,7 +67,7 @@ rg -q 'NoobThreadProgram::tick' "$BUILD_DIR/symbols.txt" || {
 rg -q 'NoobThreadProgram::poll' "$BUILD_DIR/symbols.txt" || {
   echo 'Common thread poll function is missing' >&2; exit 1;
 }
-rg -q 'IrisUltrasonicChangeThread::step' "$BUILD_DIR/symbols.txt" || {
-  echo 'Iris ultrasonic-change thread is missing' >&2; exit 1;
+rg -q 'NoobChangeThreadProgram::step' "$BUILD_DIR/symbols.txt" || {
+  echo 'Common dynamic-change thread is missing' >&2; exit 1;
 }
 echo "Verified firmware: $BUILD_DIR/iris_noob.ino.bin"

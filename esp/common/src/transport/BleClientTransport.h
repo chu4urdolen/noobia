@@ -26,6 +26,7 @@ class BleClientTransport : public NoobTransport {
                                    uint8_t argumentCount);
   void handleNotification(const uint8_t *data, size_t length);
   void handleDisconnect();
+  void handleAdvertisement(BLEAdvertisedDevice device);
   void handleScanComplete(BLEScanResults results);
 
  private:
@@ -35,7 +36,8 @@ class BleClientTransport : public NoobTransport {
   String peerMac_;
   BLEUUID serviceUuid_, downlinkUuid_, uplinkUuid_;
   BLEClient *client_ = nullptr;
-  BLEAdvertisedDevice *pendingMatch_ = nullptr;
+  bool pendingMatch_ = false;
+  uint8_t pendingAddressType_ = 0xFF;
   BLERemoteCharacteristic *downlink_ = nullptr;
   BLERemoteCharacteristic *uplink_ = nullptr;
   String pendingFrame_;

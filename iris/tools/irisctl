@@ -54,7 +54,9 @@ usage() {
   echo "  irisctl blue-blink [0|1] | police-sequence [0|1] | police-lights | police-stop"
   echo "  irisctl ultrasonic-change-start [MM] [INTERVAL_MS]"
   echo "  irisctl ultrasonic-change-stop | ultrasonic-change-status"
-  echo "  irisctl ultrasonic-change-pop | ultrasonic-change-poll | motion-police"
+  echo "  irisctl ultrasonic-change-pop | ultrasonic-change-poll | motion-police | sensor-police"
+  echo "  irisctl light-change-start [DELTA] [INTERVAL_MS]"
+  echo "  irisctl light-change-stop | light-change-status | light-change-pop | light-change-poll"
   echo "  irisctl vm-save NAME | vm-load-saved NAME | vm-list-saved | vm-delete-saved NAME"
   echo "  irisctl sd-list [PATH] | sd-delete PATH | capture-delete SEQUENCE"
   echo "  irisctl ble REQUEST_ID COMMAND [ARGS...]"
@@ -204,11 +206,11 @@ case ${1:-} in
     exec "$0" thread-start police_lights
     ;;
   blue-blink)
-    (( $# <= 2 && ${2:-0} =~ ^[01]$ )) || { usage >&2; exit 2; }
+    (( $# <= 2 )) && [[ ${2:-0} =~ ^[01]$ ]] || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL BLUE_BLINK_SEQUENCE "${2:-0}"
     ;;
   police-sequence)
-    (( $# <= 2 && ${2:-0} =~ ^[01]$ )) || { usage >&2; exit 2; }
+    (( $# <= 2 )) && [[ ${2:-0} =~ ^[01]$ ]] || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL POLICE_SEQUENCE "${2:-0}"
     ;;
   police-stop)
@@ -312,6 +314,30 @@ case ${1:-} in
     ;;
   motion-police)
     exec "$0" thread-start police_on_ultrasonic_change
+    ;;
+  sensor-police)
+    exec "$0" thread-start police_on_sensor_change
+    ;;
+  light-change-start)
+    (( $# <= 3 )) || { usage >&2; exit 2; }
+    if (( $# == 3 )); then
+      exec "$0" ble "ctl$$" CALL LIGHT_CHANGE_START "$2" "$3"
+    elif (( $# == 2 )); then
+      exec "$0" ble "ctl$$" CALL LIGHT_CHANGE_START "$2"
+    fi
+    exec "$0" ble "ctl$$" CALL LIGHT_CHANGE_START
+    ;;
+  light-change-stop)
+    exec "$0" ble "ctl$$" CALL LIGHT_CHANGE_STOP
+    ;;
+  light-change-status)
+    exec "$0" ble "ctl$$" CALL LIGHT_CHANGE_STATUS
+    ;;
+  light-change-pop)
+    exec "$0" ble "ctl$$" CALL LIGHT_CHANGE_POP
+    ;;
+  light-change-poll)
+    exec "$0" ble "ctl$$" CALL LIGHT_CHANGE_POLL
     ;;
   vm-save)
     (( $# == 2 )) || { usage >&2; exit 2; }

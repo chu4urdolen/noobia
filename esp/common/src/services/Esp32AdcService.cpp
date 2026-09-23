@@ -3,8 +3,15 @@
 #include <driver/gpio.h>
 namespace {
 int pins[8] = {-1,-1,-1,-1,-1,-1,-1,-1};
+bool channelConfigured[8] = {};
+adc_oneshot_unit_handle_t handles[2] = {nullptr, nullptr};
 NativeResult error(const char *stage, esp_err_t code) {
   return {false, 0, String("ADC ")+stage+" error="+esp_err_to_name(code)};
+}
+int unitIndex(adc_unit_t unit) {
+  if (unit == ADC_UNIT_1) return 0;
+  if (unit == ADC_UNIT_2) return 1;
+  return -1;
 }
 }
 bool Esp32AdcService::configure(uint8_t channel, int pin) {
@@ -25,16 +32,24 @@ NativeResult Esp32AdcService::read(const int32_t *args, uint8_t count) {
   adc_channel_t channel;
   esp_err_t err = adc_oneshot_io_to_channel(pin, &unit, &channel);
   if (err != ESP_OK) return error("mapping", err);
-  adc_oneshot_unit_init_cfg_t unitConfig = {};
-  unitConfig.unit_id = unit;
-  adc_oneshot_unit_handle_t handle = nullptr;
-  err = adc_oneshot_new_unit(&unitConfig, &handle);
-  if (err != ESP_OK) return error("open", err);
-  adc_oneshot_chan_cfg_t config = {};
-  config.atten = ADC_ATTEN_DB_12;
-  config.bitwidth = ADC_BITWIDTH_12;
-  err = adc_oneshot_config_channel(handle, channel, &config);
-  if (err == ESP_OK) err = gpio_set_pull_mode(gpio_num_t(pin), GPIO_FLOATING);
+  const int index = unitIndex(unit);
+  if (index < 0) return {false, 0, "ADC unit unsupported"};
+  if (!handles[index]) {
+    adc_oneshot_unit_init_cfg_t unitConfig = {};
+    unitConfig.unit_id = unit;
+    err = adc_oneshot_new_unit(&unitConfig, &handles[index]);
+    if (err != ESP_OK) return error("open", err);
+  }
+  adc_oneshot_unit_handle_t handle = handles[index];
+  if (!channelConfigured[args[0]]) {
+    adc_oneshot_chan_cfg_t config = {};
+    config.atten = ADC_ATTEN_DB_12;
+    config.bitwidth = ADC_BITWIDTH_12;
+    err = adc_oneshot_config_channel(handle, channel, &config);
+    if (err == ESP_OK)
+      err = gpio_set_pull_mode(gpio_num_t(pin), GPIO_FLOATING);
+    if (err == ESP_OK) channelConfigured[args[0]] = true;
+  }
   int total = 0, minimum = 4095, maximum = 0;
   for (int i = 0; err == ESP_OK && i < samples; ++i) {
     int value;
@@ -45,9 +60,7 @@ NativeResult Esp32AdcService::read(const int32_t *args, uint8_t count) {
     if (value > maximum) maximum = value;
     if (i+1 < samples) delay(1);
   }
-  esp_err_t closed = adc_oneshot_del_unit(handle);
   if (err != ESP_OK) return error("sample", err);
-  if (closed != ESP_OK) return error("close", closed);
   // Raw counts are relative voltage, not calibrated lux.
   int mean = (total+samples/2)/samples;
   return {true, mean, "pin="+String(pin)+" raw="+String(mean)+

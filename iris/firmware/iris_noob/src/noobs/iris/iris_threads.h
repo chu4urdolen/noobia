@@ -8,3 +8,8 @@ NoobFunction &irisUltrasonicChangeStop();
 NoobFunction &irisUltrasonicChangeStatus();
 NoobFunction &irisUltrasonicChangePop();
 NoobFunction &irisUltrasonicChangePoll();
+NoobThreadProgram &irisLightChangeThread();
+NoobFunction &irisLightChangeStop();
+NoobFunction &irisLightChangeStatus();
+NoobFunction &irisLightChangePop();
+NoobFunction &irisLightChangePoll();

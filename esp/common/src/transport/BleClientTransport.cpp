@@ -11,6 +11,12 @@ class ClientCallbacks : public BLEClientCallbacks {
     if (activeTransport) activeTransport->handleDisconnect();
   }
 };
+class ScanCallbacks : public BLEAdvertisedDeviceCallbacks {
+  void onResult(BLEAdvertisedDevice device) override {
+    if (activeTransport) activeTransport->handleAdvertisement(device);
+  }
+};
+ScanCallbacks scanCallbacks;
 void notificationCallback(BLERemoteCharacteristic *, uint8_t *data,
                           size_t length, bool) {
   if (activeTransport) activeTransport->handleNotification(data, length);
@@ -125,21 +131,16 @@ void BleClientTransport::handleDisconnect() {
   uplink_ = nullptr;
   nextAttemptAt_ = millis() + retryIntervalMs_;
 }
+void BleClientTransport::handleAdvertisement(BLEAdvertisedDevice device) {
+  String found = device.getAddress().toString();
+  found.toLowerCase();
+  if (found != peerMac_) return;
+  pendingAddressType_ = device.getAddressType();
+  pendingMatch_ = true;
+}
 void BleClientTransport::handleScanComplete(BLEScanResults results) {
+  (void)results;
   scanRunning_ = false;
-  if (pendingMatch_) {
-    delete pendingMatch_;
-    pendingMatch_ = nullptr;
-  }
-  for (int index = 0; index < results.getCount(); ++index) {
-    BLEAdvertisedDevice device = results.getDevice(index);
-    String found = device.getAddress().toString();
-    found.toLowerCase();
-    if (found == peerMac_) {
-      pendingMatch_ = new BLEAdvertisedDevice(device);
-      break;
-    }
-  }
   BLEDevice::getScan()->clearResults();
   if (!pendingMatch_) nextAttemptAt_ = millis() + retryIntervalMs_;
 }
@@ -156,20 +157,21 @@ void BleClientTransport::maintainConnection() {
 bool BleClientTransport::startScan() {
   BLEScan *scanner = BLEDevice::getScan();
   scanner->setActiveScan(true);
+  scanner->setAdvertisedDeviceCallbacks(&scanCallbacks, false, true);
+  pendingMatch_ = false;
   scanRunning_ =
       scanner->start(scanDurationSeconds_, scanCompleteCallback, false);
   return scanRunning_;
 }
 bool BleClientTransport::connectMatch() {
-  BLEAdvertisedDevice *match = pendingMatch_;
-  pendingMatch_ = nullptr;
-  if (!match) return false;
+  if (!pendingMatch_) return false;
+  pendingMatch_ = false;
   if (!client_) {
     client_ = BLEDevice::createClient();
     client_->setClientCallbacks(new ClientCallbacks());
   }
-  const bool linked = client_->connect(match);
-  delete match;
+  const bool linked =
+      client_->connect(BLEAddress(peerMac_.c_str()), pendingAddressType_);
   if (!linked) return false;
   client_->setMTU(517);
   BLERemoteService *service = client_->getService(serviceUuid_);

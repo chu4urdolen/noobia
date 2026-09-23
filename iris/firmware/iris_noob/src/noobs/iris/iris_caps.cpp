@@ -12,6 +12,7 @@ void irisRegisterCapabilities(CapabilityRegistry &capabilities) {
   capabilities.add("ULTRASONIC");
   capabilities.add("LED_SEQUENCES");
   capabilities.add("ULTRASONIC_CHANGE_THREAD");
+  capabilities.add("LIGHT_CHANGE_THREAD");
 #if IRIS_ENABLE_IR
   capabilities.add("IR_TX");
   capabilities.add("IR_RX");

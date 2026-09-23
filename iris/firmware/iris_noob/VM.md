@@ -56,6 +56,15 @@ police sequence (function 201) whenever a meaningful change arrives. It waits
 for common `SEQUENCE_STATUS` to become idle before accepting another event.
 The corresponding `.asm` file is a readable annotated listing.
 
+`light_change_start.hex` calls Iris function 207 with a dynamic-delta margin
+of 200 ADC counts and a 250 ms interval. Function 211 is its nonblocking event
+poll; each nonzero result is the logical time at which light changed.
+
+`police_on_sensor_change.hex` combines ultrasonic and photoresistor events.
+The light thread stays running while police executes, but sampling is suppressed
+by sequence `channel_busy` bits 0 and 1 for their complete execution lifetime.
+The thread takes a fresh light baseline when both LED channels finish.
+
 Common native IDs occupy 1–99 and are registered by `NoobRuntime`. Physical
 Noob functions begin at 100. `TIME_NOW` returns monotonic milliseconds as the
 raw 32-bit value in the signed VM register; arithmetic should treat wraparound

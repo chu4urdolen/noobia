@@ -58,7 +58,8 @@ class NoobProgramChannel {
     return true;
   }
 
-  void invoke(NativeRegistry &registry, int32_t input) {
+  void invoke(NativeRegistry &registry, int32_t input,
+              bool appendInput = true) {
     busy_ = true;
     const NativeEntry *entry = registry.find(functionId_);
     if (!entry) {
@@ -70,9 +71,10 @@ class NoobProgramChannel {
     int32_t callArguments[8] = {};
     for (uint8_t index = 0; index < argumentCount_; ++index)
       callArguments[index] = arguments_[index];
-    callArguments[argumentCount_] = input;
+    if (appendInput) callArguments[argumentCount_] = input;
     const NativeResult result =
-        registry.call(*entry, callArguments, argumentCount_ + 1);
+        registry.call(*entry, callArguments,
+                      argumentCount_ + (appendInput ? 1 : 0));
     lastOk_ = result.ok;
     lastDetail_ = result.detail;
     if (result.ok) results_.push(result.value);

@@ -172,6 +172,17 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().add(IrisFunctions::ULTRASONIC_CHANGE_POLL,
                               "ULTRASONIC_CHANGE_POLL",
                               irisUltrasonicChangePoll());
+  ok &= runtime.natives().add(IrisFunctions::LIGHT_CHANGE_START,
+                              "LIGHT_CHANGE_START",
+                              irisLightChangeThread());
+  ok &= runtime.natives().add(IrisFunctions::LIGHT_CHANGE_STOP,
+                              "LIGHT_CHANGE_STOP", irisLightChangeStop());
+  ok &= runtime.natives().add(IrisFunctions::LIGHT_CHANGE_STATUS,
+                              "LIGHT_CHANGE_STATUS", irisLightChangeStatus());
+  ok &= runtime.natives().add(IrisFunctions::LIGHT_CHANGE_POP,
+                              "LIGHT_CHANGE_POP", irisLightChangePop());
+  ok &= runtime.natives().add(IrisFunctions::LIGHT_CHANGE_POLL,
+                              "LIGHT_CHANGE_POLL", irisLightChangePoll());
 #if IRIS_ENABLE_IR
   ok &= runtime.natives().add(IrisFunctions::IR_SEND, "IR_SEND", Esp32IrService::send);
   ok &= runtime.natives().add(IrisFunctions::IR_READ, "IR_READ", Esp32IrService::read);
@@ -197,5 +208,6 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.addService(Esp32WifiService::rssiService());
 #endif
   ok &= runtime.addService(irisUltrasonicChangeThread());
+  ok &= runtime.addService(irisLightChangeThread());
   return ok;
 }

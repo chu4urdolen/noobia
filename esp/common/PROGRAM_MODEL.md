@@ -53,12 +53,16 @@ have independent positions, queues, and `channel_busy[slot]` bits.
 The common sequencer arrays are:
 
 - `tracks[4]`: channel definitions and current positions;
-- `channelBusy[4]`: whether each channel body is executing.
+- `channelBusy[4]`: whether each channel is executing its sequence.
 
 `SEQUENCE_STATUS` reports all busy bits and positions. `SEQUENCE_BUSY slot`
 returns one bit directly. A finite sequence stops after every active track
 reaches its final bit. Only one common sequence owns the sequencer at a time;
 starting a compiled sequence replaces the previous definition.
+
+`channel_busy[slot]` is set when a sequence starts and remains set until that
+channel reaches its end. Stop and error paths clear every bit. The low-level
+`NoobProgramChannel::busy` flag remains separate and covers one native call.
 
 VMs may call a compiled sequence, or build one through `SEQUENCE_SET`.
 
@@ -66,7 +70,7 @@ VMs may call a compiled sequence, or build one through `SEQUENCE_SET`.
 
 A thread has one logical output channel:
 
-- `channelBusy_[1]`: set around the derived `step()` body;
+- `channelBusy_[1]`: set when the thread starts and cleared when it stops;
 - one 16-integer event queue;
 - one interval and next-run time;
 - running state.
@@ -76,14 +80,19 @@ event should become visible. `POP` treats an empty queue as an error, which
 is useful for interactive diagnostics. `POLL` is intended for VM loops: it
 returns zero when empty and the next event value otherwise.
 
+`NoobChangeThreadProgram` is a reusable derived thread. Its first reading
+becomes the runtime baseline; it compares later readings with the preceding
+reading and never assumes an absolute sensor value. The physical Noob supplies
+the native source function, sensitivity delta, interval, and rearm sample count.
+
 The runtime calls all thread and sequence services cooperatively. No background
 service blocks the command transports or owns an unbounded task.
 
 ## Iris examples
 
 Iris registers low-level functions in `iris_functions.cpp`, compiled LED
-sequences in `iris_sequences.cpp`, and the ultrasonic detector thread in
-`iris_threads.cpp`.
+sequences in `iris_sequences.cpp`, and ultrasonic/light change-thread
+instances in `iris_threads.cpp`.
 
 The police sequence has two 200 ms channels:
 
@@ -98,6 +107,12 @@ with the immediately preceding distance. A change of at least 100 mm publishes
 the logical monotonic detection time, not the distance. It then disarms until
 four consecutive readings are stable within one quarter of the threshold. This
 turns continuous motion into one event episode instead of a timestamp flood.
+
+The photoresistor thread uses the same common class. It establishes its
+baseline from the current room light, samples every 250 ms, and by default
+requires a 200-count ADC delta. BLE or VM callers may supply a different delta.
+Events contain logical monotonic timestamps. Iris skips light samples while
+police LED channels 0 or 1 are busy, then takes a fresh post-sequence baseline.
 
 `police_on_ultrasonic_change.hex` composes both native classes:
 

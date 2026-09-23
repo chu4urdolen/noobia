@@ -19,6 +19,7 @@ class NoobThreadProgram : public NoobProgram,
   virtual bool step(String &event) = 0;
   virtual void onStart() {}
   virtual void onStop() {}
+  virtual String statusDetail() const { return ""; }
   void publish(int32_t value) { results_.push(value); }
   void setInterval(uint32_t intervalMs) { intervalMs_ = intervalMs; }
 

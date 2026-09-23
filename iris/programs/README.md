@@ -50,6 +50,11 @@ observing the installed enclosure noise floor.
   timestamp queues. The light thread remains running during a blink, but skips
   samples while LED sequence channels are busy and resumes with a fresh baseline.
   This prevents the police LEDs from triggering their own event.
+- `mic_rise_start`: samples small RMS chunks every 100 ms and reduces them
+  into ten one-second loudness buckets. It triggers when the newer five-bucket
+  mean is at least twice the older mean and at least RMS 20.
+- `police_on_loudness_rise`: keeps that detector running and starts one police
+  sequence for each rearmed loudness-rise event.
 - `storage_mic`: SD capacity in r0, microphone RMS in r1, then halt.
 - `audio_one_second`: record a one-second WAV to SD; sample count in r1.
 - `video_one_second`: save two JPEG frames as a one-second MJPEG; count in r2.

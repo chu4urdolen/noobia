@@ -23,12 +23,13 @@ NativeResult NoobThreadProgram::stop() {
 }
 
 NativeResult NoobThreadProgram::status() const {
-  return {true, running_ ? 1 : 0,
-          "type=thread running=" + String(running_ ? 1 : 0) +
-              " interval_ms=" + String(intervalMs_) +
-              " channel_busy=" + String(channelBusy_[0] ? 1 : 0) +
-              " queued=" + String(results_.size()) +
-              " dropped=" + String(results_.dropped())};
+  String detail = "type=thread running=" + String(running_ ? 1 : 0) +
+                  " interval_ms=" + String(intervalMs_) +
+                  " channel_busy=" + String(channelBusy_[0] ? 1 : 0) +
+                  " queued=" + String(results_.size()) +
+                  " dropped=" + String(results_.dropped());
+  detail += statusDetail();
+  return {true, running_ ? 1 : 0, detail};
 }
 
 NativeResult NoobThreadProgram::pop() {

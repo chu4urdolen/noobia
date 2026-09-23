@@ -85,14 +85,19 @@ becomes the runtime baseline; it compares later readings with the preceding
 reading and never assumes an absolute sensor value. The physical Noob supplies
 the native source function, sensitivity delta, interval, and rearm sample count.
 
+`NoobWindowRiseThreadProgram` is another reusable derived thread. It reduces
+frequent integer samples into ten fixed-duration buckets and stores no raw
+samples. Each update compares the five oldest bucket means with the five newest.
+A configurable ratio and minimum level produce one timestamp event, followed by
+a configurable number of false comparisons before rearming.
 The runtime calls all thread and sequence services cooperatively. No background
 service blocks the command transports or owns an unbounded task.
 
 ## Iris examples
 
 Iris registers low-level functions in `iris_functions.cpp`, compiled LED
-sequences in `iris_sequences.cpp`, and ultrasonic/light change-thread
-instances in `iris_threads.cpp`.
+sequences in `iris_sequences.cpp`, and continuous detector instances in
+`iris_threads.cpp`.
 
 The police sequence has two 200 ms channels:
 

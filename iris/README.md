@@ -51,12 +51,14 @@ Iris-specific behavior is split further:
   and ultrasonic distance.
 - `iris_sequences.*`: finite/repeating multi-channel LED programs.
 - `iris_threads.*`: continuous programs with explicit stop/status/result
-  functions, currently ultrasonic and photoresistor change detection.
+  functions, currently ultrasonic, photoresistor, and microphone-rise detection.
 
 `BLUE_BLINK_SEQUENCE` and `POLICE_SEQUENCE` are callable from BLE or VM.
 `ULTRASONIC_CHANGE_START` and `LIGHT_CHANGE_START` establish live sensor
 baselines, then queue timestamps only when their configured dynamic delta is
 crossed. Neither relies on an absolute environmental value.
+`MIC_RISE_START` stores ten one-second loudness integers, never raw audio. It
+compares the older five-second mean with the newer five-second mean.
 
 The installed workspace build can be run with:
 

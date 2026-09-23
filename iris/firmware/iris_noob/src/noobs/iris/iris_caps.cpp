@@ -34,6 +34,7 @@ void irisRegisterCapabilities(CapabilityRegistry &capabilities) {
 #endif
 #if IRIS_ENABLE_MIC
   capabilities.add("MIC");
+  capabilities.add("MIC_LOUDNESS_RISE_THREAD");
 #endif
   capabilities.add("RGB_LED");
   capabilities.add("SIGNAL_LED");

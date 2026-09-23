@@ -183,6 +183,18 @@ bool irisRegister(NoobRuntime &runtime) {
                               "LIGHT_CHANGE_POP", irisLightChangePop());
   ok &= runtime.natives().add(IrisFunctions::LIGHT_CHANGE_POLL,
                               "LIGHT_CHANGE_POLL", irisLightChangePoll());
+#if IRIS_ENABLE_MIC
+  ok &= runtime.natives().add(IrisFunctions::MIC_RISE_START,
+                              "MIC_RISE_START", irisMicRiseThread());
+  ok &= runtime.natives().add(IrisFunctions::MIC_RISE_STOP,
+                              "MIC_RISE_STOP", irisMicRiseStop());
+  ok &= runtime.natives().add(IrisFunctions::MIC_RISE_STATUS,
+                              "MIC_RISE_STATUS", irisMicRiseStatus());
+  ok &= runtime.natives().add(IrisFunctions::MIC_RISE_POP,
+                              "MIC_RISE_POP", irisMicRisePop());
+  ok &= runtime.natives().add(IrisFunctions::MIC_RISE_POLL,
+                              "MIC_RISE_POLL", irisMicRisePoll());
+#endif
 #if IRIS_ENABLE_IR
   ok &= runtime.natives().add(IrisFunctions::IR_SEND, "IR_SEND", Esp32IrService::send);
   ok &= runtime.natives().add(IrisFunctions::IR_READ, "IR_READ", Esp32IrService::read);
@@ -209,5 +221,8 @@ bool irisRegister(NoobRuntime &runtime) {
 #endif
   ok &= runtime.addService(irisUltrasonicChangeThread());
   ok &= runtime.addService(irisLightChangeThread());
+#if IRIS_ENABLE_MIC
+  ok &= runtime.addService(irisMicRiseThread());
+#endif
   return ok;
 }

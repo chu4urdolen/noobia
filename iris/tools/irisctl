@@ -57,6 +57,8 @@ usage() {
   echo "  irisctl ultrasonic-change-pop | ultrasonic-change-poll | motion-police | sensor-police"
   echo "  irisctl light-change-start [DELTA] [INTERVAL_MS]"
   echo "  irisctl light-change-stop | light-change-status | light-change-pop | light-change-poll"
+  echo "  irisctl mic-rise-start [RATIO_PERCENT] [MIN_RMS] | mic-rise-stop | mic-rise-status"
+  echo "  irisctl mic-rise-pop | mic-rise-poll | sound-police"
   echo "  irisctl vm-save NAME | vm-load-saved NAME | vm-list-saved | vm-delete-saved NAME"
   echo "  irisctl sd-list [PATH] | sd-delete PATH | capture-delete SEQUENCE"
   echo "  irisctl ble REQUEST_ID COMMAND [ARGS...]"
@@ -338,6 +340,30 @@ case ${1:-} in
     ;;
   light-change-poll)
     exec "$0" ble "ctl$$" CALL LIGHT_CHANGE_POLL
+    ;;
+  mic-rise-start)
+    (( $# <= 3 )) || { usage >&2; exit 2; }
+    if (( $# == 3 )); then
+      exec "$0" ble "ctl$$" CALL MIC_RISE_START "$2" "$3"
+    elif (( $# == 2 )); then
+      exec "$0" ble "ctl$$" CALL MIC_RISE_START "$2"
+    fi
+    exec "$0" ble "ctl$$" CALL MIC_RISE_START
+    ;;
+  mic-rise-stop)
+    exec "$0" ble "ctl$$" CALL MIC_RISE_STOP
+    ;;
+  mic-rise-status)
+    exec "$0" ble "ctl$$" CALL MIC_RISE_STATUS
+    ;;
+  mic-rise-pop)
+    exec "$0" ble "ctl$$" CALL MIC_RISE_POP
+    ;;
+  mic-rise-poll)
+    exec "$0" ble "ctl$$" CALL MIC_RISE_POLL
+    ;;
+  sound-police)
+    exec "$0" thread-start police_on_loudness_rise
     ;;
   vm-save)
     (( $# == 2 )) || { usage >&2; exit 2; }

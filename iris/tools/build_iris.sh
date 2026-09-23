@@ -70,4 +70,7 @@ rg -q 'NoobThreadProgram::poll' "$BUILD_DIR/symbols.txt" || {
 rg -q 'NoobChangeThreadProgram::step' "$BUILD_DIR/symbols.txt" || {
   echo 'Common dynamic-change thread is missing' >&2; exit 1;
 }
+rg -q 'NoobWindowRiseThreadProgram::step' "$BUILD_DIR/symbols.txt" || {
+  echo 'Common rolling-window rise thread is missing' >&2; exit 1;
+}
 echo "Verified firmware: $BUILD_DIR/iris_noob.ino.bin"

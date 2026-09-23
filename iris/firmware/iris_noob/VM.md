@@ -65,6 +65,10 @@ The light thread stays running while police executes, but sampling is suppressed
 by sequence `channel_busy` bits 0 and 1 for their complete execution lifetime.
 The thread takes a fresh light baseline when both LED channels finish.
 
+`mic_rise_start.hex` starts functions 212--216 with a 200% rise ratio and
+minimum RMS 20. `police_on_loudness_rise.hex` polls its timestamp queue and
+runs the same finite police sequence. Raw sound is reduced immediately into one
+integer per second; only ten integers remain in the rolling frame.
 Common native IDs occupy 1–99 and are registered by `NoobRuntime`. Physical
 Noob functions begin at 100. `TIME_NOW` returns monotonic milliseconds as the
 raw 32-bit value in the signed VM register; arithmetic should treat wraparound

@@ -13,3 +13,8 @@ NoobFunction &irisLightChangeStop();
 NoobFunction &irisLightChangeStatus();
 NoobFunction &irisLightChangePop();
 NoobFunction &irisLightChangePoll();
+NoobThreadProgram &irisMicRiseThread();
+NoobFunction &irisMicRiseStop();
+NoobFunction &irisMicRiseStatus();
+NoobFunction &irisMicRisePop();
+NoobFunction &irisMicRisePoll();

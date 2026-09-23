@@ -19,6 +19,9 @@ Program controls include:
     irisctl sensor-police
     irisctl light-change-start 200 250
     irisctl light-change-poll
+    irisctl mic-rise-start 200 20
+    irisctl mic-rise-status
+    irisctl sound-police
     irisctl sequence-status
     irisctl sequence-pop 0
     irisctl sequence-busy 0
@@ -37,6 +40,9 @@ motion episode.
 The light-change commands use a runtime baseline. Their first argument is an
 ADC delta sensitivity, not an absolute light level.
 
+`mic-rise-start` keeps only ten one-second integer buckets. The first argument
+is a percentage ratio and the second is a minimum new-half RMS. `sound-police`
+uses 200% and RMS 20, then runs the finite police sequence on each event.
 `sensor-police` combines both detectors. Light sampling pauses for the
 entire LED sequence while the detector thread keeps running, avoiding feedback.
 

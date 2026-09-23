@@ -86,6 +86,11 @@ constexpr uint32_t LIGHT_CHANGE_INTERVAL_MS = 250;
 constexpr int32_t LIGHT_CHANGE_THRESHOLD = 200;
 constexpr uint8_t LIGHT_CHANGE_REARM_SAMPLES = 4;
 constexpr uint8_t LIGHT_CHANGE_PAUSE_SEQUENCE_MASK = 0x03;
+constexpr uint32_t MIC_RISE_SAMPLE_INTERVAL_MS = 100;
+constexpr uint32_t MIC_RISE_BUCKET_MS = 1000;
+constexpr uint16_t MIC_RISE_RATIO_PERCENT = 200;
+constexpr int32_t MIC_RISE_MINIMUM_RMS = 20;
+constexpr uint8_t MIC_RISE_REARM_BUCKETS = 3;
 constexpr uint32_t POLICE_STEP_MS = 200;
 }
 
@@ -144,4 +149,9 @@ constexpr unsigned LIGHT_CHANGE_STOP = 208;
 constexpr unsigned LIGHT_CHANGE_STATUS = 209;
 constexpr unsigned LIGHT_CHANGE_POP = 210;
 constexpr unsigned LIGHT_CHANGE_POLL = 211;
+constexpr unsigned MIC_RISE_START = 212;
+constexpr unsigned MIC_RISE_STOP = 213;
+constexpr unsigned MIC_RISE_STATUS = 214;
+constexpr unsigned MIC_RISE_POP = 215;
+constexpr unsigned MIC_RISE_POLL = 216;
 }

@@ -1,10 +1,10 @@
 #include <Arduino.h>
-#include <NoobRuntime.h>
+#include <noob_runtime.h>
 #include "src/noobs/iris/iris.h"
 #include "src/noobs/iris/iris_config.h"
 #include "src/noobs/iris/nexus_peer_config.h"
 
-NoobRuntime runtime("Iris", "0.4.7");
+NoobRuntime runtime("Iris", "0.5.0");
 StreamTransport usbTransport("usb", Serial);
 #if IRIS_ENABLE_BLE
 BleClientTransport bleTransport(

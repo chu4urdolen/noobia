@@ -19,9 +19,8 @@ bool Esp32Dht11Service::begin(int p) {
   attempted = false;
   return true;
 }
-NativeResult Esp32Dht11Service::read(const int32_t *args, uint8_t count) {
-  if (count > 1 || (count && (args[0] < 0 || args[0] > 1)))
-    return {false, 0, "usage: [0=temperature|1=humidity]"};
+NativeResult Esp32Dht11Service::sample(int32_t &temperature,
+                                       int32_t &humidity) {
   if (pin < 0) return {false, 0, "DHT11 unconfigured"};
   if (millis() < 2000 || (attempted && uint32_t(millis()-lastAttempt) < 2000))
     return {false, 0, "DHT11 cooldown_ms=2000"};
@@ -54,11 +53,21 @@ NativeResult Esp32Dht11Service::read(const int32_t *args, uint8_t count) {
   snprintf(raw, sizeof(raw), "%02x%02x%02x%02x%02x", bytes[0], bytes[1], bytes[2], bytes[3], bytes[4]);
   if (uint8_t(bytes[0]+bytes[1]+bytes[2]+bytes[3]) != bytes[4])
     return {false, 0, String("DHT11 checksum raw=") + raw};
-  int humidity = bytes[0]*10 + bytes[1];
-  int temperature = (bytes[3]&0x80 ? -1-int(bytes[2]) : int(bytes[2]))*10 + (bytes[3]&15);
+  humidity = bytes[0]*10 + bytes[1];
+  temperature = (bytes[3]&0x80 ? -1-int(bytes[2]) : int(bytes[2]))*10 + (bytes[3]&15);
   if (humidity > 1000 || temperature < -200 || temperature > 800)
     return {false, 0, String("DHT11 range raw=") + raw};
-  return {true, count && args[0] ? humidity : temperature,
+  return {true, temperature,
           "temperature_c=" + String(temperature/10.0f, 1) +
           " humidity_pct=" + String(humidity/10.0f, 1) + " raw=" + raw};
+}
+
+NativeResult Esp32Dht11Service::read(const int32_t *args, uint8_t count) {
+  if (count > 1 || (count && (args[0] < 0 || args[0] > 1)))
+    return {false, 0, "usage: [0=temperature|1=humidity]"};
+  int32_t temperature = 0;
+  int32_t humidity = 0;
+  NativeResult result = sample(temperature, humidity);
+  if (result.ok) result.value = count && args[0] ? humidity : temperature;
+  return result;
 }

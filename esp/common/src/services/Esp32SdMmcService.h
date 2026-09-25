@@ -1,7 +1,7 @@
 #pragma once
 
 #include <FS.h>
-#include "syscalls/NativeRegistry.h"
+#include "syscalls/noob_native_registry.h"
 
 namespace Esp32SdMmcService {
 struct Config {
@@ -21,6 +21,7 @@ NativeResult remove(const int32_t *arguments, uint8_t count);
 NativeResult removePath(const String &arguments);
 NativeResult listPath(const String &arguments);
 String capturePath(int32_t sequence);
+const char *captureDirectory();
 bool ready();
 fs::FS &fs();
 bool validPath(const String &path);

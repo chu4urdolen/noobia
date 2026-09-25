@@ -14,11 +14,8 @@ specific work belongs in native services.
 - BLE scan/connect and credential updates
 - audio recording, camera MJPEG recording, and persistent VM storage
 
-Iris currently has **no external I2C or OLED capability**. GPIO17 and GPIO18
-are occupied by the blue LED and IR receiver. The reusable runtime retains an
-I2C implementation for a future Noob or a future Iris wiring profile, but Iris
-does not register it and `CAPS` must not report it. There is also no unrestricted
-VM GPIO/PWM syscall yet; Iris exposes only named, bounded hardware functions.
+There is no unrestricted VM GPIO/PWM syscall yet; Iris exposes only named,
+bounded hardware functions.
 
 ## High-value reusable additions
 
@@ -30,7 +27,6 @@ VM GPIO/PWM syscall yet; Iris exposes only named, bounded hardware functions.
 - configuration namespaces with validation and rollback
 - UART device channels and framed serial bridging
 - SPI transactions with selectable mode, frequency, and chip-select
-- I2C bus recovery/status for a Noob that actually registers an I2C bus
 - generic sensor polling scheduler with min/max intervals
 - battery/USB voltage and temperature telemetry where hardware exposes it
 - BLE GATT notifications for logs, status, and event streams

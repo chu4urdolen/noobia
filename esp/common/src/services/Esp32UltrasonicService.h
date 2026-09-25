@@ -1,6 +1,6 @@
 #pragma once
 
-#include "syscalls/NativeRegistry.h"
+#include "syscalls/noob_native_registry.h"
 
 namespace Esp32UltrasonicService {
 struct Config {

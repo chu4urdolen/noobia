@@ -1,7 +1,7 @@
 #include "iris.h"
 #include "iris_config.h"
 #include "iris_secrets.h"
-#include <transport/BleClientTransport.h>
+#include <transport/noob_ble_client_transport.h>
 #include <services/Esp32WifiService.h>
 #include <services/Esp32SdMmcService.h>
 #include <services/Esp32CameraService.h>
@@ -14,9 +14,12 @@
 #include <services/Esp32IrService.h>
 #include <services/Esp32UltrasonicService.h>
 #include <services/Esp32VmProgramStore.h>
-#include "iris_functions.h"
-#include "iris_sequences.h"
-#include "iris_threads.h"
+#include "hw_artifacts.h"
+#include "hw_functions.h"
+#include "seq_leds.h"
+#include "seq_media.h"
+#include "thread_detectors.h"
+#include "thread_sampling.h"
 #if IRIS_ENABLE_GPIO_DIAGNOSTICS
 #include <Esp32GpioInspector.h>
 #endif
@@ -92,6 +95,7 @@ bool irisRegister(NoobRuntime &runtime) {
 #endif
 #if IRIS_ENABLE_SD
   ok &= Esp32VmProgramStore::begin(runtime.vm());
+  runtime.setVmLifecycle(Esp32VmProgramStore::lifecycle());
 #endif
 #if IRIS_ENABLE_GPIO_DIAGNOSTICS
   ok &= Esp32GpioInspector::begin(48);
@@ -156,7 +160,37 @@ bool irisRegister(NoobRuntime &runtime) {
                               irisBlueBlinkSequence());
   ok &= runtime.natives().add(IrisFunctions::POLICE_SEQUENCE,
                               "POLICE_SEQUENCE", irisPoliceSequence());
+#if IRIS_ENABLE_CAMERA && IRIS_ENABLE_SD
+  ok &= runtime.natives().add(IrisFunctions::CAMERA_SEQUENCE_STEP,
+                              "CAMERA_SEQUENCE_STEP",
+                              irisCameraSequenceStep);
+  ok &= runtime.natives().add(IrisFunctions::CAMERA_SEQUENCE,
+                              "CAMERA_SEQUENCE", irisCameraSequence());
+#endif
+#if IRIS_ENABLE_IR && IRIS_ENABLE_SD
+  ok &= runtime.natives().add(IrisFunctions::IR_SEQUENCE_STEP,
+                              "IR_SEQUENCE_STEP", irisIrSequenceStep);
+  ok &= runtime.natives().add(IrisFunctions::IR_SEQUENCE,
+                              "IR_SEQUENCE", irisIrSequence());
+#endif
+#if IRIS_ENABLE_WIFI && IRIS_ENABLE_SD
+  ok &= runtime.natives().add(IrisFunctions::RSSI_SNAPSHOT,
+                              "RSSI_SNAPSHOT", irisRssiSnapshot);
+#endif
+#if IRIS_ENABLE_IR && IRIS_ENABLE_SD
+  ok &= runtime.natives().add(IrisFunctions::IR_SNAPSHOT,
+                              "IR_SNAPSHOT", irisIrSnapshot);
+#endif
+#if IRIS_ENABLE_SD
+  ok &= runtime.natives().add(IrisFunctions::ENV_SNAPSHOT,
+                              "ENV_SNAPSHOT", irisEnvSnapshot);
+  ok &= runtime.natives().add(IrisFunctions::ENV_TEMPERATURE,
+                              "ENV_TEMPERATURE", irisEnvTemperature);
+  ok &= runtime.natives().add(IrisFunctions::ENV_HUMIDITY,
+                              "ENV_HUMIDITY", irisEnvHumidity);
+#endif
   irisThreadsBegin(runtime.natives());
+  irisSamplingThreadsBegin(runtime.natives());
   ok &= runtime.natives().add(IrisFunctions::ULTRASONIC_CHANGE_START,
                               "ULTRASONIC_CHANGE_START",
                               irisUltrasonicChangeThread());
@@ -195,6 +229,42 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().add(IrisFunctions::MIC_RISE_POLL,
                               "MIC_RISE_POLL", irisMicRisePoll());
 #endif
+#if IRIS_ENABLE_WIFI && IRIS_ENABLE_SD
+  ok &= runtime.natives().add(IrisFunctions::RSSI_THREAD_START,
+                              "RSSI_THREAD_START", irisRssiThread());
+  ok &= runtime.natives().add(IrisFunctions::RSSI_THREAD_STOP,
+                              "RSSI_THREAD_STOP", irisRssiThreadStop());
+  ok &= runtime.natives().add(IrisFunctions::RSSI_THREAD_STATUS,
+                              "RSSI_THREAD_STATUS", irisRssiThreadStatus());
+  ok &= runtime.natives().add(IrisFunctions::RSSI_THREAD_POP,
+                              "RSSI_THREAD_POP", irisRssiThreadPop());
+  ok &= runtime.natives().add(IrisFunctions::RSSI_THREAD_POLL,
+                              "RSSI_THREAD_POLL", irisRssiThreadPoll());
+#endif
+#if IRIS_ENABLE_IR && IRIS_ENABLE_SD
+  ok &= runtime.natives().add(IrisFunctions::IR_THREAD_START,
+                              "IR_THREAD_START", irisIrThread());
+  ok &= runtime.natives().add(IrisFunctions::IR_THREAD_STOP,
+                              "IR_THREAD_STOP", irisIrThreadStop());
+  ok &= runtime.natives().add(IrisFunctions::IR_THREAD_STATUS,
+                              "IR_THREAD_STATUS", irisIrThreadStatus());
+  ok &= runtime.natives().add(IrisFunctions::IR_THREAD_POP,
+                              "IR_THREAD_POP", irisIrThreadPop());
+  ok &= runtime.natives().add(IrisFunctions::IR_THREAD_POLL,
+                              "IR_THREAD_POLL", irisIrThreadPoll());
+#endif
+#if IRIS_ENABLE_SD
+  ok &= runtime.natives().add(IrisFunctions::ENV_THREAD_START,
+                              "ENV_THREAD_START", irisEnvThread());
+  ok &= runtime.natives().add(IrisFunctions::ENV_THREAD_STOP,
+                              "ENV_THREAD_STOP", irisEnvThreadStop());
+  ok &= runtime.natives().add(IrisFunctions::ENV_THREAD_STATUS,
+                              "ENV_THREAD_STATUS", irisEnvThreadStatus());
+  ok &= runtime.natives().add(IrisFunctions::ENV_THREAD_POP,
+                              "ENV_THREAD_POP", irisEnvThreadPop());
+  ok &= runtime.natives().add(IrisFunctions::ENV_THREAD_POLL,
+                              "ENV_THREAD_POLL", irisEnvThreadPoll());
+#endif
 #if IRIS_ENABLE_IR
   ok &= runtime.natives().add(IrisFunctions::IR_SEND, "IR_SEND", Esp32IrService::send);
   ok &= runtime.natives().add(IrisFunctions::IR_READ, "IR_READ", Esp32IrService::read);
@@ -205,6 +275,12 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().addText(IrisFunctions::VM_LOAD_SAVED, "VM_LOAD_SAVED", Esp32VmProgramStore::load);
   ok &= runtime.natives().addText(IrisFunctions::VM_LIST_SAVED, "VM_LIST_SAVED", Esp32VmProgramStore::list);
   ok &= runtime.natives().addText(IrisFunctions::VM_DELETE_SAVED, "VM_DELETE_SAVED", Esp32VmProgramStore::remove);
+  ok &= runtime.natives().add(IrisFunctions::VM_LAST_STATUS,
+                              "VM_LAST_STATUS",
+                              Esp32VmProgramStore::lastStatus);
+  ok &= runtime.natives().add(IrisFunctions::VM_LAST_CLEAR,
+                              "VM_LAST_CLEAR",
+                              Esp32VmProgramStore::clearLast);
 #endif
 #if IRIS_ENABLE_BLE
   ok &= runtime.natives().add(IrisFunctions::BLE_SCAN, "BLE_SCAN", BleClientTransport::scan);
@@ -223,6 +299,19 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.addService(irisLightChangeThread());
 #if IRIS_ENABLE_MIC
   ok &= runtime.addService(irisMicRiseThread());
+#endif
+#if IRIS_ENABLE_WIFI && IRIS_ENABLE_SD
+  ok &= runtime.addService(irisRssiThread());
+#endif
+#if IRIS_ENABLE_IR && IRIS_ENABLE_SD
+  ok &= runtime.addService(irisIrThread());
+#endif
+#if IRIS_ENABLE_SD
+  ok &= runtime.addService(irisEnvThread());
+  const NativeResult restored = Esp32VmProgramStore::restoreLast();
+  Serial.printf("NRP/1 0 EVENT VM_RESTORE ok=%d value=%ld detail=%s\n",
+                restored.ok ? 1 : 0, long(restored.value),
+                restored.detail.c_str());
 #endif
   return ok;
 }

@@ -2,12 +2,7 @@
 
 Current attachments: photoresistor GPIO1, DHT11 GPIO15, ultrasonic trigger
 GPIO16/echo GPIO48, blue LED GPIO17, IR receiver GPIO18/transmitter GPIO40,
-and red LED GPIO47. External I2C/OLED is disabled in this profile because its
-former GPIO17/18 pair is occupied. Historical OLED probes remain under
-`diagnostics/` and take their pins from `diagnostic_config.h`.
-
-This is not a dormant I2C profile: Iris does not register I2C/OLED functions or
-capabilities at all. The generic source remains reusable by other Noobs.
+and red LED GPIO47.
 
 Iris is the first physical Noob using the common runtime. Her implementation is
 under `src/noobs/iris` and contains all verified pin assignments, hardware
@@ -28,6 +23,9 @@ The current profile includes these native services:
   `/captured`; returns the sequence number.
 - `101 STORAGE_STATUS`: return SD capacity and usage.
 - SD listing, chunk reading, general file deletion, and VM program storage.
+- The last successfully started VM is snapshotted to
+  `/programs/runtime_last.nvm`. It starts again after reboot unless an
+  explicit `STOP` disabled autorun. `RESET_VM` clears the snapshot.
 - Microphone level/threshold and WAV recording; camera MJPEG recording.
 - Wi-Fi connect/disconnect, credentials, scan, RSSI gathering and events.
 - BLE scanning, peer configuration/status, and onboard LED controls.
@@ -39,12 +37,11 @@ The current profile includes these native services:
 `CAPS` reports compiled capabilities and registered function names/IDs. Check
 native results for hardware readiness; registration alone does not prove it.
 
-## Restored build
+## Build
 
 Run `tools/build_iris.sh --build-dir DIR`. It selects 16 MB flash, QSPI PSRAM,
-and a 3 MB application partition. Its symbol checks require `TIME_NOW` and
-reject all external-I2C, SH1107/U8g2, and software-I2C code. Camera-internal
-SCCB remains necessary for the camera.
+and a 3 MB application partition. Its symbol checks require the common time,
+sequence, detector, and sampling-thread services.
 
 Hardware selection and tuning stay in `src/noobs/iris/iris_config.h`; reusable
 native implementations stay in `esp/common`. Real provisioning credentials go
@@ -52,5 +49,7 @@ in ignored `iris_secrets.local.h`, copied from the tracked example.
 
 Remote controls include `irisctl dht-read`, `light-read`, `ir-test`,
 `ultrasonic-read`, and `external-led`. Use `irisctl --help` for the full set.
+`irisctl vm-last-status` reports the boot snapshot and
+`irisctl vm-last-clear` removes it without changing the currently loaded VM.
 
 Live test sources are in `diagnostics/`; generated results remain local.

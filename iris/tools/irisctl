@@ -26,6 +26,10 @@ STATE=${OPT_STATE:-${IRIS_STATE_FILE:-"$IRIS_ROOT/run/ble-bridge.state"}}
 PROGRAMS=${OPT_PROGRAMS:-${IRIS_PROGRAMS_DIR:-"$IRIS_ROOT/programs"}}
 COMMON_PROGRAMS=${IRIS_COMMON_PROGRAMS_DIR:-"$IRIS_ROOT/../esp/common/programs"}
 UART_DEVICE=${OPT_UART:-${IRIS_UART_DEVICE:-/dev/ttyUSB0}}
+AUTO_BRIDGE=${IRIS_AUTO_BRIDGE:-1}
+BRIDGE_WAIT_SECONDS=${IRIS_BRIDGE_WAIT_SECONDS:-30}
+BRIDGE_UNIT=${IRIS_BRIDGE_SYSTEMD_UNIT:-iris-ble-bridge}
+BLE_PEER=${IRIS_BLE_PEER_MAC:-}
 
 usage() {
   echo "usage:"
@@ -45,7 +49,7 @@ usage() {
   echo "  irisctl ir-send [MILLISECONDS] [HZ] | ir-read [MILLISECONDS] | ir-test [BURSTS]"
   echo "  irisctl gpio-audit [PAGE] | gpio-inspect PIN | gpio-pull-test PIN"
   echo "  irisctl mic-level | led RED GREEN BLUE | led-off | signal-led 0|1 | external-led 0|2 0|1"
-  echo "  irisctl programs | vm-load NAME | vm-run | vm-stop | vm-status"
+  echo "  irisctl programs | vm-load NAME | vm-run | vm-stop | vm-reset | vm-status"
   echo "  irisctl thread-start NAME | thread-stop | thread-status"
   echo "  irisctl sequence-set SLOT MS FUNCTION BITS [ARGS...]"
   echo "  irisctl sequence-start [0|1] | sequence-stop | sequence-status | sequence-clear [SLOT]"
@@ -59,7 +63,15 @@ usage() {
   echo "  irisctl light-change-stop | light-change-status | light-change-pop | light-change-poll"
   echo "  irisctl mic-rise-start [RATIO_PERCENT] [MIN_RMS] | mic-rise-stop | mic-rise-status"
   echo "  irisctl mic-rise-pop | mic-rise-poll | sound-police | all-police"
+  echo "  irisctl camera-sequence [0|1] | ir-transmit-sequence [0|1]"
+  echo "  irisctl rssi-scan-start [DURATION_MS] [INTERVAL_MS]"
+  echo "  irisctl rssi-scan-stop | rssi-scan-status | rssi-scan-pop | rssi-scan-poll"
+  echo "  irisctl ir-scan-start [DURATION_MS] [INTERVAL_MS]"
+  echo "  irisctl ir-scan-stop | ir-scan-status | ir-scan-pop | ir-scan-poll"
+  echo "  irisctl env-start [INTERVAL_MS] | env-stop | env-status | env-pop | env-poll"
+  echo "  irisctl env-temperature | env-humidity"
   echo "  irisctl vm-save NAME | vm-load-saved NAME | vm-list-saved | vm-delete-saved NAME"
+  echo "  irisctl vm-last-status | vm-last-clear"
   echo "  irisctl sd-list [PATH] | sd-delete PATH | capture-delete SEQUENCE"
   echo "  irisctl ble REQUEST_ID COMMAND [ARGS...]"
   echo "  irisctl fetch SEQUENCE OUTPUT.jpg"
@@ -71,25 +83,75 @@ hex_text() {
   printf "%s" "$1" | xxd -p -c 256 | tr -d "\n"
 }
 
-load_bridge() {
-  [[ -r $STATE ]] || { echo "BLE bridge is not running; use: irisctl bridge" >&2; exit 1; }
+read_bridge_state() {
   unset pid fd log
-  source "$STATE"
-  [[ -n ${pid:-} && -d /proc/$pid && -n ${fd:-} && -e /proc/$pid/fd/$fd ]] ||
-    { echo "Iris is not connected to the BLE bridge yet" >&2; exit 1; }
+  [[ -r $STATE ]] && source "$STATE"
+}
+
+bridge_alive() {
+  read_bridge_state
+  [[ ${pid:-} =~ ^[0-9]+$ && -d /proc/$pid ]]
+}
+
+bridge_ready() {
+  read_bridge_state
+  [[ ${pid:-} =~ ^[0-9]+$ && -d /proc/$pid &&
+     ${fd:-} =~ ^[0-9]+$ && -e /proc/$pid/fd/$fd ]]
+}
+
+start_bridge() {
+  local state_dir
+  state_dir=$(dirname -- "$STATE")
+  mkdir -p "$state_dir"
+  [[ $BRIDGE_UNIT =~ ^[a-zA-Z0-9_.@-]+$ ]] ||
+    { echo "IRIS_BRIDGE_SYSTEMD_UNIT is invalid" >&2; return 2; }
+  systemd-run --user --quiet --collect --unit "$BRIDGE_UNIT" \
+    --property Restart=on-failure --property RestartSec=2s \
+    "$TOOLS/nexus_ble_bridge.sh" --config "$CONFIG" --state "$STATE"
+}
+
+nudge_iris_ble() {
+  [[ -n $BLE_PEER && -c $UART_DEVICE && -x $TOOLS/noobctl ]] || return 0
+  [[ $BLE_PEER =~ ^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$ ]] || return 0
+  NOOB_SERIAL_SETTLE_MS=1500 NOOB_SERIAL_TIMEOUT_MS=4000 \
+    "$TOOLS/noobctl" "$UART_DEVICE" "bridge$$" \
+    CALL_TEXT BLE_PEER_SET "$BLE_PEER" >/dev/null 2>&1 || true
+}
+
+load_bridge() {
+  bridge_ready && return 0
+  [[ $AUTO_BRIDGE == 1 ]] ||
+    { echo "BLE bridge is unavailable and automatic startup is disabled" >&2; exit 1; }
+  [[ $BRIDGE_WAIT_SECONDS =~ ^[1-9][0-9]*$ ]] ||
+    { echo "IRIS_BRIDGE_WAIT_SECONDS must be a positive integer" >&2; exit 2; }
+
+  bridge_alive || start_bridge
+  nudge_iris_ble
+  for (( attempt=0; attempt < BRIDGE_WAIT_SECONDS * 10; ++attempt )); do
+    bridge_ready && return 0
+    sleep 0.1
+  done
+
+  if bridge_alive; then
+    echo "BLE bridge is running, but Iris did not connect within ${BRIDGE_WAIT_SECONDS}s" >&2
+  else
+    echo "BLE bridge failed to start; inspect: journalctl --user -u $BRIDGE_UNIT" >&2
+  fi
+  exit 1
 }
 
 case ${1:-} in
   bridge)
-    exec "$TOOLS/nexus_ble_bridge.sh" --config "$CONFIG"
+    exec "$TOOLS/nexus_ble_bridge.sh" --config "$CONFIG" --state "$STATE"
     ;;
   status)
-    if [[ -r $STATE ]]; then
-      source "$STATE"
-      if [[ -n ${pid:-} && -d /proc/$pid ]]; then
-        echo "bridge=running pid=$pid notify_fd=${fd:-waiting} log=${log:-unknown}"
-        exit 0
-      fi
+    if bridge_ready; then
+      echo "bridge=connected pid=$pid notify_fd=$fd log=${log:-unknown}"
+      exit 0
+    fi
+    if bridge_alive; then
+      echo "bridge=waiting pid=$pid notify_fd=waiting log=${log:-unknown}"
+      exit 0
     fi
     echo "bridge=stopped"
     ;;
@@ -230,6 +292,7 @@ case ${1:-} in
     (( $# == 2 )) || { usage >&2; exit 2; }
     [[ $2 =~ ^[a-z0-9_-]+$ ]] || { echo "invalid VM program name: $2" >&2; exit 2; }
     program="$PROGRAMS/$2.hex"
+    [[ -r $program ]] || program="$PROGRAMS/vm_$2.hex"
     [[ -r $program ]] || program="$COMMON_PROGRAMS/$2.hex"
     [[ -r $program ]] || { echo "unknown VM program: $2" >&2; exit 2; }
     hex=$(tr -d [:space:] < "$program")
@@ -240,6 +303,9 @@ case ${1:-} in
     ;;
   vm-stop)
     exec "$0" ble "ctl$$" STOP
+    ;;
+  vm-reset)
+    exec "$0" ble "ctl$$" RESET_VM
     ;;
   vm-status)
     exec "$0" ble "ctl$$" STATUS
@@ -261,7 +327,7 @@ case ${1:-} in
     exec "$0" ble "ctl$$" CALL_TEXT SEQUENCE_SET "$@"
     ;;
   sequence-start)
-    (( $# <= 2 && ${2:-0} =~ ^[01]$ )) || { usage >&2; exit 2; }
+    (( $# <= 2 )) && [[ ${2:-0} =~ ^[01]$ ]] || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL SEQUENCE_START "${2:-0}"
     ;;
   sequence-stop)
@@ -368,6 +434,68 @@ case ${1:-} in
   all-police)
     exec "$0" thread-start police_on_any_change
     ;;
+  camera-sequence)
+    (( $# <= 2 )) && [[ ${2:-0} =~ ^[01]$ ]] || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL CAMERA_SEQUENCE "${2:-0}"
+    ;;
+  ir-transmit-sequence)
+    (( $# <= 2 )) && [[ ${2:-0} =~ ^[01]$ ]] || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_SEQUENCE "${2:-0}"
+    ;;
+  rssi-scan-start)
+    (( $# <= 3 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL RSSI_THREAD_START "${2:-10000}" "${3:-1000}"
+    ;;
+  rssi-scan-stop)
+    exec "$0" ble "ctl$$" CALL RSSI_THREAD_STOP
+    ;;
+  rssi-scan-status)
+    exec "$0" ble "ctl$$" CALL RSSI_THREAD_STATUS
+    ;;
+  rssi-scan-pop)
+    exec "$0" ble "ctl$$" CALL RSSI_THREAD_POP
+    ;;
+  rssi-scan-poll)
+    exec "$0" ble "ctl$$" CALL RSSI_THREAD_POLL
+    ;;
+  ir-scan-start)
+    (( $# <= 3 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_THREAD_START "${2:-10000}" "${3:-1000}"
+    ;;
+  ir-scan-stop)
+    exec "$0" ble "ctl$$" CALL IR_THREAD_STOP
+    ;;
+  ir-scan-status)
+    exec "$0" ble "ctl$$" CALL IR_THREAD_STATUS
+    ;;
+  ir-scan-pop)
+    exec "$0" ble "ctl$$" CALL IR_THREAD_POP
+    ;;
+  ir-scan-poll)
+    exec "$0" ble "ctl$$" CALL IR_THREAD_POLL
+    ;;
+  env-start)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL ENV_THREAD_START 0 "${2:-2500}"
+    ;;
+  env-stop)
+    exec "$0" ble "ctl$$" CALL ENV_THREAD_STOP
+    ;;
+  env-status)
+    exec "$0" ble "ctl$$" CALL ENV_THREAD_STATUS
+    ;;
+  env-pop)
+    exec "$0" ble "ctl$$" CALL ENV_THREAD_POP
+    ;;
+  env-poll)
+    exec "$0" ble "ctl$$" CALL ENV_THREAD_POLL
+    ;;
+  env-temperature)
+    exec "$0" ble "ctl$$" CALL ENV_TEMPERATURE
+    ;;
+  env-humidity)
+    exec "$0" ble "ctl$$" CALL ENV_HUMIDITY
+    ;;
   vm-save)
     (( $# == 2 )) || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL_TEXT VM_SAVE "$2"
@@ -382,6 +510,12 @@ case ${1:-} in
   vm-delete-saved)
     (( $# == 2 )) || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL_TEXT VM_DELETE_SAVED "$2"
+    ;;
+  vm-last-status)
+    exec "$0" ble "ctl$$" CALL VM_LAST_STATUS
+    ;;
+  vm-last-clear)
+    exec "$0" ble "ctl$$" CALL VM_LAST_CLEAR
     ;;
   sd-list)
     (( $# <= 2 )) || { usage >&2; exit 2; }

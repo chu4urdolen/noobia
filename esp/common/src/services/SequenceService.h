@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/BackgroundService.h"
-#include "syscalls/NativeRegistry.h"
+#include "core/noob_background_service.h"
+#include "syscalls/noob_native_registry.h"
 
 namespace SequenceService {
 struct ChannelDefinition {

@@ -8,6 +8,21 @@ namespace {
 bool cameraReady = false;
 esp_err_t cameraInitError = ESP_OK;
 Preferences captureState;
+
+NativeResult writeCapture(const String &path, int32_t value) {
+  camera_fb_t *frame = esp_camera_fb_get();
+  if (!frame) return {false, 0, "frame acquisition failed"};
+  File output = SD_MMC.open(path, FILE_WRITE);
+  const size_t expected = frame->len;
+  const size_t written = output ? output.write(frame->buf, frame->len) : 0;
+  if (output) output.close();
+  esp_camera_fb_return(frame);
+  if (written != expected) {
+    SD_MMC.remove(path);
+    return {false, 0, "SD write failed"};
+  }
+  return {true, value, path};
+}
 }
 
 namespace Esp32CameraService {
@@ -23,26 +38,32 @@ NativeResult capture(const int32_t *, uint8_t) {
     return {false, int32_t(cameraInitError),
             "camera init=" + String(esp_err_to_name(cameraInitError))};
   if (!Esp32SdMmcService::ready()) return {false, 0, "SD unavailable"};
-  camera_fb_t *frame = esp_camera_fb_get();
-  if (!frame) return {false, 0, "frame acquisition failed"};
-
   uint32_t sequence = captureState.getUInt("sequence", 0);
   String path;
   do {
     path = Esp32SdMmcService::capturePath(++sequence);
   } while (SD_MMC.exists(path));
 
-  File output = SD_MMC.open(path, FILE_WRITE);
-  const size_t expected = frame->len;
-  const size_t written = output ? output.write(frame->buf, frame->len) : 0;
-  if (output) output.close();
-  esp_camera_fb_return(frame);
-  if (written != expected) {
-    SD_MMC.remove(path);
-    return {false, 0, "SD write failed"};
-  }
+  NativeResult result = writeCapture(path, static_cast<int32_t>(sequence));
+  if (!result.ok) return result;
   captureState.putUInt("sequence", sequence);
-  return {true, static_cast<int32_t>(sequence), path};
+  return result;
+}
+
+NativeResult captureNamed(const char *prefix, uint32_t token) {
+  if (!cameraReady)
+    return {false, int32_t(cameraInitError),
+            "camera init=" + String(esp_err_to_name(cameraInitError))};
+  if (!Esp32SdMmcService::ready()) return {false, 0, "SD unavailable"};
+  if (!prefix || !prefix[0] || strlen(prefix) > 24)
+    return {false, 0, "invalid capture prefix"};
+  for (const char *value = prefix; *value; ++value)
+    if (!isAlphaNumeric(*value) && *value != '_' && *value != '-')
+      return {false, 0, "invalid capture prefix"};
+  const String path = String(Esp32SdMmcService::captureDirectory()) + "/" +
+                      prefix + String(token) + ".jpg";
+  if (SD_MMC.exists(path)) return {false, int32_t(token), "capture exists"};
+  return writeCapture(path, static_cast<int32_t>(token));
 }
 
 NativeResult recordMjpeg(const int32_t *arguments, uint8_t count) {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "syscalls/NativeRegistry.h"
+#include "syscalls/noob_native_registry.h"
 
 // Reusable service for a single-wire WS2812/SK6812-style RGB status LED.
 namespace Esp32RgbLedService {

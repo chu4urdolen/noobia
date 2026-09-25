@@ -1,7 +1,7 @@
 #include "services/SequenceService.h"
 
 #include <limits.h>
-#include "core/NoobProgram.h"
+#include "core/noob_program.h"
 
 namespace {
 constexpr uint8_t MAX_TRACKS = 4;

@@ -23,8 +23,6 @@ knowledge:
   GPIO16/echo GPIO48, blue LED GPIO17, IR receiver GPIO18/transmitter GPIO40,
   and red LED GPIO47.
 
-The current profile has no external I2C bus because GPIO17/18 are in use.
-I2C is not reported by `CAPS` and its native commands are not registered.
 Pins and electrical assignments live only in `iris_config.h`; reusable runtime
 services receive configuration and contain no Iris pin knowledge.
 
@@ -47,11 +45,12 @@ logical zero without resetting Iris or disturbing hardware timers.
 
 Iris-specific behavior is split further:
 
-- `iris_functions.*`: bound primitive functions such as blue LED, red LED,
+- `hw_*`: elementary Iris hardware bindings and SD artifact writers.
   and ultrasonic distance.
-- `iris_sequences.*`: finite/repeating multi-channel LED programs.
-- `iris_threads.*`: continuous programs with explicit stop/status/result
-  functions, currently ultrasonic, photoresistor, and microphone-rise detection.
+- `seq_*`: finite/repeating LED, camera, and IR programs.
+- `thread_*`: continuous detector and sampling programs with queues.
+- `vm_*`: VM assembly listings and wire-ready bytecode.
+- `noob_*`: reusable common runtime architecture under `esp/common`.
 
 `BLUE_BLINK_SEQUENCE` and `POLICE_SEQUENCE` are callable from BLE or VM.
 `ULTRASONIC_CHANGE_START` and `LIGHT_CHANGE_START` establish live sensor

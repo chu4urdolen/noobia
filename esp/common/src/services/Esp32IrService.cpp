@@ -42,11 +42,15 @@ bool begin(const Config &config) {
 
 NativeResult send(const int32_t *arguments, uint8_t count) {
   if (settings.txPin < 0 || settings.rxPin < 0) return {false, 0, "IR unconfigured"};
-  if (count > 2) return {false, 0, "usage: [duration_ms] [frequency_hz]"};
+  if (count > 3) return {false, 0, "usage: [duration_ms] [frequency_hz] [enabled]"};
   const int32_t durationMs = count ? arguments[0] : 10;
   const int32_t frequency = count > 1 ? arguments[1] : settings.defaultFrequencyHz;
+  const int32_t enabled = count > 2 ? arguments[2] : 1;
+  if (enabled < 0 || enabled > 1)
+    return {false, 0, "enabled must be 0 or 1"};
   if (durationMs < 1 || durationMs > 100 || frequency < 30000 || frequency > 60000)
     return {false, 0, "duration 1..100 ms; frequency 30000..60000 Hz"};
+  if (!enabled) return {true, 0, "skipped=1"};
   preparePins();
   const uint32_t low = sendCarrier(uint32_t(frequency), uint32_t(durationMs) * 1000UL);
   if (low == UINT32_MAX) return {false, 0, "IR PWM attach failed"};

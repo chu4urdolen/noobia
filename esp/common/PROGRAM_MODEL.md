@@ -93,11 +93,22 @@ a configurable number of false comparisons before rearming.
 The runtime calls all thread and sequence services cooperatively. No background
 service blocks the command transports or owns an unbounded task.
 
+## VM lifecycle persistence
+
+`NoobRuntime::setVmLifecycle()` installs an optional lifecycle observer.
+Successful `RUN`/`START_THREAD`, explicit `STOP`/`STOP_THREAD`, and
+`RESET_VM` notify it. The ESP32 SD program store uses this to keep a
+recoverable runtime snapshot without coupling the dispatcher to SD or Iris.
+
+A started VM is restored and run after boot. An explicitly stopped VM is
+restored in the ready state, while reset clears the boot selection. Temporary
+and backup files protect the previous snapshot if an SD write is interrupted.
+
 ## Iris examples
 
-Iris registers low-level functions in `iris_functions.cpp`, compiled LED
-sequences in `iris_sequences.cpp`, and continuous detector instances in
-`iris_threads.cpp`.
+Iris registers low-level functions in `hw_functions.cpp`, compiled LED
+sequences in `seq_leds.cpp`, and continuous detector instances in
+`thread_detectors.cpp`.
 
 The police sequence has two 200 ms channels:
 
@@ -119,7 +130,7 @@ requires a 200-count ADC delta. BLE or VM callers may supply a different delta.
 Events contain logical monotonic timestamps. Iris skips light samples while
 police LED channels 0 or 1 are busy, then takes a fresh post-sequence baseline.
 
-`police_on_ultrasonic_change.hex` composes both native classes:
+`vm_police_on_ultrasonic_change.hex` composes both native classes:
 
 1. Start the ultrasonic thread with a 100 mm delta and 250 ms interval.
 2. Poll its timestamp queue.

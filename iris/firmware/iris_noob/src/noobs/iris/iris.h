@@ -1,6 +1,6 @@
 #pragma once
 
-#include <NoobRuntime.h>
+#include <noob_runtime.h>
 
 bool irisRegister(NoobRuntime &runtime);
 bool irisCameraBegin();

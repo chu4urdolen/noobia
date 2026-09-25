@@ -4,6 +4,27 @@
 Portable VM programs are discovered in `../../esp/common/programs`; Iris-only
 programs remain in `../programs`.
 
+Every successful `vm-run` or `thread-start` snapshots the loaded bytecode
+to SD and enables boot autorun. `vm-stop` or `thread-stop` preserves the
+snapshot but disables autorun; `RESET_VM` clears it. Inspect or remove the
+boot selection with:
+
+    irisctl vm-last-status
+    irisctl vm-last-clear
+
+BLE-backed commands start the Nexus bridge automatically when it is absent and
+wait up to 30 seconds for Iris. Iris is the BLE client, so discovery consists
+of advertising the configured Nexus GATT service and waiting for Iris to
+subscribe. Set `IRIS_AUTO_BRIDGE=0` to require manual startup or change
+`IRIS_BRIDGE_WAIT_SECONDS` in `iris-tools.conf`.
+The configured `IRIS_BLE_DEVICE_MAC` lets a replacement bridge clear a stale
+radio link left behind by an earlier GATT process.
+Automatic bridges run as the transient user service `iris-ble-bridge.service`,
+so they remain alive after the invoking `irisctl` command exits.
+When Iris is also attached over USB, `irisctl` uses a short UART
+`BLE_PEER_SET` call to clear her client-side GATT cache before waiting. The
+requested command and its reply still travel over BLE.
+
 `build_iris.sh` compiles `../firmware/iris_noob` directly against the shared
 Arduino library at `../../esp/common`. It accepts `--build-dir`, `--jobs`,
 `--fqbn`, `--extra-flags`, `--common-library`, and `--sketch`; machine-specific

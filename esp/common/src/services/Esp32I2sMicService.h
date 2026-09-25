@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "syscalls/NativeRegistry.h"
+#include "syscalls/noob_native_registry.h"
 
 // Reusable ESP32 I2S microphone service. Physical Noobs provide their pins;
 // VM programs see only portable MIC_LEVEL and MIC_ABOVE native functions.

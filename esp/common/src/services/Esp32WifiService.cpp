@@ -167,6 +167,25 @@ NativeResult rssi(const int32_t *arguments, uint8_t count) {
               String(static_cast<int>(WiFi.encryptionType(index)))};
 }
 
+NativeResult scanToCsv(fs::FS &storage, const String &path) {
+  if (gathering) return {false, 0, "RSSI gathering is active"};
+  WiFi.scanDelete();
+  scanCount = WiFi.scanNetworks(false, true);
+  if (scanCount < 0) return {false, scanCount, "scan failed"};
+  File output = storage.open(path, FILE_WRITE);
+  if (!output) return {false, 0, "cannot create RSSI sample"};
+  output.println("index,rssi,channel,encryption,ssid_hex,bssid");
+  for (int index = 0; index < scanCount; ++index) {
+    output.printf("%d,%d,%d,%d,%s,%s\n", index, WiFi.RSSI(index),
+                  WiFi.channel(index), int(WiFi.encryptionType(index)),
+                  hexText(WiFi.SSID(index)).c_str(),
+                  WiFi.BSSIDstr(index).c_str());
+  }
+  output.close();
+  return {true, scanCount,
+          "networks=" + String(scanCount) + " path=" + path};
+}
+
 NativeResult rssiOn(const int32_t *, uint8_t) {
   if (gathering) return {true, 1, "already_on interval_ms=1000"};
   WiFi.scanDelete();

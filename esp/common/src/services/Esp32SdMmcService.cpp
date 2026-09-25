@@ -45,6 +45,8 @@ String capturePath(int32_t sequence) {
   return String(path);
 }
 
+const char *captureDirectory() { return active.captureDirectory; }
+
 NativeResult status(const int32_t *, uint8_t) {
   if (!ready()) return {false, 0, "SD unavailable"};
   const uint64_t sizeMb = SD_MMC.cardSize() / 1048576ULL;

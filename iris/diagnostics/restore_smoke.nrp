@@ -1,4 +1,4 @@
-# Keep all commands in one connection. No external I2C transactions.
+# Keep all commands in one connection.
 PING
 INFO
 CAPS

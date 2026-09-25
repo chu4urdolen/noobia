@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "syscalls/NativeRegistry.h"
+#include "syscalls/noob_native_registry.h"
 
 // Reusable binary status-lamp service. A Noob supplies the documented pin.
 namespace Esp32SignalLedService {

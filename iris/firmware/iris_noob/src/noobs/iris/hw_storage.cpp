@@ -6,8 +6,8 @@
 
 bool irisStorageBegin() {
   const Esp32SdMmcService::Config config = {
-      IrisPins::SD_CLK, IrisPins::SD_CMD, IrisPins::SD_D0,
+      IrisPins::SD_CLK, IrisPins::SD_CMD, IrisPins::SD_D0, IrisPins::SD_D3,
       IrisHardware::SD_MOUNT, IrisHardware::CAPTURE_DIRECTORY,
-      IrisHardware::CAPTURE_PREFIX};
+      IrisHardware::CAPTURE_PREFIX, IrisHardware::SD_CLOCK_KHZ};
   return Esp32SdMmcService::begin(config) && irisArtifactsBegin();
 }

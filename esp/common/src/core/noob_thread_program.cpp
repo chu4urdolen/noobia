@@ -8,6 +8,7 @@ NativeResult NoobThreadProgram::call(const int32_t *arguments, uint8_t count) {
     return {false, 0, "usage: [interval_ms]"};
   if (count) intervalMs_ = arguments[0];
   results_.clear();
+  haveLastPopped_ = false;
   onStart();
   running_ = true;
   channelBusy_[0] = true;
@@ -33,17 +34,49 @@ NativeResult NoobThreadProgram::status() const {
 }
 
 NativeResult NoobThreadProgram::pop() {
+  NoobRecord record;
+  if (!results_.pop(record)) return {false, 0, "thread queue empty"};
+  lastPopped_ = record;
+  haveLastPopped_ = true;
   int32_t value = 0;
-  if (!results_.pop(value)) return {false, 0, "thread queue empty"};
-  return {true, value, "remaining=" + String(results_.size()) +
-                           " dropped=" + String(results_.dropped())};
+  record.primary(value);
+  return {true, value,
+          "remaining=" + String(results_.size()) +
+              " dropped=" + String(results_.dropped()),
+          record};
 }
 
 NativeResult NoobThreadProgram::poll() {
+  NoobRecord record;
+  if (!results_.pop(record)) return {true, 0, "event=0 queued=0"};
+  lastPopped_ = record;
+  haveLastPopped_ = true;
   int32_t value = 0;
-  if (!results_.pop(value)) return {true, 0, "event=0 queued=0"};
-  return {true, value, "event=1 remaining=" + String(results_.size()) +
-                           " dropped=" + String(results_.dropped())};
+  record.primary(value);
+  return {true, value,
+          "event=1 remaining=" + String(results_.size()) +
+              " dropped=" + String(results_.dropped()),
+          record};
+}
+
+NativeResult NoobThreadProgram::field(const int32_t *arguments,
+                                      uint8_t count) const {
+  if (count != 1 || arguments[0] < 0 ||
+      arguments[0] >= NoobRecord::MAX_FIELDS)
+    return {false, 0, "usage: field_index(0..5)"};
+  if (!haveLastPopped_) return {false, 0, "no popped thread record"};
+  const char *name = nullptr;
+  int32_t value = 0;
+  if (!lastPopped_.get(uint8_t(arguments[0]), name, value))
+    return {false, 0, "record field absent"};
+  return {true, value,
+          "field=" + String(arguments[0]) + " name=" + String(name)};
+}
+
+bool NoobThreadProgram::lastPopped(NoobRecord &record) const {
+  if (!haveLastPopped_) return false;
+  record = lastPopped_;
+  return true;
 }
 
 bool NoobThreadProgram::tick(String &event) {

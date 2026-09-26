@@ -53,8 +53,9 @@ bool NoobChangeThreadProgram::step(String &event) {
     return true;
   }
 
+  NoobRecord sampled;
   int32_t current = 0;
-  if (!source_.results().pop(current)) return false;
+  if (!source_.results().pop(sampled) || !sampled.primary(current)) return false;
   if (!havePrevious_) {
     previous_ = current;
     havePrevious_ = true;

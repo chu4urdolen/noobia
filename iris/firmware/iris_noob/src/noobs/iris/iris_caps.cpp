@@ -19,6 +19,7 @@ void irisRegisterCapabilities(CapabilityRegistry &capabilities) {
   capabilities.add("IR_RX");
   capabilities.add("IR_SEQUENCE");
   capabilities.add("IR_SCAN_THREAD");
+  capabilities.add("IR_RAW_LEARN_REPLAY");
 #endif
   capabilities.add("UART");
   capabilities.add("VM");

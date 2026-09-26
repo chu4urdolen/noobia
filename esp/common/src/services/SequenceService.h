@@ -24,6 +24,7 @@ NativeResult clear(const int32_t *arguments, uint8_t count);
 NativeResult pop(const int32_t *arguments, uint8_t count);
 NativeResult queueSize(const int32_t *arguments, uint8_t count);
 NativeResult clearQueue(const int32_t *arguments, uint8_t count);
+NativeResult field(const int32_t *arguments, uint8_t count);
 NativeResult busy(const int32_t *arguments, uint8_t count);
 // A bit remains set for the full lifetime of its sequence channel.
 uint8_t busyMask();

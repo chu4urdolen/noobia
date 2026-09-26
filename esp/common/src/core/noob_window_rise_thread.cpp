@@ -81,8 +81,9 @@ bool NoobWindowRiseThreadProgram::step(String &event) {
     return true;
   }
 
+  NoobRecord sampled;
   int32_t level = 0;
-  if (!source_.results().pop(level)) return false;
+  if (!source_.results().pop(sampled) || !sampled.primary(level)) return false;
   bucketSum_ += level;
   ++bucketSamples_;
 

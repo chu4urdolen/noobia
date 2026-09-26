@@ -4,41 +4,6 @@
 
 enum class NoobProgramType { THREAD, SEQUENCE };
 
-class NoobIntegerQueue {
- public:
-  static constexpr uint8_t CAPACITY = 16;
-
-  void push(int32_t value) {
-    if (count_ == CAPACITY) {
-      head_ = (head_ + 1) % CAPACITY;
-      --count_;
-      ++dropped_;
-    }
-    values_[tail_] = value;
-    tail_ = (tail_ + 1) % CAPACITY;
-    ++count_;
-  }
-
-  bool pop(int32_t &value) {
-    if (!count_) return false;
-    value = values_[head_];
-    head_ = (head_ + 1) % CAPACITY;
-    --count_;
-    return true;
-  }
-
-  void clear() { head_ = tail_ = count_ = 0; dropped_ = 0; }
-  uint8_t size() const { return count_; }
-  uint32_t dropped() const { return dropped_; }
-
- private:
-  int32_t values_[CAPACITY] = {};
-  uint8_t head_ = 0;
-  uint8_t tail_ = 0;
-  uint8_t count_ = 0;
-  uint32_t dropped_ = 0;
-};
-
 // Channel calls are void. Results, when meaningful, enter the channel queue.
 class NoobProgramChannel {
  public:
@@ -77,7 +42,12 @@ class NoobProgramChannel {
                       argumentCount_ + (appendInput ? 1 : 0));
     lastOk_ = result.ok;
     lastDetail_ = result.detail;
-    if (result.ok) results_.push(result.value);
+    if (result.ok) {
+      if (result.record.empty())
+        results_.push(result.value);
+      else
+        results_.push(result.record);
+    }
     busy_ = false;
   }
 
@@ -85,7 +55,7 @@ class NoobProgramChannel {
   bool lastOk() const { return lastOk_; }
   const String &lastDetail() const { return lastDetail_; }
   bool busy() const { return busy_; }
-  NoobIntegerQueue &results() { return results_; }
+  NoobRecordQueue &results() { return results_; }
 
  private:
   uint16_t functionId_ = 0;
@@ -94,7 +64,7 @@ class NoobProgramChannel {
   bool lastOk_ = true;
   volatile bool busy_ = false;
   String lastDetail_;
-  NoobIntegerQueue results_;
+  NoobRecordQueue results_;
 };
 
 // Higher-level programs are callable from both BLE and VM syscalls.

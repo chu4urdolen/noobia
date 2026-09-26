@@ -19,6 +19,7 @@
 #include "seq_leds.h"
 #include "seq_media.h"
 #include "thread_detectors.h"
+#include "thread_ir_capture.h"
 #include "thread_sampling.h"
 #if IRIS_ENABLE_GPIO_DIAGNOSTICS
 #include <Esp32GpioInspector.h>
@@ -76,7 +77,9 @@ bool irisRegister(NoobRuntime &runtime) {
       IrisPins::IR_TX, IrisPins::IR_RX, IrisHardware::IR_CARRIER_HZ,
       IrisHardware::IR_SAMPLE_INTERVAL_US, IrisHardware::IR_LOOPBACK_BURST_US,
       IrisHardware::IR_LOOPBACK_PAUSE_MS, IrisHardware::IR_PWM_RESOLUTION_BITS,
-      IrisHardware::IR_PWM_DUTY});
+      IrisHardware::IR_PWM_DUTY, IrisHardware::IR_CAPTURE_RESOLUTION_HZ,
+      IrisHardware::IR_CAPTURE_IDLE_US,
+      IrisHardware::IR_CAPTURE_MIN_PULSE_US});
 #endif
 #if IRIS_ENABLE_CAMERA
   ok &= initService("CAMERA", irisCameraBegin);
@@ -132,6 +135,8 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().add(IrisFunctions::SD_DELETE, "CAPTURE_DELETE", Esp32SdMmcService::remove);
   ok &= runtime.natives().addText(IrisFunctions::SD_DELETE_PATH, "SD_DELETE", Esp32SdMmcService::removePath);
   ok &= runtime.natives().addText(IrisFunctions::SD_LIST_PATH, "SD_LIST", Esp32SdMmcService::listPath);
+  ok &= runtime.natives().addText(IrisFunctions::SD_READ_PATH, "SD_READ",
+                                  Esp32SdMmcService::readPathChunk);
 #endif
 #if IRIS_ENABLE_WIFI
   ok &= runtime.natives().add(IrisFunctions::WIFI_SCAN, "WIFI_SCAN", Esp32WifiService::scan);
@@ -240,6 +245,8 @@ bool irisRegister(NoobRuntime &runtime) {
                               "RSSI_THREAD_POP", irisRssiThreadPop());
   ok &= runtime.natives().add(IrisFunctions::RSSI_THREAD_POLL,
                               "RSSI_THREAD_POLL", irisRssiThreadPoll());
+  ok &= runtime.natives().add(IrisFunctions::RSSI_THREAD_FIELD,
+                              "RSSI_THREAD_FIELD", irisRssiThreadField());
 #endif
 #if IRIS_ENABLE_IR && IRIS_ENABLE_SD
   ok &= runtime.natives().add(IrisFunctions::IR_THREAD_START,
@@ -252,6 +259,13 @@ bool irisRegister(NoobRuntime &runtime) {
                               "IR_THREAD_POP", irisIrThreadPop());
   ok &= runtime.natives().add(IrisFunctions::IR_THREAD_POLL,
                               "IR_THREAD_POLL", irisIrThreadPoll());
+  ok &= runtime.natives().add(IrisFunctions::IR_THREAD_FIELD,
+                              "IR_THREAD_FIELD", irisIrThreadField());
+  ok &= runtime.natives().addText(IrisFunctions::IR_DICT_REMEMBER,
+                                  "IR_DICT_REMEMBER",
+                                  irisIrDictionaryRemember);
+  ok &= runtime.natives().add(IrisFunctions::IR_DICT_STATUS,
+                              "IR_DICT_STATUS", irisIrDictionaryStatus);
 #endif
 #if IRIS_ENABLE_SD
   ok &= runtime.natives().add(IrisFunctions::ENV_THREAD_START,
@@ -264,11 +278,21 @@ bool irisRegister(NoobRuntime &runtime) {
                               "ENV_THREAD_POP", irisEnvThreadPop());
   ok &= runtime.natives().add(IrisFunctions::ENV_THREAD_POLL,
                               "ENV_THREAD_POLL", irisEnvThreadPoll());
+  ok &= runtime.natives().add(IrisFunctions::ENV_THREAD_FIELD,
+                              "ENV_THREAD_FIELD", irisEnvThreadField());
 #endif
 #if IRIS_ENABLE_IR
   ok &= runtime.natives().add(IrisFunctions::IR_SEND, "IR_SEND", Esp32IrService::send);
   ok &= runtime.natives().add(IrisFunctions::IR_READ, "IR_READ", Esp32IrService::read);
   ok &= runtime.natives().add(IrisFunctions::IR_LOOPBACK, "IR_LOOPBACK", Esp32IrService::loopback);
+  ok &= runtime.natives().add(IrisFunctions::IR_REPLAY, "IR_REPLAY",
+                              irisIrReplay);
+  ok &= runtime.natives().add(IrisFunctions::IR_REPLAY_LAST, "IR_REPLAY_LAST",
+                              irisIrReplayLast);
+  ok &= runtime.natives().add(IrisFunctions::IR_VERIFY_LAST, "IR_VERIFY_LAST",
+                              irisIrVerifyLast);
+  ok &= runtime.natives().add(IrisFunctions::IR_CAPTURE_INSPECT,
+                              "IR_CAPTURE_INSPECT", irisIrCaptureInspect);
 #endif
 #if IRIS_ENABLE_SD
   ok &= runtime.natives().addText(IrisFunctions::VM_SAVE, "VM_SAVE", Esp32VmProgramStore::save);

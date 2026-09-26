@@ -4,7 +4,7 @@
 #include "src/noobs/iris/iris_config.h"
 #include "src/noobs/iris/nexus_peer_config.h"
 
-NoobRuntime runtime("Iris", "0.5.0");
+NoobRuntime runtime("Iris", "0.6.12-sdspi");
 StreamTransport usbTransport("usb", Serial);
 #if IRIS_ENABLE_BLE
 BleClientTransport bleTransport(

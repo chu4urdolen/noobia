@@ -13,6 +13,8 @@ class NoobThreadProgram : public NoobProgram,
   NativeResult status() const;
   NativeResult pop();
   NativeResult poll();
+  NativeResult field(const int32_t *arguments, uint8_t count) const;
+  bool lastPopped(NoobRecord &record) const;
   bool tick(String &event) override;
 
  protected:
@@ -21,14 +23,30 @@ class NoobThreadProgram : public NoobProgram,
   virtual void onStop() {}
   virtual String statusDetail() const { return ""; }
   void publish(int32_t value) { results_.push(value); }
+  void publish(const NoobRecord &record) { results_.push(record); }
   void setInterval(uint32_t intervalMs) { intervalMs_ = intervalMs; }
 
  private:
   uint32_t intervalMs_;
   uint32_t nextAt_ = 0;
   bool running_ = false;
-  NoobIntegerQueue results_;
+  NoobRecordQueue results_;
+  NoobRecord lastPopped_;
+  bool haveLastPopped_ = false;
   volatile bool channelBusy_[1] = {false};
+};
+
+class NoobThreadFieldFunction final : public NoobFunction {
+ public:
+  explicit NoobThreadFieldFunction(NoobThreadProgram &thread)
+      : thread_(thread) {}
+  bool acceptsNumbers() const override { return true; }
+  NativeResult call(const int32_t *arguments, uint8_t count) override {
+    return thread_.field(arguments, count);
+  }
+
+ private:
+  NoobThreadProgram &thread_;
 };
 
 class NoobThreadStopFunction final : public NoobFunction {

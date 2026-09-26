@@ -66,13 +66,15 @@ usage() {
   echo "  irisctl camera-sequence [0|1] | ir-transmit-sequence [0|1]"
   echo "  irisctl rssi-scan-start [DURATION_MS] [INTERVAL_MS]"
   echo "  irisctl rssi-scan-stop | rssi-scan-status | rssi-scan-pop | rssi-scan-poll"
-  echo "  irisctl ir-scan-start [DURATION_MS] [INTERVAL_MS]"
-  echo "  irisctl ir-scan-stop | ir-scan-status | ir-scan-pop | ir-scan-poll"
+  echo "  irisctl ir-scan-start [DURATION_MS] | ir-replay TIMESTAMP [REPEATS] | ir-replay-last [REPEATS] | ir-verify-last"
+  echo "  irisctl ir-scan-stop | ir-scan-status | ir-scan-pop | ir-scan-poll | ir-scan-field INDEX"
+  echo "  irisctl ir-remember DEVICE BUTTON | ir-dictionary"
+  echo "  irisctl ir-inspect TIMESTAMP [START_INDEX]"
   echo "  irisctl env-start [INTERVAL_MS] | env-stop | env-status | env-pop | env-poll"
   echo "  irisctl env-temperature | env-humidity"
   echo "  irisctl vm-save NAME | vm-load-saved NAME | vm-list-saved | vm-delete-saved NAME"
   echo "  irisctl vm-last-status | vm-last-clear"
-  echo "  irisctl sd-list [PATH] | sd-delete PATH | capture-delete SEQUENCE"
+  echo "  irisctl sd-list [PATH] | sd-read PATH OFFSET [LENGTH] | sd-delete PATH | capture-delete SEQUENCE"
   echo "  irisctl ble REQUEST_ID COMMAND [ARGS...]"
   echo "  irisctl fetch SEQUENCE OUTPUT.jpg"
   echo "  irisctl uart REQUEST_ID COMMAND [ARGS...]"
@@ -459,8 +461,8 @@ case ${1:-} in
     exec "$0" ble "ctl$$" CALL RSSI_THREAD_POLL
     ;;
   ir-scan-start)
-    (( $# <= 3 )) || { usage >&2; exit 2; }
-    exec "$0" ble "ctl$$" CALL IR_THREAD_START "${2:-10000}" "${3:-1000}"
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_THREAD_START "${2:-10000}"
     ;;
   ir-scan-stop)
     exec "$0" ble "ctl$$" CALL IR_THREAD_STOP
@@ -473,6 +475,33 @@ case ${1:-} in
     ;;
   ir-scan-poll)
     exec "$0" ble "ctl$$" CALL IR_THREAD_POLL
+    ;;
+  ir-scan-field)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_THREAD_FIELD "$2"
+    ;;
+  ir-remember)
+    (( $# == 3 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL_TEXT IR_DICT_REMEMBER "$2" "$3"
+    ;;
+  ir-dictionary)
+    exec "$0" ble "ctl$$" CALL IR_DICT_STATUS
+    ;;
+  ir-replay)
+    (( $# >= 2 && $# <= 3 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_REPLAY "$2" "${3:-1}"
+    ;;
+  ir-replay-last)
+    (( $# <= 2 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_REPLAY_LAST "${2:-1}"
+    ;;
+  ir-verify-last)
+    (( $# == 1 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_VERIFY_LAST
+    ;;
+  ir-inspect)
+    (( $# >= 2 && $# <= 3 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL IR_CAPTURE_INSPECT "$2" "${3:-0}"
     ;;
   env-start)
     (( $# <= 2 )) || { usage >&2; exit 2; }
@@ -520,6 +549,10 @@ case ${1:-} in
   sd-list)
     (( $# <= 2 )) || { usage >&2; exit 2; }
     exec "$0" ble "ctl$$" CALL_TEXT SD_LIST "${2:-/}"
+    ;;
+  sd-read)
+    (( $# >= 3 && $# <= 4 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL_TEXT SD_READ "$2" "$3" "${4:-32}"
     ;;
   sd-delete)
     (( $# == 2 )) || { usage >&2; exit 2; }
@@ -569,7 +602,7 @@ case ${1:-} in
     scratch=$(mktemp)
     trap "rm -f \"$scratch\"" EXIT
     previous_size=-1
-    for _ in $(seq 1 100); do
+    for _ in $(seq 1 300); do
       tail -c "+$((before + 1))" "$log" > "$scratch"
       current_size=$(stat -c %s "$scratch")
       hex=$(sed -n "s/.*#   \\(\\([0-9a-f][0-9a-f] \\)\\{1,16\\}\\).*/\\1/p" \

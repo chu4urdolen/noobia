@@ -75,4 +75,7 @@ rg -q 'NoobSamplingThreadProgram::step' "$BUILD_DIR/symbols.txt" || {
 rg -q 'Esp32VmProgramStore::restoreLast' "$BUILD_DIR/symbols.txt" || {
   echo 'VM autorestore service is missing' >&2; exit 1;
 }
+rg -q 'Esp32IrService::replayEnvelope' "$BUILD_DIR/symbols.txt" || {
+  echo 'Common IR learn/replay service is missing' >&2; exit 1;
+}
 echo "Verified firmware: $BUILD_DIR/iris_noob.ino.bin"

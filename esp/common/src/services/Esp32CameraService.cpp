@@ -1,7 +1,6 @@
 #include "services/Esp32CameraService.h"
 
 #include <Preferences.h>
-#include <SD_MMC.h>
 #include "services/Esp32SdMmcService.h"
 
 namespace {
@@ -12,13 +11,14 @@ Preferences captureState;
 NativeResult writeCapture(const String &path, int32_t value) {
   camera_fb_t *frame = esp_camera_fb_get();
   if (!frame) return {false, 0, "frame acquisition failed"};
-  File output = SD_MMC.open(path, FILE_WRITE);
+  fs::FS &storage = Esp32SdMmcService::fs();
+  File output = storage.open(path, FILE_WRITE);
   const size_t expected = frame->len;
   const size_t written = output ? output.write(frame->buf, frame->len) : 0;
   if (output) output.close();
   esp_camera_fb_return(frame);
   if (written != expected) {
-    SD_MMC.remove(path);
+    storage.remove(path);
     return {false, 0, "SD write failed"};
   }
   return {true, value, path};
@@ -42,7 +42,7 @@ NativeResult capture(const int32_t *, uint8_t) {
   String path;
   do {
     path = Esp32SdMmcService::capturePath(++sequence);
-  } while (SD_MMC.exists(path));
+  } while (Esp32SdMmcService::fs().exists(path));
 
   NativeResult result = writeCapture(path, static_cast<int32_t>(sequence));
   if (!result.ok) return result;
@@ -62,7 +62,8 @@ NativeResult captureNamed(const char *prefix, uint32_t token) {
       return {false, 0, "invalid capture prefix"};
   const String path = String(Esp32SdMmcService::captureDirectory()) + "/" +
                       prefix + String(token) + ".jpg";
-  if (SD_MMC.exists(path)) return {false, int32_t(token), "capture exists"};
+  if (Esp32SdMmcService::fs().exists(path))
+    return {false, int32_t(token), "capture exists"};
   return writeCapture(path, static_cast<int32_t>(token));
 }
 

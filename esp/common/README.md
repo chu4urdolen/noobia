@@ -44,10 +44,12 @@ services can migrate to classes independently.
 - `NoobSequenceProgram` owns one to four channel definitions and starts the
   common timed sequencer. Each channel has its own interval and bit array.
 
-Every channel has a bounded 16-integer result queue and a `channel_busy` bit.
-The wrapper sets busy before the channel body and clears it on every return.
-When the queue is full, the oldest value is replaced and the drop counter is
-reported. No program can consume unbounded RAM.
+Every channel has a bounded queue of eight records and a `channel_busy` bit.
+A record contains up to six named integer fields, such as `time_ms`, `address`,
+and `data`; legacy scalar results are wrapped as `{value:n}`. The wrapper sets
+busy before the channel body and clears it on every return. When the queue is
+full, the oldest record is replaced and the drop counter is reported. No
+program can consume unbounded RAM.
 
 ## Common native ABI
 
@@ -65,6 +67,7 @@ Noobs use IDs from 100 upward for registered hardware functions.
   `SEQUENCE_CLEAR`.
 - `8..11`: `SEQUENCE_POP`, `SEQUENCE_QUEUE_SIZE`,
   `SEQUENCE_QUEUE_CLEAR`, and `SEQUENCE_BUSY`.
+- `12 SEQUENCE_FIELD`: read a field by index from the last popped record.
 
 Both functions are registered by the common runtime and therefore do not appear
 in Iris-specific composition code. This is monotonic timing, not civil time;

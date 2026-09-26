@@ -161,6 +161,7 @@ String CommandDispatcher::callNative(const NoobRequest &request) {
                               result.detail);
   }
   String payload = "value=" + String(result.value);
+  if (!result.record.empty()) payload += " record=" + result.record.serialize();
   if (!result.detail.isEmpty()) payload += " detail=" + result.detail;
   return NoobProtocol::ok(request.requestId, payload);
 }
@@ -181,6 +182,7 @@ String CommandDispatcher::callTextNative(const NoobRequest &request) {
     return NoobProtocol::fail(request.requestId, "NATIVE_ERROR", result.detail);
   }
   String payload = "value=" + String(result.value);
+  if (!result.record.empty()) payload += " record=" + result.record.serialize();
   if (!result.detail.isEmpty()) payload += " detail=" + result.detail;
   return NoobProtocol::ok(request.requestId, payload);
 }

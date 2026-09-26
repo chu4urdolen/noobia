@@ -51,8 +51,8 @@ bool NoobSamplingThreadProgram::step(String &event) {
             "_ERROR detail=" + source_.lastDetail();
     return true;
   }
-  int32_t value = 0;
-  if (source_.results().pop(value)) publish(value);
+  NoobRecord record;
+  if (source_.results().pop(record)) publish(record);
   return false;
 }
 

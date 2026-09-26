@@ -28,17 +28,26 @@ Both are native objects, so BLE `CALL` and VM `SYS` invoke the same code.
 - one registered native function ID;
 - zero to seven fixed integer arguments;
 - one dynamic integer input;
-- a bounded queue of returned integers;
+- a bounded queue of returned records;
 - status and error details;
 - a `busy` bit.
 
 Invocation is always `void` from the scheduler point of view. Before the
 native body is called, the wrapper sets `busy=1`. It queues a successful
-integer return value when useful, then sets `busy=0`. Missing functions and
-failed calls also clear the bit before returning.
+record when useful, then sets `busy=0`. Missing functions and failed calls also
+clear the bit before returning.
 
-Queues hold 16 integers. When full, the oldest item is discarded and a drop
-counter is incremented. This keeps RAM use fixed.
+A record holds up to six `(name, integer)` fields. A queue slot can therefore
+represent one coherent observation such as `{time_ms, protocol, address,
+data, repeat}`. Existing scalar functions are automatically wrapped as
+`{value:n}`. Queues hold eight records; when full, the oldest record is
+discarded and a drop counter is incremented. Both dimensions are fixed, so RAM
+use remains bounded.
+
+BLE/UART `POP` replies serialize the complete record. A VM receives its primary
+field in the syscall destination register for backward compatibility, then can
+read other fields by index with the corresponding `*_FIELD` function. Field
+names travel in command diagnostics; VM bytecode remains integer-only.
 
 ## Sequence arrays
 
@@ -71,12 +80,13 @@ VMs may call a compiled sequence, or build one through `SEQUENCE_SET`.
 A thread has one logical output channel:
 
 - `channelBusy_[1]`: set when the thread starts and cleared when it stops;
-- one 16-integer event queue;
+- one eight-record event queue;
 - one interval and next-run time;
 - running state.
 
-Derived classes implement `step()` and call `publish(value)` only when an
-event should become visible. `POP` treats an empty queue as an error, which
+Derived classes implement `step()` and call either `publish(value)` or
+`publish(record)` only when an event should become visible. `POP` treats an
+empty queue as an error, which
 is useful for interactive diagnostics. `POLL` is intended for VM loops: it
 returns zero when empty and the next event value otherwise.
 
@@ -109,6 +119,13 @@ and backup files protect the previous snapshot if an SD write is interrupted.
 Iris registers low-level functions in `hw_functions.cpp`, compiled LED
 sequences in `seq_leds.cpp`, and continuous detector instances in
 `thread_detectors.cpp`.
+
+The IR learner records each demodulated receiver edge to `/samples/` and
+publishes structured channel records. Known NEC and RC5 frames expose
+`address` and `data`; the observed Thomson-TV signal is preserved as a 24-bit
+pulse-distance `code` because the captured waveform does not justify splitting
+it into address and command fields. Learned button labels are appended to
+`/noob/ir_dictionary.csv` with protocol, available fields, and capture time.
 
 The police sequence has two 200 ms channels:
 
@@ -145,8 +162,8 @@ The readable bytecode listing is stored beside the wire-ready hex file.
 1. Implement or reuse a `NoobFunction` for each physical action.
 2. Register it in the physical Noob composition root.
 3. Derive a sequence or thread class only for reusable native policy.
-4. Publish integers as event values; use timestamps when only occurrence
-   matters.
+4. Publish a named record when an event has several values; use a scalar
+   timestamp when only occurrence matters.
 5. Compose registered functions from VM bytecode for replaceable high-level
    logic.
 

@@ -1,11 +1,13 @@
 #pragma once
 
 #include <Arduino.h>
+#include "core/noob_record.h"
 
 struct NativeResult {
   bool ok;
   int32_t value;
   String detail;
+  NoobRecord record;
 };
 
 using NativeFunction = NativeResult (*)(const int32_t *arguments,
@@ -61,7 +63,7 @@ struct NativeEntry {
 
 class NativeRegistry {
  public:
-  static constexpr size_t MAX_FUNCTIONS = 96;
+  static constexpr size_t MAX_FUNCTIONS = 128;
   bool add(uint16_t id, const char *name, NativeFunction function);
   bool addText(uint16_t id, const char *name, NativeTextFunction function);
   bool add(uint16_t id, const char *name, NoobFunction &implementation);

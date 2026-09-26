@@ -29,6 +29,8 @@ NoobRuntime::NoobRuntime(const char *noobName, const char *firmwareVersion)
                "SEQUENCE_QUEUE_CLEAR", SequenceService::clearQueue);
   natives_.add(CommonFunctionIds::SEQUENCE_BUSY, "SEQUENCE_BUSY",
                SequenceService::busy);
+  natives_.add(CommonFunctionIds::SEQUENCE_FIELD, "SEQUENCE_FIELD",
+               SequenceService::field);
   addService(SequenceService::backgroundService());
   capabilities_.add("TIME_MONOTONIC");
   capabilities_.add("THREAD_VM");

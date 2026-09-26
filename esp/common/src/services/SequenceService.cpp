@@ -25,6 +25,8 @@ Track tracks[MAX_TRACKS];
 volatile bool channelBusy[MAX_TRACKS] = {};
 bool running = false;
 bool repeating = false;
+NoobRecord lastPopped[MAX_TRACKS];
+bool haveLastPopped[MAX_TRACKS] = {};
 
 String tokenAt(const String &text, int &position) {
   while (position < text.length() && text[position] == ' ') ++position;
@@ -163,6 +165,7 @@ void begin(NativeRegistry &registry) {
   for (uint8_t slot = 0; slot < MAX_TRACKS; ++slot) {
     tracks[slot] = Track{};
     channelBusy[slot] = false;
+    haveLastPopped[slot] = false;
   }
 }
 
@@ -345,19 +348,24 @@ NativeResult clear(const int32_t *arguments, uint8_t count) {
 NativeResult pop(const int32_t *arguments, uint8_t count) {
   if (count != 1 || arguments[0] < 0 || arguments[0] >= MAX_TRACKS)
     return {false, 0, "usage: slot(0..3)"};
-  NoobIntegerQueue &queue = tracks[arguments[0]].channel.results();
+  NoobRecordQueue &queue = tracks[arguments[0]].channel.results();
+  NoobRecord record;
+  if (!queue.pop(record)) return {false, 0, "channel queue empty"};
+  lastPopped[arguments[0]] = record;
+  haveLastPopped[arguments[0]] = true;
   int32_t value = 0;
-  if (!queue.pop(value)) return {false, 0, "channel queue empty"};
+  record.primary(value);
   return {true, value,
           "slot=" + String(arguments[0]) +
               " remaining=" + String(queue.size()) +
-              " dropped=" + String(queue.dropped())};
+              " dropped=" + String(queue.dropped()),
+          record};
 }
 
 NativeResult queueSize(const int32_t *arguments, uint8_t count) {
   if (count != 1 || arguments[0] < 0 || arguments[0] >= MAX_TRACKS)
     return {false, 0, "usage: slot(0..3)"};
-  NoobIntegerQueue &queue = tracks[arguments[0]].channel.results();
+  NoobRecordQueue &queue = tracks[arguments[0]].channel.results();
   return {true, queue.size(),
           "slot=" + String(arguments[0]) +
               " dropped=" + String(queue.dropped())};
@@ -367,7 +375,23 @@ NativeResult clearQueue(const int32_t *arguments, uint8_t count) {
   if (count != 1 || arguments[0] < 0 || arguments[0] >= MAX_TRACKS)
     return {false, 0, "usage: slot(0..3)"};
   tracks[arguments[0]].channel.results().clear();
+  haveLastPopped[arguments[0]] = false;
   return {true, 0, "slot=" + String(arguments[0]) + " cleared=1"};
+}
+
+NativeResult field(const int32_t *arguments, uint8_t count) {
+  if (count != 2 || arguments[0] < 0 || arguments[0] >= MAX_TRACKS ||
+      arguments[1] < 0 || arguments[1] >= NoobRecord::MAX_FIELDS)
+    return {false, 0, "usage: slot(0..3) field_index(0..5)"};
+  const uint8_t slot = arguments[0];
+  if (!haveLastPopped[slot]) return {false, 0, "no popped channel record"};
+  const char *name = nullptr;
+  int32_t value = 0;
+  if (!lastPopped[slot].get(uint8_t(arguments[1]), name, value))
+    return {false, 0, "record field absent"};
+  return {true, value,
+          "slot=" + String(slot) + " field=" + String(arguments[1]) +
+              " name=" + String(name)};
 }
 
 NativeResult busy(const int32_t *arguments, uint8_t count) {

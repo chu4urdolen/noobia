@@ -14,7 +14,9 @@ knowledge:
 
 ## Verified Iris hardware
 
-- OV2640 camera and one-bit SD_MMC storage.
+- OV2640 camera and SD-card storage over SPI (CLK 42, CMD/MOSI 39,
+  DAT0/MISO 41, DAT3/CS 38). The former one-bit SDMMC path corrupted raw IR
+  captures on this board; see `diagnostics/SD_IR_CAPTURE_20260926.md`.
 - MSM261D3526H1CPM microphone: data GPIO35, clock GPIO36, word-select GPIO37.
 - SK6812 RGB LED on GPIO33.
 - Green signal LED on GPIO34.
@@ -58,6 +60,27 @@ baselines, then queue timestamps only when their configured dynamic delta is
 crossed. Neither relies on an absolute environmental value.
 `MIC_RISE_START` stores ten one-second loudness integers, never raw audio. It
 compares the older five-second mean with the newer five-second mean.
+
+## IR button recordings
+
+`irisctl ir-scan-start 300000` listens for remote presses. Each captured
+receiver transition and its duration in microseconds is kept in RAM and written
+to `/samples/ir_raw_<time_ms>.csv`. `irisctl ir-scan-pop` gives the timestamp.
+The writer reads the whole file back and checks its size and checksum before
+the capture is reported as saved. If the SD card fails verification, the last
+waveform remains available in RAM until Iris restarts or another capture arrives.
+
+`irisctl ir-replay-last` transmits the latest RAM waveform and stops the scan.
+`irisctl ir-verify-last` also records that transmission through Iris's IR
+receiver and reports pulse count and timing differences against the original.
+`irisctl ir-replay <time_ms>` loads and validates a saved waveform before
+transmitting it. After popping a saved capture, `irisctl ir-remember ThomsonTV
+Power` adds its timestamp to `/noob/ir_dictionary.csv` for labeling. The IR
+receiver removes the carrier; replay regenerates it at Iris's configured
+38 kHz while preserving the observed pulse durations.
+Local transmitter/receiver loopback worked, but the saved Thomson TV Mute
+recording did not control the TV in the 2026-09-26 test. Treat remote replay
+as experimental until the optical path and waveform are independently checked.
 
 The installed workspace build can be run with:
 

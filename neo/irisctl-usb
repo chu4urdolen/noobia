@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# NRP/1 over Iris's private USB NCM link. No daemon or Python is needed on Neo.
+host=${IRIS_USB_HOST:-192.168.77.1}
+port=${IRIS_USB_PORT:-4242}
+timeout_s=${IRIS_USB_TIMEOUT_S:-20}
+
+usage() {
+  echo 'usage: irisctl-usb [--host IP] [--port PORT] [--timeout SECONDS] ping|info|caps|status|run|stop|reset-vm|call NAME [ARGS...]|call-text NAME TEXT|load FILE|raw COMMAND [ARGS...]' >&2
+  exit 2
+}
+
+while (( $# )); do
+  case $1 in
+    --host) (( $# >= 2 )) || usage; host=$2; shift 2 ;;
+    --port) (( $# >= 2 )) || usage; port=$2; shift 2 ;;
+    --timeout) (( $# >= 2 )) || usage; timeout_s=$2; shift 2 ;;
+    *) break ;;
+  esac
+done
+[[ $port =~ ^[0-9]+$ && $timeout_s =~ ^[1-9][0-9]*$ ]] || usage
+(( $# >= 1 )) || usage
+
+case $1 in
+  ping|info|caps|status|run|stop)
+    (( $# == 1 )) || usage
+    command=${1^^}
+    ;;
+  reset-vm)
+    (( $# == 1 )) || usage
+    command=RESET_VM
+    ;;
+  call|call-text)
+    (( $# >= 2 )) || usage
+    verb=CALL
+    [[ $1 == call-text ]] && verb=CALL_TEXT
+    shift
+    command="$verb $*"
+    ;;
+  load)
+    (( $# == 2 )) || usage
+    [[ -r $2 ]] || { echo "cannot read program: $2" >&2; exit 2; }
+    program=$(od -An -v -tx1 "$2" | tr -d ' \n')
+    [[ -n $program ]] || { echo 'empty program' >&2; exit 2; }
+    command="LOAD $program"
+    ;;
+  raw)
+    (( $# >= 2 )) || usage
+    shift
+    command="$*"
+    ;;
+  *) usage ;;
+esac
+
+request_id="neo$$"
+frame="NRP/1 $request_id $command"
+(( ${#frame} <= 2200 )) || { echo 'command exceeds Iris frame limit' >&2; exit 2; }
+
+if ! exec 3<>"/dev/tcp/$host/$port"; then
+  echo "cannot connect to Iris at $host:$port" >&2
+  exit 1
+fi
+printf '%s\n' "$frame" >&3
+deadline=$((SECONDS + timeout_s))
+while (( SECONDS < deadline )); do
+  if IFS= read -r -t 1 line <&3; then
+    line=${line%$'\r'}
+    if [[ $line == "NRP/1 $request_id "* ]]; then
+      printf '%s\n' "$line"
+      [[ $line != "NRP/1 $request_id ERR "* ]]
+      exit $?
+    fi
+  else
+    read_status=$?
+    if (( read_status == 1 )); then
+      echo 'Iris closed the USB command connection' >&2
+      exit 1
+    fi
+  fi
+done
+echo "no reply from Iris within ${timeout_s}s" >&2
+exit 1

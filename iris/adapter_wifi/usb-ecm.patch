@@ -1,0 +1,12 @@
+diff --git a/examples/usb/device/usb_dongle/sdkconfig.defaults b/examples/usb/device/usb_dongle/sdkconfig.defaults
+index 38f315e..9194170 100644
+--- a/examples/usb/device/usb_dongle/sdkconfig.defaults
++++ b/examples/usb/device/usb_dongle/sdkconfig.defaults
+@@ -13,4 +13,6 @@ CONFIG_TINYUSB_DEBUG_LEVEL=0
+ CONFIG_TINYUSB_CDC_ENABLED=y
+ CONFIG_TINYUSB_CDC_RX_BUFSIZE=512
+ CONFIG_TINYUSB_CDC_TX_BUFSIZE=3072
+-CONFIG_TINYUSB_NET_MODE_RNDIS=y
++# CONFIG_TINYUSB_NET_MODE_RNDIS is not set
++CONFIG_TINYUSB_NET_MODE_ECM=y
++# CONFIG_TINYUSB_BTH_ENABLED is not set

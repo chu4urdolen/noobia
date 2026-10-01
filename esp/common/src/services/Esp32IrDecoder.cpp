@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32IrDecoder.h"
 
 namespace {
@@ -158,3 +159,5 @@ const char *protocolName(Protocol protocol) {
   }
 }
 }  // namespace Esp32IrDecoder
+
+#endif  // ESP32

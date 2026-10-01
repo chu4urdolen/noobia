@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "Esp32Dht11Service.h"
 #include <driver/gpio.h>
 namespace {
@@ -71,3 +72,5 @@ NativeResult Esp32Dht11Service::read(const int32_t *args, uint8_t count) {
   if (result.ok) result.value = count && args[0] ? humidity : temperature;
   return result;
 }
+
+#endif  // ESP32

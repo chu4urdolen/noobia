@@ -15,7 +15,8 @@ capabilities, and hardware-specific policy.
 Current modules:
 
 - `src/transport`: interchangeable transport interface, an Arduino `Stream`
-  implementation for UART/USB, and an outbound BLE client transport.
+  implementation for UART/USB, outbound ESP32 BLE clients using either
+  Bluedroid or NimBLE, and a TCP server usable over ESP32 or ESP8266 Wi-Fi.
 - `src/protocol`: versioned request/reply framing and parse errors.
 - `src/commands`: common command dispatcher.
 - `src/vm`: bounded bytecode VM.
@@ -25,6 +26,8 @@ Current modules:
   hardware configuration; services contain no Iris pin assignments.
 - `src/hal`: reusable HAL contracts. Concrete ESP32 HAL implementations will
   be added as capabilities require them.
+- `idf_usb_net`: a separate ESP-IDF component for TinyUSB NCM, DHCP, and NAT.
+  Physical Noobs decide whether to include it and supply their USB LAN address.
 
 ## Functions and programs
 
@@ -77,10 +80,16 @@ at zero.
 Portable bytecode examples live in `programs/`. Programs that call a physical
 Noob's IDs remain in that Noob's own program directory.
 
+The TCP server transport accepts one bounded NRP/1 line stream at a time. A
+physical Noob configures its Wi-Fi mode and credentials; the shared transport
+only handles TCP framing. The ESP32-only native services and BLE transport are
+excluded on ESP8266, while the protocol, VM, sequencer, and registry are shared.
+
 The BLE transport seeks a configured peer GATT server, subscribes to command
 notifications, writes replies, and reconnects on a bounded schedule. Automatic
 scanning is nonblocking. GATT connection stays in the BLE library's supported
 task context and may briefly pause the cooperative runtime; failed attempts are
-rate-limited. Future Wi-Fi transports should implement the same
+rate-limited. The default Arduino backend uses Bluedroid; IDF builds can select
+the NimBLE backend with `NOOB_USE_NIMBLE`. Future Wi-Fi transports should implement the same
 `NoobTransport` contract; neither transport needs to alter the protocol,
 dispatcher, or VM.

@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32UltrasonicService.h"
 
 #include <Arduino.h>
@@ -62,3 +63,5 @@ NativeResult measure(const int32_t *arguments, uint8_t count) {
       " echo=" + String(settings.echoPin)};
 }
 }
+
+#endif  // ESP32

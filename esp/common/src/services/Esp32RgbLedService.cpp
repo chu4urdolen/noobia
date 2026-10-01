@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32RgbLedService.h"
 
 #include <esp32-hal-rgb-led.h>
@@ -27,3 +28,5 @@ NativeResult set(const int32_t *arguments, uint8_t argumentCount) {
                        String(arguments[1]) + "," + String(arguments[2])};
 }
 }
+
+#endif  // ESP32

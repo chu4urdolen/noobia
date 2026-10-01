@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32I2sMicService.h"
 
 #include <ESP_I2S.h>
@@ -121,3 +122,5 @@ NativeResult recordWav(const int32_t *arguments, uint8_t argumentCount) {
   return {true, int32_t(writtenSamples), "path=" + path + " seconds=" + String(seconds)};
 }
 }
+
+#endif  // ESP32

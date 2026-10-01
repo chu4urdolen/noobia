@@ -6,6 +6,7 @@
 
 namespace Esp32WifiService {
 bool begin(const char *defaultSsid = nullptr, const char *defaultPassword = nullptr);
+bool startAutoConnect();
 NativeResult scan(const int32_t *arguments, uint8_t count);
 NativeResult rssi(const int32_t *arguments, uint8_t count);
 NativeResult rssiOn(const int32_t *arguments, uint8_t count);

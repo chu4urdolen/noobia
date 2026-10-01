@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32VmProgramStore.h"
 
 #include "services/Esp32SdMmcService.h"
@@ -301,3 +302,5 @@ NativeResult remove(const String &arguments) {
   return {true, 1, "deleted=" + path};
 }
 }
+
+#endif  // ESP32

@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32SignalLedService.h"
 
 namespace {
@@ -21,3 +22,5 @@ NativeResult set(const int32_t *arguments, uint8_t argumentCount) {
   return {true, arguments[0], "state=" + String(arguments[0])};
 }
 }
+
+#endif  // ESP32

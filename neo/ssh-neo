@@ -1,0 +1,5 @@
+#!/bin/sh
+# Connect to Neo through its outbound USB/Iris/Wi-Fi tunnel on Nexus.
+exec ssh -i /home/aria/.ssh/noobia_neo \
+    -o HostKeyAlias=10.42.77.28 \
+    -p 2222 noob@127.0.0.1 "$@"

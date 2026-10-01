@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "Esp32AdcService.h"
 #include <esp_adc/adc_oneshot.h>
 #include <driver/gpio.h>
@@ -67,3 +68,5 @@ NativeResult Esp32AdcService::read(const int32_t *args, uint8_t count) {
       " min="+String(minimum)+" max="+String(maximum)+
       " samples="+String(samples)+" bits=12"};
 }
+
+#endif  // ESP32

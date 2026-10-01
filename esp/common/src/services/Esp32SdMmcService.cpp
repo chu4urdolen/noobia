@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32SdMmcService.h"
 
 #include <SD_MMC.h>
@@ -204,3 +205,5 @@ NativeResult listPath(const String &arguments) {
   return {true, count, "path=" + path + " entries=" + names};
 }
 }
+
+#endif  // ESP32

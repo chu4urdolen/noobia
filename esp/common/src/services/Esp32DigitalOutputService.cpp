@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32DigitalOutputService.h"
 
 namespace Esp32DigitalOutputService {
@@ -20,3 +21,5 @@ NativeResult Esp32DigitalOutputFunction::call(const int32_t *arguments,
     return {false, 0, "usage: state(0|1)"};
   return Esp32DigitalOutputService::set(pin_, arguments[0] != 0);
 }
+
+#endif  // ESP32

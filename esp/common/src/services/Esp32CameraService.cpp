@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32CameraService.h"
 
 #include <Preferences.h>
@@ -103,3 +104,5 @@ NativeResult recordMjpeg(const int32_t *arguments, uint8_t count) {
   return {true, int32_t(frames), "path=" + path + " fps=" + String(fps)};
 }
 }
+
+#endif  // ESP32

@@ -30,3 +30,9 @@
 /iris/tools/noobctl
 /iris/tools/noob_ble_fd
 /iris/tools/noobctl_batch
+/neo/private/
+/neo/deps/
+/neo/build/
+/iris/firmware/iris_combined/managed_components/
+/iris/firmware/iris_combined/sdkconfig
+/iris/firmware/iris_combined/sdkconfig.old

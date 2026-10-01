@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32IrService.h"
 
 #include <Arduino.h>
@@ -323,3 +324,5 @@ NativeResult replayAndCapture(const uint8_t *receiverLevels,
               " carrier_hz=" + String(settings.defaultFrequencyHz)};
 }
 }
+
+#endif  // ESP32

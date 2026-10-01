@@ -21,6 +21,7 @@
 #include "thread_detectors.h"
 #include "thread_ir_capture.h"
 #include "thread_sampling.h"
+#include <esp_heap_caps.h>
 #if IRIS_ENABLE_GPIO_DIAGNOSTICS
 #include <Esp32GpioInspector.h>
 #endif
@@ -37,6 +38,8 @@ bool initService(const char *name, bool (*begin)()) {
   Serial.printf("NRP/1 0 EVENT INIT service=%s\n", name);
   const bool ready = begin();
   Serial.printf("NRP/1 0 EVENT INIT_DONE service=%s ok=%d\n", name, ready);
+  Serial.printf("NRP/1 0 EVENT HEAP stage=%s internal=%u\n", name,
+                static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)));
   return ready;
 }
 NativeResult irisExternalLed(const int32_t *arguments, uint8_t count) {
@@ -95,6 +98,8 @@ bool irisRegister(NoobRuntime &runtime) {
 #if IRIS_ENABLE_WIFI
   Serial.println("NRP/1 0 EVENT INIT service=WIFI");
   ok &= Esp32WifiService::begin(IrisSecrets::WIFI_SSID, IrisSecrets::WIFI_PASSWORD);
+  Serial.printf("NRP/1 0 EVENT HEAP stage=WIFI internal=%u\n",
+                static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)));
 #endif
 #if IRIS_ENABLE_SD
   ok &= Esp32VmProgramStore::begin(runtime.vm());

@@ -1,3 +1,4 @@
+#if defined(ESP32)
 #include "services/Esp32WifiService.h"
 
 #include <WiFi.h>
@@ -99,6 +100,12 @@ bool begin(const char *defaultSsid, const char *defaultPassword) {
     wifiPreferences.putString("ssid", savedSsid);
     wifiPreferences.putString("password", savedPassword);
   }
+  return true;
+}
+
+bool startAutoConnect() {
+  if (savedSsid.isEmpty()) return false;
+  WiFi.begin(savedSsid.c_str(), savedPassword.c_str());
   return true;
 }
 
@@ -208,3 +215,5 @@ NativeResult rssiOff(const int32_t *, uint8_t) {
 
 NoobBackgroundService &rssiService() { return gatherer; }
 }
+
+#endif  // ESP32

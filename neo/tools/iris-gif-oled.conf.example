@@ -1,0 +1,7 @@
+# Copy beside iris-gif-oled as iris-gif-oled.conf or pass with --config.
+I2C_DEVICE=/dev/i2c-0
+I2C_ADDRESS=0x3c
+SIZE=128
+FIT=cover
+CONTRAST=47
+ORIENTATION=normal

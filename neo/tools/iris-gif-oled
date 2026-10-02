@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+"""Draw a monochrome GIF on the SH1107 128x128 OLED using Linux i2c-dev."""
+
+import argparse
+import ctypes
+import errno
+import fcntl
+import os
+import sys
+from pathlib import Path
+
+try:
+    from PIL import Image, ImageOps
+except ImportError:
+    print("missing Pillow; install the OS package python3-pil", file=sys.stderr)
+    raise SystemExit(2)
+
+
+I2C_RDWR = 0x0707
+I2C_MESSAGE_WRITE = 0
+
+
+class I2CMessage(ctypes.Structure):
+    _fields_ = [
+        ("addr", ctypes.c_uint16),
+        ("flags", ctypes.c_uint16),
+        ("length", ctypes.c_uint16),
+        ("buffer", ctypes.POINTER(ctypes.c_uint8)),
+    ]
+
+
+class I2CRdwrData(ctypes.Structure):
+    _fields_ = [("messages", ctypes.POINTER(I2CMessage)), ("count", ctypes.c_uint32)]
+
+
+class I2CBus:
+    def __init__(self, device, address):
+        self.device = device
+        self.address = address
+        self.fd = os.open(device, os.O_RDWR)
+        self.libc = ctypes.CDLL(None, use_errno=True)
+        self.libc.ioctl.restype = ctypes.c_int
+
+    def close(self):
+        if self.fd is not None:
+            os.close(self.fd)
+            self.fd = None
+
+    def write(self, payload, label):
+        raw = (ctypes.c_uint8 * len(payload))(*payload)
+        message = I2CMessage(
+            self.address,
+            I2C_MESSAGE_WRITE,
+            len(payload),
+            ctypes.cast(raw, ctypes.POINTER(ctypes.c_uint8)),
+        )
+        messages = (I2CMessage * 1)(message)
+        transfer = I2CRdwrData(messages, 1)
+        result = self.libc.ioctl(self.fd, I2C_RDWR, ctypes.byref(transfer))
+        if result < 0:
+            error_number = ctypes.get_errno()
+            raise OSError(error_number, f"{label}: {os.strerror(error_number)}")
+        if result != 1:
+            raise OSError(errno.EIO, f"{label}: I2C transfer returned {result} messages")
+
+
+def read_config(path):
+    settings = {
+        "I2C_DEVICE": "/dev/i2c-0",
+        "I2C_ADDRESS": "0x3c",
+        "SIZE": "128",
+        "FIT": "cover",
+        "CONTRAST": "47",
+        "ORIENTATION": "normal",
+    }
+    try:
+        lines = Path(path).read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return settings
+    for number, line in enumerate(lines, 1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise ValueError(f"{path}:{number}: expected KEY=VALUE")
+        key, value = (part.strip() for part in line.split("=", 1))
+        if key not in settings:
+            raise ValueError(f"{path}:{number}: unknown setting {key}")
+        settings[key] = value
+    return settings
+
+
+def square_bitmap(path, size, fit):
+    with Image.open(path) as source:
+        if getattr(source, "n_frames", 1) > 1:
+            print("note: animated GIF; displaying its first frame", file=sys.stderr)
+        source.seek(0)
+        image = ImageOps.exif_transpose(source).convert("L")
+    target = (size, size)
+    if fit == "cover":
+        image = ImageOps.fit(image, target, method=Image.Resampling.LANCZOS)
+    elif fit == "contain":
+        image.thumbnail(target, Image.Resampling.LANCZOS)
+        canvas = Image.new("L", target, 0)
+        canvas.paste(image, ((size - image.width) // 2, (size - image.height) // 2))
+        image = canvas
+    else:
+        image = image.resize(target, Image.Resampling.LANCZOS)
+    return image.convert("1", dither=Image.Dither.NONE)
+
+
+def page_bytes(bitmap, page):
+    pixels = bitmap.load()
+    width = bitmap.width
+    row = page * 8
+    output = bytearray(width)
+    for x in range(width):
+        value = 0
+        for bit in range(8):
+            if pixels[x, row + bit]:
+                value |= 1 << bit
+        output[x] = value
+    return output
+
+
+def draw(bus, bitmap, contrast, orientation):
+    # This SH1107 128x128 sequence was validated against the four-square
+    # pattern on this exact bus/display. The command/data controls are 0x00/0x40.
+    if orientation == "flipped":
+        segment, scan = 0xA1, 0xC8
+    else:
+        segment, scan = 0xA0, 0xC0
+    init = [
+        0xAE, 0xDC, 0x00, 0x81, contrast, 0x20, segment, scan, 0xA8, 0x7F,
+        0xD5, 0x50, 0xD9, 0x22, 0xDB, 0x35, 0xB0, 0xDA, 0x12, 0xA4, 0xA6,
+    ]
+    bus.write([0x00, *init], "SH1107 initialization")
+    bus.write([0x00, 0xAF], "display-on command")
+    for page in range(bitmap.height // 8):
+        # In page mode each byte holds eight vertical pixels; columns advance
+        # across the panel. Set page and column zero before each full-page burst.
+        bus.write([0x00, 0xB0 | page, 0x00, 0x10], f"page {page} address")
+        bus.write([0x40, *page_bytes(bitmap, page)], f"page {page} pixel data")
+        print(f"\rpage {page + 1}/{bitmap.height // 8}", end="", file=sys.stderr)
+    print(file=sys.stderr)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Draw a GIF on the 128x128 SH1107 OLED.")
+    parser.add_argument("gif", help="monochrome GIF to draw")
+    parser.add_argument("--config", help="KEY=VALUE configuration file")
+    parser.add_argument("--device", help="Linux I2C device, e.g. /dev/i2c-0")
+    parser.add_argument("--address", help="7-bit I2C address, e.g. 0x3c")
+    parser.add_argument("--size", type=int, help="square output size (default 128)")
+    parser.add_argument("--fit", choices=("cover", "contain", "stretch"))
+    parser.add_argument("--contrast", type=int, help="SH1107 contrast, 0..255")
+    parser.add_argument("--orientation", choices=("normal", "flipped"))
+    parser.add_argument("--dry-run", action="store_true", help="pack/validate only; do not touch I2C")
+    args = parser.parse_args()
+
+    config_path = args.config or os.environ.get(
+        "IRIS_GIF_OLED_CONFIG", str(Path(__file__).with_name("iris-gif-oled.conf"))
+    )
+    bus = None
+    try:
+        config = read_config(config_path)
+        device = args.device or config["I2C_DEVICE"]
+        address = int(args.address or config["I2C_ADDRESS"], 0)
+        size = args.size if args.size is not None else int(config["SIZE"])
+        fit = args.fit or config["FIT"]
+        contrast = args.contrast if args.contrast is not None else int(config["CONTRAST"])
+        orientation = args.orientation or config["ORIENTATION"]
+        if size != 128:
+            raise ValueError("this driver targets the panel's full 128x128 geometry")
+        if not 0x03 <= address <= 0x77:
+            raise ValueError("I2C_ADDRESS must be a valid 7-bit address")
+        if not 0 <= contrast <= 255:
+            raise ValueError("CONTRAST must be between 0 and 255")
+        if fit not in ("cover", "contain", "stretch"):
+            raise ValueError("FIT must be cover, contain, or stretch")
+        if orientation not in ("normal", "flipped"):
+            raise ValueError("ORIENTATION must be normal or flipped")
+
+        bitmap = square_bitmap(args.gif, size, fit)
+        white_pixels = sum(bool(value) for value in bitmap.getdata())
+        print(
+            f"image={args.gif} output={size}x{size} white={white_pixels} "
+            f"black={size * size - white_pixels}",
+            file=sys.stderr,
+        )
+        if args.dry_run:
+            print("dry run: no I2C writes sent")
+            return 0
+        if os.geteuid() != 0 and not os.access(device, os.W_OK):
+            raise PermissionError(f"cannot write {device}; run with sudo or join its i2c group")
+        bus = I2CBus(device, address)
+        draw(bus, bitmap, contrast, orientation)
+        print(f"displayed {args.gif} on SH1107 at 0x{address:02x}")
+        return 0
+    except (OSError, ValueError) as error:
+        print(f"iris-gif-oled: {error}", file=sys.stderr)
+        return 1
+    finally:
+        if bus:
+            bus.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

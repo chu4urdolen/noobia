@@ -64,6 +64,8 @@ image or captures/downloads a JPEG from Iris over the USB control link. It
 auto-stretches contrast, dithers to pure black and white, and writes a square
 128×128 GIF by default for the SH1107 OLED. See
 [`tools/README.md`](tools/README.md) for setup and options.
+Use [`tools/iris-gif-oled`](tools/iris-gif-oled) to render that GIF on the
+screen (`sudo` may be needed for `/dev/i2c-0`).
 
 ## Ethernet-free SSH
 

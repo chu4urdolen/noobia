@@ -1,0 +1,275 @@
+#!/usr/bin/env python3
+"""Convert any Pillow-readable image, or an Iris camera capture, to a square 1-bit GIF."""
+
+import argparse
+import os
+import re
+import socket
+import sys
+import time
+from pathlib import Path
+
+try:
+    from PIL import Image, ImageOps
+except ImportError:
+    print("missing Pillow; install the OS package python3-pil", file=sys.stderr)
+    raise SystemExit(2)
+
+
+DEFAULTS = {
+    "SIZE": "128",
+    "FIT": "cover",
+    "AUTOCONTRAST_CUTOFF": "1.0",
+    "IRIS_HOST": "192.168.77.1",
+    "IRIS_PORT": "4242",
+    "IRIS_TIMEOUT": "15",
+    "IRIS_CHUNK": "32",
+    "ENSURE_BOTH_COLORS": "1",
+}
+
+
+def read_config(path):
+    values = DEFAULTS.copy()
+    if not path:
+        return values
+    try:
+        lines = Path(path).read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return values
+    for number, line in enumerate(lines, 1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise ValueError(f"{path}:{number}: expected KEY=VALUE")
+        key, value = (part.strip() for part in line.split("=", 1))
+        if key not in values:
+            raise ValueError(f"{path}:{number}: unknown setting {key}")
+        values[key] = value
+    return values
+
+
+class IrisLink:
+    """Small NRP/1 client for Iris's private USB control connection."""
+
+    def __init__(self, host, port, timeout):
+        self.sock = socket.create_connection((host, port), timeout=timeout)
+        self.sock.settimeout(timeout)
+        self.buffer = bytearray()
+        self.counter = 0
+
+    def close(self):
+        self.sock.close()
+
+    def request(self, command):
+        self.counter += 1
+        request_id = f"gif{os.getpid()}_{self.counter}"
+        frame = f"NRP/1 {request_id} {command}\n".encode("ascii")
+        self.sock.sendall(frame)
+        while True:
+            newline = self.buffer.find(b"\n")
+            if newline >= 0:
+                line = self.buffer[:newline].decode("utf-8", "replace").rstrip("\r")
+                del self.buffer[: newline + 1]
+                if line.startswith(f"NRP/1 {request_id} "):
+                    if " OK" not in line:
+                        raise RuntimeError(f"Iris rejected {command.split()[0]}: {line}")
+                    return line
+                continue
+            block = self.sock.recv(4096)
+            if not block:
+                raise RuntimeError("Iris closed the USB control connection")
+            self.buffer.extend(block)
+
+    def capture(self, chunk_size):
+        reply = self.request("CALL CAMERA_CAPTURE")
+        match = re.search(r"\b(?:path=|detail=)(/captured/[^\s]+)", reply)
+        if not match:
+            raise RuntimeError(f"camera capture reply has no SD path: {reply}")
+        path = match.group(1)
+        if not path.startswith("/captured/") or ".." in path:
+            raise RuntimeError(f"refusing unexpected capture path: {path}")
+        print(f"captured {path}", file=sys.stderr)
+
+        chunks = bytearray()
+        offset = 0
+        expected_size = None
+        while True:
+            reply = self.request(
+                f"CALL_TEXT SD_READ {path} {offset} {chunk_size}"
+            )
+            size_match = re.search(r"\bsize=(\d+)", reply)
+            data_match = re.search(r"\bdata=([0-9A-Fa-f]*)", reply)
+            eof_match = re.search(r"\beof=([01])", reply)
+            if not size_match or data_match is None or not eof_match:
+                raise RuntimeError(f"malformed SD read reply: {reply}")
+            size = int(size_match.group(1))
+            if expected_size is None:
+                expected_size = size
+                if size <= 0:
+                    raise RuntimeError("Iris returned an empty camera file")
+                print(f"downloading {size} bytes from Iris SD", file=sys.stderr)
+            elif size != expected_size:
+                raise RuntimeError("capture size changed during download")
+            data = bytes.fromhex(data_match.group(1))
+            if not data and eof_match.group(1) != "1":
+                raise RuntimeError(f"Iris returned an empty chunk at offset {offset}")
+            chunks.extend(data)
+            offset += len(data)
+            if eof_match.group(1) == "1":
+                break
+        if len(chunks) != expected_size:
+            raise RuntimeError(
+                f"incomplete camera download: {len(chunks)} of {expected_size} bytes"
+            )
+        return bytes(chunks)
+
+
+def square_image(source, size, fit):
+    image = ImageOps.exif_transpose(source).convert("L")
+    target = (size, size)
+    if fit == "cover":
+        return ImageOps.fit(image, target, method=Image.Resampling.LANCZOS)
+    if fit == "contain":
+        image.thumbnail(target, Image.Resampling.LANCZOS)
+        canvas = Image.new("L", target, 0)
+        canvas.paste(image, ((size - image.width) // 2, (size - image.height) // 2))
+        return canvas
+    return image.resize(target, Image.Resampling.LANCZOS)
+
+
+def monochrome(image, cutoff, ensure_both):
+    original_low, original_high = image.getextrema()
+    width, height = image.size
+    if original_low == original_high:
+        # A fully clipped or featureless frame has no texture to dither. Keep
+        # its overall tone instead of letting error diffusion invent pattern.
+        base = 1 if original_low >= 128 else 0
+        result = Image.new("1", image.size, base)
+        if ensure_both:
+            pixels = result.load()
+            pixels[width - 2, height - 1] = 0
+            pixels[width - 1, height - 1] = 1
+            print(
+                "warning: flat frame; added a 2-pixel black/white marker",
+                file=sys.stderr,
+            )
+        return result
+
+    # Percentile autocontrast rejects a few sensor outliers; if that collapses
+    # a low-contrast scene, fall back to its actual extrema for a full stretch.
+    stretched = ImageOps.autocontrast(image, cutoff=cutoff)
+    low, high = stretched.getextrema()
+    if high <= low:
+        stretched = ImageOps.autocontrast(image, cutoff=0)
+        low, high = stretched.getextrema()
+
+    result = stretched.convert("1", dither=Image.Dither.FLOYDSTEINBERG)
+    pixels = result.load()
+    if ensure_both:
+        values = set(result.getdata())
+        if len(values) < 2:
+            source_pixels = list(stretched.getdata())
+            darkest = source_pixels.index(min(source_pixels))
+            brightest = source_pixels.index(max(source_pixels))
+            pixels[darkest % width, darkest // width] = 0
+            pixels[brightest % width, brightest // width] = 1
+    return result
+
+
+def save_gif(image, output):
+    output.parent.mkdir(parents=True, exist_ok=True)
+    # Pillow writes mode-1 GIFs with a two-entry black/white color table.
+    image.save(output, format="GIF", optimize=True)
+    with Image.open(output) as check:
+        if check.format != "GIF" or check.size != image.size:
+            raise RuntimeError("written GIF failed format/size verification")
+        palette = check.convert("RGB")
+        colors = set(palette.getdata())
+        if not colors.issubset({(0, 0, 0), (255, 255, 255)}) or len(colors) != 2:
+            raise RuntimeError("written GIF is not strictly black and white")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Make a square, pure black/white GIF from an image or Iris camera."
+    )
+    parser.add_argument("input", nargs="?", help="input image; Pillow-supported formats")
+    parser.add_argument("output", nargs="?", help="output GIF (default: INPUT.bw.gif)")
+    parser.add_argument("--camera", action="store_true", help="capture/download one Iris photo")
+    parser.add_argument("--output", dest="output_option", help="output GIF path")
+    parser.add_argument("--config", help="KEY=VALUE config file")
+    parser.add_argument("--size", type=int, help="square output edge in pixels (default 128)")
+    parser.add_argument("--fit", choices=("cover", "contain", "stretch"))
+    parser.add_argument("--cutoff", type=float, help="autocontrast percentile per tail (0..10)")
+    parser.add_argument("--iris-host")
+    parser.add_argument("--iris-port", type=int)
+    parser.add_argument("--iris-timeout", type=float)
+    parser.add_argument("--keep-camera-jpeg", action="store_true")
+    args = parser.parse_args()
+
+    config_path = args.config or os.environ.get(
+        "IRIS_PHOTO_GIF_CONFIG", str(Path(__file__).with_name("iris-photo-gif.conf"))
+    )
+    try:
+        config = read_config(config_path)
+        size = args.size if args.size is not None else int(config["SIZE"])
+        cutoff = args.cutoff if args.cutoff is not None else float(config["AUTOCONTRAST_CUTOFF"])
+        fit = args.fit or config["FIT"]
+        host = args.iris_host or config["IRIS_HOST"]
+        port = args.iris_port or int(config["IRIS_PORT"])
+        timeout = args.iris_timeout or float(config["IRIS_TIMEOUT"])
+        chunk_size = int(config["IRIS_CHUNK"])
+        ensure_both = config["ENSURE_BOTH_COLORS"] == "1"
+        if not 1 <= size <= 2048:
+            raise ValueError("SIZE must be between 1 and 2048")
+        if not 0 <= cutoff <= 10:
+            raise ValueError("AUTOCONTRAST_CUTOFF must be between 0 and 10")
+        if not 1 <= chunk_size <= 32:
+            raise ValueError("IRIS_CHUNK must be between 1 and 32")
+        if fit not in ("cover", "contain", "stretch"):
+            raise ValueError("FIT must be cover, contain, or stretch")
+        if (args.camera and args.input) or (not args.camera and not args.input):
+            parser.error("provide INPUT, or use --camera (not both)")
+        if args.output and args.output_option:
+            parser.error("choose positional OUTPUT or --output, not both")
+
+        camera_jpeg = None
+        if args.camera:
+            if args.output_option:
+                output = Path(args.output_option)
+            else:
+                output = Path.cwd() / f"iris_{time.strftime('%Y%m%d_%H%M%S')}.bw.gif"
+            link = IrisLink(host, port, timeout)
+            try:
+                camera_jpeg = link.capture(chunk_size)
+            finally:
+                link.close()
+            from io import BytesIO
+
+            source = Image.open(BytesIO(camera_jpeg))
+        else:
+            source_path = Path(args.input)
+            selected_output = args.output_option or args.output
+            output = Path(selected_output) if selected_output else source_path.with_name(
+                source_path.stem + ".bw.gif"
+            )
+            source = Image.open(source_path)
+
+        with source:
+            square = square_image(source, size, fit)
+            binary = monochrome(square, cutoff, ensure_both)
+            save_gif(binary, output)
+        if args.camera and args.keep_camera_jpeg:
+            jpeg_path = output.with_suffix(".jpg")
+            jpeg_path.write_bytes(camera_jpeg)
+            print(f"camera JPEG saved: {jpeg_path}")
+        print(f"saved {output} ({size}x{size}, 1-bit black/white GIF)")
+        return 0
+    except (OSError, ValueError, RuntimeError, TimeoutError, socket.error) as error:
+        print(f"iris-photo-gif: {error}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

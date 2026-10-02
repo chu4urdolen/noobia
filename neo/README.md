@@ -57,6 +57,14 @@ expose the USB subnet through another router or port forward.
 This Armbian image provides `analog-codec`, not a generic I2S DAC overlay;
 the former is for the H3's on-chip analog codec, not this external HAT.
 
+## Camera images for the OLED
+
+[`tools/iris-photo-gif`](tools/iris-photo-gif) accepts any Pillow-readable
+image or captures/downloads a JPEG from Iris over the USB control link. It
+auto-stretches contrast, dithers to pure black and white, and writes a square
+128×128 GIF by default for the SH1107 OLED. See
+[`tools/README.md`](tools/README.md) for setup and options.
+
 ## Ethernet-free SSH
 
 Neo's SSH server listens on all interfaces, but Iris's USB-to-Wi-Fi NAT does

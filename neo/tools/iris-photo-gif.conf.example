@@ -1,0 +1,9 @@
+# Copy to /etc/noobia/iris-photo-gif.conf or pass with --config.
+SIZE=128
+FIT=cover
+AUTOCONTRAST_CUTOFF=1.0
+IRIS_HOST=192.168.77.1
+IRIS_PORT=4242
+IRIS_TIMEOUT=15
+IRIS_CHUNK=32
+ENSURE_BOTH_COLORS=1

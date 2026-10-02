@@ -4,6 +4,8 @@
 #include "syscalls/noob_native_registry.h"
 
 namespace Esp32SdMmcService {
+constexpr size_t READ_PATH_MAX_BYTES = 512;
+
 struct Config {
   int clk;
   int cmd;

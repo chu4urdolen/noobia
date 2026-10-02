@@ -33,6 +33,9 @@ Verified on Iris, 2026-09-29:
 - Neo called `NRP/1` commands over TCP at `192.168.77.1:4242`: `PING`,
   `INFO`, `CAPS`, `TIME_NOW`, `WIFI_STATUS`, and VM `STATUS` passed. The same
   port refused connections to Iris's Wi-Fi address.
+- Path-based `SD_READ` supports up to 512 source bytes per request for the
+  USB/TCP host. The sequence-number capture reader retains its 32-byte limit;
+  existing BLE clients can continue requesting 32-byte path reads.
 
 After a Neo/Nexus restart, Neo automatically re-enumerated Iris, renewed DHCP,
 and reached the internet through a USB-bound ping; Iris rejoined Wi-Fi and

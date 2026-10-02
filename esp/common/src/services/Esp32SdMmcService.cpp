@@ -17,6 +17,7 @@ String hexBytes(const uint8_t *data, size_t length) {
   static const char digits[] = "0123456789ABCDEF";
   String result;
   result.reserve(length * 2);
+  result.reserve(length * 2);
   for (size_t i = 0; i < length; ++i) {
     result += digits[data[i] >> 4];
     result += digits[data[i] & 0x0f];
@@ -139,8 +140,8 @@ NativeResult readPathChunk(const String &arguments) {
   if (!validPath(path)) return {false, 0, "invalid absolute SD path"};
   const int32_t offset = offsetText.toInt();
   const int32_t wanted = lengthText.toInt();
-  if (offset < 0 || wanted < 1 || wanted > 32)
-    return {false, 0, "offset must be nonnegative; length 1..32"};
+  if (offset < 0 || wanted < 1 || wanted > READ_PATH_MAX_BYTES)
+    return {false, 0, "offset must be nonnegative; length 1..512"};
   File file = storage().open(path, FILE_READ);
   if (!file || file.isDirectory()) return {false, 0, "file not found"};
   const size_t total = file.size();
@@ -148,7 +149,7 @@ NativeResult readPathChunk(const String &arguments) {
     file.close();
     return {false, 0, "offset beyond file"};
   }
-  uint8_t bytes[32];
+  uint8_t bytes[READ_PATH_MAX_BYTES];
   const size_t got = file.read(bytes, wanted);
   file.close();
   return {true, offset + static_cast<int32_t>(got),

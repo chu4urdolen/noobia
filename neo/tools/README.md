@@ -18,6 +18,10 @@ private USB control link, and converts it. The original JPEG stays on Iris; use
 works with any Pillow-readable picture and does not require Iris to be
 connected.
 
+The current firmware reads up to 512 bytes per USB request. If Iris is still
+running the older firmware, the tool recognizes its 32-byte limit and falls
+back automatically; that compatibility path is much slower.
+
 Install the small OS dependency with `sudo apt install python3-pil`. Settings
 are in `iris-photo-gif.conf.example`; copy it to
 `/etc/noobia/iris-photo-gif.conf`, or use `--config FILE`. CLI flags override

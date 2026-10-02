@@ -23,7 +23,7 @@ DEFAULTS = {
     "IRIS_HOST": "192.168.77.1",
     "IRIS_PORT": "4242",
     "IRIS_TIMEOUT": "15",
-    "IRIS_CHUNK": "32",
+    "IRIS_CHUNK": "512",
     "ENSURE_BOTH_COLORS": "1",
 }
 
@@ -95,9 +95,20 @@ class IrisLink:
         offset = 0
         expected_size = None
         while True:
-            reply = self.request(
-                f"CALL_TEXT SD_READ {path} {offset} {chunk_size}"
-            )
+            try:
+                reply = self.request(
+                    f"CALL_TEXT SD_READ {path} {offset} {chunk_size}"
+                )
+            except RuntimeError as error:
+                if offset == 0 and chunk_size > 32 and "length 1..32" in str(error):
+                    print(
+                        "warning: Iris firmware has the old 32-byte read limit; "
+                        "continuing slowly",
+                        file=sys.stderr,
+                    )
+                    chunk_size = 32
+                    continue
+                raise
             size_match = re.search(r"\bsize=(\d+)", reply)
             data_match = re.search(r"\bdata=([0-9A-Fa-f]*)", reply)
             eof_match = re.search(r"\beof=([01])", reply)
@@ -225,8 +236,8 @@ def main():
             raise ValueError("SIZE must be between 1 and 2048")
         if not 0 <= cutoff <= 10:
             raise ValueError("AUTOCONTRAST_CUTOFF must be between 0 and 10")
-        if not 1 <= chunk_size <= 32:
-            raise ValueError("IRIS_CHUNK must be between 1 and 32")
+        if not 1 <= chunk_size <= 512:
+            raise ValueError("IRIS_CHUNK must be between 1 and 512")
         if fit not in ("cover", "contain", "stretch"):
             raise ValueError("FIT must be cover, contain, or stretch")
         if (args.camera and args.input) or (not args.camera and not args.input):

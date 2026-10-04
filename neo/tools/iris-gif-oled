@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 try:
-    from PIL import Image, ImageOps
+    from PIL import Image, ImageOps, ImageDraw
 except ImportError:
     print("missing Pillow; install the OS package python3-pil", file=sys.stderr)
     raise SystemExit(2)
@@ -123,7 +123,7 @@ def page_bytes(bitmap, page):
     return output
 
 
-def draw(bus, bitmap, contrast, orientation):
+def draw(bus, bitmap, contrast, orientation, skip_init=False):
     # This SH1107 128x128 sequence was validated against the four-square
     # pattern on this exact bus/display. The command/data controls are 0x00/0x40.
     if orientation == "flipped":
@@ -134,8 +134,9 @@ def draw(bus, bitmap, contrast, orientation):
         0xAE, 0xDC, 0x00, 0x81, contrast, 0x20, segment, scan, 0xA8, 0x7F,
         0xD5, 0x50, 0xD9, 0x22, 0xDB, 0x35, 0xB0, 0xDA, 0x12, 0xA4, 0xA6,
     ]
-    bus.write([0x00, *init], "SH1107 initialization")
-    bus.write([0x00, 0xAF], "display-on command")
+    if not skip_init:
+        bus.write([0x00, *init], "SH1107 initialization")
+        bus.write([0x00, 0xAF], "display-on command")
     for page in range(bitmap.height // 8):
         # In page mode each byte holds eight vertical pixels; columns advance
         # across the panel. Set page and column zero before each full-page burst.
@@ -147,7 +148,16 @@ def draw(bus, bitmap, contrast, orientation):
 
 def main():
     parser = argparse.ArgumentParser(description="Draw a GIF on the 128x128 SH1107 OLED.")
-    parser.add_argument("gif", help="monochrome GIF to draw")
+    parser.add_argument("gif", nargs="?", help="monochrome GIF to draw")
+    parser.add_argument("--text", help="draw letters alone or over an image; newlines make separate rows")
+    parser.add_argument("--text-x", type=int, default=4, help="text left column")
+    parser.add_argument("--text-y", type=int, default=4, help="text top row")
+    parser.add_argument("--text-background", choices=("black", "transparent"), default="black")
+    parser.add_argument("--text-color", choices=("black", "white"), default="white")
+    parser.add_argument("--layout", choices=("overlay", "status"), default="overlay")
+    parser.add_argument("--mascot-size", type=int, default=80)
+    parser.add_argument("--canvas-color", choices=("black", "white"), default="black")
+    parser.add_argument("--skip-init", action="store_true", help="refresh an already initialized panel")
     parser.add_argument("--config", help="KEY=VALUE configuration file")
     parser.add_argument("--device", help="Linux I2C device, e.g. /dev/i2c-0")
     parser.add_argument("--address", help="7-bit I2C address, e.g. 0x3c")
@@ -181,10 +191,35 @@ def main():
         if orientation not in ("normal", "flipped"):
             raise ValueError("ORIENTATION must be normal or flipped")
 
-        bitmap = square_bitmap(args.gif, size, fit)
+        if args.gif is None and args.text is None:
+            raise ValueError("provide an image, --text, or both")
+        if args.layout == "status":
+            if not 16 <= args.mascot_size <= 88:
+                raise ValueError("status mascot size must be 16..88")
+            bitmap = Image.new("1", (size, size), 1 if args.canvas_color == "white" else 0)
+            if args.gif is not None:
+                mascot = square_bitmap(args.gif, args.mascot_size, fit)
+                bitmap.paste(mascot, (size - args.mascot_size, size - args.mascot_size))
+        elif args.gif is None:
+            bitmap = Image.new("1", (size, size), 0)
+        else:
+            bitmap = square_bitmap(args.gif, size, fit)
+        if args.text is not None:
+            if not (0 <= args.text_x < size and 0 <= args.text_y < size):
+                raise ValueError("text position must be within the screen")
+            painter = ImageDraw.Draw(bitmap)
+            position = (2, 2) if args.layout == "status" else (args.text_x, args.text_y)
+            if args.layout == "status":
+                bounds = painter.multiline_textbbox(position, args.text, spacing=4)
+                if bounds[2] > size or bounds[3] > size - args.mascot_size:
+                    raise ValueError("status text would overlap mascot or leave screen")
+            if args.text_background == "black":
+                painter.rectangle(painter.multiline_textbbox(position, args.text, spacing=4), fill=0)
+            painter.multiline_text(position, args.text,
+                                   fill=0 if args.text_color == "black" else 1, spacing=4)
         white_pixels = sum(bool(value) for value in bitmap.getdata())
         print(
-            f"image={args.gif} output={size}x{size} white={white_pixels} "
+            f"image={args.gif or 'text'} output={size}x{size} white={white_pixels} "
             f"black={size * size - white_pixels}",
             file=sys.stderr,
         )
@@ -194,8 +229,8 @@ def main():
         if os.geteuid() != 0 and not os.access(device, os.W_OK):
             raise PermissionError(f"cannot write {device}; run with sudo or join its i2c group")
         bus = I2CBus(device, address)
-        draw(bus, bitmap, contrast, orientation)
-        print(f"displayed {args.gif} on SH1107 at 0x{address:02x}")
+        draw(bus, bitmap, contrast, orientation, args.skip_init)
+        print(f"displayed {args.gif or 'text'} on SH1107 at 0x{address:02x}")
         return 0
     except (OSError, ValueError) as error:
         print(f"iris-gif-oled: {error}", file=sys.stderr)

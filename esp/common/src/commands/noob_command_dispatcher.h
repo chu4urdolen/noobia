@@ -20,6 +20,7 @@ class CommandDispatcher {
                  size_t &length, String &error);
   String callNative(const NoobRequest &request);
   String callTextNative(const NoobRequest &request);
+  String callMixedNative(const NoobRequest &request);
 
   const char *noobName_;
   const char *firmwareVersion_;

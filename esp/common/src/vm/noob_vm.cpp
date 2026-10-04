@@ -171,20 +171,30 @@ void NoobVm::executeOne() {
     if (!stackDepth_) { fault("return stack empty"); return; }
     pc_=returnStack_[--stackDepth_]; return;
   }
-  if (opcode == 0x20) {
+  if (opcode == 0x20 || opcode == 0x22) {
     if (!need(4)) return; uint8_t d=read8(); uint16_t id=read16(); uint8_t count=read8();
-    if (!validRegister(d)||count>REGISTER_COUNT||!need(count)) return;
+    if (!validRegister(d)) return;
+    if (count > REGISTER_COUNT) { fault("too many syscall arguments"); return; }
+    if (!need(count)) return;
     int32_t args[REGISTER_COUNT]={};
     for (uint8_t i=0;i<count;++i) { uint8_t r=read8(); if (!validRegister(r)) return; args[i]=registers_[r]; }
+    String ascii;
+    if (opcode == 0x22) {
+      if (!need(1)) return;
+      const uint8_t length = read8();
+      if (!need(length)) return;
+      ascii.reserve(length);
+      for (uint8_t i = 0; i < length; ++i) ascii += char(read8());
+    }
     // Hardware never appears in the VM switch. A numeric ID resolves through
     // the registry populated by the physical Noob during initialization.
     const NativeEntry *entry=natives_.find(id);
     if (!entry || !entry->implementation ||
-        !entry->implementation->acceptsNumbers()) {
+        (opcode == 0x20 && !entry->implementation->acceptsNumbers())) {
       fault("unknown numeric syscall");
       return;
     }
-    NativeResult result=natives_.call(*entry,args,count); if (!result.ok) { fault("syscall "+String(id)+": "+result.detail); return; }
+    NativeResult result=natives_.callMixed(*entry,args,count,ascii); if (!result.ok) { fault("syscall "+String(id)+": "+result.detail); return; }
     registers_[d]=result.value; return;
   }
   if (opcode == 0x21) {

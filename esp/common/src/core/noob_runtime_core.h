@@ -4,6 +4,7 @@
 #include "transport/noob_transport.h"
 #include "commands/noob_command_dispatcher.h"
 #include "core/noob_background_service.h"
+#include "core/noob_self_test.h"
 
 class NoobRuntime {
  public:
@@ -17,11 +18,13 @@ class NoobRuntime {
   NativeRegistry &natives();
   CapabilityRegistry &capabilities();
   NoobVm &vm();
+  NoobSelfTest &selfTest() { return selfTest_; }
   void setVmLifecycle(NoobVmLifecycle &lifecycle);
   void loop();
 
  private:
   NativeRegistry natives_;
+  NoobSelfTest selfTest_;
   CapabilityRegistry capabilities_;
   NoobVm vm_;
   CommandDispatcher dispatcher_;

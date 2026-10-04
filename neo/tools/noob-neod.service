@@ -1,0 +1,22 @@
+[Unit]
+Description=Noob Linux command endpoint for Iris
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/noobia/noob-neod.conf
+EnvironmentFile=-/etc/noobia/noob-files.conf
+ExecStart=/usr/local/sbin/noob-neod
+Restart=always
+RestartSec=2
+User=noob
+SupplementaryGroups=input i2c
+ReadWritePaths=/esp /img /vm /audio
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+RestrictAddressFamilies=AF_INET AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

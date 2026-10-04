@@ -10,6 +10,10 @@ NoobRuntime::NoobRuntime(const char *noobName, const char *firmwareVersion)
                MonotonicTimeService::now);
   natives_.add(CommonFunctionIds::TIME_RESET, "TIME_RESET",
                MonotonicTimeService::reset);
+  natives_.add(CommonFunctionIds::SELF_TEST, "SELF_TEST", selfTest_);
+  selfTest_.bind(natives_);
+  addService(selfTest_);
+  capabilities_.add("BOOT_SELF_TEST");
   SequenceService::begin(natives_);
   natives_.add(CommonFunctionIds::SEQUENCE_SET, "SEQUENCE_SET",
                SequenceService::configurationFunction());
@@ -35,6 +39,7 @@ NoobRuntime::NoobRuntime(const char *noobName, const char *firmwareVersion)
   capabilities_.add("TIME_MONOTONIC");
   capabilities_.add("THREAD_VM");
   capabilities_.add("SEQUENCES");
+  capabilities_.add("NATIVE_ASCII");
 }
 
 bool NoobRuntime::addTransport(NoobTransport &transport) {

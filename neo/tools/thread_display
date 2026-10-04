@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Higher-level behavior composes native image/text drawing and ESP sensor reads.
+config=${NOOB_DISPLAY_CONFIG:-/etc/noobia/noob-display.conf}
+[[ ! -f $config ]] || source "$config"
+display=${NOOB_DISPLAY_TOOL:-/usr/local/bin/noob-display}
+espctl=${NOOB_ESP_CTL:-/usr/local/bin/irisctl-usb}
+programs=${NOOB_VM_CATALOG_DIR:-/usr/local/share/noobia/vm}
+(( $# == 2 )) || exit 2
+image=$1
+interval_ms=$2
+[[ $interval_ms =~ ^[0-9]+$ ]] && (( interval_ms >= 1000 && interval_ms <= 60000 )) || exit 2
+printf -v interval '%d.%03d' "$((interval_ms/1000))" "$((interval_ms%1000))"
+initialized=0
+while :; do
+  sensor='--C --%'
+  ip='IP unavailable'
+  ble_label='BLE:?'
+  vm_label='VM unavailable'
+  reading=$(/usr/bin/timeout 8 "$espctl" --timeout 5 call TEMP_HUMIDITY_READ 0) || reading=''
+  if [[ $reading =~ temperature_c=([-0-9.]+).*humidity_pct=([0-9.]+) ]]; then
+    printf -v sensor '%.1fC %.0f%%' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    printf 'temperature_c=%s humidity_pct=%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+  else
+    printf 'sensor_error=%s\n' "${reading:-ESP unavailable}"
+  fi
+  if [[ ${NOOB_OVERLAY_STATUS:-1} == 1 ]]; then
+    if [[ $reading == NRP/1* ]]; then
+      wifi=$(/usr/bin/timeout 8 "$espctl" --timeout 5 call WIFI_STATUS) || wifi=''
+      if [[ $wifi =~ connected=1.*ip=([0-9.]+) ]]; then
+        ip="IP ${BASH_REMATCH[1]}"
+      elif [[ $wifi == *' OK '* ]]; then
+        ip='IP disconnected'
+      else
+        ip='IP unavailable'
+      fi
+      ble=$(/usr/bin/timeout 8 "$espctl" --timeout 5 call BLE_STATUS) || ble=''
+      if [[ $ble == *' OK value=1 '* ]]; then ble_label='BLE:ON'
+      elif [[ $ble == *' OK '* ]]; then ble_label='BLE:OFF'; fi
+      vm=$(/usr/bin/timeout 8 "$espctl" --timeout 5 status) || vm=''
+      if [[ $vm =~ state=([A-Z]+) ]]; then
+        state=${BASH_REMATCH[1]}
+        case $state in RUNNING|WAITING) state=RUN ;; STOPPED) state=STOP ;; FAULTED) state=FAULT ;; esac
+        name=VM
+        snapshot=$(/usr/bin/timeout 8 "$espctl" --timeout 5 call-mixed SD_READ 0 512 /programs/runtime_last.nvm) || snapshot=''
+        if [[ $snapshot =~ size=([0-9]+).*data=([[:xdigit:]]+) ]]; then
+          size=${BASH_REMATCH[1]}
+          bytes=${BASH_REMATCH[2],,}
+          if (( ${#bytes} == size * 2 )); then
+            for program in "$programs"/vm_*.hex; do
+              [[ -f $program ]] || continue
+              known=$(tr -d '[:space:]' < "$program")
+              if [[ ${known,,} == "$bytes" ]]; then
+                name=${program##*/vm_}; name=${name%.hex}
+                [[ $name != police_on_all ]] || name=police_all
+                name=${name:0:12}
+                break
+              fi
+            done
+          fi
+        fi
+        vm_label="$name $state"
+      fi
+    else
+      ip='ESP link unavailable'
+    fi
+  fi
+  printf -v label '%s\n%s %s\n%s' "$ip" "$sensor" "$ble_label" "$vm_label"
+  printf 'overlay_text=%q\n' "$label"
+  NOOB_DISPLAY_SKIP_INIT=$initialized "$display" status "$image" "$label"
+  initialized=1
+  sleep "$interval"
+done

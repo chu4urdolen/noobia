@@ -23,6 +23,7 @@ void irisRegisterCapabilities(CapabilityRegistry &capabilities) {
 #endif
   capabilities.add("UART");
   capabilities.add("VM");
+  capabilities.add("NEO_COMMAND_BRIDGE");
 #if IRIS_ENABLE_WIFI
   capabilities.add("WIFI");
   capabilities.add("RSSI_SCAN_THREAD");

@@ -5,6 +5,11 @@ live in `../../esp/common/programs`. Each `.hex` file contains VM version-1
 bytecode in wire-ready hexadecimal. Programs call capabilities by registered
 function ID; physical pin assignments remain in each Noob-specific module.
 
+Every program, including common examples, has a description in
+[`descriptions.json`](descriptions.json). [`catalog.json`](catalog.json) also
+lists bytecode sizes, required native functions and retired dependencies.
+Regenerate/check it with `node ../tools/update-vm-catalog.mjs [--check]`.
+
 Use the Nexus controller:
 
 ```text
@@ -24,8 +29,8 @@ observing the installed enclosure noise floor.
 
 - `camera_once`: captures one photograph and halts; register 0 receives its
   sequence number.
-- `rssi_ten_seconds`: starts the native RSSI event service for ten seconds,
-  stops it, and halts.
+- `rssi_ten_seconds`: historical program using retired RSSI_ON/OFF; use
+  `rssi_thread_ten_seconds` instead.
 - `sound_capture`: continuously listens for a loud sound and takes a photo.
 - `sound_capture_test`: same control flow with threshold 1, intended only for
   deterministic integration testing.
@@ -61,8 +66,17 @@ observing the installed enclosure noise floor.
   rearm gate, and ultrasonic events from the blink interval are coalesced.
 - `storage_mic`: SD capacity in r0, microphone RMS in r1, then halt.
 - `audio_one_second`: record a one-second WAV to SD; sample count in r1.
-- `video_one_second`: save two JPEG frames as a one-second MJPEG; count in r2.
+- `video_one_second`: historical program using retired CAMERA_VIDEO; use a
+  timed camera capture sequence instead.
 - `radio_status`: Wi-Fi status in r0 and BLE connection state in r1.
 
 Run `diagnostics/restore_smoke.nrp` with `tools/noobctl_batch` to test native
 calls and following PINGs over the same UART connection.
+## Police on all + Neo display
+
+`vm_police_on_all.hex` retains the three detectors and requests the Neo display
+thread on startup. It overlays DHT11 temperature/humidity in black on
+`/img/Iris_formatted.gif`, alongside Wi-Fi/BLE/VM status, with 5000 ms waits.
+The display retries after Neo's slower boot and stops
+when its owning VM stops. Native ID 269 requires the updated ESP firmware.
+The earlier `vm_police_on_any_change.hex` remains the fallback without Neo.

@@ -250,7 +250,7 @@ def main():
             if args.output_option:
                 output = Path(args.output_option)
             else:
-                output = Path.cwd() / f"iris_{time.strftime('%Y%m%d_%H%M%S')}.bw.gif"
+                output = Path.cwd() / f"iris_{time.strftime('%Y%m%d_%H%M%S')}_formatted.gif"
             link = IrisLink(host, port, timeout)
             try:
                 camera_jpeg = link.capture(chunk_size)
@@ -263,7 +263,7 @@ def main():
             source_path = Path(args.input)
             selected_output = args.output_option or args.output
             output = Path(selected_output) if selected_output else source_path.with_name(
-                source_path.stem + ".bw.gif"
+                source_path.stem + "_formatted.gif"
             )
             source = Image.open(source_path)
 

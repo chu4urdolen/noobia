@@ -1,4 +1,4 @@
-/* Bounded single-port VM and RSSI event test; no firmware changes. */
+/* Bounded RSSI thread test; leaves the current VM unchanged. */
 #define _DEFAULT_SOURCE
 #include "noob_serial.h"
 
@@ -15,21 +15,18 @@ int main(int argc, char **argv) {
   int fd = serial_open(argv[1]);
   if (fd < 0) return 1;
   int failed = request(fd, "ping", "PING") ||
-      request(fd, "load", "LOAD 2000700000211027200171000000") ||
-      request(fd, "run", "RUN");
+      request(fd, "start", "CALL RSSI_THREAD_START 10000 1000");
   int64_t deadline = serial_now_ms() + 16000;
   for (unsigned poll = 0; !failed && serial_now_ms() < deadline; ++poll) {
     char id[32];
     snprintf(id, sizeof(id), "poll%u", poll);
-    failed |= request(fd, id, "PING");
+    failed |= request(fd, id, "CALL RSSI_THREAD_STATUS");
     usleep(500000);
   }
   failed |= request(fd, "status", "STATUS");
   /* Always attempt cleanup, including on errors. */
-  failed |= request(fd, "off", "CALL RSSI_OFF");
-  failed |= request(fd, "stop", "STOP");
+  failed |= request(fd, "off", "CALL RSSI_THREAD_STOP");
   failed |= request(fd, "alive", "PING");
   close(fd);
-  printf("RSSI samples received: %u\n", serial_rssi_samples);
-  return failed || !serial_rssi_samples;
+  return failed;
 }

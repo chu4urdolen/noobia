@@ -11,11 +11,15 @@ struct ChannelDefinition {
   uint8_t bitCount;
   const int32_t *arguments;
   uint8_t argumentCount;
+  const char *ascii = "";
+  bool appendInput = true;
 };
 
 void begin(NativeRegistry &registry);
 NativeResult set(const String &arguments);
-NativeResult setNumeric(const int32_t *arguments, uint8_t count);
+NativeResult setNumeric(const int32_t *arguments, uint8_t count,
+                        const String &ascii = String(), bool appendInput = true);
+NativeResult setMixed(const int32_t *arguments, uint8_t count, const String &ascii);
 NativeResult load(const ChannelDefinition *channels, uint8_t count);
 NativeResult start(const int32_t *arguments, uint8_t count);
 NativeResult stop(const int32_t *arguments, uint8_t count);

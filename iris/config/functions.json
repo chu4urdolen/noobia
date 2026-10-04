@@ -1,0 +1,2637 @@
+{
+  "schema_version": 1,
+  "noob": "Iris",
+  "catalog_scope": "Source registry inventory; use live CAPS to verify availability",
+  "protocol_commands": [
+    "PING",
+    "INFO",
+    "CAPS",
+    "LOAD",
+    "RUN",
+    "START_THREAD",
+    "STOP",
+    "STOP_THREAD",
+    "RESET_VM",
+    "CALL",
+    "CALL_TEXT",
+    "CALL_MIXED",
+    "STATUS",
+    "THREAD_STATUS"
+  ],
+  "access": {
+    "native_vm": "SYS/SYS_MIXED resolve registered IDs; disabled functions fail",
+    "sequence_channels": "Numeric plus ASCII via SEQUENCE_SET mixed form; requires channel-capable firmware",
+    "protocol_controls": "Host/transport commands, not sequence channel functions"
+  },
+  "test_modes": {
+    "boot_read_only": "No persistent mutation; API-level assertions only",
+    "boot_sensor": "Bounded sensor read; ultrasonic emits a normal ranging pulse",
+    "on_demand": "Needs arguments or can affect concurrent activity",
+    "manual_fixture": "Needs user observation, a signal source or a disposable fixture",
+    "destructive_opt_in": "Never run at boot; explicit disposable target and approval required",
+    "disabled": "Not compiled into the normal firmware"
+  },
+  "functions": [
+    {
+      "code": 1,
+      "name": "TIME_NOW",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Timer API callable",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 2,
+      "name": "TIME_RESET",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "destructive_opt_in",
+        "args": [],
+        "ascii": "",
+        "assertion": "Reset changes program timestamps; test only in an isolated VM",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 3,
+      "name": "SEQUENCE_SET",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers_or_text_config_or_mixed",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 4,
+      "name": "SEQUENCE_START",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 5,
+      "name": "SEQUENCE_STOP",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 6,
+      "name": "SEQUENCE_STATUS",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Sequencer state accessible",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 7,
+      "name": "SEQUENCE_CLEAR",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 8,
+      "name": "SEQUENCE_POP",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 9,
+      "name": "SEQUENCE_QUEUE_SIZE",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [
+          0
+        ],
+        "ascii": "",
+        "assertion": "Queue size accessible without consuming events",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 10,
+      "name": "SEQUENCE_QUEUE_CLEAR",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 11,
+      "name": "SEQUENCE_BUSY",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [
+          0
+        ],
+        "ascii": "",
+        "assertion": "Busy bit accessible without changing sequence",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 12,
+      "name": "SEQUENCE_FIELD",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 13,
+      "name": "SELF_TEST",
+      "owner": "common",
+      "source": "esp/common/src/core/noob_runtime_core.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Inspect cached boot evidence; never recursively probe itself",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 100,
+      "name": "CAMERA_CAPTURE",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Creates SD images; verify file and view image using a controlled target",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 101,
+      "name": "STORAGE_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "SD mounted; no test file written",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "retry_same_read",
+        "max_attempts": 2,
+        "delay_ms": 250,
+        "automatic": true
+      }
+    },
+    {
+      "code": 105,
+      "name": "SD_DELETE",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "destructive_opt_in",
+        "args": [],
+        "ascii": "",
+        "assertion": "Delete only a named disposable diagnostic file after confirmation",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 106,
+      "name": "SD_LIST",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Read a specified directory without mutation",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 110,
+      "name": "WIFI_SCAN",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Scan may affect Wi-Fi dongle traffic; do not run automatically",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 111,
+      "name": "WIFI_RSSI",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Requires WIFI_SCAN results; cached RSSI must retain acquisition timestamp",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 114,
+      "name": "WIFI_CONNECT",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Can interrupt Neo connectivity; test only with an independent recovery link",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 115,
+      "name": "WIFI_DISCONNECT",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Can interrupt Neo connectivity; test only with an independent recovery link",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 116,
+      "name": "WIFI_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Wi-Fi API callable; connection may still be pending",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 117,
+      "name": "WIFI_CREDENTIALS_SET",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "destructive_opt_in",
+        "args": [],
+        "ascii": "",
+        "assertion": "Changes persistent credentials; never auto-test or log password",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 120,
+      "name": "MIC_LEVEL",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_sensor",
+        "args": [],
+        "ascii": "",
+        "assertion": "I2S produces samples; zero loudness can be valid silence",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "retry_same_read",
+        "max_attempts": 2,
+        "delay_ms": 250,
+        "automatic": true
+      }
+    },
+    {
+      "code": 121,
+      "name": "MIC_ABOVE",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_sensor",
+        "args": [
+          0
+        ],
+        "ascii": "",
+        "assertion": "Threshold wrapper receives valid mic samples",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 122,
+      "name": "AUDIO_RECORD",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Creates SD files; verify a controlled artifact and preserve user files",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 130,
+      "name": "LED_RGB",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Requires visible LED observation; never change live outputs during boot tests",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 131,
+      "name": "LED_SIGNAL",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Requires visible LED observation; never change live outputs during boot tests",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 132,
+      "name": "LED_EXTERNAL",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Requires visible LED observation; never change live outputs during boot tests",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 140,
+      "name": "VM_SAVE",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated saved VM; never replace or clear the live startup program for testing",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 141,
+      "name": "VM_LOAD_SAVED",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated saved VM; never replace or clear the live startup program for testing",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 142,
+      "name": "VM_LIST_SAVED",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated saved VM; never replace or clear the live startup program for testing",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 143,
+      "name": "VM_DELETE_SAVED",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "destructive_opt_in",
+        "args": [],
+        "ascii": "",
+        "assertion": "Delete only a disposable diagnostic VM, never runtime_last",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 144,
+      "name": "VM_LAST_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "VM persistence status callable without replacing program",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 145,
+      "name": "VM_LAST_CLEAR",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "destructive_opt_in",
+        "args": [],
+        "ascii": "",
+        "assertion": "Clears persistent startup state; never auto-test",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 160,
+      "name": "BLE_SCAN",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs nearby advertisements and may affect the command link",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 161,
+      "name": "BLE_PEER_SET",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "destructive_opt_in",
+        "args": [],
+        "ascii": "",
+        "assertion": "Changes persistent command peer; never auto-test",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 162,
+      "name": "BLE_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "BLE transport initialized; connected peer is not required",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 170,
+      "name": "GPIO_AUDIT",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "disabled_in_current_build",
+      "testable": false,
+      "auto_testable": false,
+      "test": {
+        "mode": "disabled",
+        "args": [],
+        "ascii": "",
+        "assertion": "GPIO diagnostics not compiled into normal Iris firmware",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 171,
+      "name": "GPIO_INSPECT",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "disabled_in_current_build",
+      "testable": false,
+      "auto_testable": false,
+      "test": {
+        "mode": "disabled",
+        "args": [],
+        "ascii": "",
+        "assertion": "GPIO diagnostics not compiled into normal Iris firmware",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 172,
+      "name": "GPIO_PULL_TEST",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "disabled_in_current_build",
+      "testable": false,
+      "auto_testable": false,
+      "test": {
+        "mode": "disabled",
+        "args": [],
+        "ascii": "",
+        "assertion": "GPIO diagnostics not compiled; never sweep attached hardware",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 190,
+      "name": "TEMP_HUMIDITY_READ",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_sensor",
+        "args": [
+          0
+        ],
+        "ascii": "",
+        "assertion": "DHT11 pulse decode, checksum and measurement range pass",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "retry_after_sensor_cooldown",
+        "max_attempts": 2,
+        "delay_ms": 2500,
+        "automatic": true
+      }
+    },
+    {
+      "code": 191,
+      "name": "ADC_READ",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_sensor",
+        "args": [
+          0,
+          16
+        ],
+        "ascii": "",
+        "assertion": "Configured ADC channel reads within driver's range; no calibrated light fixture",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "retry_same_read",
+        "max_attempts": 2,
+        "delay_ms": 250,
+        "automatic": true
+      }
+    },
+    {
+      "code": 192,
+      "name": "LIGHT_READ",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_sensor",
+        "args": [
+          16
+        ],
+        "ascii": "",
+        "assertion": "Photoresistor ADC API returns; light-change response needs external observation",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 193,
+      "name": "IR_SEND",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 194,
+      "name": "IR_READ",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 195,
+      "name": "IR_LOOPBACK",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 196,
+      "name": "ULTRASONIC_READ",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_sensor",
+        "args": [
+          1,
+          30000
+        ],
+        "ascii": "",
+        "assertion": "Single bounded ranging pulse receives an echo",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "retry_same_read",
+        "max_attempts": 2,
+        "delay_ms": 250,
+        "automatic": true
+      }
+    },
+    {
+      "code": 197,
+      "name": "LED_BLUE",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Requires visible LED observation; never change live outputs during boot tests",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 198,
+      "name": "LED_RED",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Requires visible LED observation; never change live outputs during boot tests",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 199,
+      "name": "DISTANCE_MM",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_sensor",
+        "args": [],
+        "ascii": "",
+        "assertion": "Distance wrapper measures a valid echo",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "retry_same_read",
+        "max_attempts": 2,
+        "delay_ms": 250,
+        "automatic": true
+      }
+    },
+    {
+      "code": 200,
+      "name": "BLUE_BLINK_SEQUENCE",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Requires visible LED observation; never change live outputs during boot tests",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 201,
+      "name": "POLICE_SEQUENCE",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Requires visible LED observation; never change live outputs during boot tests",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 202,
+      "name": "ULTRASONIC_CHANGE_START",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 203,
+      "name": "ULTRASONIC_CHANGE_STOP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 204,
+      "name": "ULTRASONIC_CHANGE_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Detector status readable; no event consumed",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 205,
+      "name": "ULTRASONIC_CHANGE_POP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 206,
+      "name": "ULTRASONIC_CHANGE_POLL",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 207,
+      "name": "LIGHT_CHANGE_START",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 208,
+      "name": "LIGHT_CHANGE_STOP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 209,
+      "name": "LIGHT_CHANGE_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Detector status readable; no event consumed",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 210,
+      "name": "LIGHT_CHANGE_POP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 211,
+      "name": "LIGHT_CHANGE_POLL",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 212,
+      "name": "MIC_RISE_START",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 213,
+      "name": "MIC_RISE_STOP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 214,
+      "name": "MIC_RISE_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Detector status readable; no event consumed",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 215,
+      "name": "MIC_RISE_POP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 216,
+      "name": "MIC_RISE_POLL",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 217,
+      "name": "CAMERA_SEQUENCE_STEP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Creates SD images; verify file and view image using a controlled target",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 218,
+      "name": "CAMERA_SEQUENCE",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Creates SD images; verify file and view image using a controlled target",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 219,
+      "name": "IR_SEQUENCE_STEP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 220,
+      "name": "IR_SEQUENCE",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 221,
+      "name": "RSSI_SNAPSHOT",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Creates SD files; verify a controlled artifact and preserve user files",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 222,
+      "name": "IR_SNAPSHOT",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 223,
+      "name": "ENV_SNAPSHOT",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Creates SD files; verify a controlled artifact and preserve user files",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 224,
+      "name": "ENV_TEMPERATURE",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs an existing environment snapshot; must not fabricate cached values",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 225,
+      "name": "ENV_HUMIDITY",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs an existing environment snapshot; must not fabricate cached values",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 226,
+      "name": "IR_REPLAY",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 230,
+      "name": "RSSI_THREAD_START",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers_and_optional_ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 231,
+      "name": "RSSI_THREAD_STOP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 232,
+      "name": "RSSI_THREAD_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Sampling thread status readable",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 233,
+      "name": "RSSI_THREAD_POP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 234,
+      "name": "RSSI_THREAD_POLL",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 235,
+      "name": "IR_THREAD_START",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 236,
+      "name": "IR_THREAD_STOP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 237,
+      "name": "IR_THREAD_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "IR capture thread status readable; no capture started",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 238,
+      "name": "IR_THREAD_POP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 239,
+      "name": "IR_THREAD_POLL",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 240,
+      "name": "ENV_THREAD_START",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers_and_optional_ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 241,
+      "name": "ENV_THREAD_STOP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 242,
+      "name": "ENV_THREAD_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Environment thread status readable",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 243,
+      "name": "ENV_THREAD_POP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 244,
+      "name": "ENV_THREAD_POLL",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 245,
+      "name": "RSSI_THREAD_FIELD",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 246,
+      "name": "IR_THREAD_FIELD",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 247,
+      "name": "ENV_THREAD_FIELD",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated program; start/stop and queue consumption affect live behavior",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 248,
+      "name": "IR_DICT_REMEMBER",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 249,
+      "name": "IR_DICT_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 250,
+      "name": "IR_CAPTURE_INSPECT",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 251,
+      "name": "SD_READ",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers_and_ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [
+          0,
+          32
+        ],
+        "ascii": "/noob/runtime_iris.txt",
+        "assertion": "Read existing Iris metadata file without writing SD",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "retry_same_read",
+        "max_attempts": 2,
+        "delay_ms": 250,
+        "automatic": true
+      }
+    },
+    {
+      "code": 252,
+      "name": "IR_REPLAY_LAST",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 253,
+      "name": "IR_VERIFY_LAST",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Needs a known IR source/target or recorded fixture; do not transmit or edit dictionary at boot",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 260,
+      "name": "NEO_CAPS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Neo's native registry reachable",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "retry_private_usb_link",
+        "max_attempts": 3,
+        "delay_ms": 10000,
+        "automatic": true
+      }
+    },
+    {
+      "code": 261,
+      "name": "NEO_IR_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Neo IR driver available; remote press not tested",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 262,
+      "name": "NEO_IR_SCAN_START",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 263,
+      "name": "NEO_IR_SCAN_STOP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 264,
+      "name": "NEO_IR_SCAN_READ",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 265,
+      "name": "NEO_FILE_DOWNLOAD",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers_and_ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 266,
+      "name": "NEO_FILE_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Neo file/audio worker status readable",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 267,
+      "name": "VM_DOWNLOAD",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers_and_ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "on_demand",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use an isolated saved VM; never replace or clear the live startup program for testing",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 268,
+      "name": "AUDIO_PLAY",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers_and_ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 269,
+      "name": "NEO_DISPLAY_START",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers_and_ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 270,
+      "name": "NEO_DISPLAY_STOP",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 271,
+      "name": "NEO_DISPLAY_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": true,
+      "test": {
+        "mode": "boot_read_only",
+        "args": [],
+        "ascii": "",
+        "assertion": "Neo display worker status readable; visible pixels need observation",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 272,
+      "name": "NEO_IMAGE_FORMAT",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers_and_ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 273,
+      "name": "NEO_OLED_DRAW",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers_and_ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 274,
+      "name": "NEO_OLED_TEXT",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers_and_ascii",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    }
+  ]
+}

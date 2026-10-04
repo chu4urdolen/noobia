@@ -10,11 +10,14 @@ class NoobProgramChannel {
   static constexpr uint8_t MAX_ARGUMENTS = 7;
 
   bool configure(uint16_t functionId, const int32_t *arguments,
-                 uint8_t argumentCount) {
+                 uint8_t argumentCount, const String &ascii = String()) {
     if (argumentCount > MAX_ARGUMENTS ||
-        (argumentCount && !arguments)) return false;
+        (argumentCount && !arguments) || ascii.length() > 255) return false;
+    for (size_t i = 0; i < ascii.length(); ++i)
+      if (uint8_t(ascii[i]) < 32 || uint8_t(ascii[i]) > 126) return false;
     functionId_ = functionId;
     argumentCount_ = argumentCount;
+    ascii_ = ascii;
     for (uint8_t index = 0; index < argumentCount; ++index)
       arguments_[index] = arguments[index];
     results_.clear();
@@ -38,8 +41,8 @@ class NoobProgramChannel {
       callArguments[index] = arguments_[index];
     if (appendInput) callArguments[argumentCount_] = input;
     const NativeResult result =
-        registry.call(*entry, callArguments,
-                      argumentCount_ + (appendInput ? 1 : 0));
+        registry.callMixed(*entry, callArguments,
+                           argumentCount_ + (appendInput ? 1 : 0), ascii_);
     lastOk_ = result.ok;
     lastDetail_ = result.detail;
     if (result.ok) {
@@ -64,6 +67,7 @@ class NoobProgramChannel {
   bool lastOk_ = true;
   volatile bool busy_ = false;
   String lastDetail_;
+  String ascii_;
   NoobRecordQueue results_;
 };
 

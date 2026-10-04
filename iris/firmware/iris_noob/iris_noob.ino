@@ -22,13 +22,15 @@ void setup() {
   const bool ready = irisRegister(runtime);
 #if IRIS_ENABLE_BLE
   Serial.println("NRP/1 0 EVENT INIT service=BLE");
-  if (bleTransport.begin("Iris")) runtime.addTransport(bleTransport);
+  const bool bleReady = bleTransport.begin("Iris") && runtime.addTransport(bleTransport);
+  runtime.selfTest().record("BLE_INIT", bleReady ? NoobSelfTest::State::READY : NoobSelfTest::State::FAILED);
 #endif
   Serial.println(ready ? "NRP/1 0 EVENT READY name=Iris"
                        : "NRP/1 0 EVENT DEGRADED name=Iris");
 #if IRIS_ENABLE_BLE
   Serial.println("NRP/1 0 EVENT BLE " + bleTransport.status());
 #endif
+  runtime.selfTest().finish();
 }
 
 void loop() {

@@ -22,6 +22,8 @@ NativeResult status(const int32_t *arguments, uint8_t count);
 NativeResult list(const int32_t *arguments, uint8_t count);
 NativeResult readChunk(const int32_t *arguments, uint8_t count);
 NativeResult readPathChunk(const String &arguments);
+NativeResult readPathMixed(const int32_t *arguments, uint8_t count,
+                           const String &path);
 NativeResult remove(const int32_t *arguments, uint8_t count);
 NativeResult removePath(const String &arguments);
 NativeResult listPath(const String &arguments);

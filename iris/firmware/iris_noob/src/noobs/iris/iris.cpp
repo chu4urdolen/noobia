@@ -16,11 +16,13 @@
 #include <services/Esp32VmProgramStore.h>
 #include "hw_artifacts.h"
 #include "hw_functions.h"
+#include "hw_neo_bridge.h"
 #include "seq_leds.h"
 #include "seq_media.h"
 #include "thread_detectors.h"
 #include "thread_ir_capture.h"
 #include "thread_sampling.h"
+#include "iris_self_test_plan.h"
 #include <esp_heap_caps.h>
 #if IRIS_ENABLE_GPIO_DIAGNOSTICS
 #include <Esp32GpioInspector.h>
@@ -29,6 +31,12 @@
 void irisRegisterCapabilities(CapabilityRegistry &capabilities);
 
 namespace {
+NoobSelfTest *bootChecks = nullptr;
+bool checkedInit(const char *name, bool ready) {
+  if (bootChecks) bootChecks->record(name, ready ? NoobSelfTest::State::READY
+                                              : NoobSelfTest::State::FAILED);
+  return ready;
+}
 NativeResult irisLightRead(const int32_t *arguments, uint8_t count) {
   if (count > 1) return {false, 0, "usage: [samples(1..64)]"};
   const int32_t args[] = {0, count ? arguments[0] : 16};
@@ -37,6 +45,7 @@ NativeResult irisLightRead(const int32_t *arguments, uint8_t count) {
 bool initService(const char *name, bool (*begin)()) {
   Serial.printf("NRP/1 0 EVENT INIT service=%s\n", name);
   const bool ready = begin();
+  checkedInit(name, ready);
   Serial.printf("NRP/1 0 EVENT INIT_DONE service=%s ok=%d\n", name, ready);
   Serial.printf("NRP/1 0 EVENT HEAP stage=%s internal=%u\n", name,
                 static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)));
@@ -57,8 +66,9 @@ bool irisRegister(NoobRuntime &runtime) {
   // This is the single composition root for Iris. Common code learns what Iris
   // supports only through these registries, never through board-name checks.
   irisRegisterCapabilities(runtime.capabilities());
+  bootChecks = &runtime.selfTest();
   bool ok = true;
-  ok &= Esp32AdcService::configure(0, IrisPins::PHOTORESISTOR);
+  ok &= checkedInit("ADC_CONFIG", Esp32AdcService::configure(0, IrisPins::PHOTORESISTOR));
   ok &= runtime.natives().add(IrisFunctions::ADC_READ, "ADC_READ", Esp32AdcService::read);
   ok &= runtime.natives().add(IrisFunctions::LIGHT_READ, "LIGHT_READ", irisLightRead);
   ok &= Esp32UltrasonicService::begin({
@@ -73,7 +83,7 @@ bool irisRegister(NoobRuntime &runtime) {
                               Esp32UltrasonicService::measure);
   ok &= runtime.natives().add(IrisFunctions::DISTANCE_MM, "DISTANCE_MM",
                               irisDistanceFunction());
-  ok &= Esp32Dht11Service::begin(IrisPins::DHT11_DATA);
+  ok &= checkedInit("DHT_CONFIG", Esp32Dht11Service::begin(IrisPins::DHT11_DATA));
   ok &= runtime.natives().add(IrisFunctions::TEMP_HUMIDITY_READ, "TEMP_HUMIDITY_READ", Esp32Dht11Service::read);
 #if IRIS_ENABLE_IR
   ok &= Esp32IrService::begin({
@@ -93,11 +103,15 @@ bool irisRegister(NoobRuntime &runtime) {
 #if IRIS_ENABLE_MIC
   ok &= initService("MIC", irisMicrophoneBegin);
 #endif
-  ok &= Esp32RgbLedService::begin(IrisPins::RGB_LED);
-  ok &= Esp32SignalLedService::begin(IrisPins::SIGNAL_LED);
+  ok &= checkedInit("RGB_DRIVER", Esp32RgbLedService::begin(IrisPins::RGB_LED));
+  ok &= checkedInit("SIGNAL_DRIVER", Esp32SignalLedService::begin(IrisPins::SIGNAL_LED));
+  bootChecks->record("LED_VISIBLE_OUTPUT", NoobSelfTest::State::UNTESTED);
+  bootChecks->record("IR_REPLAY_TARGET", NoobSelfTest::State::UNTESTED);
+  bootChecks->record("OLED_VISIBLE_OUTPUT", NoobSelfTest::State::UNTESTED);
+  bootChecks->record("AUDIO_AUDIBLE_OUTPUT", NoobSelfTest::State::UNTESTED);
 #if IRIS_ENABLE_WIFI
   Serial.println("NRP/1 0 EVENT INIT service=WIFI");
-  ok &= Esp32WifiService::begin(IrisSecrets::WIFI_SSID, IrisSecrets::WIFI_PASSWORD);
+  ok &= checkedInit("WIFI_INIT", Esp32WifiService::begin(IrisSecrets::WIFI_SSID, IrisSecrets::WIFI_PASSWORD));
   Serial.printf("NRP/1 0 EVENT HEAP stage=WIFI internal=%u\n",
                 static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)));
 #endif
@@ -131,23 +145,17 @@ bool irisRegister(NoobRuntime &runtime) {
   // reusable ESP32 service with no knowledge of the Iris board pin map.
 #if IRIS_ENABLE_CAMERA
   ok &= runtime.natives().add(IrisFunctions::CAMERA_CAPTURE, "CAMERA_CAPTURE", Esp32CameraService::capture);
-  ok &= runtime.natives().add(IrisFunctions::CAMERA_VIDEO, "CAMERA_VIDEO", Esp32CameraService::recordMjpeg);
 #endif
 #if IRIS_ENABLE_SD
   ok &= runtime.natives().add(IrisFunctions::STORAGE_STATUS, "STORAGE_STATUS", Esp32SdMmcService::status);
-  ok &= runtime.natives().add(IrisFunctions::SD_LIST, "CAPTURE_LIST", Esp32SdMmcService::list);
-  ok &= runtime.natives().add(IrisFunctions::SD_READ_CHUNK, "CAPTURE_READ_CHUNK", Esp32SdMmcService::readChunk);
-  ok &= runtime.natives().add(IrisFunctions::SD_DELETE, "CAPTURE_DELETE", Esp32SdMmcService::remove);
   ok &= runtime.natives().addText(IrisFunctions::SD_DELETE_PATH, "SD_DELETE", Esp32SdMmcService::removePath);
   ok &= runtime.natives().addText(IrisFunctions::SD_LIST_PATH, "SD_LIST", Esp32SdMmcService::listPath);
-  ok &= runtime.natives().addText(IrisFunctions::SD_READ_PATH, "SD_READ",
-                                  Esp32SdMmcService::readPathChunk);
+  ok &= runtime.natives().addMixed(IrisFunctions::SD_READ_PATH, "SD_READ",
+                                   Esp32SdMmcService::readPathMixed);
 #endif
 #if IRIS_ENABLE_WIFI
   ok &= runtime.natives().add(IrisFunctions::WIFI_SCAN, "WIFI_SCAN", Esp32WifiService::scan);
   ok &= runtime.natives().add(IrisFunctions::WIFI_RSSI, "WIFI_RSSI", Esp32WifiService::rssi);
-  ok &= runtime.natives().add(IrisFunctions::RSSI_ON, "RSSI_ON", Esp32WifiService::rssiOn);
-  ok &= runtime.natives().add(IrisFunctions::RSSI_OFF, "RSSI_OFF", Esp32WifiService::rssiOff);
   ok &= runtime.natives().add(IrisFunctions::WIFI_CONNECT, "WIFI_CONNECT", Esp32WifiService::connect);
   ok &= runtime.natives().add(IrisFunctions::WIFI_DISCONNECT, "WIFI_DISCONNECT", Esp32WifiService::disconnect);
   ok &= runtime.natives().add(IrisFunctions::WIFI_STATUS, "WIFI_STATUS", Esp32WifiService::status);
@@ -165,6 +173,42 @@ bool irisRegister(NoobRuntime &runtime) {
                               irisBlueLedFunction());
   ok &= runtime.natives().add(IrisFunctions::LED_RED, "LED_RED",
                               irisRedLedFunction());
+  // Linux-side commands are proxied through the private USB link. Neo owns
+  // the Linux driver and reports its available functions with NEO_CAPS.
+  ok &= runtime.natives().add(IrisFunctions::NEO_CAPS, "NEO_CAPS",
+                              IrisNeoBridge::caps);
+  ok &= runtime.natives().add(IrisFunctions::NEO_IR_STATUS, "NEO_IR_STATUS",
+                              IrisNeoBridge::irStatus);
+  ok &= runtime.natives().add(IrisFunctions::NEO_IR_SCAN_START,
+                              "NEO_IR_SCAN_START",
+                              IrisNeoBridge::irScanStart);
+  ok &= runtime.natives().add(IrisFunctions::NEO_IR_SCAN_STOP,
+                              "NEO_IR_SCAN_STOP",
+                              IrisNeoBridge::irScanStop);
+  ok &= runtime.natives().add(IrisFunctions::NEO_IR_SCAN_READ,
+                              "NEO_IR_SCAN_READ",
+                              IrisNeoBridge::irScanRead);
+  ok &= runtime.natives().addMixed(IrisFunctions::NEO_FILE_DOWNLOAD,
+                              "NEO_FILE_DOWNLOAD", IrisNeoBridge::fileDownload);
+  ok &= runtime.natives().add(IrisFunctions::NEO_FILE_STATUS,
+                              "NEO_FILE_STATUS", IrisNeoBridge::fileStatus);
+  ok &= runtime.natives().addMixed(IrisFunctions::VM_DOWNLOAD,
+                              "VM_DOWNLOAD", IrisNeoBridge::vmDownload);
+  ok &= runtime.natives().addMixed(IrisFunctions::AUDIO_PLAY,
+                              "AUDIO_PLAY", IrisNeoBridge::audioPlay);
+  ok &= runtime.natives().addMixed(IrisFunctions::NEO_IMAGE_FORMAT,
+                              "NEO_IMAGE_FORMAT", IrisNeoBridge::imageFormat);
+  ok &= runtime.natives().addMixed(IrisFunctions::NEO_OLED_DRAW,
+                              "NEO_OLED_DRAW", IrisNeoBridge::oledDraw);
+  ok &= runtime.natives().addMixed(IrisFunctions::NEO_OLED_TEXT,
+                              "NEO_OLED_TEXT", IrisNeoBridge::oledText);
+  ok &= runtime.natives().addMixed(IrisFunctions::NEO_DISPLAY_START,
+                              "NEO_DISPLAY_START", IrisNeoBridge::displayStart);
+  ok &= runtime.natives().add(IrisFunctions::NEO_DISPLAY_STOP,
+                              "NEO_DISPLAY_STOP", IrisNeoBridge::displayStop);
+  ok &= runtime.natives().add(IrisFunctions::NEO_DISPLAY_STATUS,
+                              "NEO_DISPLAY_STATUS", IrisNeoBridge::displayStatus);
+  ok &= runtime.addService(IrisNeoBridge::displayService(runtime.vm()));
   ok &= runtime.natives().add(IrisFunctions::BLUE_BLINK_SEQUENCE,
                               "BLUE_BLINK_SEQUENCE",
                               irisBlueBlinkSequence());
@@ -321,9 +365,6 @@ bool irisRegister(NoobRuntime &runtime) {
   ok &= runtime.natives().add(IrisFunctions::GPIO_INSPECT, "GPIO_INSPECT", Esp32GpioInspector::inspect);
   ok &= runtime.natives().add(IrisFunctions::GPIO_PULL_TEST, "GPIO_PULL_TEST", Esp32GpioInspector::pullTest);
 #endif
-#if IRIS_ENABLE_WIFI
-  ok &= runtime.addService(Esp32WifiService::rssiService());
-#endif
   ok &= runtime.addService(irisUltrasonicChangeThread());
   ok &= runtime.addService(irisLightChangeThread());
 #if IRIS_ENABLE_MIC
@@ -342,5 +383,7 @@ bool irisRegister(NoobRuntime &runtime) {
                 restored.ok ? 1 : 0, long(restored.value),
                 restored.detail.c_str());
 #endif
+  ok &= irisAddSelfTestPlan(runtime);
+  checkedInit("IRIS_REGISTRATION", ok);
   return ok;
 }

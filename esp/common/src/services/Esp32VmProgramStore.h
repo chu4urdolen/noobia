@@ -13,6 +13,8 @@ NativeResult lastStatus(const int32_t *arguments, uint8_t count);
 NativeResult clearLast(const int32_t *arguments, uint8_t count);
 NativeResult save(const String &arguments);
 NativeResult load(const String &arguments);
+NativeResult storeBytes(const String &name, const uint8_t *bytes,
+                        size_t length, bool replace = false);
 NativeResult list(const String &arguments);
 NativeResult remove(const String &arguments);
 }

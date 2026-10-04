@@ -137,9 +137,21 @@ NativeResult readPathChunk(const String &arguments) {
       second < 0 ? input.substring(first + 1)
                  : input.substring(first + 1, second);
   const String lengthText = second < 0 ? String("32") : input.substring(second + 1);
-  if (!validPath(path)) return {false, 0, "invalid absolute SD path"};
   const int32_t offset = offsetText.toInt();
   const int32_t wanted = lengthText.toInt();
+  const int32_t numbers[] = {offset, wanted};
+  return readPathMixed(numbers, 2, path);
+}
+
+NativeResult readPathMixed(const int32_t *arguments, uint8_t count,
+                           const String &path) {
+  // Preserve the old CALL_TEXT path/offset/length encoding.
+  if (!count) return readPathChunk(path);
+  if (!ready()) return {false, 0, "SD unavailable"};
+  if (count > 2 || !arguments) return {false, 0, "usage: offset [length], ASCII path"};
+  if (!validPath(path)) return {false, 0, "invalid absolute SD path"};
+  const int32_t offset = arguments[0];
+  const int32_t wanted = count > 1 ? arguments[1] : 32;
   if (offset < 0 || wanted < 1 || wanted > READ_PATH_MAX_BYTES)
     return {false, 0, "offset must be nonnegative; length 1..512"};
   File file = storage().open(path, FILE_READ);

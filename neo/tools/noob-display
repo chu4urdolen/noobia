@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Fixed operations; remote arguments are never interpreted as shell code.
+config=${NOOB_DISPLAY_CONFIG:-/etc/noobia/noob-display.conf}
+[[ ! -f $config ]] || source "$config"
+images=${NOOB_IMG_DIR:-/img}
+formatter=${NOOB_FORMAT_TOOL:-/usr/local/bin/iris-photo-gif}
+oled=${NOOB_OLED_TOOL:-/usr/local/bin/iris-gif-oled}
+i2c=${NOOB_OLED_DEVICE:-/dev/i2c-0}
+address=${NOOB_OLED_ADDRESS:-0x3c}
+draw() { "$oled" --device "$i2c" --address "$address" "$@"; }
+image_path() {
+  local name=$1
+  [[ $name =~ ^[A-Za-z0-9_-][A-Za-z0-9_.-]*$ && $name != *'..'* ]] || exit 2
+  image=$images/$name
+  [[ -f $image && ! -L $image ]] || exit 2
+}
+(( $# >= 2 )) || exit 2
+case $1 in
+  format)
+    (( $# == 2 )) || exit 2
+    image_path "$2"
+    destination=${image%.*}_formatted.gif
+    [[ ! -e $destination && ! -L $destination ]] || { echo 'formatted file already exists' >&2; exit 1; }
+    scratch=$(mktemp "$images/.formatted.XXXXXX")
+    trap 'unlink "$scratch"' EXIT
+    "$formatter" "$image" "$scratch" --size 128 --fit contain
+    sync -f "$scratch"
+    ln "$scratch" "$destination"
+    printf 'formatted=%s\n' "$destination"
+    ;;
+  image)
+    (( $# == 2 )) || exit 2
+    image_path "$2"; draw "$image"
+    ;;
+  text)
+    (( $# == 2 )) || exit 2
+    draw --text "$2"
+    ;;
+  overlay)
+    (( $# == 3 )) || exit 2
+    image_path "$2"
+    draw "$image" --text "$3" --text-color "${NOOB_OVERLAY_COLOR:-black}" \
+      --text-background transparent --text-x "${NOOB_OVERLAY_X:-4}" \
+      --text-y "${NOOB_OVERLAY_Y:-4}"
+    ;;
+  status)
+    (( $# == 3 )) || exit 2
+    image_path "${NOOB_STATUS_IMAGE:-$2}"
+    refresh=()
+    [[ ${NOOB_DISPLAY_SKIP_INIT:-0} != 1 ]] || refresh=(--skip-init)
+    draw "$image" --layout status --mascot-size "${NOOB_STATUS_MASCOT_SIZE:-80}" \
+      --canvas-color white --text "$3" --text-color black \
+      --text-background transparent "${refresh[@]}"
+    ;;
+  thread)
+    (( $# == 3 )) || exit 2
+    exec "${NOOB_DISPLAY_THREAD_TOOL:-/usr/local/bin/thread_display}" "$2" "$3"
+    ;;
+  *) exit 2 ;;
+esac

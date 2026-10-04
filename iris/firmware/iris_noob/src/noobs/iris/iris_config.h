@@ -203,4 +203,20 @@ constexpr unsigned IR_CAPTURE_INSPECT = 250;
 constexpr unsigned SD_READ_PATH = 251;
 constexpr unsigned IR_REPLAY_LAST = 252;
 constexpr unsigned IR_VERIFY_LAST = 253;
+// Iris proxies these calls to Linux services on the paired NanoPi over USB.
+constexpr unsigned NEO_CAPS = 260;
+constexpr unsigned NEO_IR_STATUS = 261;
+constexpr unsigned NEO_IR_SCAN_START = 262;
+constexpr unsigned NEO_IR_SCAN_STOP = 263;
+constexpr unsigned NEO_IR_SCAN_READ = 264;
+constexpr unsigned NEO_FILE_DOWNLOAD = 265;
+constexpr unsigned NEO_FILE_STATUS = 266;
+constexpr unsigned VM_DOWNLOAD = 267;
+constexpr unsigned AUDIO_PLAY = 268;
+constexpr unsigned NEO_DISPLAY_START = 269;
+constexpr unsigned NEO_DISPLAY_STOP = 270;
+constexpr unsigned NEO_DISPLAY_STATUS = 271;
+constexpr unsigned NEO_IMAGE_FORMAT = 272;
+constexpr unsigned NEO_OLED_DRAW = 273;
+constexpr unsigned NEO_OLED_TEXT = 274;
 }

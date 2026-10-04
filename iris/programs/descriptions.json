@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "programs": {
+    "vm_police_on_all": "Start ultrasonic, light and loudness detectors plus Neo mascot/status display; any event triggers the finite police sequence. Requires updated ESP function 269 and /img/Iris_formatted.gif on Neo.",
+    "vm_police_on_any_change": "Run all three detectors and finite police flashes without requiring Neo or OLED; previous stable fallback.",
+    "vm_police_on_sensor_change": "Run ultrasonic and dynamic light-change detectors; either event triggers finite police flashes. Light sampling pauses during LED activity.",
+    "vm_police_on_ultrasonic_change": "Poll 100 mm ultrasonic changes at 250 ms and trigger police flashes; coalesce events while flashing.",
+    "vm_police_on_loudness_rise": "Trigger police flashes when newer five-second mean loudness is twice older five-second mean, above RMS 20.",
+    "vm_police_sequence_vm": "Configure two 200 ms LED tracks from VM registers for ten alternating flashes in two seconds; both end off. Native sequence completes after VM halts.",
+    "vm_police_lights": "Continuous blue/red alternation every 125 ms using LED_EXTERNAL. Stopping VM can leave one LED on; use the finite police sequence normally.",
+    "vm_led_blink": "Continuous onboard RGB LED blink with a dim green value of 8 and 500 ms steps; stopping VM may leave its last state.",
+    "vm_ultrasonic_change_start": "Start the native ultrasonic detector at 250 ms with a 100 mm delta, then halt. Stop the native thread explicitly when finished.",
+    "vm_light_change_start": "Start dynamic light-change detection at 250 ms with a 200-count margin, then halt; baseline comes from current readings.",
+    "vm_mic_rise_start": "Start the rolling ten-bucket loudness detector at 200% ratio and minimum RMS 20, then halt. Missing HALT fixed during catalog review.",
+    "vm_sound_capture": "Measure MIC_ABOVE with threshold 50; capture JPEG after a loud sample, wait three seconds, then resume polling at 250 ms. Writes SD photos.",
+    "vm_sound_capture_test": "Same sound/camera flow with RMS threshold 1; controlled integration fixture only, can repeatedly write photos.",
+    "vm_camera_once": "Capture one numbered JPEG to ESP SD and halt; sequence number is returned in r0.",
+    "vm_camera_sequence": "Start the native five-photo sequence with one-second intervals; sequence continues after VM halts. Writes SD JPEGs.",
+    "vm_storage_mic": "Read SD capacity into r0 and microphone RMS into r1, then halt; no test files created.",
+    "vm_audio_one_second": "Record a one-second PCM WAV to ESP SD; sample count is returned in r1. Writes an audio file.",
+    "vm_video_one_second": "Retired: calls removed CAMERA_VIDEO (107) to make two-frame MJPEG. Do not run on cleaned-up firmware; use camera sequences and Neo assembly.",
+    "vm_dht11_once": "Wait 2100 ms for DHT11 startup, read temperature plus humidity detail, then halt.",
+    "vm_light_once": "Read current photoresistor ADC with the default sample count and halt; r0 contains the reading.",
+    "vm_radio_status": "Read Wi-Fi status into r0 and BLE connection state into r1, then halt; no scan or reconfiguration.",
+    "vm_rssi_ten_seconds": "Retired: uses removed RSSI_ON/OFF (112/113). Use vm_rssi_scan and the common sampling thread instead.",
+    "vm_rssi_scan": "Start the default ten-second native RSSI scan thread; snapshots are saved as timestamped SD CSV files.",
+    "vm_ir_scan": "Start the default ten-second native IR capture thread. A known remote/source is needed to verify reception; it does not replay IR.",
+    "vm_ir_transmit_sequence": "Start five short carrier bursts using the native IR sequence. Emits IR; requires an explicit receiver/target fixture.",
+    "vm_env_thread": "Start continuous temperature/humidity sampling every 2500 ms, saving timestamped SD CSV files; explicitly stop the thread when finished."
+  },
+  "common_programs": {
+    "arithmetic": "Compute 7 + 5 into r2 and halt; hardware-independent VM smoke test.",
+    "time_now": "Read logical monotonic milliseconds into r0 and halt; no timer reset.",
+    "time_reset": "Reset the logical timer to zero and halt; changes timestamps used by running programs, so test in isolation."
+  }
+}

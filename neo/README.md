@@ -54,6 +54,15 @@ is bound to Iris's USB address; a connection to her Wi-Fi address on port 4242
 was refused. This is an unauthenticated local control protocol, so do not
 expose the USB subnet through another router or port forward.
 
+Iris can also proxy a small whitelist of Neo-owned Linux functions back over
+the same private USB network. `tools/noob-neod.c` is the companion NRP/1
+endpoint; it binds to `192.168.77.2:4243` when configured with
+`tools/noob-neod.conf.example`. It exposes capability discovery and bounded IR
+scan start/status/read/stop operations—never arbitrary shell execution. The
+FriendlyELEC PCM5102A NanoHat contains a VS1838B receiver, but the current Neo
+kernel has not registered an `/sys/class/rc/rc0` device, so IR scanning reports
+unavailable until Linux IR driver/device-tree support is enabled.
+
 This Armbian image provides `analog-codec`, not a generic I2S DAC overlay;
 the former is for the H3's on-chip analog codec, not this external HAT.
 

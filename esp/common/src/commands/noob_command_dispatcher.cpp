@@ -1,4 +1,7 @@
 #include "commands/noob_command_dispatcher.h"
+#include <errno.h>
+#include <limits.h>
+#include <stdlib.h>
 
 namespace {
 int hexValue(char value) {
@@ -93,6 +96,7 @@ String CommandDispatcher::dispatch(const NoobRequest &request) {
   }
   if (request.command == "CALL") return callNative(request);
   if (request.command == "CALL_TEXT") return callTextNative(request);
+  if (request.command == "CALL_MIXED") return callMixedNative(request);
   if (request.command == "STATUS" || request.command == "THREAD_STATUS") {
     return NoobProtocol::ok(request.requestId, vm_.status());
   }
@@ -181,6 +185,62 @@ String CommandDispatcher::callTextNative(const NoobRequest &request) {
   if (!result.ok) {
     return NoobProtocol::fail(request.requestId, "NATIVE_ERROR", result.detail);
   }
+  String payload = "value=" + String(result.value);
+  if (!result.record.empty()) payload += " record=" + result.record.serialize();
+  if (!result.detail.isEmpty()) payload += " detail=" + result.detail;
+  return NoobProtocol::ok(request.requestId, payload);
+}
+
+String CommandDispatcher::callMixedNative(const NoobRequest &request) {
+  int position = 0;
+  const String selector = tokenAt(request.arguments, position);
+  const NativeEntry *entry = natives_.find(selector);
+  if (!entry) {
+    char *end = nullptr;
+    const long id = strtol(selector.c_str(), &end, 10);
+    if (!selector.isEmpty() && end && !*end && id >= 0 && id <= 65535)
+      entry = natives_.find(static_cast<uint16_t>(id));
+  }
+  if (!entry) return NoobProtocol::fail(request.requestId, "NO_FUNCTION", selector);
+
+  int32_t numbers[NoobVm::REGISTER_COUNT] = {};
+  uint8_t count = 0;
+  while (position < request.arguments.length()) {
+    while (position < request.arguments.length() && request.arguments[position] == ' ')
+      ++position;
+    if (position >= request.arguments.length() || request.arguments[position] == '"') break;
+    const String token = tokenAt(request.arguments, position);
+    char *end = nullptr;
+    errno = 0;
+    const long long value = strtoll(token.c_str(), &end, 10);
+    if (count >= NoobVm::REGISTER_COUNT || token.isEmpty() || !end || *end ||
+        errno == ERANGE || value < INT32_MIN || value > INT32_MAX)
+      return NoobProtocol::fail(request.requestId, "BAD_ARGUMENT", "expected signed 32-bit number");
+    numbers[count++] = static_cast<int32_t>(value);
+  }
+  if (position >= request.arguments.length() || request.arguments[position++] != '"')
+    return NoobProtocol::fail(request.requestId, "BAD_ARGUMENT", "expected quoted ASCII string; use \"\" for empty");
+  String ascii;
+  bool closed = false;
+  while (position < request.arguments.length()) {
+    char c = request.arguments[position++];
+    if (c == '"') { closed = true; break; }
+    if (c == '\\') {
+      if (position >= request.arguments.length()) break;
+      c = request.arguments[position++];
+      if (c != '"' && c != '\\')
+        return NoobProtocol::fail(request.requestId, "BAD_ARGUMENT", "only quote and backslash escapes supported");
+    }
+    ascii += c;
+    if (ascii.length() > NativeRegistry::MAX_ASCII_BYTES)
+      return NoobProtocol::fail(request.requestId, "BAD_ARGUMENT", "ASCII argument too long");
+  }
+  while (position < request.arguments.length() && request.arguments[position] == ' ')
+    ++position;
+  if (!closed || position != request.arguments.length())
+    return NoobProtocol::fail(request.requestId, "BAD_ARGUMENT", "unterminated string or trailing arguments");
+  const NativeResult result = natives_.callMixed(*entry, numbers, count, ascii);
+  if (!result.ok) return NoobProtocol::fail(request.requestId, "NATIVE_ERROR", result.detail);
   String payload = "value=" + String(result.value);
   if (!result.record.empty()) payload += " record=" + result.record.serialize();
   if (!result.detail.isEmpty()) payload += " detail=" + result.detail;

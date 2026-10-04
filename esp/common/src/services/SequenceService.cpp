@@ -18,6 +18,7 @@ struct Track {
   uint8_t bitCount = 0;
   uint8_t position = 0;
   NoobProgramChannel channel;
+  bool appendInput = true;
 };
 
 NativeRegistry *nativeRegistry = nullptr;
@@ -110,7 +111,7 @@ class SequenceRunner : public NoobBackgroundService {
         continue;
 
       track.channel.invoke(*nativeRegistry,
-                           track.bits[track.position] == '1');
+                           track.bits[track.position] == '1', track.appendInput);
       invoked = true;
       if (!track.channel.lastOk()) {
         stopAll();
@@ -152,6 +153,10 @@ class SequenceConfigurationFunction final : public NoobFunction {
   }
   NativeResult callText(const String &arguments) override {
     return SequenceService::set(arguments);
+  }
+  NativeResult callMixed(const int32_t *arguments, uint8_t count,
+                         const String &ascii) override {
+    return SequenceService::setMixed(arguments, count, ascii);
   }
 };
 
@@ -225,9 +230,20 @@ NativeResult set(const String &arguments) {
               " function=" + String(entry->id) + " bits=" + bits};
 }
 
-NativeResult setNumeric(const int32_t *arguments, uint8_t count) {
+NativeResult setMixed(const int32_t *arguments, uint8_t count, const String &ascii) {
+  if (count < 6 || count > 13 || !arguments ||
+      (arguments[5] != 0 && arguments[5] != 1))
+    return {false, 0, "usage: slot interval_ms function_id bit_count packed_bits append_bit(0|1) [args...] ASCII"};
+  int32_t numeric[12] = {};
+  for (uint8_t i = 0; i < 5; ++i) numeric[i] = arguments[i];
+  for (uint8_t i = 6; i < count; ++i) numeric[i - 1] = arguments[i];
+  return setNumeric(numeric, count - 1, ascii, arguments[5] != 0);
+}
+
+NativeResult setNumeric(const int32_t *arguments, uint8_t count,
+                        const String &ascii, bool appendInput) {
   if (running) return {false, 0, "stop sequence before editing"};
-  if (count < 5)
+  if (count < 5 || !arguments)
     return {false, 0,
             "usage: slot interval_ms function_id bit_count packed_bits [args...]"};
   const int32_t slot = arguments[0];
@@ -247,8 +263,8 @@ NativeResult setNumeric(const int32_t *arguments, uint8_t count) {
 
   const NativeEntry *entry = nativeRegistry->find(uint16_t(functionId));
   if (!entry || !entry->implementation ||
-      !entry->implementation->acceptsNumbers())
-    return {false, 0, "function must be a numeric native function"};
+      (!entry->implementation->acceptsNumbers() && !entry->implementation->acceptsText()))
+    return {false, 0, "function must be registered"};
 
   Track configured;
   configured.configured = true;
@@ -258,7 +274,9 @@ NativeResult setNumeric(const int32_t *arguments, uint8_t count) {
   for (int32_t index = 0; index < bitCount; ++index)
     configured.bits[index] =
         ((packed >> (bitCount - index - 1)) & 1U) ? '1' : '0';
-  configured.channel.configure(entry->id, arguments + 5, count - 5);
+  configured.appendInput = appendInput;
+  if (!configured.channel.configure(entry->id, arguments + 5, count - 5, ascii))
+    return {false, 0, "invalid channel arguments"};
   tracks[slot] = configured;
   return {true, slot,
           "slot=" + String(slot) + " interval_ms=" + String(interval) +
@@ -281,7 +299,7 @@ NativeResult load(const ChannelDefinition *channels, uint8_t count) {
       return {false, slot, "invalid channel definition"};
     const NativeEntry *entry = nativeRegistry->find(source.functionId);
     if (!entry || !entry->implementation ||
-        !entry->implementation->acceptsNumbers())
+        (!entry->implementation->acceptsNumbers() && !entry->implementation->acceptsText()))
       return {false, slot, "channel function is not registered"};
 
     Track &target = loaded[slot];
@@ -293,8 +311,10 @@ NativeResult load(const ChannelDefinition *channels, uint8_t count) {
         return {false, slot, "channel bits must be 0 or 1"};
       target.bits[index] = source.bits[index] ? '1' : '0';
     }
-    target.channel.configure(source.functionId, source.arguments,
-                             source.argumentCount);
+    target.appendInput = source.appendInput;
+    if (!source.ascii || !target.channel.configure(source.functionId, source.arguments,
+                                                   source.argumentCount, source.ascii))
+      return {false, slot, "invalid channel arguments"};
   }
 
   for (Track &track : tracks) track = Track{};

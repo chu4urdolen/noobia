@@ -20,6 +20,7 @@ are little-endian. Execution is cooperative and bounded per runtime loop.
 | `14` | `14` | return |
 | `20` | `20 dst func16 argc regs...` | native syscall |
 | `21` | `21 milliseconds16` | nonblocking wait |
+| `22` | `22 dst func16 argc regs... textlen8 ASCII...` | native syscall with numbers and ASCII |
 | `30` | `30 dst address8` | load memory byte |
 | `31` | `31 address8 src` | store memory byte |
 
@@ -78,6 +79,14 @@ Noob functions begin at 100. `TIME_NOW` returns monotonic milliseconds as the
 raw 32-bit value in the signed VM register; arithmetic should treat wraparound
 normally rather than interpreting the sign as wall-clock time.
 
+## Neo Linux functions
+
+Iris functions 260–264 proxy to Neo over the private USB LAN. For example,
+`CALL NEO_CAPS` asks Neo for its Linux-side capabilities, while `CALL
+NEO_IR_STATUS`, `NEO_IR_SCAN_START`, `NEO_IR_SCAN_READ`, and
+`NEO_IR_SCAN_STOP` address its NanoHat IR receiver. VM programs use the same
+IDs with `SYS`; these calls do not add Linux pin knowledge to common ESP code.
+
 Portable programs live in `/noobia/esp/common/programs`; Iris-specific programs
 live in `/noobia/iris/programs`. Together they contain wire-ready examples for
 time, arithmetic, one-shot capture, timed RSSI gathering, and sound-triggered
@@ -85,3 +94,9 @@ capture.
 
 Native failures and invalid bytecode place the VM in `FAULT`. `RESET_VM` clears
 program memory, data memory, registers, call stack, and fault state.
+
+Opcode `22` carries an inline printable ASCII literal, at most 255 bytes, after
+its register arguments. A zero text length supplies `""`. Old opcode `20`
+automatically supplies `""` too. Native functions must copy the string if they
+need to retain it after the call. Check `NATIVE_ASCII` in `CAPS` before loading
+programs that use opcode `22`.

@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Fixed-purpose file operations; configuration is trusted, not remote input.
+config=${NOOB_FILES_CONFIG:-/etc/noobia/noob-files.conf}
+[[ ! -f $config ]] || source "$config"
+esp_dir=${NOOB_ESP_DIR:-/esp}
+img_dir=${NOOB_IMG_DIR:-/img}
+vm_dir=${NOOB_VM_DIR:-/vm}
+audio_dir=${NOOB_AUDIO_DIR:-/audio}
+host=${IRIS_USB_HOST:-192.168.77.1}
+port=${IRIS_USB_PORT:-4242}
+timeout_s=${IRIS_USB_TIMEOUT_S:-20}
+max_bytes=${NOOB_FILE_MAX_BYTES:-67108864}
+chunk=${NOOB_FILE_CHUNK:-512}
+[[ $port =~ ^[0-9]+$ && $timeout_s =~ ^[1-9][0-9]*$ &&
+   $max_bytes =~ ^[1-9][0-9]*$ && $chunk =~ ^[1-9][0-9]*$ ]] || exit 2
+(( chunk <= 512 )) || exit 2
+
+fail() { echo "$*" >&2; exit 1; }
+request() {
+  request_id="file$$_$((++counter))"
+  printf 'NRP/1 %s %s\n' "$request_id" "$1" >&3
+  reply=''
+  local line deadline=$((SECONDS + timeout_s))
+  while (( SECONDS < deadline )); do
+    if IFS= read -r -t 1 line <&3; then
+      if [[ $line == "NRP/1 $request_id "* ]]; then
+        [[ $line == "NRP/1 $request_id OK"* ]] || fail "$line"
+        reply=$line
+        return
+      fi
+    fi
+  done
+  fail 'ESP reply timed out'
+}
+
+(( $# == 2 )) || fail 'usage: noob-files fetch ESP_SD_PATH | play AUDIO_BASENAME'
+case $1 in
+  fetch)
+    path=$2
+    LC_ALL=C
+    [[ $path == /* && $path != *'..'* && $path != *$'\n'* &&
+       $path != *$'\r'* && $path != *'\'* && ${#path} -lt 192 &&
+       $path =~ ^[[:print:]]+$ ]] || fail 'invalid SD path'
+    name=${path##*/}
+    [[ -n $name && $name != .* ]] || fail 'invalid filename'
+    case ${name,,} in
+      *.jpg|*.jpeg|*.png|*.gif|*.bmp|*.webp|*.mjpeg|*.mp4) directory=$img_dir ;;
+      *.wav|*.mp3|*.flac|*.ogg|*.opus|*.aac|*.m4a) directory=$audio_dir ;;
+      *.nvm|*.bin) directory=$vm_dir ;;
+      *) directory=$esp_dir ;;
+    esac
+    [[ -d $directory && -w $directory ]] || fail "directory unavailable: $directory"
+    destination=$directory/$name
+    [[ ! -e $destination && ! -L $destination ]] || fail 'destination already exists'
+    temporary=$(mktemp "$directory/.download.XXXXXX")
+    trap '[[ -z ${temporary:-} ]] || unlink "$temporary"' EXIT
+    exec 3<>"/dev/tcp/$host/$port"
+    counter=0 offset=0 expected=-1
+    escaped=${path//\\/\\\\}; escaped=${escaped//\"/\\\"}
+    while :; do
+      request "CALL_MIXED SD_READ $offset $chunk \"$escaped\""
+      [[ $reply =~ size=([0-9]+) ]] || fail 'missing file size'
+      size=${BASH_REMATCH[1]}
+      (( size <= max_bytes )) || fail 'file exceeds configured limit'
+      (( expected < 0 )) && expected=$size
+      (( size == expected )) || fail 'source size changed'
+      [[ $reply =~ data=([[:xdigit:]]*) ]] || fail 'missing data'
+      hex=${BASH_REMATCH[1]}
+      (( ${#hex} % 2 == 0 && ${#hex}/2 <= chunk )) || fail 'invalid chunk'
+      [[ $reply =~ eof=([01]) ]] || fail 'missing EOF'
+      eof=${BASH_REMATCH[1]}
+      escaped_bytes=''
+      for (( i=0; i<${#hex}; i+=2 )); do
+        escaped_bytes+="\\x${hex:i:2}"
+      done
+      printf '%b' "$escaped_bytes" >>"$temporary"
+      offset=$((offset + ${#hex}/2))
+      (( offset <= expected )) || fail 'too much data'
+      [[ $eof == 1 ]] && break
+      [[ -n $hex ]] || fail 'empty non-final chunk'
+    done
+    (( offset == expected )) || fail 'incomplete download'
+    sync -f "$temporary"
+    # A link commits without overwriting an existing filename.
+    ln "$temporary" "$destination"
+    sha256sum "$destination"
+    printf 'downloaded=%s bytes=%s\n' "$destination" "$offset"
+    ;;
+  play)
+    name=$2
+    [[ $name =~ ^[A-Za-z0-9_-][A-Za-z0-9_.-]*$ && $name != *'..'* ]] || fail 'use an audio basename'
+    path=$audio_dir/$name
+    [[ -f $path && ! -L $path ]] || fail 'audio file not found'
+    case ${name,,} in
+      *.wav) exec /usr/bin/aplay -q -D "${NOOB_AUDIO_DEVICE:-plughw:CARD=PCM5102A,DEV=0}" -- "$path" ;;
+      *.mp3|*.flac|*.ogg|*.opus|*.aac|*.m4a)
+        [[ -x /usr/bin/ffplay ]] || fail 'compressed audio requires ffplay; WAV works without it'
+        exec /usr/bin/ffplay -nodisp -autoexit -loglevel error "$path" ;;
+      *) fail 'unsupported audio extension' ;;
+    esac
+    ;;
+  *) fail 'unknown operation' ;;
+esac

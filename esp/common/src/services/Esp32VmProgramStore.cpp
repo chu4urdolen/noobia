@@ -248,6 +248,20 @@ NativeResult save(const String &arguments) {
   return {true, int32_t(length), "saved=" + path};
 }
 
+NativeResult storeBytes(const String &name, const uint8_t *bytes,
+                        size_t length, bool replace) {
+  if (!programVm) return {false, 0, "program store unavailable"};
+  if (!bytes || !length || length > NoobVm::PROGRAM_BYTES)
+    return {false, 0, "invalid VM size"};
+  const String path = pathFor(name);
+  if (path.isEmpty()) return {false, 0, "invalid program name"};
+  if (!replace && Esp32SdMmcService::fs().exists(path))
+    return {false, 0, "saved program already exists"};
+  String error;
+  if (!atomicWrite(path, bytes, length, error)) return {false, 0, error};
+  return {true, int32_t(length), "saved=" + path + " active_vm_unchanged=1"};
+}
+
 NativeResult load(const String &arguments) {
   if (!programVm) return {false, 0, "program store unavailable"};
   String path = pathFor(arguments);

@@ -37,12 +37,17 @@ usage() {
   echo "  irisctl bridge"
   echo "  irisctl status"
   echo "  irisctl ping | info | caps | capture | scan"
+  echo "  irisctl self-test (cached boot diagnostics; no destructive tests)"
   echo "  irisctl time-now | time-reset"
+  echo '  irisctl call-mixed NAME [NUMBERS...] ASCII (use "" for empty ASCII)'
+  echo '  irisctl neo-download SD_PATH | neo-file-status | vm-download FILE.nvm [REPLACE=0|1] | audio-play BASENAME'
+  echo '  irisctl display-start GIF_BASENAME [MS=5000] | display-stop | display-status'
+  echo '  irisctl image-format IMAGE_BASENAME | oled-draw GIF_BASENAME | oled-text TEXT'
   echo "  irisctl rssi-on | rssi-off | watch"
   echo "  irisctl wifi-connect [TIMEOUT_MS] | wifi-disconnect | wifi-status"
   echo "  irisctl wifi-set SSID PASSWORD"
   echo "  irisctl ble-scan [SECONDS] | ble-peer MAC | ble-status"
-  echo "  irisctl audio-record [SECONDS] | video-record [SECONDS] [FPS]"
+  echo "  irisctl audio-record [SECONDS] (camera frames use camera sequences)"
   echo "  irisctl dht-read [0=temperature|1=humidity]"
   echo "  irisctl light-read [SAMPLES]"
   echo "  irisctl ultrasonic-read [SAMPLES] [TIMEOUT_US]"
@@ -143,6 +148,41 @@ load_bridge() {
 }
 
 case ${1:-} in
+  neo-download|audio-play)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    function=NEO_FILE_DOWNLOAD
+    [[ $1 != audio-play ]] || function=AUDIO_PLAY
+    exec "$0" call-mixed "$function" "$2"
+    ;;
+  neo-file-status)
+    (( $# == 1 )) || { usage >&2; exit 2; }
+    exec "$0" ble "ctl$$" CALL NEO_FILE_STATUS
+    ;;
+  vm-download)
+    (( $# == 2 || $# == 3 )) || { usage >&2; exit 2; }
+    exec "$0" call-mixed VM_DOWNLOAD "${3:-0}" "$2"
+    ;;
+  call-mixed)
+    (( $# >= 3 && $# <= 11 )) || { usage >&2; exit 2; }
+    name=$2
+    [[ $name =~ ^[A-Za-z0-9_]+$ ]] || { echo 'invalid function name' >&2; exit 2; }
+    shift 2
+    ascii=${!#}
+    LC_ALL=C
+    [[ $ascii =~ ^[[:print:]]*$ && ${#ascii} -le 255 ]] || {
+      echo 'ASCII must be printable and at most 255 bytes' >&2; exit 2;
+    }
+    numbers=("${@:1:$#-1}")
+    command="CALL_MIXED $name"
+    for number in "${numbers[@]}"; do
+      [[ $number =~ ^-?[0-9]+$ ]] || { echo 'expected integer argument' >&2; exit 2; }
+      command+=" $number"
+    done
+    ascii=${ascii//\\/\\\\}
+    ascii=${ascii//\"/\\\"}
+    command+=" \"$ascii\""
+    exec "$0" ble "ctl$$" "$command"
+    ;;
   bridge)
     exec "$TOOLS/nexus_ble_bridge.sh" --config "$CONFIG" --state "$STATE"
     ;;
@@ -164,6 +204,27 @@ case ${1:-} in
   capture)
     exec "$0" ble "ctl$$" CALL CAMERA_CAPTURE
     ;;
+  self-test)
+    exec "$0" ble "ctl$$" CALL SELF_TEST
+    ;;
+  display-start)
+    (( $# == 2 || $# == 3 )) || { usage >&2; exit 2; }
+    exec "$0" call-mixed NEO_DISPLAY_START "${3:-5000}" "$2"
+    ;;
+  display-stop|display-status)
+    function=NEO_DISPLAY_STOP
+    [[ $1 != display-status ]] || function=NEO_DISPLAY_STATUS
+    exec "$0" ble "ctl$$" CALL "$function"
+    ;;
+  image-format|oled-draw|oled-text)
+    (( $# == 2 )) || { usage >&2; exit 2; }
+    case $1 in
+      image-format) function=NEO_IMAGE_FORMAT ;;
+      oled-draw) function=NEO_OLED_DRAW ;;
+      oled-text) function=NEO_OLED_TEXT ;;
+    esac
+    exec "$0" call-mixed "$function" "$2"
+    ;;
   scan)
     exec "$0" ble "ctl$$" CALL WIFI_SCAN
     ;;
@@ -174,10 +235,10 @@ case ${1:-} in
     exec "$0" ble "ctl$$" CALL TIME_RESET
     ;;
   rssi-on)
-    exec "$0" ble "ctl$$" CALL RSSI_ON
+    exec "$0" ble "ctl$$" CALL RSSI_THREAD_START 0 1000
     ;;
   rssi-off)
-    exec "$0" ble "ctl$$" CALL RSSI_OFF
+    exec "$0" ble "ctl$$" CALL RSSI_THREAD_STOP
     ;;
   wifi-connect)
     (( $# <= 2 )) || { usage >&2; exit 2; }
@@ -248,7 +309,8 @@ case ${1:-} in
     ;;
   video-record)
     (( $# <= 3 )) || { usage >&2; exit 2; }
-    exec "$0" ble "ctl$$" CALL CAMERA_VIDEO "${2:-3}" "${3:-5}"
+    echo "Use a CAMERA_SEQUENCE_STEP track; assemble its JPEG frames on Neo." >&2
+    exit 2
     ;;
   mic-level)
     exec "$0" ble "ctl$$" CALL MIC_LEVEL
@@ -552,7 +614,7 @@ case ${1:-} in
     ;;
   sd-read)
     (( $# >= 3 && $# <= 4 )) || { usage >&2; exit 2; }
-    exec "$0" ble "ctl$$" CALL_TEXT SD_READ "$2" "$3" "${4:-32}"
+    exec "$0" call-mixed SD_READ "$3" "${4:-512}" "$2"
     ;;
   sd-delete)
     (( $# == 2 )) || { usage >&2; exit 2; }
@@ -560,7 +622,9 @@ case ${1:-} in
     ;;
   capture-delete)
     (( $# == 2 )) || { usage >&2; exit 2; }
-    exec "$0" ble "ctl$$" CALL CAPTURE_DELETE "$2"
+    [[ $2 =~ ^[0-9]{1,8}$ ]] || { echo "invalid capture number" >&2; exit 2; }
+    printf -v capture_path '/captured/cam_%08d.jpg' "$((10#$2))"
+    exec "$0" sd-delete "$capture_path"
     ;;
   watch)
     load_bridge

@@ -16,4 +16,5 @@ constexpr uint16_t SEQUENCE_QUEUE_SIZE = 9;
 constexpr uint16_t SEQUENCE_QUEUE_CLEAR = 10;
 constexpr uint16_t SEQUENCE_BUSY = 11;
 constexpr uint16_t SEQUENCE_FIELD = 12;
+constexpr uint16_t SELF_TEST = 13;
 }

@@ -1,0 +1,505 @@
+{
+  "schema_version": 1,
+  "programs": [
+    {
+      "name": "vm_audio_one_second",
+      "path": "iris/programs/vm_audio_one_second.hex",
+      "bytes": 13,
+      "description": "Record a one-second PCM WAV to ESP SD; sample count is returned in r1. Writes an audio file.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 122,
+          "name": "AUDIO_RECORD"
+        }
+      ]
+    },
+    {
+      "name": "vm_camera_once",
+      "path": "iris/programs/vm_camera_once.hex",
+      "bytes": 6,
+      "description": "Capture one numbered JPEG to ESP SD and halt; sequence number is returned in r0.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 100,
+          "name": "CAMERA_CAPTURE"
+        }
+      ]
+    },
+    {
+      "name": "vm_camera_sequence",
+      "path": "iris/programs/vm_camera_sequence.hex",
+      "bytes": 6,
+      "description": "Start the native five-photo sequence with one-second intervals; sequence continues after VM halts. Writes SD JPEGs.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 218,
+          "name": "CAMERA_SEQUENCE"
+        }
+      ]
+    },
+    {
+      "name": "vm_dht11_once",
+      "path": "iris/programs/vm_dht11_once.hex",
+      "bytes": 9,
+      "description": "Wait 2100 ms for DHT11 startup, read temperature plus humidity detail, then halt.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 190,
+          "name": "TEMP_HUMIDITY_READ"
+        }
+      ]
+    },
+    {
+      "name": "vm_env_thread",
+      "path": "iris/programs/vm_env_thread.hex",
+      "bytes": 6,
+      "description": "Start continuous temperature/humidity sampling every 2500 ms, saving timestamped SD CSV files; explicitly stop the thread when finished.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 240,
+          "name": "ENV_THREAD_START"
+        }
+      ]
+    },
+    {
+      "name": "vm_ir_scan",
+      "path": "iris/programs/vm_ir_scan.hex",
+      "bytes": 6,
+      "description": "Start the default ten-second native IR capture thread. A known remote/source is needed to verify reception; it does not replay IR.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 235,
+          "name": "IR_THREAD_START"
+        }
+      ]
+    },
+    {
+      "name": "vm_ir_transmit_sequence",
+      "path": "iris/programs/vm_ir_transmit_sequence.hex",
+      "bytes": 6,
+      "description": "Start five short carrier bursts using the native IR sequence. Emits IR; requires an explicit receiver/target fixture.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 220,
+          "name": "IR_SEQUENCE"
+        }
+      ]
+    },
+    {
+      "name": "vm_led_blink",
+      "path": "iris/programs/vm_led_blink.hex",
+      "bytes": 49,
+      "description": "Continuous onboard RGB LED blink with a dim green value of 8 and 500 ms steps; stopping VM may leave its last state.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 130,
+          "name": "LED_RGB"
+        }
+      ]
+    },
+    {
+      "name": "vm_light_change_start",
+      "path": "iris/programs/vm_light_change_start.hex",
+      "bytes": 20,
+      "description": "Start dynamic light-change detection at 250 ms with a 200-count margin, then halt; baseline comes from current readings.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 207,
+          "name": "LIGHT_CHANGE_START"
+        }
+      ]
+    },
+    {
+      "name": "vm_light_once",
+      "path": "iris/programs/vm_light_once.hex",
+      "bytes": 6,
+      "description": "Read current photoresistor ADC with the default sample count and halt; r0 contains the reading.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 192,
+          "name": "LIGHT_READ"
+        }
+      ]
+    },
+    {
+      "name": "vm_mic_rise_start",
+      "path": "iris/programs/vm_mic_rise_start.hex",
+      "bytes": 20,
+      "description": "Start the rolling ten-bucket loudness detector at 200% ratio and minimum RMS 20, then halt. Missing HALT fixed during catalog review.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 212,
+          "name": "MIC_RISE_START"
+        }
+      ]
+    },
+    {
+      "name": "vm_police_lights",
+      "path": "iris/programs/vm_police_lights.hex",
+      "bytes": 61,
+      "description": "Continuous blue/red alternation every 125 ms using LED_EXTERNAL. Stopping VM can leave one LED on; use the finite police sequence normally.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 132,
+          "name": "LED_EXTERNAL"
+        }
+      ]
+    },
+    {
+      "name": "vm_police_on_all",
+      "path": "iris/programs/vm_police_on_all.hex",
+      "bytes": 138,
+      "description": "Start ultrasonic, light and loudness detectors plus Neo mascot/status display; any event triggers the finite police sequence. Requires updated ESP function 269 and /img/Iris_formatted.gif on Neo.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 6,
+          "name": "SEQUENCE_STATUS"
+        },
+        {
+          "code": 201,
+          "name": "POLICE_SEQUENCE"
+        },
+        {
+          "code": 202,
+          "name": "ULTRASONIC_CHANGE_START"
+        },
+        {
+          "code": 206,
+          "name": "ULTRASONIC_CHANGE_POLL"
+        },
+        {
+          "code": 207,
+          "name": "LIGHT_CHANGE_START"
+        },
+        {
+          "code": 211,
+          "name": "LIGHT_CHANGE_POLL"
+        },
+        {
+          "code": 212,
+          "name": "MIC_RISE_START"
+        },
+        {
+          "code": 216,
+          "name": "MIC_RISE_POLL"
+        },
+        {
+          "code": 269,
+          "name": "NEO_DISPLAY_START"
+        }
+      ]
+    },
+    {
+      "name": "vm_police_on_any_change",
+      "path": "iris/programs/vm_police_on_any_change.hex",
+      "bytes": 107,
+      "description": "Run all three detectors and finite police flashes without requiring Neo or OLED; previous stable fallback.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 6,
+          "name": "SEQUENCE_STATUS"
+        },
+        {
+          "code": 201,
+          "name": "POLICE_SEQUENCE"
+        },
+        {
+          "code": 202,
+          "name": "ULTRASONIC_CHANGE_START"
+        },
+        {
+          "code": 206,
+          "name": "ULTRASONIC_CHANGE_POLL"
+        },
+        {
+          "code": 207,
+          "name": "LIGHT_CHANGE_START"
+        },
+        {
+          "code": 211,
+          "name": "LIGHT_CHANGE_POLL"
+        },
+        {
+          "code": 212,
+          "name": "MIC_RISE_START"
+        },
+        {
+          "code": 216,
+          "name": "MIC_RISE_POLL"
+        }
+      ]
+    },
+    {
+      "name": "vm_police_on_loudness_rise",
+      "path": "iris/programs/vm_police_on_loudness_rise.hex",
+      "bytes": 54,
+      "description": "Trigger police flashes when newer five-second mean loudness is twice older five-second mean, above RMS 20.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 6,
+          "name": "SEQUENCE_STATUS"
+        },
+        {
+          "code": 201,
+          "name": "POLICE_SEQUENCE"
+        },
+        {
+          "code": 212,
+          "name": "MIC_RISE_START"
+        },
+        {
+          "code": 216,
+          "name": "MIC_RISE_POLL"
+        }
+      ]
+    },
+    {
+      "name": "vm_police_on_sensor_change",
+      "path": "iris/programs/vm_police_on_sensor_change.hex",
+      "bytes": 85,
+      "description": "Run ultrasonic and dynamic light-change detectors; either event triggers finite police flashes. Light sampling pauses during LED activity.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 6,
+          "name": "SEQUENCE_STATUS"
+        },
+        {
+          "code": 201,
+          "name": "POLICE_SEQUENCE"
+        },
+        {
+          "code": 202,
+          "name": "ULTRASONIC_CHANGE_START"
+        },
+        {
+          "code": 206,
+          "name": "ULTRASONIC_CHANGE_POLL"
+        },
+        {
+          "code": 207,
+          "name": "LIGHT_CHANGE_START"
+        },
+        {
+          "code": 211,
+          "name": "LIGHT_CHANGE_POLL"
+        }
+      ]
+    },
+    {
+      "name": "vm_police_on_ultrasonic_change",
+      "path": "iris/programs/vm_police_on_ultrasonic_change.hex",
+      "bytes": 63,
+      "description": "Poll 100 mm ultrasonic changes at 250 ms and trigger police flashes; coalesce events while flashing.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 6,
+          "name": "SEQUENCE_STATUS"
+        },
+        {
+          "code": 201,
+          "name": "POLICE_SEQUENCE"
+        },
+        {
+          "code": 202,
+          "name": "ULTRASONIC_CHANGE_START"
+        },
+        {
+          "code": 206,
+          "name": "ULTRASONIC_CHANGE_POLL"
+        }
+      ]
+    },
+    {
+      "name": "vm_police_sequence_vm",
+      "path": "iris/programs/vm_police_sequence_vm.hex",
+      "bytes": 81,
+      "description": "Configure two 200 ms LED tracks from VM registers for ten alternating flashes in two seconds; both end off. Native sequence completes after VM halts.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 3,
+          "name": "SEQUENCE_SET"
+        },
+        {
+          "code": 4,
+          "name": "SEQUENCE_START"
+        }
+      ]
+    },
+    {
+      "name": "vm_radio_status",
+      "path": "iris/programs/vm_radio_status.hex",
+      "bytes": 11,
+      "description": "Read Wi-Fi status into r0 and BLE connection state into r1, then halt; no scan or reconfiguration.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 116,
+          "name": "WIFI_STATUS"
+        },
+        {
+          "code": 162,
+          "name": "BLE_STATUS"
+        }
+      ]
+    },
+    {
+      "name": "vm_rssi_scan",
+      "path": "iris/programs/vm_rssi_scan.hex",
+      "bytes": 6,
+      "description": "Start the default ten-second native RSSI scan thread; snapshots are saved as timestamped SD CSV files.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 230,
+          "name": "RSSI_THREAD_START"
+        }
+      ]
+    },
+    {
+      "name": "vm_rssi_ten_seconds",
+      "path": "iris/programs/vm_rssi_ten_seconds.hex",
+      "bytes": 14,
+      "description": "Retired: uses removed RSSI_ON/OFF (112/113). Use vm_rssi_scan and the common sampling thread instead.",
+      "status": "retired",
+      "requires": [
+        {
+          "code": 112,
+          "name": "RSSI_ON"
+        },
+        {
+          "code": 113,
+          "name": "RSSI_OFF"
+        }
+      ]
+    },
+    {
+      "name": "vm_sound_capture",
+      "path": "iris/programs/vm_sound_capture.hex",
+      "bytes": 30,
+      "description": "Measure MIC_ABOVE with threshold 50; capture JPEG after a loud sample, wait three seconds, then resume polling at 250 ms. Writes SD photos.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 100,
+          "name": "CAMERA_CAPTURE"
+        },
+        {
+          "code": 121,
+          "name": "MIC_ABOVE"
+        }
+      ]
+    },
+    {
+      "name": "vm_sound_capture_test",
+      "path": "iris/programs/vm_sound_capture_test.hex",
+      "bytes": 30,
+      "description": "Same sound/camera flow with RMS threshold 1; controlled integration fixture only, can repeatedly write photos.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 100,
+          "name": "CAMERA_CAPTURE"
+        },
+        {
+          "code": 121,
+          "name": "MIC_ABOVE"
+        }
+      ]
+    },
+    {
+      "name": "vm_storage_mic",
+      "path": "iris/programs/vm_storage_mic.hex",
+      "bytes": 11,
+      "description": "Read SD capacity into r0 and microphone RMS into r1, then halt; no test files created.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 101,
+          "name": "STORAGE_STATUS"
+        },
+        {
+          "code": 120,
+          "name": "MIC_LEVEL"
+        }
+      ]
+    },
+    {
+      "name": "vm_ultrasonic_change_start",
+      "path": "iris/programs/vm_ultrasonic_change_start.hex",
+      "bytes": 20,
+      "description": "Start the native ultrasonic detector at 250 ms with a 100 mm delta, then halt. Stop the native thread explicitly when finished.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 202,
+          "name": "ULTRASONIC_CHANGE_START"
+        }
+      ]
+    },
+    {
+      "name": "vm_video_one_second",
+      "path": "iris/programs/vm_video_one_second.hex",
+      "bytes": 20,
+      "description": "Retired: calls removed CAMERA_VIDEO (107) to make two-frame MJPEG. Do not run on cleaned-up firmware; use camera sequences and Neo assembly.",
+      "status": "retired",
+      "requires": [
+        {
+          "code": 107,
+          "name": "CAMERA_VIDEO"
+        }
+      ]
+    },
+    {
+      "name": "arithmetic",
+      "path": "esp/common/programs/arithmetic.hex",
+      "bytes": 17,
+      "description": "Compute 7 + 5 into r2 and halt; hardware-independent VM smoke test.",
+      "status": "available_in_source",
+      "requires": []
+    },
+    {
+      "name": "time_now",
+      "path": "esp/common/programs/time_now.hex",
+      "bytes": 6,
+      "description": "Read logical monotonic milliseconds into r0 and halt; no timer reset.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 1,
+          "name": "TIME_NOW"
+        }
+      ]
+    },
+    {
+      "name": "time_reset",
+      "path": "esp/common/programs/time_reset.hex",
+      "bytes": 6,
+      "description": "Reset the logical timer to zero and halt; changes timestamps used by running programs, so test in isolation.",
+      "status": "available_in_source",
+      "requires": [
+        {
+          "code": 2,
+          "name": "TIME_RESET"
+        }
+      ]
+    }
+  ]
+}

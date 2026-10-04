@@ -3,9 +3,11 @@
 
 #include <WiFi.h>
 #include <Preferences.h>
+#include <services/MonotonicTimeService.h>
 
 namespace {
 int scanCount = -1;
+uint32_t scanTimeMs = 0;
 bool gathering = false;
 bool scanRunning = false;
 uint32_t nextScanAt = 0;
@@ -159,19 +161,27 @@ NativeResult scan(const int32_t *, uint8_t) {
   WiFi.scanDelete();
   scanCount = WiFi.scanNetworks(false, true);
   if (scanCount < 0) return {false, scanCount, "scan failed"};
+  scanTimeMs = MonotonicTimeService::milliseconds();
   return {true, scanCount, "networks=" + String(scanCount)};
 }
 
 NativeResult rssi(const int32_t *arguments, uint8_t count) {
+  if (count > 1) return {false, 0, "usage: [network_index]"};
   if (scanCount < 0) return {false, 0, "run WIFI_SCAN first"};
   const int32_t index = count ? arguments[0] : 0;
   if (index < 0 || index >= scanCount)
     return {false, 0, "network index out of range"};
+  NoobRecord record;
+  record.add("value", WiFi.RSSI(index));
+  // Cached readings retain the acquisition time, not the call time.
+  record.add("time_ms", int32_t(scanTimeMs));
+  record.add("index", index);
+  record.add("channel", WiFi.channel(index));
   return {true, WiFi.RSSI(index),
           "index=" + String(index) + " ssid_hex=" + hexText(WiFi.SSID(index)) +
               " channel=" + String(WiFi.channel(index)) +
               " encryption=" +
-              String(static_cast<int>(WiFi.encryptionType(index)))};
+              String(static_cast<int>(WiFi.encryptionType(index))), record};
 }
 
 NativeResult scanToCsv(fs::FS &storage, const String &path) {
@@ -179,6 +189,7 @@ NativeResult scanToCsv(fs::FS &storage, const String &path) {
   WiFi.scanDelete();
   scanCount = WiFi.scanNetworks(false, true);
   if (scanCount < 0) return {false, scanCount, "scan failed"};
+  scanTimeMs = MonotonicTimeService::milliseconds();
   File output = storage.open(path, FILE_WRITE);
   if (!output) return {false, 0, "cannot create RSSI sample"};
   output.println("index,rssi,channel,encryption,ssid_hex,bssid");

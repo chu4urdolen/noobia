@@ -16,11 +16,12 @@ if (( EUID != 0 )); then
 fi
 : > "$part"
 request=0
+printf -v capture_path '/captured/cam_%08d.jpg' "$((10#$sequence))"
 while :; do
   request=$((request + 1)); request_id="fetch${request}"
   before=$(stat -c %s "$NOOB_BLE_LOG")
   "$TOOLS/noob_ble_fd" "$bridge_pid" "$notify_fd" \
-    "NRP/1 $request_id CALL SD_READ_CHUNK $sequence $offset 32" >/dev/null
+    "NRP/1 $request_id CALL_MIXED SD_READ $offset 32 \"$capture_path\"" >/dev/null
   found=
   for _ in $(seq 1 100); do
     tail -c "+$((before + 1))" "$NOOB_BLE_LOG" > "$scratch"

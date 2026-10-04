@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+host=${NOOB_NEO_HOST:-192.168.77.2}
+port=${NOOB_NEO_PORT:-4243}
+timeout_s=${NOOB_NEO_TIMEOUT_S:-5}
+while (( $# )); do
+  case $1 in
+    --host) host=$2; shift 2 ;;
+    --port) port=$2; shift 2 ;;
+    *) break ;;
+  esac
+done
+case ${1:-} in
+  download|audio-play|image-format|oled-draw|oled-text)
+    (( $# == 2 )) || exit 2
+    command=FILE_DOWNLOAD
+    case $1 in
+      audio-play) command=AUDIO_PLAY ;; image-format) command=IMAGE_FORMAT ;;
+      oled-draw) command=OLED_DRAW ;; oled-text) command=OLED_TEXT ;;
+    esac
+    ascii=$2
+    LC_ALL=C
+    [[ $ascii =~ ^[[:print:]]+$ && ${#ascii} -lt 192 ]] || exit 2
+    ascii=${ascii//\\/\\\\}; ascii=${ascii//\"/\\\"}
+    command="CALL_MIXED $command \"$ascii\""
+    ;;
+  display-start)
+    (( $# == 2 || $# == 3 )) || exit 2
+    [[ $2 =~ ^[A-Za-z0-9_-][A-Za-z0-9_.-]*$ && ${3:-5000} =~ ^[0-9]+$ ]] || exit 2
+    command="CALL_MIXED DISPLAY_START ${3:-5000} \"$2\""
+    ;;
+  ping|caps|file-status|ir-status|ir-start|ir-read|ir-stop|display-stop|display-status)
+    (( $# == 1 )) || exit 2
+    case $1 in
+      ping) command=PING ;; caps) command=CAPS ;; file-status) command=FILE_STATUS ;;
+      ir-status) command=IR_STATUS ;; ir-start) command=IR_SCAN_START ;;
+      ir-read) command=IR_SCAN_READ ;; ir-stop) command=IR_SCAN_STOP ;;
+      display-stop) command=DISPLAY_STOP ;; display-status) command=DISPLAY_STATUS ;;
+    esac ;;
+  *) echo 'usage: noob-neoctl [--host IP] [--port PORT] download SD_PATH|audio-play BASENAME|image-format BASENAME|oled-draw GIF|oled-text TEXT|display-start GIF [MS]|display-stop|display-status|file-status|ping|caps|ir-status|ir-start|ir-read|ir-stop' >&2; exit 2 ;;
+esac
+[[ $command == PING || $command == CAPS || $command == CALL_MIXED* ]] || command="CALL_MIXED $command \"\""
+[[ $port =~ ^[0-9]+$ && $timeout_s =~ ^[1-9][0-9]*$ && ${#command} -lt 480 ]] || exit 2
+exec 3<>"/dev/tcp/$host/$port"
+printf 'NRP/1 %s %s\n' "$$" "$command" >&3
+deadline=$((SECONDS+timeout_s))
+while (( SECONDS < deadline )); do
+  if IFS= read -r -t 1 line <&3 && [[ $line == "NRP/1 $$ "* ]]; then
+    echo "$line"
+    [[ $line == "NRP/1 $$ OK"* ]]
+    exit $?
+  fi
+done
+echo 'Neo reply timed out' >&2
+exit 1

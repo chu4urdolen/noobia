@@ -8,6 +8,7 @@ timeout_s=${IRIS_USB_TIMEOUT_S:-20}
 
 usage() {
   echo 'usage: irisctl-usb [--host IP] [--port PORT] [--timeout SECONDS] ping|info|caps|status|run|stop|reset-vm|call NAME [ARGS...]|call-text NAME TEXT|load FILE|raw COMMAND [ARGS...]' >&2
+  echo '       irisctl-usb [OPTIONS] call-mixed NAME [NUMBERS...] ASCII (use "" for empty ASCII)' >&2
   exit 2
 }
 
@@ -23,6 +24,24 @@ done
 (( $# >= 1 )) || usage
 
 case $1 in
+  call-mixed)
+    (( $# >= 3 && $# <= 11 )) || usage
+    name=$2
+    [[ $name =~ ^[A-Za-z0-9_]+$ ]] || usage
+    shift 2
+    ascii=${!#}
+    LC_ALL=C
+    [[ $ascii =~ ^[[:print:]]*$ && ${#ascii} -le 255 ]] || usage
+    numbers=("${@:1:$#-1}")
+    command="CALL_MIXED $name"
+    for number in "${numbers[@]}"; do
+      [[ $number =~ ^-?[0-9]+$ ]] || usage
+      command+=" $number"
+    done
+    ascii=${ascii//\\/\\\\}
+    ascii=${ascii//\"/\\\"}
+    command+=" \"$ascii\""
+    ;;
   ping|info|caps|status|run|stop)
     (( $# == 1 )) || usage
     command=${1^^}

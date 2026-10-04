@@ -21,3 +21,8 @@ cc -O2 -Wall -Wextra -o uart_raw_console uart_raw_console.c
 Do not commit the generated binary.
 See `MIC_RISE_20260923.md` for the rolling microphone detector hardware test.
 See `VM_AUTORESTORE_20260925.md` for the RUN/STOP/RESET persistence test.
+
+## Boot self-test
+
+See [BOOT_SELF_TEST.md](BOOT_SELF_TEST.md) for the common runner, Iris test
+policies, recovery limits and the `irisctl self-test` command.

@@ -57,19 +57,23 @@ extern "C" void app_main(void) {
   logInternalHeap("iris");
 #if IRIS_ENABLE_BLE
   Serial.println("NRP/1 0 EVENT INIT service=BLE");
-  if (bleTransport.begin("Iris")) runtime.addTransport(bleTransport);
+  const bool bleReady = bleTransport.begin("Iris") && runtime.addTransport(bleTransport);
+  runtime.selfTest().record("BLE_INIT", bleReady ? NoobSelfTest::State::READY : NoobSelfTest::State::FAILED);
   Serial.println("NRP/1 0 EVENT INIT_DONE service=BLE");
   logInternalHeap("ble");
 #endif
   Serial.println("NRP/1 0 EVENT INIT service=USB_NET");
   const bool usbReady = startUsbNetwork();
+  runtime.selfTest().record("USB_NET_INIT", usbReady ? NoobSelfTest::State::READY : NoobSelfTest::State::FAILED);
   Serial.println("NRP/1 0 EVENT INIT_DONE service=USB_NET");
   logInternalHeap("usb_net");
   if (usbReady && usbControl.begin() && runtime.addTransport(usbControl)) {
     runtime.capabilities().add("USB_NRP");
+    runtime.selfTest().record("USB_CONTROL_INIT", NoobSelfTest::State::READY);
     Serial.printf("NRP/1 0 EVENT USB_CONTROL port=%u ready=1\n",
                   IrisUsbNet::CONTROL_PORT);
   } else {
+    runtime.selfTest().record("USB_CONTROL_INIT", NoobSelfTest::State::FAILED);
     Serial.printf("NRP/1 0 EVENT USB_CONTROL port=%u ready=0\n",
                   IrisUsbNet::CONTROL_PORT);
   }
@@ -77,6 +81,7 @@ extern "C" void app_main(void) {
   Serial.printf("NRP/1 0 EVENT WIFI_AUTOCONNECT started=%d\n", wifiAutoConnect);
   Serial.println(ready ? "NRP/1 0 EVENT READY name=Iris"
                        : "NRP/1 0 EVENT DEGRADED name=Iris");
+  runtime.selfTest().finish();
   for (;;) {
     runtime.loop();
     delay(1);

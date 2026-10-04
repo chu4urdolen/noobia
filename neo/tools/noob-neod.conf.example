@@ -1,0 +1,4 @@
+# Private Iris-to-Neo command service. Keep it bound to the USB-only subnet.
+NOOB_NEOD_BIND=192.168.77.2
+NOOB_NEOD_PORT=4243
+NOOB_NEOD_IR_TOOL=/usr/bin/ir-keytable

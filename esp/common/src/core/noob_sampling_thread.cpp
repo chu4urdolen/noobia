@@ -3,12 +3,13 @@
 NoobSamplingThreadProgram::NoobSamplingThreadProgram(
     uint16_t sourceFunctionId, const char *eventName, uint32_t intervalMs,
     uint32_t durationMs, const int32_t *sourceArguments,
-    uint8_t sourceArgumentCount)
+    uint8_t sourceArgumentCount, const char *sourceAscii)
     : NoobThreadProgram(intervalMs),
       sourceFunctionId_(sourceFunctionId),
       eventName_(eventName),
       durationMs_(durationMs),
-      sourceArgumentCount_(sourceArgumentCount) {
+      sourceArgumentCount_(sourceArgumentCount),
+      sourceAscii_(sourceAscii ? sourceAscii : "") {
   if (!sourceArguments || sourceArgumentCount_ > MAX_SOURCE_ARGUMENTS)
     sourceArgumentCount_ = 0;
   for (uint8_t index = 0; index < sourceArgumentCount_; ++index)
@@ -17,7 +18,7 @@ NoobSamplingThreadProgram::NoobSamplingThreadProgram(
 
 void NoobSamplingThreadProgram::begin(NativeRegistry &registry) {
   registry_ = &registry;
-  source_.configure(sourceFunctionId_, sourceArguments_, sourceArgumentCount_);
+  source_.configure(sourceFunctionId_, sourceArguments_, sourceArgumentCount_, sourceAscii_);
 }
 
 NativeResult NoobSamplingThreadProgram::call(const int32_t *arguments,
@@ -33,9 +34,21 @@ NativeResult NoobSamplingThreadProgram::call(const int32_t *arguments,
   return result;
 }
 
+NativeResult NoobSamplingThreadProgram::callMixed(const int32_t *arguments,
+                                                  uint8_t count,
+                                                  const String &ascii) {
+  if (count > 2 || (count && (!arguments || arguments[0] < 0 || arguments[0] > 3600000)) ||
+      (count > 1 && (arguments[1] < 50 || arguments[1] > 60000)))
+    return {false, 0, "invalid thread duration/interval"};
+  if (!source_.configure(sourceFunctionId_, sourceArguments_, sourceArgumentCount_, ascii))
+    return {false, 0, "invalid source ASCII"};
+  sourceAscii_ = ascii;
+  return call(arguments, count);
+}
+
 void NoobSamplingThreadProgram::onStart() {
   startedAt_ = millis();
-  source_.configure(sourceFunctionId_, sourceArguments_, sourceArgumentCount_);
+  source_.configure(sourceFunctionId_, sourceArguments_, sourceArgumentCount_, sourceAscii_);
 }
 
 bool NoobSamplingThreadProgram::step(String &event) {

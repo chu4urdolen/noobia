@@ -26,6 +26,18 @@ Current modules:
   hardware configuration; services contain no Iris pin assignments.
 - `src/hal`: reusable HAL contracts. Concrete ESP32 HAL implementations will
   be added as capabilities require them.
+
+Native functions can register a mixed callback using `addMixed(id, name, fn)`.
+Its signature is `NativeResult fn(const int32_t *numbers, uint8_t count,
+const String &ascii)`. Existing numeric calls, sequences, and threads supply
+an empty ASCII string. Older numeric implementations are adapted through the
+same interface and reject nonempty text; text-only registrations also remain
+supported. Mixed strings contain up to 255 printable ASCII bytes and live for
+the duration of the call. `CALL_MIXED NAME 7 "filename"` exposes this interface
+on all existing transports, including BLE and USB TCP. VM opcode `0x22` passes
+register arguments followed by an inline ASCII literal; `0x20` supplies `""`.
+Capability `NATIVE_ASCII` advertises the extension. Regression checks are in
+`tests/`.
 - `idf_usb_net`: a separate ESP-IDF component for TinyUSB NCM, DHCP, and NAT.
   Physical Noobs decide whether to include it and supply their USB LAN address.
 

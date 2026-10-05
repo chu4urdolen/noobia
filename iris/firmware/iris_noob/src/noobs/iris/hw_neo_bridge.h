@@ -20,5 +20,7 @@ NativeResult oledText(const int32_t *, uint8_t, const String &text);
 NativeResult displayStart(const int32_t *, uint8_t, const String &name);
 NativeResult displayStop(const int32_t *, uint8_t);
 NativeResult displayStatus(const int32_t *, uint8_t);
+NativeResult ledSet(const int32_t *, uint8_t);
+NativeResult ledStatus(const int32_t *, uint8_t);
 NoobBackgroundService &displayService(NoobVm &vm);
 }

@@ -2632,6 +2632,50 @@
         "max_attempts": 1,
         "automatic": false
       }
+    },
+    {
+      "code": 275,
+      "name": "NEO_LED_SET",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
+    },
+    {
+      "code": 276,
+      "name": "NEO_LED_STATUS",
+      "owner": "Iris",
+      "source": "iris/firmware/iris_noob/src/noobs/iris/iris.cpp",
+      "arguments": "numbers",
+      "availability": "registered_when_service_enabled",
+      "testable": true,
+      "auto_testable": false,
+      "test": {
+        "mode": "manual_fixture",
+        "args": [],
+        "ascii": "",
+        "assertion": "Use a valid Linux fixture; file/audio/display/IR effects need verification and may affect live threads",
+        "review_required": false
+      },
+      "recovery": {
+        "action": "none",
+        "max_attempts": 1,
+        "automatic": false
+      }
     }
   ]
 }

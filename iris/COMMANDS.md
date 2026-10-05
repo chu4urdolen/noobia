@@ -136,6 +136,8 @@ Live CAPS is authoritative: a source entry does not guarantee enabled hardware.
 | 272 | NEO_IMAGE_FORMAT | numbers_and_ascii | manual_fixture | registered_when_service_enabled |
 | 273 | NEO_OLED_DRAW | numbers_and_ascii | manual_fixture | registered_when_service_enabled |
 | 274 | NEO_OLED_TEXT | numbers_and_ascii | manual_fixture | registered_when_service_enabled |
+| 275 | NEO_LED_SET | numbers | manual_fixture | registered_when_service_enabled |
+| 276 | NEO_LED_STATUS | numbers | manual_fixture | registered_when_service_enabled |
 
 Full test assertions and recovery limits: [functions.json](config/functions.json).
 Command framing/examples: [PROTOCOL.md](firmware/iris_noob/PROTOCOL.md).

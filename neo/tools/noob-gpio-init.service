@@ -1,0 +1,13 @@
+[Unit]
+Description=Iris Neo safe startup state for physical header pin 23
+After=systemd-udev-trigger.service
+Before=noob-neod.service
+
+[Service]
+Type=oneshot
+# Physical pin 23 is PC2, line 66. Runtime takes over after this short LOW.
+ExecStart=/usr/bin/gpioset -c gpiochip0 -C noobia-pin23-safe -p 50ms -t 0 66=0
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

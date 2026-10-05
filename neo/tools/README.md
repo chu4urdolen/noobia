@@ -1,5 +1,7 @@
 # Iris photo to monochrome GIF
 
+Neo LED native controls and startup safe state: [LEDS.md](LEDS.md).
+
 `iris-photo-gif` is a Linux-side image converter for the NanoPi Neo. It accepts
 any format supported by Pillow, makes a square image (128×128 by default),
 stretches its useful brightness range, dithers it to true one-bit black and

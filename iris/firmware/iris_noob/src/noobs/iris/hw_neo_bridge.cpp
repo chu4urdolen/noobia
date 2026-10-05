@@ -185,6 +185,17 @@ int nibble(char c) {
 }
 
 namespace IrisNeoBridge {
+NativeResult ledSet(const int32_t *args, uint8_t count) {
+  if (count != 2 || (args[1] != 0 && args[1] != 1))
+    return {false, 0, "usage: physical_pin 0|1"};
+  String command = "CALL LED_SET " + String(args[0]) + " " + String(args[1]);
+  return neoRequest(command.c_str());
+}
+NativeResult ledStatus(const int32_t *args, uint8_t count) {
+  if (count != 1) return {false, 0, "usage: physical_pin"};
+  String command = "CALL LED_STATUS " + String(args[0]);
+  return neoRequest(command.c_str());
+}
 NoobBackgroundService &displayService(NoobVm &vm) {
   displayVm = &vm;
   return neoDisplayService;

@@ -2,6 +2,10 @@
 
 Current host regression checks (no physical GPIO/I2C writes):
 
+LED GPIO ioctl mock: compile `led-native.c` with `../tools/hw_led.c` and
+`-Wl,--wrap=open,--wrap=close,--wrap=ioctl`; verifies boot LOW, ten independent
+pins, invalid arguments, busy-owner errors and status reads without mutation.
+
 ```sh
 bash neo/tests/test-thread-display.sh
 bash neo/tests/test-noob-files.sh

@@ -208,6 +208,10 @@ bool irisRegister(NoobRuntime &runtime) {
                               "NEO_DISPLAY_STOP", IrisNeoBridge::displayStop);
   ok &= runtime.natives().add(IrisFunctions::NEO_DISPLAY_STATUS,
                               "NEO_DISPLAY_STATUS", IrisNeoBridge::displayStatus);
+  ok &= runtime.natives().add(IrisFunctions::NEO_LED_SET,
+                              "NEO_LED_SET", IrisNeoBridge::ledSet);
+  ok &= runtime.natives().add(IrisFunctions::NEO_LED_STATUS,
+                              "NEO_LED_STATUS", IrisNeoBridge::ledStatus);
   ok &= runtime.addService(IrisNeoBridge::displayService(runtime.vm()));
   ok &= runtime.natives().add(IrisFunctions::BLUE_BLINK_SEQUENCE,
                               "BLUE_BLINK_SEQUENCE",

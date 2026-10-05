@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include "noob_native_registry.h"
 #include "hw_display.h"
+#include "hw_led.h"
 
 #define REQUEST_BYTES 512
 #define REPLY_BYTES 768
@@ -349,6 +350,8 @@ static void native_adapter(int client, unsigned id, const char *name,
 }
 
 static const NoobNativeEntry natives[] = {
+  {"LED_SET", 2, 0, hw_led_call},
+  {"LED_STATUS", 1, 0, hw_led_call},
   {"IR_STATUS", 0, 0, native_adapter},
   {"IR_SCAN_START", 0, 0, native_adapter},
   {"IR_SCAN_STOP", 0, 0, native_adapter},
@@ -423,6 +426,9 @@ static void handle(int client) {
 
 int main(void) {
   hw_display_bind(respond);
+  hw_led_bind(respond);
+  if (hw_led_boot() < 0)
+    fprintf(stderr, "GPIO boot LOW failed for pin 23: %s\n", strerror(errno));
   const char *bind_ip = getenv("NOOB_NEOD_BIND");
   const char *port_text = getenv("NOOB_NEOD_PORT");
   const char *tool = getenv("NOOB_NEOD_IR_TOOL");

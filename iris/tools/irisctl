@@ -43,6 +43,7 @@ usage() {
   echo '  irisctl neo-download SD_PATH | neo-file-status | vm-download FILE.nvm [REPLACE=0|1] | audio-play BASENAME'
   echo '  irisctl display-start GIF_BASENAME [MS=5000] | display-stop | display-status'
   echo '  irisctl image-format IMAGE_BASENAME | oled-draw GIF_BASENAME | oled-text TEXT'
+  echo '  irisctl neo-led PIN 0|1 | neo-led-status PIN (physical Neo header pins)'
   echo "  irisctl rssi-on | rssi-off | watch"
   echo "  irisctl wifi-connect [TIMEOUT_MS] | wifi-disconnect | wifi-status"
   echo "  irisctl wifi-set SSID PASSWORD"
@@ -148,6 +149,15 @@ load_bridge() {
 }
 
 case ${1:-} in
+  neo-led|neo-led-status)
+    [[ ${2:-} =~ ^(7|11|12|13|15|19|21|22|23|24)$ ]] || exit 2
+    if [[ $1 == neo-led ]]; then
+      (( $# == 3 )) && [[ $3 =~ ^[01]$ ]] || exit 2
+      exec "$0" ble "ctl$$" CALL NEO_LED_SET "$2" "$3"
+    else
+      (( $# == 2 )) || exit 2
+      exec "$0" ble "ctl$$" CALL NEO_LED_STATUS "$2"
+    fi ;;
   neo-download|audio-play)
     (( $# == 2 )) || { usage >&2; exit 2; }
     function=NEO_FILE_DOWNLOAD

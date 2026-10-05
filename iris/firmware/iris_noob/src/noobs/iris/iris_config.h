@@ -219,4 +219,6 @@ constexpr unsigned NEO_DISPLAY_STATUS = 271;
 constexpr unsigned NEO_IMAGE_FORMAT = 272;
 constexpr unsigned NEO_OLED_DRAW = 273;
 constexpr unsigned NEO_OLED_TEXT = 274;
+constexpr unsigned NEO_LED_SET = 275;
+constexpr unsigned NEO_LED_STATUS = 276;
 }

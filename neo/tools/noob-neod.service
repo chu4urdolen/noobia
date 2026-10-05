@@ -1,6 +1,8 @@
 [Unit]
 Description=Noob Linux command endpoint for Iris
 After=network.target
+Wants=noob-gpio-init.service
+After=noob-gpio-init.service
 
 [Service]
 Type=simple

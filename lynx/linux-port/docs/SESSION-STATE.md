@@ -3172,3 +3172,58 @@ cleanpoweroff. Fullpackintegrity andordereddependencies checked. Nophysical
 probe attempted. Doc THERMAL-AFTER-SSH.md, Makefilethermal-pack/thermal-check.
 PHONE REMAINS OFF. V19unchanged andboththermalholdsactive. Next offline review
 probe/clock/regulator sideeffects, then a separatelyreviewedshortsupervisedtest.
+
+### Supervised sensor-only cold trial prepared after Noob confirmed cooldown
+
+User asks continue cooled. Review pinned OnePlus source found missing DT-level
+calibrationprovider nvmem_mtk-devinfo.ko, despite no ELFdependency. Add before
+LVTS, checkchosenatagcount1..400/fullsize/mincellcoverage before anyinsertion.
+Provider registers readonly NVMEM frombootdata; sensorprobe normallyinitializes
+hardware andthermalrebootprotection. Exactstockmodulesunmodified. Clock/reset/
+project prereqs verifiedpresent inoldinventory andrequiredagainlive. No hand
+registerwrites, fuseprogramming, charging or CPUfrequency stage inthistrial.
+
+Sensorpack1792099635423460996 SHAedc011a45072b6c3baa13da4ba73462d7a0e049236719a54fb093fb2da0ebffb,
+44modules/2294722bytes. Onlysoc-temperatureplan enabled; globalflashholdactive.
+NativeARMguardtest1792099651403112156 passed. Stop timer test1792099829723111225
+passed detachedparentexit/powerdown inVM (90→1secondaccelerated). Hostselftest
+pack/identity/timerackpolicy passed. docs/SENSOR-TRIAL-REVIEW.md hasdetails.
+
+tools/lynx_sensor_trial.py willlisten beforepowercue. On SSHproof arms independent
+90secondpowerofftimer BEFORE normalfallbackack, uploadsRAMpack, snapshots,
+sensorstageonly,dmesg, immediatepoweroffrequest. Timernevercancelled. Physical
+poweroffunproven; Noobmustsupervise/override ifheat orhang. No flash/newimage.
+No GitHub push unless somethingnewworksonhardware. Phoneoff untilpowercue.
+
+### Cold boot started; listener refreshed before contact
+
+Initial listener logs/sensor-trial-1792100173660028633/result.json was ready
+before powercue; user subsequently reported Orange State. Original listener
+had already spent about206s waiting before this report, with no phonecontact
+or operations. Stopped exact owned PID73789 withSIGTERM beforecontact and
+started fresh300s listener logs/sensor-trial-1792100424200752360/result.json,
+session90561. No further buttons/reboot required. User told Orange State is
+expected/unlockedwarning, not Linuxproof. Observe currentlistener through
+sensorstage/shutdownrequest; do not flash or run anyparallelphonecommand.
+
+### SUCCESS: sensor-only RAM trial yielded29validthermalzones; stoprequested
+
+Fresh listener1792100424200752360/session90561 reached pinned SSH at
+192.168.100.5 (DHCPchangedfrom.9). Allidentitychecks matched. Stop90stimer
+armedBEFOREfallbackack, RAMpacktransfer1.79s, sensorstage0.518s exit0.
+Only nvmem_mtk_devinfo andsoc_temp_lvts newlyinserted; bothbindasexpected.
+Snapshotuptime98.58s: soc_max34917, CPU~26685..35159, GPU24204/24599,
+DRAM~25647..26931, consys29000.29of43zonesvalid; remaining14board/PMICzones
+unavailable. No batterytemp, CPUfrequency control,chargingchange orflash.
+KernelreportsLKinitLVTS, no fakecalibrationwarning. Sensor milestoneverified.
+
+Saved620107byte kernel+sensor capture; summarize_sensor_trial.py verifies raw
+hashes/proof/modules/bindings/ordering/unchangedboot andoutputs sanitized
+docs/SENSOR-HARDWARE-RESULT.json. InitialstrictUTF8parsefailed onvendorbytes;
+correctedtolossydecodeforparsingONLY, rawpreserved. Summarypassed29/43.
+
+Explicit poweroffrequestedabout5.1safterfirstbeacon; SSHcommandtimedout5s.
+No furtherphonecommands. Independent90stimer nevercancelled. Physicalpoweroff
+NOTYETCONFIRMED; askedNoob viaasyncquestion. Globalflashholdstillactive; no
+furtherhardwaretrial untilphysicalstateknown. V19andprivatecheckpointunchanged.
+New workingmilestone qualifiesforGitHubsource/docsupload; no rawlogs orOEMpack.

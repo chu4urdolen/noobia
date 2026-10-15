@@ -10,5 +10,7 @@
   "live_capture_receipt": "/noobia/lynx/logs/native-live-1792092186336551640/result.json",
   "thermal_safety_validated": false,
   "thermal_safety_hold": true,
-  "last_installed_boot_a": "V19 installed; user confirmed unplugged and powered off after heating; thermal safety hold active"
+  "ram_only_sensor_readings_verified": true,
+  "ram_only_sensor_valid_zones": 29,
+  "last_installed_boot_a": "V19 unchanged; supervised RAM sensor trial completed and shutdown requested; physical confirmation pending"
 }

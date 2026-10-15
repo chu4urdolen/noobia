@@ -37,6 +37,7 @@ case "$#:$1" in
 esac
 case "$2" in soc-temperature|cpu-frequency) stage=$2 ;; *) fail 'stage is review-only or unknown' ;; esac
 [ ! -e "$PACK/REVIEW-HOLD" ] || fail 'pack is preparation-only; hardware review hold remains active'
+"$BB" grep -qx "$stage" "$PACK/ALLOWED-STAGES" || fail 'stage is review-only or unknown'
 [ -n "$SSH_CONNECTION" ] || fail 'a live SSH session is required'
 [ "$("$BB" uname -r)" = '5.10.149-android12-9-o-g311738fbb5a8' ] || fail 'kernel mismatch'
 IFS= read -r token < /etc/lynx/session-token || fail 'boot token unavailable'
@@ -44,6 +45,21 @@ IFS= read -r confirmed < /run/lynx/host-confirmed || fail 'pinned host has not c
 [ -n "$token" ] && [ "$confirmed" = "$token" ] || fail 'boot confirmation mismatch'
 (cd "$PACK" && "$BB" sha256sum -c SHA256SUMS) || fail 'pack hash mismatch'
 (cd /sys/firmware/devicetree/base && "$BB" sha256sum -c "$PACK/DT-SHA256SUMS") || fail 'device tree differs'
+for name in clk_mt6983 reset_ti_syscon oplus_project; do
+    [ -d "/sys/module/$name" ] || fail 'stock clock/reset/project prerequisites missing'
+done
+if [ "$stage" = soc-temperature ]; then
+    tag=/sys/firmware/devicetree/base/chosen/atag,devinfo
+    [ -r "$tag" ] || tag=/sys/firmware/devicetree/base/chosen@0/atag,devinfo
+    [ -r "$tag" ] || fail 'bootloader calibration tag missing'
+    count=$("$BB" od -An -N4 -tu4 "$tag") || fail 'calibration tag unreadable'
+    count=$(printf '%s' "$count" | "$BB" tr -d ' \n')
+    case "$count" in ''|*[!0-9]*) fail 'invalid calibration count' ;; esac
+    [ "$count" -gt 0 ] && [ "$count" -le 400 ] || fail 'calibration count outside stock bounds'
+    total=$("$BB" wc -c < "$tag") || fail 'calibration tag size unavailable'
+    IFS= read -r minimum < "$PACK/DEVINFO-MIN-BYTES" || fail 'calibration bounds absent'
+    [ "$total" -ge "$((4+count*4))" ] && [ "$((count*4))" -ge "$minimum" ] || fail 'truncated calibration tag'
+fi
 # Require a real SoC temperature before the CPU-frequency stage. This is a
 # conservative test cutoff, not a validated battery-temperature guarantee.
 if [ "$stage" = cpu-frequency ]; then

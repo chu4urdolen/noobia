@@ -8,12 +8,12 @@ from network_userspace import put
 from prepare_busybox_diagnostics import pack
 def sha(data):return hashlib.sha256(data).hexdigest()
 def main():
- candidates=sorted((P/'artifacts').glob('thermal-ssh-pack-*/result.json'));F=candidates[-1].parent;m=json.loads((F/'manifest.json').read_text());report=json.loads((F/'result.json').read_text());raw=(F/'thermal-ssh-pack.tar.gz').read_bytes();require(sha(raw)==report['archive_sha256'],'Archive differs');require(not m['live_trial_eligible'],'Pack unexpectedly live eligible')
+ candidates=sorted((P/'artifacts').glob('thermal-ssh-pack-*/result.json'));F=candidates[-1].parent;m=json.loads((F/'manifest.json').read_text());report=json.loads((F/'result.json').read_text());raw=(F/'thermal-ssh-pack.tar.gz').read_bytes();require(sha(raw)==report['archive_sha256'],'Archive differs');require(not m['live_trial_eligible'] or m.get('trial_scope')==['soc-temperature'],'Pack trial scope differs')
  with tarfile.open(fileobj=io.BytesIO(raw),mode='r:gz') as t:
   members=t.getmembers();require(all(x.isfile() and not x.name.startswith('/') and '..' not in Path(x.name).parts for x in members),'Unsafe archive path/type');files={x.name:t.extractfile(x).read() for x in members};require(len(files)==len(members),'Duplicate archive entry')
  for line in files['SHA256SUMS'].decode().splitlines():
   digest,name=line.split('  ',1);require(sha(files[name])==digest,'Checksum mismatch: '+name)
- require(files['thermal-step.sh']==(P/'thermal-step.sh').read_bytes(),'Runtime source differs');require('REVIEW-HOLD' in files,'Hold missing')
+ require(files['thermal-step.sh']==(P/'thermal-step.sh').read_bytes(),'Runtime source differs');require(('REVIEW-HOLD' in files)==(not m['live_trial_eligible']),'Hold policy differs')
  for name,row in m['modules'].items():
   data=files['modules/'+row['file']];require(sha(data)==row['sha256'],'Module changed');require(module_metadata(data)['values']['vermagic']==[m['kernel_release']+' SMP preempt mod_unload modversions aarch64'],'Module kernel differs')
  for group,row in m['groups'].items():
@@ -44,6 +44,7 @@ check() {
  if [ "$rc" != 0 ] && $BB grep -Fq "$expected" /fixture/check.out; then echo "THERMAL_GUARD_$name=PASS"; else echo "THERMAL_GUARD_$name=FAIL"; $BB cat /fixture/check.out; fi
 }
 unset SSH_CONNECTION
+printf 'fixture hold\\n' > /fixture/REVIEW-HOLD
 check HOLD 'preparation-only' $BB sh /fixture/thermal-step.sh --load soc-temperature
 check REVIEW_ONLY 'review-only or unknown' $BB sh /fixture/thermal-step.sh --load battery
 $BB rm /fixture/REVIEW-HOLD
@@ -52,7 +53,10 @@ export SSH_CONNECTION='192.0.2.1 10000 192.0.2.2 22'
 printf '%s\\n' mismatch > /run/lynx/host-confirmed
 check TOKEN 'boot confirmation mismatch' $BB sh /fixture/thermal-step.sh --load soc-temperature
 $BB cp /etc/lynx/session-token /run/lynx/host-confirmed
+$BB cp /fixture/manifest.json /fixture/manifest.saved
+printf x >> /fixture/manifest.json
 check HASH 'pack hash mismatch' $BB sh /fixture/thermal-step.sh --load soc-temperature
+$BB cp /fixture/manifest.saved /fixture/manifest.json
 # Repair only fixture checksums to reach actual mismatching QEMU DT guard.
 (cd /fixture && $BB grep -v '  REVIEW-HOLD$' SHA256SUMS > HASH.NEW && $BB mv HASH.NEW SHA256SUMS)
 check DT 'device tree differs' $BB sh /fixture/thermal-step.sh --load soc-temperature

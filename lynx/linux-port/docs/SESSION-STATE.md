@@ -1,0 +1,3110 @@
+# Current Lynx handoff state
+
+Goal remains native Linux on OnePlus Nord 3 CPH2493 / MT6983, with a minimal
+BusyBox boot first. User permits recoverable controlled boot_a trials and broader
+judged-safe recovery work. Do not infer that an offline test guarantees hardware
+success. Preserve working bootloader/recovery foundations and slot B.
+
+User clarified that a bare **OK** may mean the application showed its additional
+cybersecurity-content notice and interrupted the reply. Treat it as continuation
+of the existing authorized task, not new authorization, a state change, or a
+request to evade safeguards. The exact notice and official help page were checked.
+General loader-bypass investigation was paused; ordinary Linux image diagnostics
+continue. No authentication bypass or exploit payload was executed.
+
+Button timing and outcomes are in `BUTTON-SEQUENCES.md`. A plain unplugged/off
+USB connection missed the handshake. Probe-confirmed waiting plus both volume
+buttons held at the explicit connect-NOW signal reached regular OPLUS Preloader,
+accepted stock DA1/DA2 into RAM, and answered the short-filename availability
+request. No AIO file data followed. Successful session:
+`tools/mtk-sessions/aio-readiness-1791650798290665979/`.
+
+Last observed USB state: 22d9:0006 OPLUS Preloader, stock RAM loader potentially
+awaiting the deliberately unsent file. No host probe is still running. Buttons
+have been released at Aria's instruction. The next native trial requires a
+physical reset and return to Fastboot, not reuse of this RAM session.
+
+Persistent boot_a was successfully restored to verified August stock image:
+`logs/boot-a-usb-device-mode-trial-1791645217241106203.json`.
+No later partition flash has been issued. Matching stock vendor_boot_a, dtbo_a,
+vbmeta_a restoration receipt remains valid; slot B was preserved.
+
+A concrete native USB omission was found: xhci-mtk-hcd.ko missing before MTU3
+creates its enabled host child and saves its driver's pointer. Exact stock-module
+disassembly supports the pointer conversion lacking a null-driver check. This
+is a plausible startup fault, not an observed cause of the phone's failure.
+
+Corrected offline image:
+`artifacts/busybox-August-usb-device-xhci/nord3-busybox-candidate.img`,
+SHA256 6ec551d5f4742fdb6c06d5e5f012ef934fa8663d0010fb7957bee3d81242e5d9.
+Exact unchanged stock kernel, 35 matching modules, xHCI before MTU3, and a guard
+withholding MTU3 if xHCI did not load. Target ARM emulation reached an interactive
+shell and loaded all 35 modules; 13 peripheral-mode guards passed. Upstream AVB
+unlocked/locked models and independent packaging validation passed their expected
+checks. Physical Linux boot/USB binding remain unproven. Metadata retains original
+OEM hash with a modified-payload mismatch; OEM approval is not claimed.
+
+Fixed tool: `tools/lynx_boot_a_usb_xhci_trial.py`.
+Default offline readiness verified exact stock undo and trial commands; receipt:
+`logs/boot-a-usb-xhci-trial-1791652260685692785.json`.
+Once user returns Lynx to Fastboot, identify the new USB node and provide scoped
+access, then fresh preflight and the authorized boot_a-only trial may proceed.
+The tool's `--flash-linux --reboot` writes only boot_a and reboots once.
+Observe for native USB/serial success; if it fails, restore stock boot_a through
+Fastboot. Stop for unexpected recovery behavior. Do not run another stored Linux
+variant without a concrete new fix or diagnostic purpose.
+
+## Latest change: corrected xHCI trial ran
+
+The user reached Fastboot via recovery-first/Volume Down + Power, with USB
+initially unplugged. After plugging in, host node 001/014 was 0e8d:201c; access
+was granted and fresh identity/slot/size preflight passed. The corrected native
+image was written to boot_a and rebooted successfully:
+`logs/boot-a-usb-xhci-trial-1791652936719946783.json`.
+The 60-second USB observation showed no phone endpoint or ttyACM:
+`logs/lynx-usb-observation-1791652951320637469.json`.
+No physical native boot is proved. This supersedes the earlier current-state
+statements: Lynx has left the RAM-loader session; the corrected Linux candidate
+is now the last recorded boot_a write. Stock undo is pending Fastboot return.
+The next operation is fixed-tool `--restore-stock` after fresh USB/preflight,
+without reboot, before another trial.
+
+A possible later non-bypass diagnostic lead is the preloader's ordinary READ32
+interface. The captured target reports Mem read auth false, but that alone does
+not prove the command is implemented or accessible. Its upstream entry-point
+must not be run if it automatically invokes a bypass. Only a separately reviewed,
+fixed-region, bounded direct-read path could test this lead. No direct READ32
+probe has been prepared or executed in the current work.
+
+## Latest stock undo and next prepared diagnostic
+
+User returned quickly to Fastboot, node 001/015, 0e8d:201c. Fixed tool verified
+stock undo and fresh identity/slot/size checks, then restored boot_a successfully:
+`logs/boot-a-usb-xhci-trial-1791653164047994118.json`.
+No reboot or other partition write followed. Last persistent boot_a is stock
+again; the corrected native candidate is no longer the last write. Log export:
+`logs/pllk-1791653196269209324.json`. Current last observed mode is Fastboot.
+
+An ordinary fixed-region header probe is now prepared:
+`tools/lynx_preloader_pstore_header.py`. Default is offline plan; `--self-test`
+checks fixed address/word encoding and six protocol failure cases. `--connect`
+waits for regular MT6983 preloader, verifies the chip ID against the successful
+earlier Lynx session, requires Mem read auth false, then sends one 16-word read
+at 0x48090000 (64 bytes). Both status fields must be zero, with exact word count.
+It blocks all loader uploads, watchdog/register/memory/storage writes,
+authentication, BROM resets, bypasses and fallback memory reads. No CLI generic
+reader or full dump is invoked. Waiting is bounded to 180 seconds; active work
+to 30 seconds after handshake. No live header read has occurred yet.
+
+Next physical step: unplug USB and use the official Power + Volume Up
+10-second force-off sequence, leaving USB unplugged. Once the user is ready,
+start the guarded header probe with necessary USB access and wait for its actual
+waiting output. Signal connect NOW while both volume buttons are held, without
+Power; release buttons only after confirmed acquisition. This repeats the
+recorded successful loader-entry combination, with an ordinary diagnostic read
+instead of any loader upload or bypass. If read permission/status is denied,
+stop without changing security policy or supplying a payload.
+
+
+## Full pstore collector prepared (2026-10-10)
+
+User requested complete acquisition and preserved evidence to reduce repeated physical cycles.
+
+The new tool `tools/lynx_preloader_pstore_capture.py` requests exactly the known pstore RAM allocation at `0x48090000`, length `0xe0000` (917504 bytes), through a single ordinary READ32 transaction. MT6983 regular preloader mode, the previously recorded exact SOC_ID, memory-read authorization flag, and pinned diagnostic source hashes are checked before the request. Loader uploads, authentication, security bypass, register/memory/storage writes and fallback routines remain blocked. Protocol commands necessarily travel over USB; they are read requests, not memory writes.
+
+The capture stores raw big-endian wire words, decoded little-endian memory bytes, protocol replies, numeric leading/trailing statuses, request echoes, per-fragment timing, SHA256 hashes and partial results. A fragmented final word remains in the raw file and is recorded separately. The SDK aggregate reader can discard partial replies on timeout, so the transfer uses direct bounded endpoint reads. This is an application-level capture, not a complete USB bus trace. Handshake console output is preserved separately.
+
+Twelve offline cases passed, including full-region capture, fragmented replies, accepted low nonzero statuses, rejected leading/trailing statuses, interrupted body and completion reads, three failed echo stages, and an oversized response. All mock session artifacts are retained in `tools/test-artifacts/pstore-offline-tests-1791659269535613359/`, with machine-readable `test-results.json` and source hashes.
+
+No live run of this full collector has occurred. Hardware support for this single large request is unproven. A rejected request ends without another technique. Successful transport would not establish pstore age, decode compressed records, or prove association with the failed native boot.
+
+Lynx currently enumerates as 22d9:0006, USB 001/017, from the earlier interrupted header request. Its protocol state is not assumed clean. A fresh physical preloader entry is required before live acquisition. No new flash or partition change was made during collector development. Last known persistent boot_a remains the verified stock undo recorded in logs/boot-a-usb-xhci-trial-1791653164047994118.json.
+
+
+### Earlier header probe correction
+
+The earlier live header session `tools/mtk-sessions/pstore-header-1791654123980651167/` completed the regular MT6983 handshake and exact chip identity match, then stopped on a nonzero leading status before saving any header. The numeric status was not preserved. The pinned upstream implementation accepts statuses 0 through 255; the original probe incorrectly required zero. Therefore its “denied” error is not evidence of confirmed authorization denial. The new collector records the actual status, uses the documented range, and never falls back to authentication or bypass.
+
+The immediately preceding both-volume-button attempt from an active restart loop entered Fastboot instead. A later recovery-menu Power off, unplug, then both-volume-button connection reached OPLUS Preloader. These are distinct initial states; the combination is not guaranteed to select the same mode from every state.
+
+
+## Full collector first live attempt
+
+Session pstore-full-1791659369491056067: USB was absent before starting the probe. After the explicit connect cue, the user held both volume buttons and USB enumerated 001/018, 22d9:0006 OPLUS Preloader. The regular handshake never completed; repeated handshake failures were observed. Stopped verified PID60882 with SIGINT; process exit130 and receipt state stopped/KeyboardInterrupt. No fixed-region memory request, loader upload, authentication, bypass or partition write occurred. This combination reached Preloader but did not prove a fresh protocol state or a completed handshake. Detailed exceptions were hidden at the current logging level, so enabling preserved DEBUG logging before another attempt. USB remained connected after the user was instructed to release buttons.
+
+
+## Ordinary pstore read result — 2026-10-10
+
+The DEBUG attempt pstore-full-1791659570169672293 enumerated USB001/020 (22d9:0006), but startup synchronization received A0 instead of expected5F. Stopped PID61573 with SIGINT, exit130. Same physical connection then accepted a single ordinary GET_HW_CODE query (fd09070000); normal preloader identification matched MT6983 and the exact saved Lynx SOC_ID. This establishes that the connected phone was already command-ready, without authentication, bypass or loader upload.
+
+Full-region READ32 (917504 bytes) and a separate 64-byte size check at 0x48090000 both echoed every request field exactly and returned leading status0x1000 before data. No RAM data was received. Receipts and raw protocol replies are in tools/mtk-sessions/pstore-full-1791659786746018581/ and pstore-full-1791659923281277745/. Consolidated evidence: docs/pstore-ordinary-read-result.json. The MTKClient status table names0x1000 CRYPTO_INIT_FAIL, but this generic label does not prove the exact proprietary preloader cause or justify authentication/bypass. Ordinary RAM access to this region is unavailable through the tested interface; stop repeating it without new evidence.
+
+ModemManager was active and inspected the same ttyACM path. Scoped mmcli inhibition failed NotFound, leaving service state unchanged. Interference was not established as the cause. No background collector remains, no partition changed, and last persistent boot_a remains stock. User was told to release volume buttons and leave USB connected.
+
+
+## Separate stock AEE log-export lead
+
+See docs/STOCK-AEE-DUMP-LEAD.md for new offline AEE command registration and destination dispatch. USB output exists, but the default command can select ext4 output; no command issued. Normal-LK and AEE analyses are saved separately. Prepared guarded getvar-all inventory; next required interaction is return to Fastboot, USB connected. No background collector or modem-service inhibition remains.
+
+
+## Native software-reboot proof completed; stock undo done
+
+The controlled test produced an automatic Fastboot return with the exact reboot-mode signature requested by the native Linux init. This is strong hardware evidence that native userspace executed, not a working USB/Linux installation or a captured native console marker.
+
+Prepared image: artifacts/busybox-August-boot-proof-bound-guards/nord3-busybox-candidate.img, SHA256 a9a72334185a5ddec9b6e3ece6e9e01600582f62c4db7bebc8ce87c4d5c3fe43. Exact August stock kernel; native BusyBox PID1; matching mtk_wdt, reboot-mode and syscon-reboot-mode drivers; one freestanding ARM64 RESTART2 bootloader request only after actual driver/node/property checks. It does not start the USB gadget stack or write partitions. Preliminary artifact busybox-August-boot-proof is retained separately.
+
+The ARM64 helper executed under the exact stock kernel in QEMU and the kernel printed Restarting system with command bootloader, exiting QEMU successfully: artifacts/emulated-reboot-helper-1791662465537639804/result.json. The exact full image plus vendor-before-generic ramdisk refused the reboot on virtual hardware and remained PID1: artifacts/emulated-boot-proof-guard-1791662599378418727/result.json. Eleven exact-source host guard cases passed: tools/test-artifacts/boot-proof-guard-1791662566283189527/result.json. An initial fixture path substitution also changed the driver name; this test-only bug was fixed, and the failed artifacts were retained. Independent image and AOSP unlocked/locked AVB checks passed: docs/boot-proof-validation.json. AOSP AVB is not OnePlus LK.
+
+User's existing boot_a-only native-trial authorization applied. Stock undo hash, matching baseline and exact restore command were checked before flashing. Trial accepted only boot_a and one reboot: logs/boot-a-boot-proof-trial-1791662841074803432.json. No other partition, slot or bootloader change. User was told to leave buttons untouched. USB changed from original Fastboot001/021 to absent, then returned as new Fastboot001/022. The first observer expired shortly after reboot; the second found Fastboot, so exact return latency was not captured.
+
+Pre-trial log: logs/pllk-1791661502886412997.clean.txt. NONRST_REG2=0x20000000, low mode bits0; ramconsole watchdog status0. Post-trial log: logs/pllk-1791662950347665197.clean.txt. NONRST_REG2=0x28002003, low mode bits3; ramconsole watchdog status0x2; long-pressed reboot0; LK boot mode99. Mode3 matches the actual stock FDT mode-bootloader property. The log's raw rst-from-lk label remains and is preserved; this minimal init omitted OEM boot-stage-reporting modules. No physical native console text was retrieved. Hardware interpretation remains explicitly indirect. Consolidated evidence and limitations: docs/boot-proof-hardware-result.json.
+
+After saving reset evidence, verified stock boot_a undo succeeded with no reboot: logs/boot-a-boot-proof-trial-1791662962729666883.json. Last persistent boot_a is stock; Lynx is in Fastboot, with no observer/probe running. Native proof image is preserved locally. USB serial/networking and a usable native OS are still unproved.
+
+The earlier serial-verification warning was inspected in stock LK. The mismatch path returns an error and the caller logs then joins its normal continuation. No halt or forced Fastboot was found on that local failure path; no device identity data changed. Stock boot.img has a1650580-byte generic ramdisk, and the saved Nord3 board configuration does not declare separate init_boot use. Its partition's existence alone was not evidence that boot_a was the wrong trial target.
+
+Next focused investigation: compare native USB/module bringup with this three-driver baseline. The candidate no longer needs to be judged only by USB enumeration: the standard software-return proof provides another observable result. Keep the original USB image, all proofs and stock restore intact. No additional trial is currently running.
+
+
+## Follow-up reset-handler review and pending experimental detail
+
+The ordinary `reboot` literal is suffix-merged into another string, explaining the first failed pointer lookup. Actual registration references locate normal reboot handler at analysis0x106cb4 and reboot-bootloader handler0x106ce0. The normal handler acknowledges then calls platform reset with1,1; it has no explicit mode3 setter. The bootloader handler explicitly passes3 to its mode setter then resets with1,7. Evidence: docs/lk-reboot-string-references.json and lk-fastboot-reboot-handlers.disassembly.txt. This strengthens the controlled native-init interpretation; complete proprietary reset graph remains unproved.
+
+Asked the user whether any buttons were pressed after the no-buttons instruction and before Fastboot return; reply pending. This is an experimental observation check, not a new permission request. Do not equate a bareOK popup-continuation reply with a button-state confirmation. Current phone remains stock boot_a in Fastboot, node001/022; no trial or observer runs. Preserve proof artifacts and prepare USB/module comparison only after accounting for this control detail.
+
+
+## Human observation confirmed; BusyBox first
+
+Noob explicitly confirmed that no buttons were touched and Lynx was in Fastboot after the trial. This closes the pending experimental-control question and strengthens the native-init software-reboot proof. On the next turn Noob requested that the result be documented and coding continue, then clarified BusyBox first. Current development milestone is a live BusyBox USB shell using the already compatible stock kernel; kernel rebuilding and distribution integration follow specific demonstrated needs. No new flash is authorized by mere build-tool output; existing scoped controlled-trial authorization and restoration checks continue to govern any trial.
+
+
+## BusyBox USB-console coding and first trial
+
+Current milestone is a live BusyBox shell over USB, using the proven exact August stock kernel. No kernel rebuild, Android framework, distribution root filesystem, networking or SSH was added in this step.
+
+The successful minimal reboot proof, source and result are preserved unchanged. Noob confirmed no buttons were touched during that return to Fastboot. The project README now points to that result and the current BusyBox milestone; the previous README is archived as README-BEFORE-CONFIRMED-BOOT.md.
+
+New native source: init-busybox-usb-console. New reproducible offline builder: build_busybox_usb_console.py. Image: artifacts/busybox-August-busybox-console/nord3-busybox-candidate.img; SHA2563c75e5791fa9ed6be1a655e978fac4c68b8ea1479ca4777b54106f51326572dc. It retains the exact stock kernel and matching vendor ramdisk dependency, loads the proven reset drivers first, then the preserved USB supplier order. All37 module hashes and versions match stock. It exposes only ACM serial, with USB1d6b:0104 and serial lynx-busybox. A shell connection prints native banner, uname, PID1 information, module progress and full kernel dmesg. PID1 persists after shell exit. Runtime mounts are proc/sysfs/tmpfs/configfs; no partition mounting or native partition-writing tool is included.
+
+The exact proven driver/property guard is embedded before the USB code. If USB setup reports failure and the reset guard passed, init requests one standard software return to Fastboot. If the guard did not pass, init stays alive without a reboot request. A kernel/module-probe hang or apparently bound gadget that never enumerates may still require physical Fastboot entry; automatic recovery is not guaranteed.
+
+The stock-kernel ARM64 VM test executed the exact combined vendor/generic image, observed native PID1, USB setup failure and RESET_GUARD_REFUSED, with no reboot request. Artifact: artifacts/emulated-busybox-console-1791666814527661557/result.json. Independent fixed-image, module/order and unlocked/locked AOSP AVB checks passed in tools/validate_busybox_usb_console.py; report docs/busybox-console-validation.json. These tests do not establish a hardware USB shell.
+
+Host recorder tools/lynx_busybox_console.py matches only the native USB IDs and serial before opening ttyACM. It preserves raw bytes and partial captures, waits for the native banner, then sends only uname/PID1/id checks. Completion parsing was tested against fragmented data and echoed commands so command echo cannot count as a successful reply. Capture has a120-second deadline and32MiB size bound. It emits a heartbeat and process identity; the trial tool refuses a Linux write if the recorder is not actively waiting. Stock restoration does not depend on a recorder being active.
+
+Trial tool: tools/lynx_boot_a_busybox_console_trial.py. Verified offline readiness: logs/boot-a-busybox-console-trial-1791667156051355831.json. It preserves exact Fastboot identity/slot checks, verified firmware/baseline checks and stock boot_a undo. Longer passive observer: tools/lynx_usb_observe_busybox.py, duration180seconds, starts before the trial.
+
+Live trial boot-a-busybox-console-trial-1791667291915431284 accepted only boot_a and one reboot. User was told USB connected, no button presses. Recorder: logs/busybox-console-1791667287110999263.json. Observation: running at time of this entry. Hardware result remains pending. Last persistent boot_a is this console candidate until its verified stock undo is recorded; do not assume the prior stock undo is still the last write. No other partition, slot, bootloader, calibration or authentication change occurred.
+
+
+## First BusyBox USB-console result: no banner; stock undo pending
+
+The boot_a write and reboot succeeded: logs/boot-a-busybox-console-trial-1791667291915431284.json. Native console recorder reached its120-second deadline with zero captured bytes and no shell marker: logs/busybox-console-1791667287110999263.json. User reported OrangeState afterward. No usable BusyBox USB shell is proved. Screen alone does not locate the failure or establish whether the native kernel is running. The previous minimal software-reboot proof remains valid and unchanged.
+
+Last persistent boot_a is the BusyBox console candidate, not stock. Stock undo is pending physical Fastboot return; user was instructed to return to Fastboot with USB connected. Exact stock undo is ready in tools/lynx_boot_a_busybox_console_trial.py --restore-stock, which does not require a live console recorder. No further image trial before undo and new diagnostic evidence. Consolidated result: docs/busybox-console-first-hardware-result.json. Longer passive observer remains bounded to180seconds; the native console collector has exited.
+
+Next code investigation should separate module loading, peripheral-role selection, gadget binding and host enumeration into observable checkpoints using the successful software-return baseline. Also fix the success criterion: a successful UDC bind without host enumeration currently leaves init waiting for ttyGS0; it cannot be treated as a successful console or guarantee an automatic return. Preserve this first image and its evidence before changing that behavior.
+
+## Console undo complete; timed driver checkpoint started
+
+Lynx returned physically to Fastboot on USB001/023. Verified stock boot_a
+restoration succeeded without reboot: logs/boot-a-busybox-console-trial-1791667721697489275.json.
+The first console failure record now includes that restoration receipt.
+
+Noob reiterated that timing must always be considered. This is preserved in
+/noobia/lynx/AGENTS.md. All new code/artifacts stay under Lynx; prior proof,
+console image, source and captures are preserved unchanged.
+
+New offline builder: linux-port/prepare_busybox_diagnostics.py. It prepares
+separate suppliers-only and with-MTU3 module checkpoints from the exact proven
+BusyBox image. Each requires actual reset-driver guards before loading more
+modules, stops on any insertion error, then rechecks guards and requests one
+standard Linux bootloader reboot. No gadget, role change or mdev is included.
+The separate console source draft adds a bounded host-configured-state check;
+it has not been built or flashed.
+
+Six shell fixtures passed: tools/test-artifacts/busybox-usb-checkpoints-1791667910990513433/result.json.
+Both exact checkpoint images reached native PID1 and refused hardware-dependent
+work in QEMU with no reset devices. With-MTU3 VM receipt:
+linux-port/artifacts/emulated-module-checkpoint-with-mtu3-1791667912949232589/result.json.
+Independent validation passed: linux-port/docs/usb-module-checkpoint-validation.json.
+Three passive observer fixtures passed: tools/test-artifacts/trial-observer-1791668080105103084/result.json.
+
+One with-MTU3 boot_a-only diagnostic was issued under the existing controlled
+trial authorization after fresh preflight and verified stock undo. User was
+told to leave USB connected and avoid buttons. Before-trial supported raw LK
+log: logs/pllk-1791668092698085859.json. Trial:
+logs/boot-a-usb-checkpoint-trial-1791668099832373363.json. Image SHA256:
+5bb984899b19c9e739faa23aa9039374a5ad20ab99c10948d5d2b964da3616d6.
+The image write and single reboot succeeded; last persistent boot_a is now
+this checkpoint, superseding the stock restoration above. No other partition
+was written. Stock undo is pending after observation.
+
+The passive USB collector starts and confirms readiness after preflight and
+immediately before the write, in the same process, so approval latency does
+not consume the observation window. It persists wall times, monotonic elapsed
+times, USB node changes and heartbeat. Trial records both command start/end
+times and raw Fastboot replies. Observer:
+logs/usb-checkpoint-observer-1791668099992342633.json. At first status check,
+USB departed at1.766 seconds after collector start; no return was yet observed.
+Observation is bounded to180 seconds after reboot and was running at this entry.
+Do not treat a return alone as complete proof: fresh identity/reset evidence
+and human button observations still matter. A missing return cannot identify
+the failing module or distinguish insertion failure from a probe hang.
+
+## Driver-only hardware checkpoint: bounded negative result, hands required
+
+The full180-second window after reboot completed. No Fastboot return, native
+gadget or recognized preloader endpoint was observed after the initial USB
+departure. Trial process exited0 because commands and observation completed;
+its explicit fastboot_return_observed field is false, so process exit0 is NOT
+a successful module-loading or native-console result. Evidence:
+docs/usb-module-checkpoint-first-hardware-result.json. This does not invalidate
+the earlier confirmed three-module BusyBox boot proof.
+
+Last persistent boot_a remains the with-MTU3 checkpoint. Verified stock undo
+is pending physical Fastboot return. User was told to return to Fastboot with
+USB connected; work stopped for that physical interaction. No observer or
+trial process remains running. On return, obtain fresh node access/identity
+checks, capture the supported read-only LK reset log if Fastboot behaves as
+expected, then run tools/lynx_boot_a_usb_checkpoint_trial.py --restore-stock.
+Do not reboot after undo. Preserve all evidence and review the reset log
+before another trial. The suppliers-only checkpoint and enumeration draft
+were not flashed.
+
+## Checkpoint stock undo complete; original boot inference reviewed
+
+User returned Lynx to Fastboot USB001/024. Supported read-only LK log export
+succeeded: logs/pllk-1791668359166049762.json. Verified stock boot_a restoration
+then succeeded without reboot: logs/boot-a-usb-checkpoint-trial-1791668366401102943.json.
+Last persistent boot_a is stock. No trial/observer remains running. Other
+partitions and slotB were not changed. After-checkpoint log has NONRST_REG2
+0x20000000 and ramconsole watchdog0; no useful crash location or mode3 software
+return signature was retrieved. Physical reset history can erase evidence,
+so absence of a marker is not proof native init never ran.
+
+Noob asked whether the earlier automatic Fastboot test was certain. Reviewed
+the original receipt: only normal fastboot reboot was sent; the controlled
+return had no reported button input and mode changed from0 to3 with software
+reset0x2. Those are strong indirect evidence for native execution. There was
+no direct native console marker, the exact return timing was missed, and the
+complete proprietary fallback/reset graph remains unproved. Earlier wording
+claiming definite execution was too strong. README and original result now
+explicitly distinguish strongly supported execution from conclusive proof.
+Next causal verification should pair a fully timed minimal-baseline repeat
+with an otherwise matching hold/no-reboot control, or capture direct native
+output. Do not describe the failed USB/module checkpoints as disproving the
+original evidence or as locating the hardware failure.
+
+Matching hold/no-reboot control prepared OFFLINE at
+artifacts/busybox-minimal-hold-control/nord3-busybox-candidate.img, SHA256
+25040803f00546bda46ba58407f19e7dcf1978375466a210df360cbcdd2f9166.
+The sole changed archive entry is init: its guarded reboot request is replaced
+by a hold-control message. Kernel, modules and unused helper remain identical
+to the minimal reference. Four exact guard/branch fixtures passed with reboot
+stubbed: tools/test-artifacts/boot-hold-control-1791668614253554039/result.json.
+No hardware causality is established by these tests. Control is not flash
+eligible, has not been flashed, and would require physical Fastboot recovery
+after observation. Lynx remains on restored stock boot_a in Fastboot; no further
+phone command was issued after the original-evidence confidence review.
+
+## Timed minimal comparison: reboot arm repeated; hold arm observing
+
+Two fixed tools now preserve the reviewed boot_a-only trial guards, fresh
+preflight, matching stock firmware and exact undo checks, and same-process
+timed USB collection: tools/lynx_boot_a_timed_minimal_reboot_trial.py and
+tools/lynx_boot_a_timed_minimal_hold_trial.py. Receipts include image/tool/observer
+hashes, command wall times and monotonic durations. Complete hold image passed
+independent archive comparison, source branch tests, exact-stock-kernel QEMU
+guard refusal and unlocked/locked policy checks:
+docs/boot-hold-control-validation.json. Only init changes; unused helper remains.
+
+Reboot-arm trial: logs/boot-a-timed-minimal-reboot-trial-1791668852862284083.json.
+USB observer: logs/usb-minimal-reboot-observer-1791668853023049484.json.
+Original image returned again as Fastboot001/025, approximately21.624 seconds
+after normal reboot began (poll resolution0.25seconds). Before/after supported
+LK logs: logs/pllk-1791668845978416528.json and logs/pllk-1791668922230977251.json.
+Reset mode again changed0x20000000 to0x28002003 and watchdog status0 to0x2.
+Stock boot_a undo then succeeded without reboot:
+logs/boot-a-timed-minimal-reboot-trial-1791668928584614474.json.
+User was instructed to avoid buttons/cable changes. A specific asynchronous
+button/cable observation question is pending; do not infer confirmation.
+
+Hold-arm trial: logs/boot-a-timed-minimal-hold-trial-1791668942994926109.json.
+Its boot_a write and one normal reboot were accepted. Passive observation is
+bounded to180seconds after reboot. User was told to leave buttons/cable untouched.
+Last persistent boot_a is NOW the minimal hold control, superseding the undo
+above. Stock undo after this control remains pending. No other partition or
+slot was changed. A return would challenge the native-init attribution; no
+return supports the contrast but cannot itself prove native init reached hold.
+Do not declare conclusive native PID1 proof without direct output or stronger
+causal evidence. Collation tool: tools/summarize_minimal_boot_comparison.py.
+
+## Timed minimal comparison complete; physical undo required
+
+Reboot arm returned as Fastboot001/025 about21.624seconds after normal reboot
+began and reproduced mode3/software-reset0x2. The matching hold arm had no
+recognized phone USB endpoint or Fastboot return for the full180-second
+post-reboot observation. Both collectors and trial processes have exited.
+Machine-readable collation with raw receipt hashes, command-relative event
+timings, reset-log values and limits: docs/timed-minimal-boot-comparison.json.
+
+This contrast strengthens the native-init interpretation if buttons/cable were
+untouched. The positive-arm specific human observation question remains
+pending; no answer was inferred. Hold-arm input confirmation is not yet
+recorded. No direct native console marker was captured, and no-return alone
+cannot show the hold init actually reached its hold. Conclusive native PID1
+proof remains false in the saved result.
+
+Last persistent boot_a remains the minimal HOLD CONTROL, not stock. User was
+instructed to return Lynx physically to Fastboot with USB connected; work stops
+for this interaction. On return: verify new USB node/ACL and fresh identity,
+capture supported reset log if normal Fastboot behavior permits, then restore
+only verified stock boot_a with
+tools/lynx_boot_a_timed_minimal_hold_trial.py --restore-stock, no reboot. Preserve
+all captures. Do not run another trial before this undo is recorded.
+
+## Hold-control stock undo completed
+
+User returned Lynx physically to Fastboot USB001/026. New-node ACL completed,
+fresh identity checks passed, and supported read-only reset log was saved:
+logs/pllk-1791669338064161970.json. Verified stock boot_a restoration accepted
+without reboot: logs/boot-a-timed-minimal-hold-trial-1791669344703570332.json.
+Current last persistent boot_a is STOCK, superseding the hold control. No
+observer/trial runs. Machine-readable comparison now includes this undo and
+after-hold log. Preserve outstanding button/cable observation uncertainties;
+a bare go did not answer them.
+
+Next offline preparation will split the previously failed34 additional-module
+sequence at dependency-complete prefixes, preserving the same checkpoint init
+and kernel. This is targeted localization after a negative full-sequence test,
+not evidence that any particular driver failed.
+
+## Dependency-checked prefix localization: halfway returns
+
+Offline builder linux-port/prepare_usb_module_prefixes.py prepared prefixes
+5,17,26 from the failed full checkpoint, changing ONLY the module-list entry
+in the archive. Init, kernel, other entries and metadata tail remain identical.
+All prefixes passed independent dependency-order, stock hash/version, archive
+comparison and unlocked/locked policy checks. Prefix17 exact image reached
+native PID1 and refused hardware work in QEMU without real reset devices:
+linux-port/artifacts/emulated-module-prefix-17-1791669497528573254/result.json.
+This VM refusal also covers identical init in the other prefixes; those two
+images were not independently emulated. Reports: docs/usb-module-prefix-*-validation.json.
+
+Prefix17 boot_a-only trial and one reboot were accepted:
+logs/boot-a-usb-prefix-17-trial-1791669578567730520.json. Observer recorded
+Fastboot001/026 departure and return as001/027:
+logs/usb-prefix-17-observer-1791669578729142671.json. User reported OrangeState,
+then explicitly FASTBOOT; no specific no-button/cable confirmation was supplied.
+Supported post-trial LK log reproduced NONRST_REG2=0x28002003 and watchdog0x2,
+with raw reset-stage label lk retained: logs/pllk-1791669638160806380.json.
+Verified stock boot_a undo accepted without reboot:
+logs/boot-a-usb-prefix-17-trial-1791669721794768324.json.
+
+Next authorized timed checkpoint prefix26 was issued after that undo:
+logs/boot-a-usb-prefix-26-trial-1791669772716713000.json. It adds nine subsequent
+modules and excludes the last eight. No userspace gadget/role setup is added.
+User was instructed to leave USB/buttons untouched. Consult its operation
+receipt for write/observation status; if accepted, it supersedes stock undo
+above and requires another verified stock undo. Consolidated localization:
+docs/usb-module-prefix-hardware-results.json. Prefix5 has not been flashed.
+
+Prefix26 returned as Fastboot001/028 without a new physical-entry instruction.
+Observer: logs/usb-prefix-26-observer-1791669772877163869.json. Supported reset
+log again showed mode3/software-status0x2, raw stage lk retained:
+logs/pllk-1791670042485253427.json. Stock boot_a undo succeeded without reboot:
+logs/boot-a-usb-prefix-26-trial-1791670056875302215.json.
+
+The preserved suppliers-only image (33 additional modules, no MTU3) passed
+the same independent prefix validator after an explicit path/hash mapping
+was added. Fixed tool: tools/lynx_boot_a_usb_prefix_33_trial.py. Authorized
+timed boot_a-only trial issued:
+logs/boot-a-usb-prefix-33-trial-1791670069077804262.json. If its write is
+accepted it supersedes the prefix26 stock undo. User was instructed to leave
+USB/buttons untouched. A prefix33 return compared with the previous full34
+failure narrows the problem to adding MTU3 or that addition's effects on the
+guard/reset path; it still does not capture a kernel crash or prove its cause.
+
+Prefix33 returned as Fastboot001/029. Supported reset log again matched mode3
+and software-reset0x2: logs/pllk-1791670188040507900.json. Verified stock boot_a
+undo accepted with no reboot: logs/boot-a-usb-prefix-33-trial-1791670202862845876.json.
+Current last persistent boot_a is STOCK; no trial/observer runs. Prefix5 was
+not flashed. The boundary is now adding MTU3 to the33-module support sequence;
+the precise hardware failure mechanism is still unknown.
+
+Stock kernel config uses MODVERSIONS, full Clang LTO and strict CFI, compiler
+Android clang12.0.5 r416183b. Module signing is unset. The local kernel repo
+is shallow and does not contain the stock311738fbb5a8 object, so an arbitrary
+source rebuild is not yet a verified compatible module.
+
+An OFFLINE experimental NULL-child-driver guard was prepared in a separate
+stock MTU3 copy. It changes only the three instructions at text0x54d0..0x54d8:
+direct driver load fromx0, preserve zero return, CBZ to the existing cleanup
+branch when no child driver is bound. Module SHA256
+49688170d2be04c5051331f93ddf8eda8d8bc5ce37baf82dd04d2edb7f657223;
+original d3c59fa794a6e02f014dd0de660592bb66c9d7f8eb941c1d1183f8a3322bb467
+is preserved. Manifest: artifacts/mtu3-null-child-guard/manifest.json.
+All other bytes, imported symbol versions, relocations and CFI-related sections
+remain byte-identical. ELF build-id is retained, so SHA256/manifest must be used
+to identify the changed artifact. The source-equivalent guard breaks on an
+unbound child, matching the machine-code early exit rather than continuing to
+another child; an initial draft needed this semantic correction.
+
+Six extracted ARM64 fragment cases passed in exact-stock-kernel QEMU:
+artifacts/emulated-mtu3-null-guard-1791670531833079574/result.json.
+They demonstrate the original NULL-to-negative-pointer construction and the
+guard's NULL/non-NULL/return behavior, not an actual MT6983 crash. A further test
+adds actual original-module load/unload and guarded-module load under the stock
+kernel; result pending at this entry. The separate full checkpoint image
+substitutes only lib/modules/mtu3.ko, leaving init, kernel, module order and all
+other archive entries intact: artifacts/busybox-mtu3-null-guard-checkpoint/
+with SHA256c815d527d6a4ff54f4ef2e04f968a7e4a6cf0a51e6e2eb1bba33df3e411c7c6c.
+It is offline and not yet flash eligible. No guarded module/image has been
+sent to Lynx. Independent validation and actual module-load testing are required
+before a controlled trial of this specific guard.
+
+## Guarded MTU3 trial: offline checks pass, hardware return fails
+
+Original-module load, unload and guarded-module load all succeeded under the
+exact stock kernel in isolated QEMU. The six ARM64 arithmetic/branch/store
+cases also passed in that run:
+artifacts/emulated-mtu3-null-guard-1791670663767994158/result.json.
+Independent image/module delta and unlocked/locked policy checks passed:
+docs/mtu3-guard-checkpoint-validation.json. An applicable source patch and
+guarded source are preserved separately as source-null-child-guard.patch and
+mtu3_host.guarded.c under artifacts/mtu3-null-child-guard; the earlier manual
+source-equivalent draft is retained too. No kernel/module authentication or
+CFI settings were changed; the guard modifies existing function instructions.
+
+Authorized boot_a-only checkpoint accepted one image write and normal reboot:
+logs/boot-a-mtu3-guard-trial-1791670823185473386.json. Passive observer:
+logs/usb-mtu3-guard-observer-1791670823343810265.json. The full180-second
+post-reboot window ended with no Fastboot return or recognized phone endpoint.
+Both processes exited. User reported OrangeState, then a further reboot into
+OrangeState. Exact screen-reboot timing was not measured; do not invent it.
+The NULL-child guard is NOT a demonstrated hardware fix. No direct native
+console or kernel crash location was captured.
+
+Last persistent boot_a is the GUARDED MTU3 CHECKPOINT, not stock. Verified stock
+undo is pending physical Fastboot. User was instructed to return Fastboot with
+USB connected; work stops for that physical step. On return, grant the new
+node ACL, wait for completion, verify fresh identity, save supported read-only
+LK reset evidence, then run tools/lynx_boot_a_mtu3_guard_trial.py --restore-stock
+with no reboot. Preserve other partitions and slotB; stop on unexpected recovery
+behavior. Consolidated result: docs/mtu3-guard-first-hardware-result.json.
+
+Future diagnostics should distinguish a failed/blocked insmod, changed reset
+guard, and kernel fault before another fix is selected. A supported userspace
+supervisor after the confirmed prefix33 may help distinguish completed insertion
+from a blocked loader through bounded, timed software-return outcomes. Do not
+implement another hardware trial before stock undo and reset-evidence review.
+
+## Guard experiment stock undo complete; supervise the loader next
+
+Lynx returned physically to Fastboot USB001/030. Fresh identity checks and
+supported read-only reset log export succeeded: logs/pllk-1791671229069563463.json.
+Verified stock boot_a restore then succeeded without reboot:
+logs/boot-a-mtu3-guard-trial-1791671243113551814.json. Current last persistent
+boot_a is STOCK. No observer/trial remains running. After-log shows mode0 and
+watchdog0 without useful crash location; physical reset history can erase
+prior evidence, so this is not proof that the experimental kernel never ran.
+
+Next offline diagnostic source is mtu3-timed-supervisor.sh. It runs the original
+stock MTU3 insertion in a child after the returning prefix33 and validated
+stock reset bindings. Parent observes15seconds, then makes one supported reset
+request at20seconds (success),40seconds (returned error), or60seconds (no result
+within15seconds) after child start. Runtime state is tmpfs; no partitions are
+mounted or written. It deliberately avoids re-enumerating potentially blocked
+platform sysfs after the child starts. Timing is an indirect beacon: only
+interpret with calibration, untouched controls and matching reset evidence.
+Kernel/power faults or a blocked reboot path can still prevent all beacons.
+This source is offline, untested, not built into a candidate and not flashed
+at this entry. Test child status, timing/clock failure, single-reset semantics
+and independent artifact compatibility before considering hardware use.
+
+## Stock-module MTU3 supervisor validated and trial started
+
+Six exact-source host cases passed with simulated clock/reboot stub: success
+deadline20, returned-error deadline40, pending child deadline60, and clock or
+mount failures with no reset call. Evidence:
+tools/test-artifacts/mtu3-supervisor-1791671516955331219/result.json.
+Built image: artifacts/busybox-mtu3-timed-supervisor/nord3-busybox-candidate.img,
+SHA256adb55ffe21b8079c4e64a8eb48917c6566dcfd58763fa813bb10a635ad2b6b9a.
+Only init and module-list archive entries differ from the full stock-module
+checkpoint. Original stock MTU3 and every other module remain unchanged; the
+experimental pointer guard is NOT used. Parent loads the returning prefix33,
+validates reset bindings, then forks the MTU3 load and uses RAM-only result state.
+It does not re-enumerate platform sysfs after child start, avoiding that source
+of blocking. It makes one supported restart request, never retries.
+
+Exact image/stock-kernel QEMU refusal passed:
+artifacts/emulated-mtu3-supervisor-1791671678612938593/result.json.
+Independent archive/kernel/source/module integrity and unlocked/locked AVB
+checks passed: docs/mtu3-supervisor-validation.json. Fixed trial tool:
+tools/lynx_boot_a_mtu3_supervisor_trial.py, with verified stock undo and fresh
+Fastboot checks. One authorized boot_a-only trial issued:
+logs/boot-a-mtu3-supervisor-trial-1791671793516438825.json.
+User was instructed to leave buttons/USB untouched for the full observation.
+If the write succeeds it supersedes the guard-trial stock undo and requires
+its own undo. No other partition, slot, module authenticity setting or CFI
+setting changes. Observe this receipt before acting on current device state.
+
+Timing interpretation is indirect. Child-relative deadlines20/40/60 correspond
+roughly to earlier baseline reboot-return latency plus those delays, with
+integer-uptime scheduling and USB polling uncertainty. Do not assign an outcome
+from an overlapping or unexplained time. Kernel faults, reset-path blocking or
+human input can prevent or confound every timing beacon. Preserve raw records
+and corroborating reset signature before reporting a likely loader outcome.
+
+## Supervisor return recorded; resumed after gap and stock undo complete
+
+Saved observer recorded departure from Fastboot001/030 and return as001/031
+83.693seconds after observer start, approximately82.106seconds after normal
+reboot began. This is about60.48seconds beyond the prior21.62-second baseline,
+consistent with the supervisor no-result-within15seconds /60-second deadline.
+It is INDIRECT classification only: no child status text was captured, no
+specific no-button/cable confirmation arrived, and result-publication failures
+or intervening input can confound it. It does not prove a permanent hang.
+
+User resumed work after token/context interruption. The host USB enumeration
+now shows Lynx as001/004, not the historical001/031; do not use the current
+enumeration as proof of the historical return or assume nothing happened in
+the intervening gap. Current fresh identity checks match the device. Supported
+LK log saved much later: logs/pllk-1791742954764056400.json. It now shows neutral
+reset mode0x20000000 and watchdog0, with no software-return signature. This
+cannot corroborate the historical timing beacon.
+
+Verified stock boot_a restore succeeded without reboot:
+logs/boot-a-mtu3-supervisor-trial-1791742981981876985.json. Current last persistent
+boot_a is STOCK; no observer/trial remains running. Consolidated evidence and
+limits: docs/mtu3-supervisor-first-hardware-result.json. Continue offline review
+of MTU3 probe/initialization waits; do not promote timing inference into direct
+native console proof or a located kernel fault. All old artifacts stay preserved.
+
+## Real BusyBox test catches missing /dev/null; earlier hang inference invalid
+
+Native supervisor VM test failed in a useful way:
+artifacts/emulated-mtu3-supervisor-native-1791743705299181179/result.json.
+The real ARM64 ash printed "can't open '/dev/null': No such file or directory"
+at background-child startup and then selected the no-result timing path. The
+handset supervisor inherited the minimal checkpoint init, which also mounted
+fresh tmpfs /dev and created only console/kmsg, with no mdev scan or null node.
+Thus the old82-second signal cannot establish that insmod ran or was blocked;
+the child could fail BEFORE insertion. The earlier mocked BusyBox commands did
+not reveal this. User was told clearly; no new phone write occurred.
+
+Supervisor source now creates /dev/null c1:3 before forking. Host fixtures add
+a null-node-creation failure case and keep success/error/pending/clock/mount
+cases. Retest the actual BusyBox/stock-module VM success path before building
+or flashing a corrected candidate. Preserve the defective historical image and
+its receipts; do not reinterpret them as MTU3 hang evidence. Prefix33 versus
+full34 foreground tests remain separate evidence of the MTU3-loading boundary.
+Current last persistent boot_a is still restored STOCK, Fastboot001/004.
+
+## Corrected supervisor v2 verified and authorized trial started
+
+Corrected source819bf6ffe549e2137e682f5dfdb9e9eb0ff4abd1c35824781316c7f52826b29c
+creates /dev/null before async ash child launch. Seven host cases passed:
+tools/test-artifacts/mtu3-supervisor-1791743965836557432/result.json.
+Actual ARM64 BusyBox with exact stock kernel and original MTU3 registered the
+module and took the success reset path20.61s after child start in QEMU:
+artifacts/emulated-mtu3-supervisor-native-1791743964645690671/result.json.
+This is VM execution, not a captured Lynx shell or MT6983 hardware probe.
+
+V1 trial tool is retired to restore-stock only; original source/tool/validator
+archives retained in artifacts/busybox-mtu3-timed-supervisor. V2 image SHA256
+382e6f6d82f249d8e51b29a0680aaabdc7bf48c506fcdc9d74ec68f1fec66832. Exact
+v2 image refuses hardware-module work without real reset drivers in QEMU:
+artifacts/emulated-mtu3-supervisor-v2-1791744222861099194/result.json. Independent
+validator checks original kernel/module bytes, two-entry archive delta, source,
+all test receipts and unlocked/locked AVB model: docs/mtu3-supervisor-v2-validation.json.
+
+Read-only pretrial LK log: logs/pllk-1791744599163403308.json. V2 trial accepted
+boot_a write and one normal reboot: logs/boot-a-mtu3-supervisor-v2-trial-1791744614133186620.json.
+Observer is running; CURRENT LAST PERSISTENT boot_a is v2 diagnostic, stock undo
+pending. No other partition changes. User told USB/buttons untouched. Do not
+classify until observer result and timely LK reset evidence are collected.
+
+## Corrected v2 hardware observation complete: no return; physical Fastboot needed
+
+V2 trial1791744614133186620 accepted boot_a and normal reboot. Passive observer
+1791744614291014500 recorded departure and no Fastboot return during the full
+180-second post-reboot window; no observer errors. It provides NO timing outcome
+classification, no captured child status and no direct native-userspace proof.
+Summary: docs/mtu3-supervisor-v2-first-hardware-result.json. Current last persistent
+boot_a is V2 DIAGNOSTIC; STOCK UNDO PENDING. No other writes, slots unchanged.
+No active trial remains. Physical Fastboot return is required before read-only
+LK capture and stock boot_a restoration without reboot. Stop hardware work and
+ask user for that interaction; do not silently assume restored stock.
+
+## Physical Fastboot recovered; v2 stock undo accepted
+
+User reported Fastboot; USB001/006 0e8d:201c freshly verified. Read-only LK log
+logs/pllk-1791744893648656623.json preserved before undo. Neutral NONRST_REG2
+0x20000000/watchdog0 and volume-down key detection/mode99 reflect physical
+return; no native crash or software-return proof. Verified STOCK boot_a write
+accepted WITHOUT REBOOT: logs/boot-a-mtu3-supervisor-v2-trial-1791744900526607787.json.
+Current last persistent boot_a is STOCK; no active observer. Recovery foundations
+and slot B unchanged. Continue offline diagnosis before further trial.
+
+## RAM-only registration guard prepared; independent tests; new trial started
+
+User permits simultaneous tests when they do not collide. Offline VM runs use
+separate artifact directories; handset operations remain sequential. No agents
+spawned. New approach uses sysfs driver_override to block MTU3 matching before
+platform probe, keeping original module bytes, CFI, kernel and DTB unchanged.
+Guard scans compatible properties, permits only exact August USB0/USB1 OF nodes,
+refuses bound devices or preexisting overrides, validates all targets before
+writing, writes only driver_override, verifies readback and never unbinds.
+This matching restriction exists in RAM only until reboot; no target partition
+mount/write inside initramfs. Failure returns74 before insmod.
+
+Exact August DTB + published platform source audit:
+docs/mtu3-driver-override-audit.json; reference source commit81ec42ad5e803be0cba619f9f7bb298db7d33d7b
+is related, not verified exact stock commit. Stock MTU3 .init.text disassembly
+shows only __platform_driver_register call before return; module untouched.
+Real stock-kernel driver_override write/read/clear on an unbound virt device:
+artifacts/emulated-platform-driver-override-1791745084847200395/result.json passed.
+Seven real ARM64 BusyBox guard fixture cases including bound/bad-second refusal:
+artifacts/emulated-mtu3-registration-guard-1791745167330526009/result.json passed.
+
+First combined VM test placed synthetic fixtures under /run, then supervisor
+mounted fresh tmpfs there, hiding them. Preserve failure:
+artifacts/emulated-mtu3-registration-supervisor-1791745272091483690/result.json.
+It correctly refused insertion and took error reset at40.83s; NOT a passed
+registration test or hardware fault. Corrected VM fixtures live at /fixture:
+artifacts/emulated-mtu3-registration-supervisor-v2-1791745291349064983/result.json
+passed, original module registered, child-relative reset20.57s. No MT6983 probe
+is emulated. Exact handset image VM refuses work absent real watchdog drivers:
+artifacts/emulated-mtu3-registration-image-1791745229591886300/result.json passed.
+Independent image/source/module/AVB tests: docs/mtu3-registration-validation.json.
+
+Candidate artifacts/busybox-mtu3-registration-only/nord3-busybox-candidate.img
+SHA256 ed01113dbd38f98f41138dbecd3022217ce85bd163c1e394d41428960ae744c0.
+Read-only pretrial LK: logs/pllk-1791745366907714303.json. Authorized boot_a trial
+logs/boot-a-mtu3-registration-trial-1791745375231056769.json. Inspect receipt for
+write/observation results; stock undo needed if write accepted. Preserve all
+other partitions and slot B. This is timing inference, not a native shell.
+
+## Registration-only hardware return: strong indirect success; stock undo complete
+
+Trial1791745375231056769 accepted boot_a + normal reboot. Passive observer
+1791745375391481368 recorded001/006 departure and001/007 return 41.803s
+after normal reboot, about20.179s beyond minimal reference21.624s,
+consistent with20s success deadline. Read-only LK1791745461052613061 captured
+software-reboot signature NONRST_REG2=0x28002003 /wdt=0x2, raw stage=lk retained.
+Pretrial LK1791745366907714303 was neutral0x20000000/wdt0. User explicitly said
+no button presses; cable changes not separately explicitly addressed. This is
+strong indirect native BusyBox/guard/stock-module-return evidence, not a captured
+shell, device UDC binding, or conclusive native execution proof. Unblocked v2
+did not return in180s; blocking controller matching restores the timed return.
+
+Stock boot_a undo accepted WITHOUT REBOOT:
+logs/boot-a-mtu3-registration-trial-1791745484785635273.json. Current last
+persistent boot_a=VERIFIED STOCK; USB001/007 Fastboot. Other partitions/slot B
+unchanged. Consolidated evidence: docs/mtu3-registration-first-hardware-result.json.
+Next isolate which controller attachment/initialization path prevents return.
+
+## Wi-Fi + SSH preparation in progress; no Wi-Fi handset flash yet
+
+User/Rose prioritize native Wi-Fi+SSH and permit independent simultaneous tests.
+Network selected=Noobia WPA2 (Nexus192.168.100.106 on wlx40a5ef5f66f1); M40 network
+postponed explicitly. Existing saved profile UUIDdfa26e16-06b4-4746-95fd-4ad3bbc57f63
+was read privately by tools/prepare_noobia_wifi_credentials.py. No password printed;
+private config and dedicated client/host keys in /noobia/lynx/secrets mode0700.
+Never print/cat these secrets or include them in diagnostic logs. Keys are pinned
+with HostKeyAlias=lynx /secrets/lynx_known_hosts. Wi-Fi image must be mode0600
+because it contains PSK-equivalent and SSH host key. Do not include client
+private key in handset image. Host Wi-Fi configuration has not been changed.
+User reported network drop; inspection found both host links UP and phone still
+Fastboot001/007. Git broad source read suffered a network reset; no phone Wi-Fi
+was flashed or tested. Current last persistent boot_a remains VERIFIED STOCK.
+
+Matching local OTA vendor_dlkm,odm_dlkm,vendor,odm extracted and full operation/
+partition SHA verified in artifacts/stock-cph2493-August-eu-ota/wifi-reference;
+extraction-1791745920155667500.json. Vendor_dlkm is ext4, vendor/odm EROFS.
+Read-only EROFS tool unpacked under tools/erofs (no host package install).
+Initial debugfs rdump ownership changes were denied, contents existed; final
+module provenance/byte/ABI checks still required. tools/audit_wifi_modules.py
+combines modules.dep with embedded modinfo dependencies spanning boot/DLKM;
+Wi-Fi graph55 modules. External module scmversion differs from kernel SCM
+normally; exact vermagic and module_layout CRC/shared import CRCs match.
+tools/audit_wifi_boot_modules.py adds read-only storage support:61-module graph,
+23MB raw, no shared CRC conflicts; docs/wifi-boot-module-audit.json. Radio startup
+may require additional OF clock/regulator suppliers beyond symbol dependencies.
+
+Official Alpinev3.22 signed ARM64 musl,wpa_supplicant2.11,iw6.9,Dropbear2025.88
+packages under tools/alpine-aarch64. Verifier/keys bootstrapped from HTTPS official
+CDN in tools/alpine-bootstrap; apk verifies subsequent repository/package
+signatures (initial missing trust-key extraction corrected; no allow-untrusted).
+No host install. Absolute bin/sh symlink package excluded from root extraction;
+keep proven static BusyBox shell. network_userspace.py packages native tools.
+Actual ARM64 key-authenticated Dropbear loopback command +supplicant/iw under
+exact stock kernel passed: artifacts/emulated-native-network-userspace-1791746685214260818/result.json.
+DHCP initial fixture lacked full veth peer setup and DHCP server; failure preserved
+at emulated-native-dhcp-ssh-1791747592558697513. Corrected VM uses signed full
+iproute2 +dnsmasq only in isolated guest; DHCP+SSH passed:
+artifacts/emulated-native-dhcp-ssh-v2-1791748020799825150/result.json. No radio verified.
+
+Published module repo reference files preserved in docs/wifi-source-reference.
+Stock driver readiness GET_CHIP_ID ioctl0x8004c200 returns direct integer0x6983.
+/dev/wmtWifi WR-BUF:NVRAM prefix12bytes followed by factory payload requires one
+complete write; data copied into driver RAM. Station command S powers Wi-Fi.
+Factory file used by stock helper=/mnt/vendor/nvdata/APCFG/APRDEB/WIFI. Native
+code must read existing data, not invent/rewrite calibration. read-only script
+lynx-calibration-readonly.sh discovers sole PARTNAME=nvdata from sysfs, blockdev
+sets RAM read-only flag, mount ext4 ro,noload, verifies ro, copies WIFI128..32768
+bytes to RAM and unmounts. Fastboot getvar nvdata/nvram sizes returned EMPTY
+(success status only; not geometry proof): logs/wifi-calibration-layout-1791747916677798142.json.
+Runtime discovery must refuse ambiguous/absent partition. No writable mounting.
+
+Native helper lynx-wifi-control.c/entry.S freestanding ARM64, no partition-write
+paths; permits chip query, existing NVRAM/stock config RAM submit, station mode.
+Initial BSS-only ELF helper segfaulted in VM BEFORE any handset use; archived
+in artifacts/wifi-native-helpers/initial-helper-before-data-anchor.elf and source.
+Synthetic calibration VM showed real block read-only /ro,noload mount/copy passed,
+helper startup failed: emulated-native-calibration-readonly-1791748298212428796.
+Corrected helper has nonempty writable .data mapping; retest currently running
+(exec session54117). Do not use helper unless actual stock-kernel VM tests pass.
+Final Wi-Fi boot image NOT YET BUILT OR FLASH-ELIGIBLE. Need supervisor/pstore
+diagnostics, immutable image validation, native helper/RO safety tests and host
+collector ready before controlled boot_a-only Wi-Fi trial. Preserve all proven
+images and stock undo; slot B/recovery foundations unchanged.
+
+## First Wi-Fi hardware trial ACTIVE: v3 two-stage boot_a installed
+
+All work remains /noobia/lynx. Current final candidate=busybox-wifi-ssh-twostage-v3
+SHA2563a1c2ddacac0c6fdf7e152a2db30add1b1b4fbab881346d6d346faf584abf94c.
+Kernel bytes remain exact stock. Small first-stage ramdisk1615060 bytes fits
+stock metadata boundary21889024; local VBMETA1600bytes/footer unchanged.
+Supplementary native files stored ONLY in unused boot_a padding at25165824
+(24MiB), gzip10195226bytes. SHA25622882fa431be1282b15b58d89e86247c027be7392f906199537b5df9c82b893b.
+Do not mistake prior size failure for missing compression: existing codec already
+uses LZ4 HC12. Actual constraint was the small stock loaded-area/metadata boundary.
+Whole boot_a remains64MiB; no partition resized, no vendor_boot/dtbo/vbmeta/slot B
+changes. Candidate/ramdisk/supplement private mode0600 in folder0700. Client
+private key excluded. .gitignore excludes secrets and Wi-Fi artifacts.
+
+Stage0 reset guards copied from known-returning prefix33. It creates /dev/null,
+RAM /run128MiB, pstore/devpts; loads base33 +6 matching storage drivers from
+unchanged vendor ramdisk. Waits up to30s for async UFS boot_a GPT discovery.
+Child discovers unique boot_a64MiB, sets its block RO flag, reads fixed bounded
+supplement, verifies SHA256 before gzip/CPIO extraction into RAM. First-stage
+parent enforces180s deadline and one standard Fastboot request on failure.
+After verified extraction, native Wi-Fi runtime starts with empty base/storage
+load lists (already loaded); radio dependencies additional48, original stock
+module bytes. Reads factory nvdata RO/noload, copies calibration to RAM; native
+helper sends fixed documented /dev/wmtWifi RAM protocol; station, nl80211 WPA2,
+DHCP, key-only Dropbear, public nonce beacon to Nexus192.168.100.106:5514.
+Second parent deadline240s, cancelled only by token acknowledgement written
+through pinned authenticated SSH. No extra reset attempt after helper returns.
+Pstore warm-retention hardware unverified; complete diagnostics captured over
+encrypted SSH when available. Public UDP discovery is NOT treated as proof.
+
+Read-only calibration and corrected native helper test passed:
+artifacts/emulated-native-calibration-readonly-1791748592634210034/result.json.
+DHCP+key SSH+UDP native stock-kernel VM passed:
+artifacts/emulated-native-dhcp-ssh-udp-1791749522460166466/result.json.
+Actual bounded BOOT_A read-only +SHA+CPIO extraction on synthetic64MiB loop
+device, wrong SHA/ambiguous partition refusal passed:
+artifacts/emulated-native-boot-payload-1791752193887838856/result.json.
+Ten parent supervisor control fixtures passed:
+tools/test-artifacts/wifi-supervisors-1791752500321885348/result.json.
+This test caught malformed no-newline host-confirmation causing early return
+without fallback; v3 ignores it and continues deadline. Earlier v1/v2 image
+artifacts retained, NEVER flashed. Exact final image VM reset guard passed:
+artifacts/emulated-wifi-image-1791752848494401208/result.json. Independent source/
+archives/modules/firmware/private-file/layout/AVB checks passed:
+docs/wifi-image-validation.json. tools/validate_wifi_image.py pins exact hash.
+
+New host collector tools/lynx_wifi_contact.py self-tests passed. It accepts only
+image-specific public nonce from Noobia subnet, then requires pinned ED25519
+host identity + dedicated client key +native kernel/PID1/init/BusyBox hashes.
+After proof, sends atomic RAM acknowledgement and saves boot/wpa/pstore/kernel
+logs privately. Listen process exec43967, receipt:
+logs/wifi-contact-1791753503241750200/result.json. ACTIVE for600s since before
+flash. New fixed trial tools/lynx_boot_a_wifi_trial.py checks collector freshness
+and host IPv4; starts passive USB observer AFTER fresh preflight before write.
+Trial exec14417, logs/boot-a-wifi-trial-1791753511523909231.json. BOOT_A write
+and normal reboot ACCEPTED. Current last persistent boot_a=V3 WI-FI DIAGNOSTIC,
+STOCK UNDO PENDING unless pinned native SSH succeeds. Trial observes USB/SSH up
+to600s. No other phone commands issued during observation. User told buttons/USB
+untouched. Read-only pretrial LK logs/pllk-1791753461116999900.json.
+
+On successful pinned SSH/ack: keep native image running, collect diagnostics,
+report true native communication. On returned Fastboot: fresh node ACL +LK log
+then tools/lynx_boot_a_wifi_trial.py --restore-stock WITHOUT REBOOT. On no return/
+SSH: stop hardware work and ask user for physical Fastboot. Never silently mark
+restored stock, never interpret process exit0 as radio/native success.
+
+## 2026-10-12 bedtime pause: supersedes ACTIVE entry above
+
+Wi-Fi v3 returned to Fastboot about54s after reboot, with no beacon or SSH.
+Read-only LK export logs/pllk-1791753872288099107.* saved. Stock boot_a undo
+ACCEPTED without reboot: logs/boot-a-wifi-trial-1791753886161258334.json.
+CURRENT LAST PERSISTENT BOOT_A = MATCHING AUGUST STOCK. Last observed Fastboot.
+Listener completed600s; no phone trial active. Noob asks to pause for bedtime.
+Do not start another hardware trial until resumed.
+
+Detailed next-step handoff: docs/RESUME-NEXT.md. Concrete omitted prerequisite:
+reset-ti-syscon.ko before UFS. New hex logger and decoder created/tested in
+native ARM64 VM, not yet integrated or verified persistent on phone. Standard
+Fastboot fetch unsupported; no partition logging write attempted. Consolidated
+hardware result: docs/wifi-v3-first-hardware-result.json. No new phone image
+written after the successful stock undo.
+
+## 2026-10-12 resumed: v4 prepared and independently validated
+
+Noob resumed and reported Fastboot. USB001/002 0e8d:201c; fresh ACL/preflight
+passed identity, unlocked, slot a and all expected sizes. Stock boot_a remains
+last installed pending the next explicit trial receipt.
+
+Audited stock reset supplier: docs/ufs-reset-supplier-audit.json. Three enabled
+ti,syscon-reset stock DT nodes; reset-ti-syscon.ko SHA
+98c8b506aacb757dc8ef94df2fffe36789c7a64ad2311ffdae263d86d2fe98c8,
+matching vermagic/layout/shared imported symbol CRCs. This omitted prerequisite
+is now first in seven-module storage list. No MTU3 loaded.
+
+New candidate artifacts/busybox-wifi-ssh-twostage-v4/nord3-busybox-candidate.img
+SHA0abe578cdc82a8f42b6bd812f3217dcc622f2a980d93e3c3418bc6dadf731af7,
+64MiB; first-stage legacy LZ4 1620973bytes; supplement10195190bytes at24MiB.
+Kernel, original loaded-area boundary, metadata/footer and partition geometry
+preserved. V3/tools preserved. Fresh session token, separate supervisor,
+bootstrap and wifi RAM journals, module begin/OK/failure hex codes/codebook.
+No partition log writes; warm-reboot persistence still unverified.
+
+Exact-image guard VM passed: emulated-wifi-v4-image-1791794946333674412/result.json.
+Native ARM64 journal/control/reset-module-registration test initially failed
+because TEST fixture omitted host-ip and concurrent printk interleaved export;
+initial captures retained. Corrected fixture passed all8checks:
+emulated-wifi-v4-journals-1791795237342303273/result.json. No handset flash was
+performed for those tests. Independent validation docs/wifi-v4-image-validation.json
+passed original core supervisor/native DHCP/SSH/calibration/payload receipts,
+new logger integration, exact VM, image/source/module/secret/metadata checks and
+AVB unlocked/locked policy model. Physical storage/radio not established.
+
+Separate pinned v4 tools: validate_wifi_v4_image.py, test_wifi_v4_image_vm.py,
+lynx_boot_a_wifi_v4_trial.py, lynx_wifi_v4_contact.py. Collector self-test passed;
+same pinned SSH identity/client key, new image session/init hash. It retrieves
+each hex journal individually after authenticated SSH and acknowledgement,
+retains raw bytes and decodes checksum/sequence/codebook. Ack timeout now saved
+and stops instead of silently dropping the receipt. Host Noobia address remains
+192.168.100.106. No new credentials required.
+
+### V4 hardware trial ACTIVE; last installed image now experimental v4
+
+Listener exec78202 ready; receipt logs/wifi-v4-contact-1791796121440275829/result.json.
+Authorized trial exec55332; receipt logs/boot-a-wifi-v4-trial-1791796190425679987.json.
+boot_a64MiB write and single normal reboot ACCEPTED. LAST PERSISTENT BOOT_A IS
+V4 WI-FI DIAGNOSTIC; STOCK UNDO PENDING unless pinned SSH+ack succeeds.
+No other partition writes or slot changes. Passive USB/network observation
+active. Leave handset/buttons untouched; capture up to600s, then physical
+interaction only if needed. Never claim stock restored until new undo receipt.
+Pretrial read-only LK: logs/pllk-1791795695626852235.json.
+
+### V4 trial finished; matching stock boot_a restored
+
+V4 returned automatically to Fastboot on USB001/006 ~54.45s after reboot,
+without any beacon/SSH. Internal failed stage remains unknown. Fresh ACL,
+read-only LK export logs/pllk-1791796477741516715.json, then stock boot_a undo
+ACCEPTED without reboot: logs/boot-a-wifi-v4-trial-1791796478398063909.json.
+LAST INSTALLED BOOT_A IS STOCK AUGUST again. V4 listener finished600s normally.
+Consolidated docs/wifi-v4-first-hardware-result.json. No native journals retrieved.
+
+Offline DT selection lead: current stock LK log explicitly selects dynamic
+overlay index5 (project21871, DTS22823). Reconstructed stock vendor-boot DTB
+plus stock overlay5 via private libfdt; preserved
+artifacts/stock-runtime-dtb-overlay5/stock-merged.dtb and result.json, final
+packed416325bytes. No phone DT modifications. Provider graph
+docs/ufs-provider-graph-overlay5.json confirms the direct UFS clock, power,
+VEMC regulator/reset supplier candidates already in current lists. Original
+audit lacked OF aliases for some drivers; compatible literals supplement it.
+Offline tree still omits runtime bootloader fixups, so do not call it captured
+runtime DT. Reset addition alone did not establish working storage.
+
+### Storage-only outcome diagnostic ACTIVE
+
+Built artifacts/busybox-storage-outcome-v1/nord3-busybox-candidate.img,
+SHA85d219fd6625897638ef70ee9abd9959cbf625f0063cecf19905a70f03b5e358,
+first-stage1621571bytes. Same stock kernel/reset guards/metadata/footer and
+same v4 supplement. It ONLY runs the storage bootstrap, then one delayed
+standard bootloader reboot. No radio/SSH startup or new partition log writes.
+Code1=base load failed,2=storage load failed,3=no boot_a/no UFS binding,
+4=no boot_a/UFS binding,5=payload failed,6=payload verified/extracted,
+7=worker deadline180s,8=other. Delays65,90,115,140,165,190,215,240 seconds
+from probe start, plus uncertain boot latency. Classifications are timing
+inferences, not persistent authenticated hex logs. Tolerance8s; compare with
+saved post-return reset fields and physical-interference observations.
+
+All9control fixtures passed (eight results plus invalid clock):
+tools/test-artifacts/storage-outcome-control-1791797333352821595/result.json.
+Exact-image VM guard passed emulated-storage-outcome-image-1791797624958932543.
+Independent layout/core provenance checks docs/storage-outcome-image-validation.json.
+Pretrial log logs/pllk-1791797690472335906.json. Trial exec8780, receipt
+logs/boot-a-storage-outcome-trial-1791797727376757844.json. Write boot_a and
+one normal reboot ACCEPTED. LAST INSTALLED BOOT_A IS STORAGE DIAGNOSTIC;
+STOCK UNDO PENDING. Passive observation<=330s. On Fastboot return save LK
+and restore stock using tools/lynx_boot_a_storage_outcome_trial.py --restore-stock
+without reboot. On no return stop for physical Fastboot. No network listener.
+
+### Storage outcome v1 returned with timing code0x03; stock restored
+
+Storage probe returned to USB001/007 at136.833319994s after reboot, matching
+code03 target115s+baseline21.624 within0.209319994s. Inferred outcome: base
+and storage insmods completed, but boot_a absent and ufshcd-mtk not bound.
+Timing is NOT an authenticated internal log, and user physical non-interference
+was requested but not separately explicitly confirmed. Do not mark conclusive.
+Post-return LK logs/pllk-1791799014755145548.json show NONRST_REG2=0x28002003,
+parsed reset2, watchdog2. Stock boot_a undo ACCEPTED without reboot:
+logs/boot-a-storage-outcome-trial-1791799015407889204.json. LAST INSTALLED IMAGE
+IS MATCHING STOCK BOOT_A. No active trial/listener.
+
+Concrete next hypothesis: published driver-core.c defaults fw_devlink flags ON
+and strict=true; explicit fw_devlink=permissive standard early kernel parameter
+retains sync-state ordering without inferred probe gates. Reference saved
+docs/wifi-source-reference/driver-core.c; official kernel documentation supports
+its semantics. Real kernel binary remains unchanged; published source is not
+the exact stock commit. Testing parameter support/behavior on exact stock
+kernel is still necessary. No authentication/secure-boot bypass involved.
+
+Builder prepare_fwdevlink_variant.py initially refused the existing nonempty
+experimental command line, with no output image created. Actual inherited
+arguments are rdinit=/init panic=10 noobia.usb=1. Preserve those and APPEND the
+new flag; do not replace them. Prepare storage-only comparison before Wi-Fi.
+
+### Storage-only permissive comparison ACTIVE
+
+New image artifacts/busybox-storage-outcome-v2/nord3-busybox-candidate.img SHA
+5f85ae811386ccec50c1eab94649f587621035ca053126788d9627ee666bea25,
+first-stage1621570bytes. Original init logic/modules/kernel/supplement unchanged;
+fresh token and appended fw_devlink=permissive, preserving rdinit/panic/noobia
+arguments. Private permissions and metadata/footer preserved. Exact stock-kernel
+VM guard and command line tested: emulated-storage-outcome-permissive-1791803335687320065.
+Independent docs/storage-permissive-image-validation.json passed control source,
+unchanged provenance and unlocked/locked AVB host model. Pretrial LK
+logs/pllk-1791803402511592441.json; offline undo ready.
+
+Trial exec96023, logs/boot-a-storage-permissive-trial-1791803501226694814.json.
+boot_a write and single normal reboot ACCEPTED. LAST INSTALLED IMAGE IS V2
+STORAGE DIAGNOSTIC; STOCK UNDO PENDING. Observe<=330s, no other commands.
+On return capture fresh ACL/LK and restore stock with
+tools/lynx_boot_a_storage_permissive_trial.py --restore-stock WITHOUT reboot.
+On no return stop and request physical Fastboot. No network listener running.
+
+### Storage permissive comparison returned code0x03; stock undo completed
+
+Comparison returned USB001/008 at136.797089063s after reboot, matching the same
+0x03 inference within0.173089063s. The standard fw_devlink=permissive option
+did not change this observed result. Actual physical /proc/cmdline has NOT been
+read back, so do not claim the parameter was consumed or hypothesis disproved.
+Stock driver binary literal ufshcd-mtk verified; reset literal ti-syscon-reset
+also verified. Next useful diagnostic must check kernel option delivery,
+platform device/driver registration and actual supplier bindings, not repeat
+another identical Wi-Fi trial.
+
+Fresh ACL and post-return LK logs/pllk-1791804299363163542.json saved. Stock
+boot_a undo receipt logs/boot-a-storage-permissive-trial-1791804300020938688.json.
+No other partitions changed. See returned undo command output before assuming
+completion; current tool session89055 was polled at this entry.
+
+Stock undo session89055 returned exit0 (send/write OKAY); stock restoration
+completed before the following new profile experiment.
+
+### Binding profile v1 ACTIVE
+
+New artifacts/busybox-binding-profile-v1/nord3-busybox-candidate.img,
+SHA571fc62e9b6c4ba99ea3bc4c4c327fb147d405fccac073305ffd978fc101c7b0,
+first-stage1621959bytes. Same stock kernel/fw_devlink header/v4 supplement and
+reset guards. Storage worker followed by ordered READ-ONLY profile. Codes:
+1=fw_devlink=permissive absent in /proc/cmdline;2=ufshcd-mtk driver absent;
+3=UFS OF/platform device absent;4=first reset supplier not bound;
+5=VEMC class name absent;6=waiting_for_supplier1;7=all inspected prerequisites
+present/no waiting flag;8=bootstrap failed/timed out before profile. Same
+65..240s timed standard return channel. Never call inferred code an authenticated
+or persistent kernel log. No hardware-control writes or extra partition writes.
+
+Real ARM64 stock-kernel helper fixtures passed all7codes +lookalike refusal:
+emulated-native-binding-profile-1791805258234178270/result.json. All timing/
+one-reset fixtures passed tools/test-artifacts/binding-profile-control-1791805258653889446.
+Exact-image hardware guard VM passed emulated-binding-profile-image-1791805266481097277.
+Independent docs/binding-profile-image-validation.json passed; stock undo ready.
+Pretrial log logs/pllk-1791805417943694443.json.
+
+Trial exec73149; logs/boot-a-binding-profile-trial-1791805853343109374.json.
+boot_a write and one normal reboot ACCEPTED. LAST INSTALLED BOOT_A IS PROFILE
+DIAGNOSTIC; STOCK UNDO PENDING. Passive observation330s; on return fresh ACL/LK,
+then tools/lynx_boot_a_binding_profile_trial.py --restore-stock WITHOUT reboot.
+On no return stop for physical Fastboot. No network listener. User asked through
+async input whether prior two timed returns had buttons/cable untouched; answer
+pending. Do not infer their confirmation from silence.
+
+### Binding profile v1 returned code0x07; stock undo issued
+
+Profile returned to USB001/009 at236.912365611s after reboot, matching code07
+within0.288365611s. Inference: /proc/cmdline contains fw_devlink=permissive;
+ufshcd-mtk registered; actual UFS platform/OF node found; first stock reset
+supplier bound; VEMC name found; no waiting_for_supplier1 observed. Attribute
+absence also returns7, so don't claim waiting_for_supplier explicitly equals0.
+Parameter presence doesn't prove effective ordering if later arguments override
+it. No persistent/native log retrieved; physical non-interference question
+still pending. Software-return evidence remains conditional timing evidence.
+
+Read-only LK logs/pllk-1791807456604965428.json saved. Stock undo issued:
+logs/boot-a-binding-profile-trial-1791807457264766800.json, exec45351 pending
+poll. Verify exit0 before marking stock installed. No other partition changes.
+
+Next direct evidence: stock config KPROBES/KRETPROBES/KPROBE_EVENTS/TRACING/
+KALLSYMS_ALL enabled, DEBUG_FS_ALLOW_ALL enabled. DYNAMIC_DEBUG disabled, CORE
+only, so avoid assuming dynamic-debug control can enable built-in driver logs.
+Consider normal kernel tracing of UFS core function return and PM-domain attach
+entry/return, retaining raw trace in RAM and reporting classified result via
+same bounded timing channel. Verify trace syntax/availability using exact-stock
+ARM64 VM before touching handset; no return-value modification or persistent
+kernel/bootloader changes. No such tracer is installed yet.
+
+New storage/binding/probe-trace artifact prefixes contain the inherited private
+Wi-Fi supplement, so added explicit .gitignore exclusions; existing images
+already mode0600 and directories0700. Do not publish those images or secrets.
+
+Stock undo exec45351 returned exit0, send/write OKAY. LAST INSTALLED BOOT_A
+IS MATCHING STOCK AUGUST; phone last observed Fastboot001/009. No live hardware
+trial or listener. User physical non-interference confirmation still pending.
+
+New observational trace source linux-port/lynx-driver-trace.sh creates only
+own trace instance/group; records ufshcd_pltfrm_init retval and PM-domain attach
+entry device name/retval. Standard kprobe event API, no retval replacement,
+raw-address probe, global trace clear or partition logging. Device.kobj and
+kobject.name offsets0 checked against supplied headers; native VM device-add
+trace verifies real name fetch. Source retained device.h/kobject.h. Capture
+stops own buffer only, avoiding unregistering potentially active return probes.
+No tracing candidate has been built or flashed yet.
+
+Native exact-stock-kernel Cortex-A72 trace test PASSED all8checks including
+actual getpid return and new RAM loop16 device-name fetch:
+emulated-native-driver-trace-cortex-a72-1791808671169674544/result.json.
+Full QEMU max feature model produced ZERO guest output and never reached init.
+Uninstrumented max baseline also failed before init:
+emulated-native-driver-trace-max-1791809280706756030/result.json.
+Max pauth=off likewise no init/output; do NOT attribute these to tracing.
+New --baseline/init-marker/clean-poweroff/no-exception assertions preserve this
+distinction. SVE-disabled virtual feature comparisons started independently;
+exec sessions returned by latest tool call. Resolve/test relevant virtual CPU
+features before a physical tracing trial. All VM failures/raw outputs retained.
+
+### Native observational trace verified; trace-only hardware trial ACTIVE
+
+Concrete Cortex-A710 and Cortex-A72 exact-stock-kernel tests passed real syscall
+PID returns, real signed ENOENT=-2 returns, loop16 device-name fetch, clean
+poweroff/no kernel exceptions. Modern max variants all failed before init even
+without tracing; concrete model verification resolves the relevant tracer test.
+Native collector+BusyBox awk classifier receipt:
+emulated-native-driver-trace-cortex-a710-1791811428303994005/result.json.
+Classifier semantic18cases passed tools/test-artifacts/driver-trace-classifier-1791811091125715382.
+
+New candidate artifacts/busybox-probe-trace-v1/nord3-busybox-candidate.img SHA
+2154dbd63d2de8bab56669db2dabf5f26bb9a8a16774a968717164e8dffccfd4,
+first-stage1623202bytes. Stock kernel/header arguments/metadata/footer/supplement
+preserved. Own trace instance/group only; never unregister potentially active
+return probes at capture. Raw trace/dmesg in RAM0600. No functional return
+replacement, raw-address probes or extra partition writes. Codes1=trace setup
+unavailable;2=UFS core EPROBE_DEFER;3=matched UFS PM-domain attach negative before
+completed UFS core call;4=configuration/lookup errors;5=timeout/IO;6=othernonzero;
+7=last UFScore success;8=no usable completion/capture or bootstrap timeout.
+Still a coarse timing channel, not persistent authenticated kernel log retrieval.
+
+All10timer/setup/capture/timeout controlcases passed
+tools/test-artifacts/probe-trace-control-1791813417611317959/result.json.
+Exact-image guard VM passed emulated-probe-trace-image-1791813425392692175.
+Independent docs/probe-trace-image-validation.json passed source/layout/native/
+semantic/control/provenance/AVB checks. Pretrial LK logs/pllk-1791813788131375860.json.
+
+Trial exec29407; logs/boot-a-probe-trace-trial-1791814948467033764.json.
+boot_a write and one normal reboot ACCEPTED. LAST INSTALLED IMAGE IS TRACE
+DIAGNOSTIC; STOCK UNDO PENDING. Passive observe330s. On return fresh ACL/LK then
+tools/lynx_boot_a_probe_trace_trial.py --restore-stock WITHOUT reboot. On no return
+stop for physical Fastboot. No network listener. Do not continue probing if
+recovery behaves unexpectedly. User non-interference confirmation remains pending.
+
+### 2026-10-13 resumed: trace outcome inconclusive, stock undo completed
+
+Prior trace trial 1791814948467033764 returned after 261.867293664 seconds;
+timed code 0x08, residual 0.243293664 seconds. This combines empty/unclassified
+trace, capture failure and worker timeout; do not infer a specific root cause.
+Fresh USB node 001/005 required ACL today. Initial preflight timed out without
+USB access (receipt 1791899129577653502); no writes attempted by that check.
+Read-only bootloader export logs/pllk-1791899213383717164.json succeeded.
+Stock restoration logs/boot-a-probe-trace-trial-1791899248771469252.json
+completed exit0: boot_a send/write OKAY. LAST INSTALLED BOOT_A IS VERIFIED
+STOCK AUGUST IMAGE. No reboot, slot switch, erase or other partition write.
+
+New offline test option test_native_driver_trace.py --load-reset-module loads
+the hash-verified stock reset-ti-syscon module after enabling tracing. Exact
+stock kernel Cortex-A710 VM passed all16checks, including module insertion,
+driver registration, subsequent trace capture/classification and clean poweroff:
+artifacts/emulated-native-driver-trace-cortex-a710-module-load-1791899465625435841/result.json.
+This verifies that composition for this module in emulation, not physical UFS.
+No phone trial/listener active. User physical non-interference confirmation
+remains unanswered. No working Wi-Fi/SSH or persistent native log readback yet.
+
+### Direct storage-probe diagnostic prepared and verified offline
+
+Exact stock ufs_mediatek_mod:ufs_mtk_probe symbol verified in stock ELF; audit
+docs/ufs-trace-target-audit.json. Published deferred-module trace implementation
+retained docs/wifi-source-reference/trace_kprobe.c; published revision is not
+the exact stock kernel build. Exact-stock-kernel deferred reset init return
+actually captured in Cortex-A710 VM (receipt 1791899787303022097).
+
+Local probe-trace-v2 was NEVER FLASHED. Its native collector passed but timeout
+code2 scheduled90seconds, before the180second worker deadline; preserved that
+offline candidate and corrected mapping in v3. v3 code1=setup failure,
+2=completed MediaTek probe success,3=capture/parser failure,4=expected PID
+trace health absent,5=no completed MediaTek probe,6=last probe -517,
+7=other probe error,8=worker deadline. Generic UFS/PM events still collected
+as raw context. Known PID getpid return is required before interpreting probe
+absence/success. RAM trace remains unavailable after reboot; timings indirect.
+
+v3 image SHA b8114a11af588a9f40df0ab125895388a567879a913a973186aacc764b2185b4,
+ramdisk1623071bytes. Stock kernel, inherited supplement, metadata/footer kept.
+All9timing/control cases passed 1791901374743633330; all12parser semantic cases
+passed1791902345247136757. Native collector/module/deferred/errno test passed
+all19checks1791901374941857888. Exact-image hardware guard VM passed
+1791902748659771646; independent docs/probe-trace-v3-image-validation.json
+passed layout, source/test hashes, inherited Wi-Fi provenance and AVB model.
+Default Python missing capstone was a host dependency failure only; existing
+tools/mtk-venv interpreter ran the exact-image VM successfully.
+No v3 phone flash yet. LAST INSTALLED BOOT_A REMAINS STOCK.
+
+### v3 hardware trial ACTIVE; stock undo pending
+
+Trial logs/boot-a-probe-trace-v3-trial-1791902942389926489.json, exec21105.
+Fresh identity/layout preflight passed; boot_a diagnostic send/write and one
+normal reboot accepted. LAST INSTALLED BOOT_A IS V3 DIAGNOSTIC. Observer armed
+before flash, watches USB330seconds. No network listener or additional phone
+commands during observation. On return capture fresh USB node ACL and read-only
+LK log, then tools/lynx_boot_a_probe_trace_v3_trial.py --restore-stock, no reboot.
+If no return, stop for physical Fastboot. No other partitions touched.
+
+### v3 hardware result: code05; stock undo completed
+
+Trial1791902942389926489 returned186.753755745seconds after reboot, timed
+code0x05 residual0.129755745seconds: expected PID trace health observed but
+no usable completed MediaTek UFS probe result. Could reflect absent/rejected
+module instrumentation, probe not reached, incomplete probe, or malformed
+trace; do not claim specific cause or direct logs retrieved. Physical
+non-interference confirmation still not received. USB001/006 ACL granted.
+Read-only LK receipt logs/pllk-1791903796973998037.json, NONRST_REG2=28002003,
+raw reset label lk, wdt_status2; same supported-reset pattern as prior tests.
+Stock restore logs/boot-a-probe-trace-v3-trial-1791903945089654421.json completed
+exit0, boot_a send/write OKAY. LAST INSTALLED BOOT_A IS MATCHING STOCK.
+No reboot, slot switch or additional partition changes. No live observer.
+Next distinguish module-probe registration rejection from pre-probe deferral,
+using stock metadata/source audit before choosing further instrumentation.
+
+### Next collector tested offline; physical confirmation needed
+
+Stock CONFIG_FUNCTION_TRACER is disabled, so the published DYNAMIC_FTRACE
+notrace-function rejection branch does not explain this stock build. Stock
+UFS module has no mcount table; that absence alone is not a rejection proof.
+Other module-probe registration rejection or core deferral remains possible.
+
+Prepared linux-port/lynx-driver-trace-core-v1.sh adds normal builtin supplier
+and pinctrl entry/return probes, preserving PM/UFS/module/known-PID events.
+Capture saves read-only debugfs devices_deferred and raw trace/dmesg in RAM.
+No persistent readback claim or extra partition write. Exact-stock-kernel
+Cortex-A710 VM passed all19checks including deferred module init return,
+subsequent captures and no exceptions: native receipt1791904584944992946.
+This proves definitions/composition in emulation, not physical supplier errors.
+No core-collector handset image built/flashed yet.
+
+v3 validator now filters native receipts by matching collector hash instead of
+requiring the latest unrelated collector test to match. This preserves strict
+tested-source matching while allowing separate offline tests.
+LAST INSTALLED BOOT_A REMAINS STOCK, Fastboot USB last node001/006. No observer.
+Before treating latest timed code05 as handset diagnostic evidence, obtain
+Noob's confirmation whether buttons/cable were untouched during that return.
+All tools and raw/failed tests retained under /noobia/lynx.
+
+### 2026-10-13 continued: core checks diagnostic prepared
+
+User asked to continue; this is not an answer to the physical non-interference
+question, so prior timing results remain conditional. Prepared core-probe-v1
+with normal supplier/pinctrl/PM entry/return traces, exact stock module probe
+events, known PID tracing health, kernel module re-registration warning check,
+and read-only deferred-device list capture. No return-value changes or binding
+override. Complete raw trace/dmesg/deferred data stays in RAM; persistent
+retrieval still unverified. Per-kind/per-task stacks distinguish nesting and
+interleaving; malformed/unpaired/incomplete captures conservatively unknown.
+
+Core codes:1=trace/setup/capture/correlation unavailable;2=MTK probe success;
+3=matching module trace registration warning;4=last UFS supplier check negative;
+5=last UFS pinctrl check negative;6=last UFS PM-domain attach negative;
+7=healthy tracing without a classified earlier fault (may still have MTK error);
+8=worker deadline. Timers unchanged65..240seconds in25second steps; timeout
+code8 scheduled after180second worker deadline. One supported software return.
+
+Candidate SHA dbc47af2604563013d2e7591c81b788551938d4467aeedad131370c4ae4eb94f,
+ramdisk1623807bytes. Stock kernel/geometry/supplement/metadata/footer retained.
+Parser19hostcases passed1791906805649441398. All cases also passed with actual
+ARM64 BusyBox under exact stock kernel, including real syscall errno/module
+zero return classification: native receipt1791906978626687052. All diagnostics
+saved under lynx. Added core-probe artifact prefix to .gitignore (private
+supplement inherited); images600/directories700. No phone flash yet.
+
+### Core diagnostic trial ACTIVE; stock undo pending
+
+Independent docs/core-probe-image-validation.json passed. Exact-image guard VM
+receipt1791907214700179200 and corrected10control fixtures1791907215051339373
+passed. Capture-failure fixture now actually reaches capture after successful
+setup, rather than being masked by its expected code1. Stock undo references
+and images verified immediately before fresh Fastboot identity/layout checks.
+
+Trial logs/boot-a-core-probe-trial-1791907590015628810.json, exec76440. boot_a
+send/write and one normal reboot accepted. LAST INSTALLED BOOT_A IS CORE
+DIAGNOSTIC. Passive observer330seconds, no other phone commands while observing.
+Noob asked to leave cable/buttons untouched; confirmation still not received.
+After return save fresh-node ACL/read-only LK then run
+tools/lynx_boot_a_core_probe_trial.py --restore-stock WITHOUT reboot. If no return,
+stop for physical Fastboot. No network listener or other partition changes.
+
+### Core trial result07; stock restored
+
+Trial1791907590015628810 returned236.89886006seconds after reboot, code0x07,
+residual0.27486006seconds. Healthy tracing, no classified earlier fault: no
+module re-registration warning detected, no matched negative last UFS supplier,
+pinctrl or PM-domain return classified. Does NOT prove those functions ran for
+the UFS device, nor exclude a different failure. Physical non-interference
+confirmation pending; result remains timing inference. No native SSH.
+Read-only LK logs/pllk-1791907985837575083.json retained; same raw lk reset label
+and NONRST_REG2=28002003. Stock undo logs/boot-a-core-probe-trial-1791908116386063554.json
+completed exit0, boot_a send/write OKAY, no reboot. LAST INSTALLED BOOT_A STOCK.
+No live observer. Next inspect live compatibility, driver override, automatic
+probing flag and deferred list using ordinary read-only sysfs/debugfs interfaces.
+
+### Live matching diagnostic built and ARM64 logic tested
+
+Prepared lynx-match-profile.sh and artifacts/busybox-match-profile-v1; SHA
+13f82774e2bc6f20e03917c9cf97f8fae100186f91a3477badf1c66c3a36f8c6,
+ramdisk1622045bytes. Original stock kernel, loaded-area bound, supplementary
+payload and metadata/footer retained. Matching helper does not write binding,
+override or automatic-probe settings. Reads live OF compatible NUL list,
+driver symlink/override, platform drivers_autoprobe and deferred-device list.
+Unknown required interfaces conservatively return1. Extra RAM logs mode600.
+Codes1=device/driver/interface unavailable;2=expected driver already bound;
+3=unexpected bound driver or override;4=exact stock compatible absent;
+5=automatic platform probing disabled;6=live UFS device on deferred list;
+7=expected match/override/autoprobe but unbound and not listed deferred;
+8=bootstrap failure/deadline. Null/unset override forms handled distinctly
+from an override blocking this driver. No forced binding or dependency changes.
+
+Native stock-kernel ARM64 tests passed all13fixture cases plus clean poweroff/
+no exceptions, receipt1791908741605825717. All artifacts retained; private
+match-profile prefix now excluded from Git. No phone trial yet; STOCK INSTALLED.
+
+### Matching trial ACTIVE; stock undo pending
+
+All10control fixtures1791908848632337411 and exact-image guard VM
+1791908847280767755 passed; independent docs/match-profile-image-validation.json
+passed. Trial logs/boot-a-match-profile-trial-1791909079698893610.json, exec68434.
+Fresh identity/layout passed, boot_a send/write and one normal reboot accepted.
+LAST INSTALLED BOOT_A MATCH PROFILE DIAGNOSTIC. Passive USB observer330seconds.
+No phone commands during observation. On return fresh ACL/read-only LK then
+tools/lynx_boot_a_match_profile_trial.py --restore-stock WITHOUT reboot. If no
+return, stop for physical Fastboot. No network listener or other partition writes.
+
+### Matching result07; stock restored; DMA/default-clock audit closed
+
+Trial1791909079698893610 returned236.896536376seconds after reboot, timedcode07,
+residual0.272536376seconds: UFS/driver present, expected compatible included,
+no blocking driver override, platform autoprobe1; expected driver unbound and
+device absent from read-only deferred list. Timing inference remains conditional
+on physical non-interference (still unconfirmed). Read-only LK receipt
+logs/pllk-1791910295178639083.json has same raw lk and NONRST_REG2=28002003.
+Stock restore logs/boot-a-match-profile-trial-1791910336718519438.json completed
+exit0/send/writeOKAY, no reboot. LAST INSTALLED BOOT_A MATCHING STOCK.
+
+Retained published platform.c, driver-dd.c, clk-conf.c, scpsys sources; manifest
+docs/binding-sources.json. They are reference revision, not exact stock commit.
+Platform setup can fail before entering module probe: core DMA configure and
+platform of_clk_set_defaults precede PM-domain attach/driver probe. Offline
+stock overlay5 UF node has NO iommus or assigned-clock/assigned-clock-parent
+properties, docs/ufs-dma-requirements.json. Do NOT infer missing IOMMU module
+or load extra drivers based on this closed speculative lead. Bootloader may
+change runtime DT; no direct runtime DT dump obtained yet.
+
+tools/lynx_experiment_index.py indexed56trial/restoration receipts without
+parse errors; refresh after restore to reflect current stock state. Index
+is receipt-derived, not partition readback; confirmations never inferred.
+No live observer/network listener. Next inspect platform match/setup return
+paths with verified stock-kernel tracing, rather than changing dependency sets.
+
+### Platform collector offline test caught driver-name fetch error
+
+Prepared platform_match, platform_dma_configure and platform_drv_probe entry/
+return tracing from verified reference layouts. Buffer4096KiBperCPU (bounded)
+and fresh PID health immediately before capture preserve later evidence when
+many match calls occur. No handset image/flash of this collector yet.
+First platform-v1 VM receipt1791911000693855715 FAILED only driver-name check:
+real match calls captured device names and retval0, but driver strings empty.
+Standard string fetch requires nested dereference of first-field name pointer:
+driver=+0(+0($arg2)):string, matching the already native-tested device-name
+fetch. Preserved failed v1 source/raw captures, generated platform-v2 corrected
+source and started exact-stock-kernel VM check. Do not attribute this offline
+collector error to the phone or reinterpret earlier working core traces.
+Stock remains installed; no handset observer or network listener active.
+
+### Noob confirmed physical non-interference; platform v2 collector passed
+
+Noob explicitly answered the question about the last two trials: Lynx returned
+on her own; buttons/cable untouched, Noob working at another computer and only
+pressing proceed. This validates the non-interference condition for core trial
+1791907590015628810 and matching trial1791909079698893610. Their distinct
+verified code07 paths plus matching reset evidence provide stronger native
+userspace/control-flow evidence. Still no direct native SSH or raw trace readback.
+Keep original trial receipts intact; separate confirmation receipt/index link.
+
+Corrected platform-v2 native VM receipt1791911277559522752 PASSED real driver
+name ti-syscon-reset, actual kernel returns, stock module/deferred tracing,
+all core parser fixtures, fresh PID capture and clean poweroff. Failed v1
+source/raw evidence preserved. Exact stock UFS OF match TABLE extracted from
+ELF object, docs/stock-ufs-match-table.json, confirming the live-profile string
+mediatek,mt8183-ufshci from actual driver data, not a loose compatible literal.
+
+New lynx-classify-platform-trace.awk pairs expected driver matches and UFS
+DMA/platform wrapper returns by task/function. All20hostsemantic cases passed
+1791911617372937790; native ARM64 parser check started. No platform handset
+image built/flashed yet. LAST INSTALLED BOOT_A STOCK; no live phone observer.
+
+### Platform image assembled; exact-image checks pending
+
+Native platform collector+classifier passed all checks receipt1791911695893522215,
+including actual driver-name fetch, fresh PID health, real signed kernel
+return classification in VM-only paired fixtures and all20semantic cases on
+ARM64 BusyBox. Separate Noob confirmation receipt
+logs/physical-noninterference-1791911760535070022.json references the two
+specific prior trials; index refreshed with confirmation links, original raw
+trial receipts unchanged. No confirmations inferred for other historical tests.
+
+Platform-probe-v1 SHA aff51e9e74094d95fa0e2addbf3671326869a07eda2104f09b28821f8b07f56f,
+ramdisk1623982bytes. Stock kernel, metadata/footer, geometry and supplement
+unchanged. Traces standard platform_match (including exact driver name), DMA
+configuration and platform probe wrapper, retaining earlier core/MTK context.
+No bind override, module additions or return-value replacement. Fresh PID
+health at capture, bounded4096KiBperCPU buffers; no persistent retrieval claim.
+Codes1=unavailable/invalid correlation;2=expected-driver match nonpositive;
+3=UFS DMA setup nonzero;4=UFS platform probe nonzero;5=no expected-driver match
+captured;6=positive expected-driver match, no platform completion;7=platform
+probe returned0;8=worker deadline. Code7 is not Wi-Fi success or proof of
+final device binding. Private platform-probe image prefix excluded from Git.
+No hardware flash yet. Current boot_a remains STOCK.
+
+### Platform trial ACTIVE; stock undo pending
+
+Control fixtures1791913139017836068 and exact-image guard VM1791913208789611740
+passed; independent docs/platform-probe-image-validation.json passed. Trial
+logs/boot-a-platform-probe-trial-1791913277659661512.json, exec76978. Fresh
+identity/layout check passed, boot_a send/write and one normal reboot accepted.
+LAST INSTALLED BOOT_A PLATFORM DIAGNOSTIC. Observer330seconds, no phone commands
+during observation. On return fresh-node ACL/read-only LK, then
+tools/lynx_boot_a_platform_probe_trial.py --restore-stock, WITHOUT reboot.
+User says they leave all buttons/cable untouched generally; preserve that
+context and separate confirmations for explicit prior two trials. No network
+listener, slot change or other partition changes.
+
+### Platform result04: identified nonzero wrapper return; stock restored
+
+Trial1791913277659661512 returned161.977955374seconds after reboot, timed0x04,
+residual0.353955374seconds. Classified last matched UFS platform_drv_probe
+return nonzero. No earlier last expected-driver nonpositive match or UFS DMA
+nonzero return took precedence. This is the first identified failing wrapper,
+not yet its exact errno or proof which internal call failed. User generally
+confirmed buttons/cable untouched; direct raw kernel trace remains unavailable.
+Read-only LK receipt logs/pllk-1791916817493195613.json retained, same raw lk
+reset label and NONRST_REG2=28002003. Stock restore
+logs/boot-a-platform-probe-trial-1791916836649330931.json completed exit0,
+boot_a send/writeOKAY, no reboot. LAST INSTALLED BOOT_A MATCHING STOCK.
+No live observer. Next report exact platform wrapper return via bounded timing
+encoding, preserving originals and validating the finer timing/decoding first.
+
+Potential guessed-device-name filtering limitation noted: old parsers require
+address112b0000 and ufs substring. Current result04 did match a target under
+that rule, so do not claim actual alias caused prior absence. Derive the exact
+live target name from its OF node symlink in next diagnostic for robustness.
+
+### Exact errno field prepared and tested; stock remains installed
+
+New errno image8856714bafaabc6869ab58fa46194babcd055afd22b88ba93d3d0bf02901afaa,
+ramdisk1623859bytes, artifacts/busybox-platform-errno-v1. Stock kernel/geometry/
+footer/metadata and supplement unchanged. Resolve live UFS name by exact OF
+node symlink (refuse zero/multiple matches), then pair only matching platform
+wrapper entry/returns. Live-name aliases tested, but no alias claimed as root.
+
+Timing field0=wrapper0;1..120=negative errno;121=-517;122=larger negative;
+123=positive;124=no target/completed return;125=fresh health missing;
+126=setup/capture/correlation failure;127=180second worker deadline.
+Targetdelay60+2*field seconds; observer380s. New baseline21.9s from explicitly
+confirmed core/match trials (21.89886/21.89654 observed offsets). Tolerance0.8s
+strictly less than1s midpoint; ambiguous/variable-latency returns unclassified.
+This is finer timing inference, not direct kernel log transport or final binding.
+
+All132errno parser cases passed1791917162157499765; all128timers and4failure
+cases passed1791917161804628425. Exact-stock-kernel ARM64 BusyBox passed all
+cases, actual -2 and0 kernel returns in paired VM-only fixtures, real driver
+name fetch, fresh health, live-name empty/alias/duplicate tests:
+native receipt1791917283805568899. No physical handset flash yet.
+
+Original USB observer preserved tools/lynx_trial_observer_v1.py before adding
+absolute monotonic event/start timestamps to main observer. New decoder
+tools/lynx_errno_timing.py uses monotonic reboot-operation/USB difference;
+wall timestamps retained to detect wall-clock jumps. All128decoder fields,
+4midpoint rejections,60second clock-jump case, missing-monotonic refusal and
+observer record fields passed1791917681505981013. No wall-clock fallback.
+Final exact-image VM/independent validation pending. LAST INSTALLED BOOT_A STOCK.
+
+### Errno image verified; hardware trial starting
+
+Exact-image guard VM1791917845987575439 passed; independent
+docs/platform-errno-image-validation.json passed stock/layout, native parser/
+live-name, all-field control and monotonic decoder/observer checks. New
+tools/lynx_boot_a_platform_errno_trial.py allows only boot_a, freshly checks
+identity/layout and stock restoration images. Observer380seconds and monotonic
+decoder0.8second acceptance; original tools/images preserved. Trial exec55181
+started with --flash-linux --reboot. Check newest receipt before claiming a
+write/reboot completed. If accepted LAST INSTALLED BOOT_A ERRNO DIAGNOSTIC;
+stock undo pending until successful --restore-stock receipt. On return fresh
+USB ACL/read-only LK, then restore without reboot. If no return, stop for
+physical Fastboot. No other partitions/slots or network listener involved.
+
+### Exact field0x6e: platform wrapper ETIMEDOUT; stock restored
+
+Trial logs/boot-a-platform-errno-trial-1791918039172518933.json returned
+301.932799034seconds after reboot by MONOTONIC timestamps. Field0x6e (110)
+decoded platform wrapper retval-110/ETIMEDOUT, residual0.032799034seconds
+within0.8acceptance. Wall/monotonic disagreement about-0.9microseconds, no
+clock-jump issue. Fresh PID health and exact live UFS-name correlation required
+by this classifier. Still indirect timing transport, not raw kernel trace.
+User generally leaves phone untouched. This narrows failure to a timed-out
+operation in the storage platform path; it does not identify which call yet.
+Do NOT reinterpret as a missing firmware dependency, hardware damage, or proof
+that UFS link initialization itself rather than power-domain attach timed out.
+
+Read-only LK receipt logs/pllk-1791918645499566781.json retained. Stock restore
+logs/boot-a-platform-errno-trial-1791918656634186671.json completed exit0,
+boot_a send/writeOKAY, no reboot. LAST INSTALLED BOOT_A MATCHING STOCK.
+No observer/network listener active. Refresh experiment index after this result.
+
+Stock modules.load includes additional nvmem, power/clock and bringup modules
+not in our chosen bootstrap set. Investigate actual stock PHY/power-provider
+requirements and callback bindings before adding any modules or changing
+fw_devlink. No new driver load set or kernel ordering change authorized by
+mere speculation; evidence must justify the next controlled boot_a-only trial.
+
+### Timeout-context diagnostic prepared; boot_a trial next
+
+Stock kernel and scpsys message audit passed docs/timeout-message-audit.json.
+Host parser68cases, native stock-kernel ARM64 BusyBox parser68cases and VM-only
+synthetic /dev/kmsg -> actual dmesg roundtrip passed:
+artifacts/emulated-native-timeout-logs-cortex-a710-module-load-1791920834041774615/result.json.
+No synthetic kernel messages are injected on the handset. New runtime gates
+classification on same-boot exact live UFS platform retval -110 and fresh PID
+health; log mask0..63, sentinels124..127, existing60+2*field monotonic carrier.
+Power/SRAM/controller/link/UIC/generic timeout bits1/2/4/8/16/32. Error cascades
+can set multiple bits; mask0 means no matched retained message, not no timeout.
+Control77cases passed1791920908262272481; decoder128cases1791921066672375674.
+Local v1 prototype preserved, v2 generalizes health from exactly1 to positive.
+No other kernel/module/commandline changes. Candidate b5d0ac87efdf209e849f43c842e0e06e3e4690d0dd3fc0a02f19b4ade7562d98,
+artifacts/busybox-timeout-log-v2/nord3-busybox-candidate.img, ramdisk1624419bytes.
+Exact-image guard1791921067140614489 and independent validation passed
+docs/timeout-log-image-validation.json. tools/lynx_boot_a_timeout_log_trial.py
+pins candidate and stock undo, modifies onlyboot_a, observer380seconds.
+LAST INSTALLED BOOT_A STILL STOCK until a successful new flash receipt.
+User confirms leaves handset untouched and works on another computer. No
+physical action currently required. On return obtain fresh ACL, read-only LK,
+then --restore-stock without reboot. If no return stop for physical Fastboot.
+
+### Timeout mask32 recorded; stock restored; complementary context prepared
+
+Trial logs/boot-a-timeout-log-trial-1791921141231819557.json returned at
+145.874376448seconds monotonic, code0x20/mask32, residual0.025623552seconds.
+Same-boot platform-110 gate passed; targeted timeout context matched, none of
+the specific mtcmos/SRAM/controller/link/UIC messages matched. This does NOT
+rule out these stages or establish the first failing operation. No raw RAM
+kernel log retrieved. Read-only LK logs/pllk-1791921372237888900.json has normal
+prior reset pattern (NONRST_REG2=0x28002003, wdt_status2). Stock restore
+logs/boot-a-timeout-log-trial-1791921382029819893.json exit0/send/writeOKAY,
+no reboot. LAST INSTALLED BOOT_A MATCHING STOCK; Fastboot USB001/011 aria rw.
+
+Exact stock error literal inventory docs/stock-storage-error-messages.json
+includes MediaTek "probe failed %d", power clk/regulator failures, generic
+platform "Initialization failed" and variant init error messages. Published
+ufs_mtk_probe emits probe-failed after ufshcd_pltfrm_init error. Compiled literal
+is verified but published source is not the exact stock commit. Complementary
+bits1/2/4/8/16/32 mean module probe/power-provider/platform-init/variant/regulator/
+clock messages. Classifier lynx-classify-timeout-sites.awk, unchanged trace,
+gate, modules, kernel, commandline and timer carrier from timeout-log-v2.
+Candidate artifacts/busybox-timeout-site-v1/nord3-busybox-candidate.img SHA
+21d10aad02191ce95e6c7b8fec70528b57504d56d2f3b8c03654e5826427b832.
+Host68parser/native68parser and VM-only real dmesg roundtrip passed; all77control
+and128decoder cases passed. Native1791921576945012851, guard1791921576059590941.
+Independent docs/timeout-site-image-validation.json passed before next trial.
+Next tools/lynx_boot_a_timeout_site_trial.py --flash-linux --reboot, boot_a only,
+stock undo pinned. Check actual receipt before claiming installed/completed.
+
+### Complementary mask0; stock restored; five concrete clock suppliers identified
+
+Trial logs/boot-a-timeout-site-trial-1791921643097725725.json returned at
+81.832205878seconds monotonic, mask0, residual0.067794122seconds. Same-boot
+platform-110 gate passed, none of the six additional message categories matched.
+Absence is conditional on message emission/retention and does not prove absence
+of callback execution. Read-only LK logs/pllk-1791921807093908628.json normal
+reset pattern; stock restore logs/boot-a-timeout-site-trial-1791921824217858469.json
+exit0/send/writeOKAY, no reboot. LAST INSTALLED BOOT_A MATCHING STOCK,
+Fastboot USB001/012 aria rw. No trial observer or network listener active.
+EXPERIMENT-INDEX.json now65receipts, stock accepted installation.
+
+New primary-source finding: __genpd_dev_pm_attach missing provider calls
+driver_deferred_probe_check_state, which can return -110 and warn "deferred
+probe timeout, ignoring dependency". The exact warning is in stock kernel.
+This is a plausible explanation for generic timeout + no lower UFS/scpsys
+error messages; actual warning/provider state NOT YET transported from phone.
+Do NOT claim literal hardware timeout is proven. Ordinary genpd power-on error
+is translated to -517 by the published attach code.
+
+Actual bootstrap includes both mtk-scpsys and mtk-scpsys-mt6983, so loading
+these two alone is NOT a fix. init_scp acquires clocks for all declared domains
+before provider registration; failure in any domain aborts the provider.
+audit_scpsys_clock_suppliers.py resolves all54clock DT specifiers, marks basic/
+prefix clocks used by published init, and resolves exact stock named ELF
+of_device_id objects (stock_of_match_tables.py). Five required provider modules
+are absent from bootstrap: clk-mt6983-cam, -img, -mdp_grp, -mm, -vcodec. First
+source-order absent supplier may differ from DT-list order; inspect source init.
+Saved docs/scpsys-clock-suppliers.json includes exact table objects. OF aliases
+are missing for many modules, so empty alias matches previously hid missing
+providers. Compatible literal candidates are explicitly weaker; clk-fmeter
+contains topckgen strings but is not the actual top clock driver. Use exact
+match tables, not blindly empty alias lists or diagnostic literal matches.
+
+check_power_clock_image_fit.py measured adding exactly these5stockmodules
+before mtk-scpsys in base list. All use stockg311738fbb5a8/vermagic, depends
+clk-common already loaded earlier. Ramdisk1648126bytes, loaded area21889024bytes
+equals existing metadata boundary; fits without moving metadata/supplement.
+docs/power-clock-image-fit.json records hashes/metadata. No new image has been
+written or flashed; native loading/ABI, final actual compressed geometry and
+independent validation still required. A larger final runtime could overflow,
+so verify actual build; never assume the fit estimate covers future changes.
+Next useful action: prepare a new boot_a diagnostic with exactly5clock suppliers
+before scpsys, retaining original errno collector/carrier or proven storage
+outcome control; verify stock-kernel ARM64 module loading, geometry and undo.
+Prefer one combined checkpoint reporting provider binding + storage discovery,
+or errno-first to see whether -110 changes. Wi-Fi second stage is prepared but
+cannot launch until UFS reads its verified own-boot supplement. No Wi-Fi/SSH
+success yet. Keep existing stock, v4 and all diagnostic images/tools immutable.
+
+### Manual review plus independent tests; Wi-Fi v5 hardware trial next
+
+User explicitly confirms immediate goal Wi-Fi/SSH and requests manual code
+review alongside independent tests. No additional agents spawned; review and
+separate offline VM processes run concurrently. POWER-CLOCK-REVIEW.md records
+findings, caveats and original failed VM fixture. Initial clock-only trace VM
+1791922476532408170 lacked AEE prerequisites; unknown symbols recorded. Corrected
+isolated native test1791923200142625988 loaded mrdump,aee_aed,clk-common and all5
+clock modules successfully, clean poweroff/no exception. These prerequisites
+were already in the handset bootstrap. Does NOT prove physical gate/provider
+binding. Published init_scp whole-provider dependency confirmed; probes ignoring
+registration return mean driver/module presence alone remains insufficient.
+
+New Wi-Fi v5 candidate SHA856e9f39f283593777608fc838afb66a130398732585035dc0c61bfd1925c3af,
+artifacts/busybox-wifi-ssh-twostage-v5/nord3-busybox-candidate.img. Exactly5stock
+clock modules inserted before mtk-scpsys; base38. Existing Wi-Fi v4 init/runtime,
+radio/firmware/private config/supplement/recovery metadata retained; freshsession.
+fw_devlink=permissive uses prior-tested argument. Ramdisk1644684bytes, aligned
+loaded area4096bytes below original metadata. No extra diagnostic trace/runtime
+added; direct native Wi-Fi/SSH trial. Native exact image guard1791923370950111168,
+native journal integration1791923373163479790 and independent
+docs/wifi-v5-image-validation.json all passed. Collector self-test passed after
+adding absolute monotonic event/heartbeat timestamps. Noobia hostIP106 verified.
+
+tools/run_wifi_v5_trial.py prepares900second Noobia UDP collector, verifies
+fresh listening receipt BEFORE running pinned tools/lynx_boot_a_wifi_v5_trial.py.
+The trial performs fresh Fastboot preflight and boot_a-only flash/reboot,
+observes passive USB and pinned native SSH up to600seconds. Listener accepts
+only this image's token and Noobia subnet; key-only host-pinned SSH proof gates
+fallback cancellation. Captures/journals stay private in logs. No credentials
+printed; no unrelated network/device changes. Check actual newest receipt before
+claiming installed or completed. LAST INSTALLED BOOT_A STOCK until successful
+new write. On failure with Fastboot return fresh ACL/read-only LK then stock
+undo using wifi-v5 trial --restore-stock without reboot; if no Fastboot return
+stop for required physical interaction. On pinned SSH success preserve Linux
+and fetch diagnostics. No bootloader/recovery/slot B write or slot switch.
+
+### Wi-Fi v5 bounded trial completed without contact or Fastboot return; physical step required
+
+logs/boot-a-wifi-v5-trial-1791923548451967966.json: boot_a send/writeOKAY,
+rebootOKAY; 600second observation completed with no automatic Fastboot return
+and no verified native SSH. Collector logs/wifi-v5-contact-1791923547239542956/
+result.json recorded no datagrams. USB recorder
+logs/usb-wifi-observer-1791923548613584811.json retained full wall/monotonic
+departure/heartbeat/completion, no errors and no subsequent USB enumeration.
+Runner logs/wifi-v5-run-1791923546350206862/result.json completed, collector
+terminated in its finally block. Collector receipt may still say listening;
+it is a preserved partial capture, NOT a live listener now. No live trial or
+listener remains. No native RAM journals retrieved; no Wi-Fi/UFS success proven.
+
+LAST INSTALLED BOOT_A Wi-Fi v5 Linux candidate, NOT STOCK. Stock undo pending.
+No other partitions/slots touched. Do not claim that missing clocks were the
+confirmed hardware cause or that new drivers bound on the handset. Changed
+failure timing only shows behavior differs; initialization/stall location unknown.
+Unexpected absence of supported fallback: stop hardware experiments until
+physical Fastboot is recovered and stock boot_a restored. No further flash,
+reboot or auth/BootROM operation is justified while USB is absent.
+
+Next REQUIRED human step: get Lynx back into Fastboot using the previously
+successful button sequence and leave USB connected. Ask what is on screen if
+that sequence fails; do not select Format data. Once Fastboot USB enumerates,
+grant aria rw on the fresh device node and await actual ACL exit0. Fresh
+read-only preflight + supported LK log, then immediately restore stock using
+tools/lynx_boot_a_wifi_v5_trial.py --restore-stock (no reboot). Pinned stock image
+and exact command remain available, accepted prior restores. Stop if identity,
+Fastboot, recovery or restoration behaves unexpectedly.
+
+After restoration, use the saved source/VM findings to prepare a smaller
+storage/provider diagnostic before attempting Wi-Fi again. Do not repeat the
+same v5 Wi-Fi image without a concrete new diagnostic/fix. Five clock modules
+loaded in isolated ARM64 VM; hardware provider/gate effects are not emulated.
+POWER-CLOCK-REVIEW.md retains ignored-registration-return and generic deferred
+timeout caveats. All new test scripts and failed fixtures preserved under Lynx.
+
+### Fastboot physically recovered; Wi-Fi v5 stock undo completed
+
+User "ok go" followed required physical step. USB001/013 enumerated Fastboot;
+pkexec ACL completed exit0, fresh preflight identity/slot/layout matched.
+Read-only LK logs/pllk-1791924349763626740.json retained306769rawbytes:
+rst-from "?", NONRST_REG2=0x20000000, current wdt_status0/exp_type0,
+older backup wdt_status5. This differs from prior supported-software-return
+pattern (0x28002003/status2), compatible with physical entry but NOT a kernel
+crash diagnosis or proof of the stalled stage. Do not treat as confirmed auto
+return, since previous600second observation explicitly saw no return.
+Stock restore logs/boot-a-wifi-v5-trial-1791924357268970216.json exit0,
+send/writeOKAY, no reboot. LAST INSTALLED BOOT_A MATCHING STOCK, Fastboot001/013.
+No live observers/listeners. Next prepare progress-before-insmod RAM checkpoints
+and a bounded supervisor, initially limiting load set to existing early base
+plus five clocks BEFORE scpsys/UFS/radio. This isolates whether the clock
+registration itself disrupts our supported reboot path. Do not repeat fullv5.
+Review and offline tests may continue; each future hardware image requires
+concrete validation and stock undo. Wi-Fi/SSH still unverified.
+
+### Essential path agreed: storage driver checkpoints, then Wi-Fi/SSH
+
+User requests timed one-module-at-a-time storage diagnostics, initcall_debug
+and pstore if possible; latest steering keeps scope essential to SSH ASAP.
+No further broad debugger work planned. Stock restored receipt above remains
+last installed until a successful new trial. New first checkpoint adds only
+clk-mt6983-cam after27previously tested base modules; scpsys/UFS/radio excluded.
+
+Preserved module-progress-v1 and v2 prototypes. Debug runtime adds atomic
+before/after insertion fields and per-producer LXDG1 stage512 hex records.
+Pending fields1..count, completed40+index, failed80+index; field0 means selected
+prefix inserted completely, not hardware binding. Fixed90s sample, one normal
+reset at120+2*field, observer420s. Never kills an in-flight insmod or reads
+hardware control sysfs to determine progress. Hex records remain RAM/kmsg/pmsg
+copies; physical persistence/retrieval still unproven.
+
+Stock initcall_debug boot option verified under exact ARM64 stock kernel:
+artifacts/emulated-native-initcall-debug-v2-cortex-a710-1791925349086771031/result.json.
+Initial test incorrectly used filtered console (loglevel7 hides DEBUG7);
+preserved failure. Actual dmesg has module init start/return/timing. Published
+TRACEPOINTS configuration registers debug callbacks during boot, so runtime
+bool toggling alone is insufficient. Boot option changes startup timing,
+therefore count0 known-field calibration must precede decoding count28.
+
+CONFIG_PSTORE/RAM/CONSOLE/PMSG=y. Offline merged DT has no ramoops/pstore node,
+but LK physically allocates pstore0x48090000 size0xE0000, console0x40000,
+pmsg0x10000; runtime fixups/backend registration unknown. Previous ordinary
+BootROM read failed0x1000/no data; no repeat, authentication or bypass.
+Saved VM hex decode docs/hex-and-initcall-review.json: bootstrap86, wifi3,
+supervisor3 valid records, explicitly NOT handset captures.
+
+Candidates:
+count0 artifacts/busybox-module-progress-debug-0-v1/nord3-busybox-candidate.img
+SHA465fa84fd647dc04298565db906bcbad3794166d247900bd2246d24702a521d2;
+count28 artifacts/busybox-module-progress-debug-28-v1/nord3-busybox-candidate.img
+SHA9b5e9ff94c5c441e945ebc3bf714b253d2f8bcfbfcc91182b8d9baf54aeab0e4.
+Both retain exact stock kernel, v5 metadata/payload/footer and base module files;
+only init/session/progress files/codebook and initcall_debug argument change.
+No new partition write until trial. Native control/hex tests passed count0
+1791925690834560247 and count28-v2 1791925778589452219. Short5s VM sample
+initially captured field68 (camera returned but bookkeeping still in progress);
+not a hardware failure. Longer VM10s sample passed, real production remains90s.
+Dependency audit docs/module-progress-dependencies.json includes unchanged
+vendor ramdisk supplying watchdog/reboot modules: all declared dependencies
+present before loads, no shared imported CRC conflict. Exact-image guards
+1791925689678224679/count0 and1791925688695057902/count28 passed.
+Independent module-progress-debug-0/28-validation.json passed. Timing decoder
+128fields/4midpoints/calibration ranges tested1791926226496597850.
+
+Pinned trial tools lynx_boot_a_progress_debug_0_trial.py and _28_trial.py.
+Count0 --flash-linux --reboot next; on return fresh ACL, read-only LK and stock
+undo via count0 --restore-stock, no reboot. verify_progress_calibration.py binds
+known-field0 timing to exact candidate plus matching software-reset record.
+Only then count28 trial can run (requires docs/progress-debug-calibration.json).
+If any unexpected recovery/no Fastboot return, stop for physical interaction;
+do not repeat full Wi-Fi v5 or issue another blind flash.
+
+### Debug timing calibration succeeded; camera checkpoint next
+
+Count0 trial logs/boot-a-progress-debug-0-trial-1791926275369654496.json
+returned automatically141.833501310seconds monotonic. Known field0 delay120s
+gives baseline21.833501310s, wall/monotonic disagreement-0.151microseconds.
+Fresh ACL001/014 completed exit0. Read-only LK
+logs/pllk-1791926453078399643.json matches supported software-reset pattern;
+verify_progress_calibration.py saved docs/progress-debug-calibration.json.
+Interpretation remains conditional on physical non-interference; user leaves
+handset untouched during trials. No storage or SSH proof from this calibration.
+Stock restore logs/boot-a-progress-debug-0-trial-1791926462807453946.json
+send/writeOKAY and exit0, no reboot. LAST INSTALLED BOOT_A STOCK.
+Next count28 trial includes exactly first27known base modules plus camera clock;
+all other new clocks, scpsys, UFS and radio excluded. Tested diagnostics and
+verified baseline already ready, no broader investigations needed first.
+
+### Camera clock insertion checkpoint passed; stock restored; remaining-clock test next
+
+Count28 trial logs/boot-a-progress-debug-28-trial-1791926490441770029.json
+returned141.578643856s monotonic, field0, residual0.254857454s against verified
+debug baseline. All first27base insertions plus clk-mt6983-cam returned success
+before90s sampling. This is NOT individual platform binding/provider proof.
+Fresh ACL001/015 exit0, read-only LK logs/pllk-1791926815444532241.json has
+rst-from-lk, NONRST_REG2=0x28002003, currentwdt_status2. Stock restore
+logs/boot-a-progress-debug-28-trial-1791926821707430952.json send/writeOKAY,
+exit0, no reboot. LAST INSTALLED BOOT_A STOCK.
+
+To reach SSH sooner while preserving per-module evidence, next count32 loads
+the remaining4clock providers sequentially, atomic before/after checkpoints
+for every module. No scpsys/UFS/radio yet. Same kernel/runtime/timing baseline.
+Candidate artifacts/busybox-module-progress-debug-32-v1/nord3-busybox-candidate.img
+SHA2468d6b65d4f3cd06927db51b9e077708e363a9ecdd112c568203cc4a3eea6dd,
+ramdisk1645941bytes. Native ARM64 success/failure/hex receipts passed
+1791926887741395669, exact-image guard1791926888214148762.
+Independent docs/module-progress-debug-32-validation.json passed.
+Next lynx_boot_a_progress_debug_32_trial.py --flash-linux --reboot, boot_a only.
+On return fresh ACL/read-only LK then --restore-stock without reboot. On no
+return or unexpected recovery stop for physical step. Preserve prior images.
+
+### All five clock insertions passed; stock restored; controller checkpoint ready
+
+Count32 trial logs/boot-a-progress-debug-32-trial-1791927078552586856.json
+returned automatically141.596150276s, field0, residual0.237351034s.
+All32 sequential insertions completed before sampling; driver binding remains
+unproven. LK logs/pllk-1791927439180684178.json matches supported software
+reset. Stock undo logs/boot-a-progress-debug-32-trial-1791927449283339667.json
+exit0/send/writeOKAY, no reboot. LAST INSTALLED BOOT_A STOCK, USB001/016.
+
+Count34 adds only mtk-scpsys and mtk-scpsys-mt6983 to that prefix, with atomic
+per-module checkpoints. No later USB, UFS or radio modules. Candidate SHA
+6070a324cbbfc8a1262b94ae111e3a6b3a4cb330e66af54d2363a3e2c5b7edad.
+Host control1791927429985198223, native control1791927507179304304 and image
+guard1791927507565177462 passed. Independent count34 validation passed.
+Next controlled boot_a-only trial; on return read-only LK then stock undo.
+Goal remains SSH ASAP: after controller insertion, isolate essential storage
+without unrelated USB drivers. No handset Wi-Fi, storage or SSH proof yet.
+
+### Controller insertion passed; stock restored; essential storage candidate built
+
+Count34 hardware trial logs/boot-a-progress-debug-34-trial-1791928031199548761.json
+returned141.928076525s, field0, residual0.094575215s. Read-only LK
+logs/pllk-1791928371396207838.json matches normal supported software reset.
+Both power-controller module insertions completed; binding still unproven.
+Stock restore logs/boot-a-progress-debug-34-trial-1791928396853943908.json
+send/writeOKAY and exit0, no reboot. LAST INSTALLED BOOT_A STOCK, USB001/017.
+
+Essential-storage count41 candidate SHA
+476997a9b518d951f075194004cf288e0214741f571810f8932009b8c585d11e,
+ramdisk1646090bytes. Loads first34 modules then seven stock UFS modules,
+excluding four unrelated USB drivers and rpmb-mtk. Afterwards bounded partition
+discovery plus unchanged read-only own boot payload hash/extraction function.
+New nonoverlapping progress fields: pending1..41, inserted43..83, failed85..125;
+42=payload pending,84=payload extracted,126=discovery/read failure,
+127=unavailable/malformed;0=all modules AND verified payload read complete.
+Timing geometry/baseline unchanged. Local control/native/guard tests underway;
+candidate is not flash eligible until validation passes. No radio startup yet.
+
+Essential-storage offline results: all module pending/failed states passed
+control1791928699335457832; native ARM64 success/module-failure/payload-failure
+and three independent hex journals passed1791928698777718833; exact-image
+reset failure guard passed1791928715205332570. Dependency audit passed all41
+modules with no missing dependencies/shared imported CRC conflict.
+Final independent validation additionally checks exact progress interpretation.
+Next lynx_boot_a_essential_storage_trial.py --flash-linux --reboot; boot_a only.
+
+### Essential storage did not return in observation window; stock restored
+
+Trial logs/boot-a-essential-storage-trial-1791928863980329500.json accepted
+boot_a write/reboot. Completed observer1791928864140505572 captured departure
+and no Fastboot return for421.859724s, no capture error. Therefore no timing
+field or storage/payload success can be inferred. Host session resumed next
+morning with changed USB numbering; current Fastboot appearance cannot be
+assigned a return time. No native storage/Wi-Fi/SSH proof.
+Current LK1791968894147433004 has rst-from-?, NONRST_REG2=0x20000000, wdt0;
+not the supported reset pattern, not a kernel-crash diagnosis by itself.
+Stock undo logs/boot-a-essential-storage-trial-1791968968866015972.json
+send/writeOKAY, exit0, no reboot. LAST INSTALLED BOOT_A STOCK, USB001/002.
+
+Next narrower candidate: proven34 prefix plus first6 storage prerequisites,
+excluding ufs-mediatek-mod, USB/radio startup and payload read. Per-module
+pending/returned/failure timing returns to earlier40/80 offset protocol, whose
+fields remain nonoverlapping through index40. Preserve failed full41 candidate.
+
+Count40 candidate SHA18a5250d0617c03a305381b6aa24e37a0f2681463e441f7771a586df4a2ec540,
+ramdisk1646002bytes. Host control1791969100688105089, native control/hex
+1791969173989461527 and exact guard1791969174856388131 passed. Exact40-module
+dependency audit passed; independent module-progress-debug-40-validation passed.
+Next lynx_boot_a_storage_prefix_trial.py --flash-linux --reboot, boot_a only.
+Normal reboot is not an independent hardware failsafe: published device_shutdown
+calls wait_for_device_probe, so a stuck probe can block the normal reset syscall.
+This is a source-based possible explanation, not a retrieved handset diagnosis.
+
+### Six storage prerequisites inserted; stock restored; guarded UFS probe next
+
+Count40 trial logs/boot-a-storage-prefix-trial-1791969301603078904.json returned
+141.729712147s, field0, residual0.103789163s. First40 insertions completed by90s.
+LK1791969570087577342 has normal supported reset: lk, NONRST28002003, wdt2.
+Stock undo logs/boot-a-storage-prefix-trial-1791969590915731899.json accepted
+send/write, exit0, no reboot. LAST INSTALLED BOOT_A STOCK, USB001/006.
+Full41 failure is now narrowed to main UFS insertion or subsequent payload read;
+not yet proof which one. Published normal reboot waits on active probes, so
+software supervisor existence does not guarantee a successful ordinary reset.
+
+Exact stock CONFIG_MAGIC_SYSRQ=y. Source audit docs/sysrq-reset-path.json and
+real stock kernel ARM64 VM emergency reset1791969728780655793 passed. Two
+incorrect source-header assumptions were corrected; failed audit assertion
+receipt preserved. Native VM demonstrates reset interface, NOT handset Fastboot
+destination. Ordinary reboot-mode notifier is expected to prepare bootloader
+mode before device_shutdown; subsequent emergency reset skips shutdown/probe
+wait. This destination remains conditional until hardware observation.
+
+Prepared main-UFS-only candidate artifacts/busybox-ufs-probe-emergency-v1,
+SHAf65ec3de06c76a85f7796492476c5eba89666aa79bf59c6c15a0037f615e7b60,
+ramdisk1646147bytes. Exactly41 sequential insertions, no payload read/radio.
+At encoded deadline request normal bootloader reset once in background, then
+if still running after5seconds, one supported SysRq emergency reset. No raw
+register, calibration, authentication or additional partition modifications.
+Runtime checks reset interface writable before loading modules. Existing
+watchdog/reboot-mode guard retained. Normal and emergency timing grids are
+decoded only when interpretation is unique; ambiguous results rejected.
+Host control1791970009488482376 and probe-safe timing tests passed. Native
+control/hex and exact-image guard running after user interruption/resume.
+No UFS/fallback hardware flash yet; latest stock state confirmed by receipt.
+
+UFS/fallback native control/hex1791970247505771668 and exact guard
+1791970248209622937 passed; independent ufs-probe-emergency-validation passed.
+Host/reset paths are fixtures in control tests; real SysRq only exercised in
+isolated VM so far. Next lynx_boot_a_ufs_probe_trial.py --flash-linux --reboot.
+Normal request can prepare bootloader intent but emergency destination is not
+assumed proven. On any unexpected recovery/no return stop for physical step.
+
+### UFS/fallback trial did not return; physical Fastboot needed
+
+Trial logs/boot-a-ufs-probe-trial-1791970441950636428.json accepted boot_a
+write/reboot, completed observation with fastboot_return_observed=false and
+native_ssh_verified=false. At2026-10-14 09:41:03UTC lsusb has no Lynx node.
+LATEST INSTALLED BOOT_A: UFS/fallback diagnostic f65ec3de..., NOT STOCK.
+No stock undo issued because no Fastboot connection. No live trial/listener.
+Do not run another hardware experiment until Lynx is physically returned to
+Fastboot, fresh node ACL/preflight, read-only LK and verified stock undo.
+Exact undo: lynx_boot_a_ufs_probe_trial.py --restore-stock (no reboot).
+
+This negative trial does NOT prove emergency reset executed, main UFS entered,
+or kernel globally froze. The runtime tests -w /proc/sysrq-trigger before its
+clock/worker; an unavailable/denied interface returns into stop without an
+ordinary reset. Actual handset interface availability was not independently
+calibrated; VM success does not resolve that alternative. Other possibilities
+include blocked logging/probe/reset or reset to a non-Fastboot destination.
+Do not classify exact stop location from this missing return.
+
+Next offline correction: preflight interface-check failure must request the
+already-proven ordinary reset instead of merely stop. Before further UFS load,
+use an ordinary-reset-only presence checkpoint with the passing40 prefix (or
+bare calibrated prefix) to establish whether handset SysRq is actually writable.
+Preserve current frozen image, failures and all raw captures; no authentication,
+raw register, slot B or other partition changes. Primary goal stays SSH ASAP.
+
+### Fastboot recovered; UFS/fallback stock undo completed; harmless interface test ready
+
+User said ok go; USB001/007 Fastboot visible. ACL completed exit0. Fresh LK
+logs/pllk-1791975178541994109.json has rst-from-?, NONRST20000000, wdt0x800;
+not the supported normal software-reset pattern. Do not infer emergency executed.
+Stock restore logs/boot-a-ufs-probe-trial-1791975202358594351.json send/writeOKAY,
+exit0, no reboot. LAST INSTALLED BOOT_A STOCK, USB001/007.
+
+Prepared artifacts/busybox-reset-interface-v1, candidate SHA
+ea2715f2f7ec48f56fcdc42d1a380b8aeba030db5903d0a6b89acaee11f107ce,
+ramdisk1645677bytes. Bare calibrated prefix (no additional module insertion),
+one harmless SysRq help request in a supervised worker, ordinary reset only.
+Field0=help write accepted (not an emergency reset),1=rejected,2=interface
+missing,3=help write pending at90s. Delay120+2field, same verified baseline.
+Host fixtures1791976957631614284 passed all4 cases. Native stock kernel/ARM64
+1791977208421522979 passed real help handler, simulated missing interface,
+hex journals, two fake ordinary resets and clean poweroff. Exact image guard
+1791977207955943685 passed. Final validation/timing check before hardware trial.
+
+### Handset SysRq help accepted; ordinary reset succeeded; stock restored
+
+Trial logs/boot-a-reset-interface-trial-1791977398018947610.json returned
+141.712182378s, field0, residual0.121318932s: harmless help write accepted.
+Fresh ACL001/008 exit0. LK1791977730641379113 matches supported normal reset
+(lk/NONRST28002003/wdt2). This supports actual handset interface availability;
+does not prove emergency Fastboot destination or execution during failed UFS.
+Stock undo logs/boot-a-reset-interface-trial-1791977852891092432.json send/write
+OKAY, exit0, no reboot. LAST INSTALLED BOOT_A STOCK, USB001/008.
+
+Next essential source review: distinguish inserted power-controller module
+from bound controller and registered ufs0 domain object, without main UFS load.
+Saved source shows UFS init enables PHY/clocks and calls secure firmware; a
+main-UFS failure need not be a userspace or module-list error. Candidate boot
+commandline already has panic=10; panic/reboot is another possible cause of
+lost software-supervisor return. Neither kernel panic nor firmware mismatch
+is established by current captures. No further blind UFS flash.
+
+Prepared read-only metadata snapshot artifacts/busybox-power-metadata-snapshot-v1,
+SHAd68afb3526a28a81c41a0b1b85a4816f85269fddb80c5eac11caadc5402ab598,
+ramdisk1646094bytes. Proven34 prefix only, then driver symlink and directory
+queries; no main UFS/PHY/storage/calibration/radio load or emergency reset.
+Result bitmask:1=controller1c001000 bound to mtk-scpsys-mt6983,
+2=debugfs ufs0 domain object present,4=debugfs mounted,8=SysRq access writable.
+Domain presence requires debugfs bit; impossible combinations are reserved.
+16=base insertion failed,17=base pending,18=query pending;125/127 malformed/missing.
+One normal reset at120+2field seconds, fixed90s snapshot, existing debug baseline.
+No register/control-file read; genpd presence does not prove power-on/onecell
+provider success. Published source adds runtime debugfs domain directories;
+exact stock module rodata contains both expected names. Audit passed.
+Host actual-query fixtures1791979532934515330 passed8cases, native ARM64
+1791979748928539801 passed mask15/mock-positive, base-failure16 and real VM
+query12 (debugfs and SysRq, no MediaTek domains), valid hex and clean poweroff.
+Exact image guard1791979748440362566 passed. Final timing/validation before trial.
+
+### Snapshot returned near base-failure code; no metadata flags established
+
+Trial logs/boot-a-power-snapshot-trial-1791980226181199915.json returned
+173.359010364s. Old2s-grid decoder nearest16/base-load-failed, residual0.47449s.
+No power_metadata_flags emitted. Snapshot full mask15 would have expected
+171.8335s; a1.5255s profile/boot/shutdown offset is an alternative to actual
+base failure. No exact failed module/log readback. Treat result provisional;
+do not assert domain absence or base failure as established hardware fact.
+LK1791981323760922154 matches normal supported reset. Stock undo
+logs/boot-a-power-snapshot-trial-1791981596680295648.json send/writeOKAY,
+exit0/no reboot. LAST INSTALLED BOOT_A STOCK, USB001/009.
+
+Next snapshot v2 uses5s slots/tolerance2s (separation remains unambiguous),
+adds exact failed module field32+index, and persistent log file interface
+presence as mask16 (metadata only, no record contents read). Masks0..31;
+32=base pending,33..66=failed module1..34,67=query pending,68/69 malformed/missing.
+Same proven34 prefix and normal reset; no main UFS/emergency/storage/radio.
+Wider observation540s covers the largest error field. Preserve v1 as raw evidence.
+
+Snapshot v2 candidate artifacts/busybox-power-metadata-snapshot-v2 SHA
+a19be93f2ae73debfb51dfd02e582ba97b31d882491ea10f2a05790db4efa9df,
+ramdisk1646179bytes. Extra flag16=persistent log file interface (pstore regular
+file or /proc/last_kmsg) exists; NOT content/readability or retained crash proof.
+Host control1791982245571194358, native ARM64/control/hex1791982519088374458
+and exact guard1791982519477207719 passed. Wider timing test validates offsets
+including1.5255s and rejects invalid/midpoint signals. Existing debug baseline
+with explicit assumed maximum2s profile/startup variation; larger drift remains
+unclassified or potentially unsafe to interpret and requires scrutiny.
+All masks0..31, exact failure33..66, base pending32, query67, malformed68/missing69.
+Next lynx_boot_a_power_snapshot_v2_trial.py --flash-linux --reboot after final
+validation. On return fresh ACL/read-only LK/stock undo, no reboot. Main UFS,
+radio, raw registers, calibration, slot B and recovery foundations unchanged.
+
+### Wide snapshot mask31 returned; controller/domain/log interfaces present; stock restored
+
+Trial logs/boot-a-power-snapshot-v2-trial-1791983380958537683.json returned
+296.908668609s, mask31, residual0.075167299s. Timed flags alltrue: controller
+bound, ufs0 domain object present, debugfs mounted, SysRq access writable, and
+persistent log file interface exists (pstore regular file OR /proc/last_kmsg).
+This does not establish actual retained data, onecell lookup or domain power-on.
+Supported LK reset logs/pllk-1791984261094223261.json matches lk/NONRST28002003/wdt2.
+Stock undo logs/boot-a-power-snapshot-v2-trial-1791984360598234019.json accepted
+send/write, exit0, no reboot. LAST INSTALLED BOOT_A STOCK, USB001/010.
+No active observer. Wider frame resolves current startup/module ambiguity;
+do not retroactively assume v1 was definitely mask15 versus a transient failure.
+
+Next essential diagnostic: bounded read of already exposed kernel log files,
+without main UFS. Prefer validated LXDG1 records with the frozen UFS session
+token; report persistent-content/stage/exception clues through safe normal-reset
+timing, not an invented direct log download. Interface existence alone is not
+readability or evidence of the UFS failure. Preserve originals and private logs.
+
+Prepared bounded retained-log query artifacts/busybox-retained-log-query-v1,
+SHA3f713d6949c9e5c6fcab86e76b8b22e7c949bc45f0b140fa6ac74c6d85287412,
+ramdisk1646979bytes. Same34 prefix, no main UFS/radio/block/raw RAM access.
+Reads only regular non-symlink files from mounted pstore and /proc/last_kmsg,
+max8files/1MiB each into private RAM. Reference is frozen UFS/fallback session
+from f65ec3de... image. Select one bounded record: prefer checksum-valid
+reference, then raw reference, then generic; never OR markers across files.
+Flags1=data,2=reference token text,4=valid capsule checksum,8=panic/oops,
+16=CFI failure,32=UFS/power/clock/SMC symbol within60lines of CallTrace.
+Markers in one selected record may still refer to different incidents; token
+and SHA are not authentication or complete sequence verification. No markers
+does not establish absence of crash; old UFS logs may no longer be retained.
+64=base pending,65=query pending,66=base failure,68/69 malformed/missing;
+5s slots/tolerance2s, observation540s, one ordinary reset, stock undo ready.
+
+Host corpus1791985908553974847 passed12cases incl checksum failures, frame
+selection/no cross-file mixing,8-file/1MiB bounds and pending/failure resets.
+Native ARM64 parser1791986209443342211 passed synthetic matching crash63,
+base-failure66 and empty-query0, checksummed own journals/clean poweroff.
+Exact guard1791986209756872172 passed. Timing test corrected a fixture that
+mistakenly labelled valid field7 as reserved; no runtime/image change.
+Independent validator corrected a token variable shadowing image-reference
+bytes; no runtime/image change. Final validation before hardware query.
+
+### Retained query found data and a checksum-valid failed-UFS session record
+
+Trial logs/boot-a-retained-log-trial-1791987156215800161.json returned
+178.390434683s, selected-record mask7, residual1.556933373s (inside widened2s
+tolerance). Nonempty bounded data, exact F65-session token, and at least one
+SHA256-valid stage capsule found. Selected record has no detected panic/oops,
+CFI failure or UFS/power CallTrace marker; this is NOT a global no-crash claim.
+No full raw handset file was downloaded; data interpretation is through the
+normal-reset timing signal. Capsule checksum is integrity, not authenticated
+identity or sequence completeness. Supported LK1791988064142846318 has
+lk/NONRST28002003/wdt2. Stock undo1791988094405919062 accepted send/writeOKAY,
+exit0/no reboot. LAST INSTALLED BOOT_A STOCK, USB001/011. No active observer.
+
+Next read-only query extracts the last checksum-valid stage512/status in a
+selected retained reference record. Prioritize common results41(before main
+UFS),83(insertion returned),125(insertion failure),0(all prefix completed) in
+transport slots1..4; map all other valid reference statuses too. A retained
+marker brackets execution/logging; it is not an exact instruction stop or
+guaranteed most recent boot across files. No new UFS activation needed.
+
+Prepared artifacts/busybox-retained-stage-query-v1 SHA
+1dc206e7ba79067711957f9d8b40ea19d53594b38a4d7e51026275035262bc52,
+ramdisk1647983bytes. Source still bounded8files/1MiB, one standard reset,
+proven34 prefix. Prefer a record with a verified stage512 progress capsule;
+use last such valid capsule in its sampled byte order, not maximal sequence.
+Map125valid reference statuses, prioritizing41/83/125/0 as transport1/2/3/4;
+0=no reference progress marker,126=base pending,127=query pending,
+128=base fail,129=bad reference/map,130=missing worker.5s slots/tolerance2s,
+observation900s covers largest rare code; common UFS outcomes return quickly.
+Host corpus1791990215206140603 passed18cases incl newest valid marker,
+completion/failure status, invalid-last rejection, non-progress stages,
+selection/checksums and read limits. Native ARM64 stock-kernel
+1791990450364509089 and exact guard1791990450691998540 passed. Timing corpus
+passed all valid codes/offsets and midpoint rejection. Independent validation
+passed. Next lynx_boot_a_retained_stage_trial.py --flash-linux --reboot; on
+return fresh ACL/read-only LK then verified --restore-stock without reboot.
+
+### Retained UFS marker41 observed; stock boot_a restored
+
+Retained-stage trial logs/boot-a-retained-stage-trial-1791990934592699635.json
+returned146.88020619099916s, transport1/status41, residual0.046704881s.
+Last checksum-valid stage512 in the selected bounded F65 reference record is
+the marker immediately before ufs-mediatek-mod.ko insertion. This brackets
+the load/probe/logging boundary; not an exact instruction stop, guaranteed
+newest boot across files, or complete sequence proof. No raw retained file
+downloaded. LK1791991595248441968 has lk/NONRST28002003/wdt2.
+Stock undo logs/boot-a-retained-stage-trial-1791992392183165910.json accepted
+send/write OKAY, exit0, no reboot. LAST INSTALLED BOOT_A STOCK, USB001/012.
+
+Prepared offline artifacts/busybox-ufs-registration-only-v1 SHA
+034177798aed0cb0210e51eaf563eefc055abe6fcdbde3d272f89003b1880a56,
+ramdisk1646403. Proven first40 prefix followed by original main UFS module,
+SHA31e452411297a57a6ed4c31b207c3b4604fa8b55acd95cff6135c680846614a4.
+RAM-only driver_override guard requires exactly one unbound platform target,
+exact compatible mediatek,mt8183-ufshci, exact runtime OF node
+/sys/firmware/devicetree/base/ufshci@112b0000, empty/(null) writable override;
+validates all targets before writing, no unbind/existing override overwrite.
+Exact stock OF table audit and merged overlay5 DT agree. Module unchanged.
+One normal reset only, 90s sample, six5s slots120..145/tolerance2s/240s observer.
+0=guard verified+insertion returned,1=guard refused,2=main insertion failed,
+3=pending,4=prefix failure,5=missing/malformed. No UFS hardware probe, storage
+payload/calibration read, raw-register writes or radio startup requested.
+
+Native fixture1791993179707640864 failed only outcome expectations because
+the shortened1s sample preceded completion of forty fake loads. All8 guard
+cases/hex/reset-count/poweroff passed. Test-only sample extended10s/deadline12s,
+pending fake load20s; candidate/runtime unchanged. Rerun in progress.
+Exact image guard1791993307256277019 passed, correctly refuses loads/reset
+without MTK reset devices. Independent validation and native rerun pending;
+do not flash until they pass. All prior images and recovery foundation retained.
+
+### Guarded UFS module registered on Lynx; stock undo completed
+
+Native guard/supervisor1791993306392303788 passed all8 guard cases,5 outcome
+cases, capsule checksums/sequences, reset count and clean poweroff. Exact-image
+guard1791993307256277019 passed. Independent ufs-registration-validation.json
+passed unchanged stock kernel/module/metadata/payload, prefix provenance,
+declared dependencies/import CRCs, source/native receipts and AVB policy model.
+Timing test passed25cases. Source/tool/test artifacts retained under Lynx.
+
+Hardware trial logs/boot-a-ufs-registration-trial-1791993758249868766.json
+returned141.85409067699948s, field0, residual0.020589366999s. Conditional on
+non-interference and supported-reset pattern, guard verified and original UFS
+module insertion returned with hardware matching blocked. Main module init
+and registration can complete; the unguarded failure is associated with the
+matching/attachment/probing path, not proven exact function or root cause.
+No physical UFS storage read, Wi-Fi or SSH established. LK1791994813904320388
+has lk/NONRST28002003/wdt2. Stock undo1791994932301896630 accepted send/write
+OKAY exit0, no reboot. LAST INSTALLED BOOT_A STOCK, Fastboot USB001/013.
+
+New offline logging route: exact stock kernel VM1791994814225571079 proves
+tp_printk boot argument sends a selected dynamic syscall trace event into
+dmesg; no exception, clean poweroff. Published primary trace source saved by
+audit_trace_printk_path.py at commit81ec42ad..., not exact stock commit.
+This does NOT prove UFS function instrumentation, physical event execution,
+or phone pstore persistence. Next native test loads the exact UFS dependency
+closure on QEMU with no MTK matching devices, registering six selected
+function-entry probes. Only after that, prepare a narrow persistent trace
+hardware experiment. Prior broad tracing images remain unchanged.
+
+### Exact stock module trace setup verified; controlled traced probe prepared
+
+Native stock UFS dependency closure loads/driver registration succeed on
+QEMU. First module trace test1791995233130052719 created all6 events but
+literal printf enable writes returned1. Do not equate those statuses with
+proof that events remained disabled: no activation readbacks were collected.
+Bounded two-byte dd writes passed1791995376825967320. Actual setup script
+with dd and explicit enabled=1 readbacks passed1791995743905771054 for six
+module functions plus platform_drv_probe/dev_pm_domain_attach/genpd_dev_pm_attach.
+No exception, clean poweroff. Some initial source function targets were
+inlined or in the builtin kernel; exact module symbols corrected before use.
+
+Prepared artifacts/busybox-ufs-trace-probe-v1 SHA
+30a2757ef742a859a24d577b35bf33111c3ed3cc5d43baa4199cf0d889f363ff,
+ramdisk1647445, sessiona886c9c0269ceb1c38536059332860de.
+Exact first40 prefix, RAM-only matching guard, original UFS insertion,
+then9 selected dynamic entry events enabled/read back and tp_printk output.
+Event names lx<TOKEN>_<index> identify this image's records. After ready,
+verify original override still set/unbound, clear it, verify cleared, request
+only exact guarded platform device via one bounded drivers_probe write.
+No unbind/partition storage writes/calibration read/radio/payload startup.
+Core event records lack device-name arguments and could represent other
+devices; do not attribute them to UFS without contextual evidence. Module
+function entries are more specific. No recorded entry is proof of return.
+
+Capsule stage515/status16=trace ready,17=before probe request,18=probe returned.
+Outcome0=probe returned+expecteddriverbound, not block access proof;
+1guardrefused/2modulefail/3pending/4prefixfail/5missing-malformed,
+6tracesetupfail(no probe requested)/7probewritefail/8notbound/9clear/prereqrefused.
+One standard reset only,90s sample,5s slots120..165/tolerance2/240s observation.
+Actual normal shutdown may stall waiting for a probe; on no return stop for
+physical Fastboot, then save LK/stock undo without reboot. No emergency reset
+or authentication bypass included. Stock undo command already verified.
+
+Probe safety/refusal fixtures1791996752774450077 passed8cases and exact-device
+request counts. Supervisor1791996753599877089 passed9outcomes/single reset.
+Timing corpus passed41cases. Exact image guard1791996798959207899 passed.
+Final independent validation in progress. LAST INSTALLED BOOT_A STILL STOCK.
+
+### Traced UFS probe did not return; physical Fastboot needed
+
+Final independent ufs-trace-probe-validation.json PASSED. Authorized trial
+logs/boot-a-ufs-trace-probe-trial-1791997650231626827.json accepted boot_a
+send/write and one normal reboot, but no Fastboot return within240seconds;
+native_ssh_verified=false. USB observer receipt saved by trial tool.
+LAST INSTALLED BOOT_A IS TRACED UFS PROBE image30a2757e..., NOT STOCK.
+Stock undo PENDING. Stop hardware commands until physical Fastboot recovery.
+Do not infer exact hang, trace activation on handset, event execution, or
+pstore persistence from non-return. Parent reset can block behind probing.
+
+On user Fastboot recovery: inspect actual USB node, await ACL exit0, collect
+supported read-only LK log, then
+python3 /noobia/lynx/tools/lynx_boot_a_ufs_trace_probe_trial.py --restore-stock
+Verify send/writeOKAY and exit0; NO reboot/slot switch/erase/other flash.
+If recovery state is unexpected, stop. Only then run a validated read-only
+retained log query of this unique traced-image token, without new main UFS.
+
+While passive observation was active, prepared read-only query source
+linux-port/lynx-retained-ufs-trace-runtime.sh using
+tools/prepare_retained_ufs_trace_query.py. It selects one bounded regular
+non-symlink record(max8files/1MiB), checksum-valid reference capsules,
+last token-specific lx<TOKEN>_[1-9] trace entry or stage515 phase16/17/18.
+No cross-file mixing or full-sequence/authentication claim. Generic core
+events can refer to other devices. Entry is not return proof. Prefix34 only.
+This runtime is NOT YET TESTED, PACKED, VALIDATED OR FLASHED. Do not use until
+host/native/bounds/geometry/guard checks pass. Source generator corrected
+initialization replacement anchors before generating; saved all artifacts.
+No active observer remains. Next required action is Noob's physical Fastboot.
+
+### Physical Fastboot recovered; traced-probe stock undo completed
+
+User resumed with ok go; actual USB001/014 Fastboot observed and ACL completed.
+Supported read-only LK logs/pllk-1791998271005283290.json saved (raw306769bytes).
+Current reset label?, NONRST_REG2=20000000/wdt0 differs from normal timed return;
+do not treat it as proof of a particular crash or reset cause. Stock undo
+logs/boot-a-ufs-trace-probe-trial-1791998307093549444.json accepted send/write
+OKAY exit0/no reboot. LAST INSTALLED BOOT_A STOCK. Slot B/foundation unchanged.
+
+Prepared artifacts/busybox-retained-ufs-trace-query-v1 SHA
+299c1ab3207e48d546077506690a1cfb91bdf05d0fe2c63d3a56dc4feff5ef75,
+ramdisk1647362. Proven34 prefix, unchanged stock kernel/recovery metadata and
+supplemental payload. Reads max8regular non-symlink retained files/1MiB each.
+Reference token is traced-probe imagea886c9c0269ceb1c38536059332860de.
+Only checksum-valid reference capsules allow trace/phase interpretation;
+one selected record, prefer valid token-specific trace over phase-only.
+Last event in sampled byteorder1..9; generic7..9 may be other devices.
+10trace-ready phase16/11beforeprobe phase17/12probereturned phase18 but no
+matched trace entry retained;13validcapsule no recognizedphase/entry;
+0no validatedref;14basepending/15querypending/16basefail/17bad/18missing.
+Five-second slots120..210, tolerance2s, observer270s, one normal reset only.
+No new mainUFS/PHY/storage/radio startup or raw-memory reads. Checksums not
+authentication/complete sequence proof; entry not return proof; retained
+byteorder not newest boot or last CPU instruction. Full raw log not downloaded.
+
+Host corpus1791998563543802348 passed30cases including all9events, wrong token,
+invalid checksum, phase selection, last entry, no cross-file mixing,8file/1MiB
+bounds and pending/failure resets. Exact image guard1791998644340087043 passed.
+Timing corpus passed77cases. Native ARM64 parser test in progress; final
+independent geometry/source/provenance/boot-policy validation pending.
+Do not flash until native and independent validation pass. No phone trial active.
+
+Native ARM64 query1791998643455841065 PASSED: synthetic matching trace4,
+basefailure16, emptyquery0, three fake reset calls, complete own diagnostic
+checksums/sequences, clean poweroff/no exception. Final independent retained
+ufs trace validation PASSED. Trial harness validator argument corrected to
+--count34 before hardware use; image/runtime unchanged.
+
+Read-only query trial logs/boot-a-retained-ufs-trace-trial-1791998823833905362.json
+accepted boot_a write and one reboot; passive USB observer270s running.
+LAST INSTALLED BOOT_A QUERY image299c1ab3..., STOCK UNDO PENDING.
+On return fresh USB ACL/read-only LK, then
+python3 /noobia/lynx/tools/lynx_boot_a_retained_ufs_trace_trial.py --restore-stock
+Await send/writeOKAY exit0, no reboot. If no return stop for physical Fastboot.
+No mainUFS or radio activation in this query. No parallel hardware trial.
+
+### Retained handset trace found reference-clock entry; stock undo completed
+
+Query1791998823833905362 returned166.8020574029979s, field5,
+residual0.031443907003s. Selected bounded record has checksum-valid traced
+reference capsule and its last token-specific entry is ufs_mtk_setup_ref_clk.
+This establishes a retained module-function entry (conditional on supported
+reset/non-interference), not a completed function, exact stop or full raw log
+retrieval. Later uninstrumented work may have executed. Generic core event
+attribution is not involved in field5. LK1791999113646276335 matches
+lk/NONRST28002003/wdt2. Stock undo1791999205104712325 accepted send/write
+OKAY exit0/no reboot. LAST INSTALLED BOOT_A STOCK, Fastboot USB001/015.
+
+Exact stock binary audit saved docs/stock-ufs-refclk-audit.json and disassembly.
+576byte ufs_mtk_setup_ref_clk body: on-path call __arm_smccc_smc at+0x88,
+after call+0x8c, request-store+0xa0, afterstore+0xa4, acknowledgement-read+0xf0,
+afterread+0xf4. Firmwarecall args0xc2000276/8/1. Bounded poll deadline adds
+3000000nanoseconds; absent ACK alone should return a timeout, not prove a hang.
+Source matches broad path, but exact compiled offsets verified independently.
+Possible next boundaries include firmware call, MMIO access, function return,
+or later untraced crypto work. Do not bypass firmware/ACK checks or force clocks.
+
+Preparing a standard kprobe/kretprobe trace variant at those audited offsets,
+plus function return and crypto entry. Must pass exact native activation and
+image/guard/control checks before another hardware trial. No raw address writes
+or modified stock .ko files; instrumentation is ordinary kernel RAM tracing.
+
+### Finer reference-clock diagnostic verified offline; v1 rejected and retained
+
+Reference-clock v1 imageeca2aec00366ccb05721aa3bbb7f6bdb190eeaa0f4c496d61b097fc98c4b223f
+was NEVER FLASHED. Native1791999757702499570 accepted first6 markers but
+rejected+0xf4(after-read NOP), so setup stopped and later probes were not
+attempted. No exception/clean poweroff. Rejection alone does not establish
+its cause. Preserve v1 image/source/failed receipt; do not use it on Lynx.
+
+Corrected v2 uses audited+0xf8(after-read barrier) instead. Native
+1791999942177265100 passed all9 activation/readback checks, exact stock module
+dependency loading/driver registration, no exception and clean poweroff.
+Probe-safety fixtures1791999988212858373 passed8cases. Parent probe/reset logic
+unchanged. v2 setup SHA51fef6ebbb32c9262b24c7b97597c2dff995c031ff87ca24d035fc2cef1b2824.
+Standard kprobes/kretprobe only, no module binary/firmware logic changes.
+
+Prepared artifacts/busybox-refclk-trace-probe-v2 SHA
+b4a505426c91b3a0c151b977ddcfbfddeabcca612a59959408230c19d317aea1,
+ramdisk1647522, session69adf9d14707d848063b861b8f248748.
+Markers1refclkentry(on arg),2before on-pathSMC+88,3afterSMC+8c,
+4before requeststore+a0,5afterstore+a4,6before ACKread+f0,7afterread+f8,
+8refclkreturn(signedretval),9cryptoentry. All are UFS-specific; old query
+codebook assumption7..9genericcore MUST NOT be reused for these labels.
+Entry/offset markers bracket execution, not full rawlog or exact failure proof;
+tracing can affect timing. Off-path firmware calls have different offsets.
+
+Exact v2 image guard in progress/final independent validation pending.
+LAST INSTALLED BOOT_A STILL STOCK; no hardware observer/trial active.
+If all checks pass, lynx_boot_a_refclk_v2_probe_trial.py --flash-linux --reboot.
+On return fresh ACL/LK then --restore-stock/no reboot. On no return within
+240s stop for physical Fastboot. Next read-only query must use this exact new
+token/event mapping and validated runtime; do not report old function labels.
+
+### Corrected reference-clock probe ACTIVE; stock undo pending
+
+Exact guard1792000112061067612 PASSED. Independent refclk-v2-probe-validation
+PASSED all preserved kernel/modules/probe/reset/metadata/payload checks,
+exact offset definitions/native activation/probe-safety and AVB policy.
+Trial logs/boot-a-refclk-v2-probe-trial-1792000293405053079.json accepted
+boot_a send/write and one normal reboot; passive USB observation240s active.
+LAST INSTALLED BOOT_A REFERENCE-CLOCK V2 imageb4a50542..., NOT STOCK.
+On return fresh USBACL/read-only LK then
+python3 /noobia/lynx/tools/lynx_boot_a_refclk_v2_probe_trial.py --restore-stock
+No reboot. If no return stop for physical Fastboot. No concurrent hardware test.
+
+While observing, built read-only artifacts/busybox-retained-refclk-trace-query-v1
+SHA4eec20add7e57d70c5f29b11f02b7f726e8cc8ff24be1395aa738605c39bccf5,
+ramdisk1647360. Same bounded reader runtime as previously proven query299c...,
+but exact new reference token69adf9d14707d848063b861b8f248748 and event meanings.
+All9events UFS-specific; ID8 is a kretprobe return marker (retval not fetched by
+this query). Reader code/34 prefix/reset/limits unchanged; separate image/token
+and native/control/guard tests prepared and running. Timing math19slots unchanged.
+Final independent validation NOT YET run. Do not flash until all checks pass.
+No raw log download or exact failure instruction claim. Preserve all versions.
+
+### Finer probe did not return; STOP for physical Fastboot
+
+Trial1792000293405053079 completed240s passive observation with no Fastboot
+return and no native SSH. Do not infer marker execution, exact hang, firmware
+failure or pstore persistence from non-return. LAST INSTALLED BOOT_A STILL
+REFERENCE-CLOCK V2 b4a50542..., STOCK UNDO PENDING. Hardware work stopped.
+User must return Lynx to Fastboot; use actual USB state, not ok as confirmation.
+On return await USBACL exit0, save supported read-only LK then verified
+lynx_boot_a_refclk_v2_probe_trial.py --restore-stock, awaitexit0/no reboot.
+Only then finish validation/run the read-only finer-marker query.
+
+Prepared query host30case corpus1792000506870335635 PASSED; exact query guard
+1792000505999940123 PASSED. Native test already launched before observation
+ended; completion receipt pending at this state entry. Independent validation
+still pending. No further phone commands issued. All sources/images/tests and
+raw receipts retained under /noobia/lynx. No active phone observer remains.
+
+Already-running native readback test1792000505651678414 completed PASS after
+observation ended: real ARM64 parser/synthetic matchingmarker4, basefail16,
+empty0, own capsule hashes/sequences, three fake resets, no exception/clean
+poweroff. No VM or phone observer remains. Final independent query validation
+still pending; no query flash issued. Physical Fastboot required next.
+
+### Physical Fastboot recovered; finer probe restored and readback ACTIVE
+
+On user ok go, actual Fastboot USB001/016 observed. USBACL request completed
+exit0 after waiting; no phone command sent before completion. Supported LK
+logs/pllk-1792000751869227173.json saved(raw306599bytes), label?/NONRST20000000/
+wdt0; not evidence of a particular hang or crash. Stock undo
+logs/boot-a-refclk-v2-probe-trial-1792000771987963063.json accepted boot_a
+send/writeOKAY exit0, no reboot/other writes. Stock was installed before query.
+
+Final validate_retained_refclk_image.py --count34 PASSED: query4eec20ad...,
+exact reference b4a50542... token69adf9d14707d848063b861b8f248748, correct9
+checkpoint/return meanings, native/control/guard/bounds/timing/geometry/modules/
+kernel/metadata/supplement/model checks. Reader has no new main UFS activation.
+Now lynx_boot_a_retained_refclk_trial.py --flash-linux --reboot observing270s.
+LAST INSTALLED BOOT_A QUERY once write accepted; stock undo pending afterward.
+On return fresh USBACL/LK then same tool --restore-stock(no reboot), awaitexit0.
+On no return stop for physical Fastboot. Interpret last selected retained marker,
+not exact CPU stop; checksums are not authentication/complete stream proof.
+
+### Finer retained trace reaches request-store boundary; stock restored
+
+Read-only query logs/boot-a-retained-refclk-trial-1792000799665556758.json
+returned161.75437212399993s, field4, residual0.079129186001s. Last token-specific
+checkpoint in selected checksum-valid reference record is before on-path
+request-register store(+0xa0). No later marker retained in that selected sample.
+Reaching this boundary on the audited control path is after the firmware call;
+do not blame authentication/SMC non-return based on old entry-only evidence.
+Still not exact stop proof: logging/tracing can affect execution, and no full
+sequence/rawlog or guaranteed newest boot across files retrieved. Subsequent
+register store or trace completion is the next boundary to investigate.
+
+Supported LK1792001195573833013 matches lk/NONRST28002003/wdt2. Stock undo
+logs/boot-a-retained-refclk-trial-1792001251973574639.json accepted send/write
+OKAY exit0/no reboot. LAST INSTALLED BOOT_A STOCK, Fastboot USB001/017.
+No observer active. Native SSH/Wi-Fi/storage block access still unproved.
+
+Saved stock startup/module/merged-DT audit docs/ufs-stock-startup-audit.json
+and local primary sources startup-clk-bringup.c/startup-mtk-scpsys-bringup.c/
+startup-clk-mt6983.c at published commit81ec42ad...(not exact stock commit).
+All5 UFS-requested clocks are from loaded topckgen provider. Stock modules.load
+also loads clk-bringup.ko before UFS. Sole matching merged-DT target is
+/clkitg/bring-up, compatiblemediatek,clk-bring-up, okay,23listed clocks from
+clk26m/infracfg_ao/topckgen, including extra infra and top clocks omitted from
+UFS own5clock requests. Source enables these clocks via normal clk API; errors
+are logged/ignored, so insertion is not proof of every clock enabled. No
+matching scpsys bringup/postao node found in merged DT; no reason to add that
+module yet. Firmware-helper hypothesis not established; stock load order places
+tinysys-scmi after UFS. No added module or register force performed by audit.
+
+Next verify exact stock clock helper match table/ABI and runtime DT target,
+then consider one clock-helper-only change to controlled UFS boot_a trial.
+Require host/native/guard/image validation and preserved stock undo as usual.
+
+### Audited stock clock helper added behind exact-target guard; trial ACTIVE
+
+Exact clock helper audit PASSED: moduleSHA
+4b62b692837be57cc9aab66136dec5d772840c8f572c37c20c59bda979216823,
+same g311738fbb5a8/vermagic, no declared dependencies/shared imported CRC
+conflicts; exact OF table onlyclk-bring-up/clk-post-ao. Merged DT has only
+/clkitg/bring-up (simple-bus parent), clockpropertySHA
+c6c820b927cb362d545b5798b35dec002e60f50805a78d4cc81ad7e90b698e9b.
+Stock helper enables23 listed clocks through normal kernel API, including
+bus_aximem_sel (top clock248) outside UFS own5 clocks. No manual register force.
+Not proof this is the missing dependency or that all clocks enabled.
+
+Prepared artifacts/busybox-stock-clock-helper-probe-v1 SHA
+b161edddb4a1a6a2e572f16298397f162d14f2d3e888220e58b576c5c4c0fe76,
+ramdisk1648471, session739ab92bd0a0f1d0d916d126ba1c7f3e.
+First40 unchanged; UFS matching guard set before helper. Helper guard requires
+notalreadyloaded, exactlyone unbound compatible/path target, exact clockproperty
+and actual .ko SHA before load. Supplied by unchanged stock vendor ramdisk.
+After insertion require driverbring_up bound and read-only framework
+bus_aximem_sel prepare/enable counts positive, else no UFS probe requested.
+Framework counters are not actual hardware measurements. Helper ignores
+individual clock errors. No new scpsys bringup, rawregister poke, partition
+storage/calibration write, firmware logic change or authentication bypass.
+All original module/kernel/recovery bytes and reference-clock traces preserved.
+
+Stage516:1beforehelperload,2loadreturned,3bound/counterspositive.
+Existing outcomes0..9 unchanged;10helperguardrefused,11helperloadfailed,
+12helpernotbound,13buscountermissing/zero => no UFS probe requested.
+14five-second slots120..185, tolerance2s,90s sample,240s observer,one normal reset.
+Native exacthelperABI+ARM64guard13cases1792002337470437103 PASSED, own valid
+hex/cleanpoweroff/no exception. Combined supervisor13cases1792002706992137223
+PASSED. Exact image reset guard1792002708082641051 PASSED. Timing57cases PASSED.
+Final independent stock-clock-helper-probe-validation PASSED preserved-source/
+ABI/DT/native/control/guard/timing/geometry/metadata/payload/boot-policy checks.
+
+Now lynx_boot_a_stock_clock_helper_probe_trial.py --flash-linux --reboot:
+on acceptedwrite LAST INSTALLED BOOT_A CLOCK-HELPER DIAGNOSTIC, STOCK UNDO PENDING.
+Passive observer240s, no simultaneous hardware test. On return fresh USBACL/LK
+then same tool --restore-stock(no reboot), awaitexit0. On no return stop for
+physical Fastboot. Readback must use this exact new token, helper phase516 and
+finer9 event meanings; do not reuse old token. Still no verified Wi-Fi/SSH.
+
+### Stock clock helper proves controlled UFS binding; Wi-Fi v7 returns early
+
+Clock-helper hardware trial logs/boot-a-stock-clock-helper-probe-trial-1792003167463063951.json
+returned 141.72383403300046 seconds, decoded field0/residual0.10966727699997:
+ufshcd-mtk bound after exact clock helper guard/cached framework counters passed.
+Block-device reads, payload access, calibration, Wi-Fi and SSH were not thereby proved.
+LK1792004030064469099 normal reset; stock restore1792004226629890074 succeeded.
+
+Wi-Fi v7 preserves the physically successful UFS override/helper/traced controlled
+probe flow, base34/storage7, V5 payload at24MiB and unchanged radio/credentials.
+Candidate SHA9a17b8e72e8e8fe8928f551fcf593cee1d19a712affe498f23f637e7ac4da00c,
+token135562a3878163138979301c76b64536; required native journals/exact-image guard/
+independent image validation passed before trial1792006188424181913.
+Returned early to Fastboot, no UDP beacon or verified SSH. Cause UNKNOWN.
+
+Read-only supported LK capture1792006688435032783 succeeded, reset fromlk,
+NONRST_REG2=28002003, wdt2 matches deliberate reset. Stock boot_a restore
+logs/boot-a-wifi-v7-trial-1792006699503237717.json completed send/write OKAY exit0,
+no reboot. LAST INSTALLED BOOT_A STOCK; Fastboot USB001/019. Other partitions
+unchanged. Old collector PID121820 received targeted SIGTERM to free UDP5514.
+
+Preparing separately preserved busybox-retained-wifi-v7-query-v1 with proven34
+prefix only, no storage PHY/main-controller activation, block reads or radio.
+SHA8af0ebdcc356256a540dfdaa5fd5eff27bd9220737c880782d9ef53eb5becc22,
+ramdisk1646991. Reads at most8 regular nonsymlink retained kernel files, first1MiB
+each; exactv7token/checksum; prefers failure capsule over major phase and reset
+chatter, latest sampled byte order within same priority, first tied file.
+One selected record only; not newest-boot/authentication/full-sequence proof.
+19slots120+5code, sample90s, tolerance2, observer270s; only one normal reset.
+Host/native/exact-image checks in progress; DO NOT FLASH until independently
+validated. This query distinguishes bootstrap151/152/153/154/other, Wi-Fi worker
+failure, or retained major phase. No live SSH shell has been established.
+
+### Wi-Fi v7 retained query found no available valid capsule; stock restored
+
+Readback native test1792006940509638132, host selection43cases1792006939583468896,
+exact image guard1792006940033614000 and independent validation PASSED.
+Hardware trial logs/boot-a-retained-wifi-v7-trial-1792007090552374937.json
+returned141.73541490199568s, field0/residual0.09808640800474677: no checksum-valid
+v7 reference capsule in selected bounded retained files. This does not show
+whether v7 emitted no capsule or whether persistence/retention/truncation lost it.
+No failure phase identified. LK1792007777401711061 succeeded. Stock restoration
+1792007836629556672 accepted send/writeOKAY exit0, no reboot. LAST INSTALLED BOOT_A
+STOCK; USB001/020. No live observer or radio/SSH collector active.
+
+Readback semantic erratum: code5 includes bootstrap completionstatus0 as well as
+unclassified bootstrapstatus, because diag-hooks emits stage254 on success too.
+Do not interpret code5 as definitely failed. This hardware result wascode0,
+so unaffected. Preserve existing artifact/tool rather than silently rewriting
+historical codebook. Any future reader should explicitly distinguish status0.
+
+Preparing bootstrap timing diagnostic v1 (a9c233c6aefbae80e2e9cd1fabbb1dcda8cdac3119d9ea58bc5e95b73c96802a),
+ramdisk1647665. Preserves every v7 stock module/guard/helper/trace/payload byte,
+kernel/cmdline/AVB/footer; only init and fresh token differ. Stops before radio.
+Both bootstrap success and original failure/deadline paths use one normal reset,
+timed from saved RAM start at240+5code, max275s; observer360s. Eight outcomes:
+0payload verified/extracted,1base151,2storage152,3partition153,4payload154,
+5other numeric result,6resultmissing/deadline,7malformedresult.
+Native ARM64 BusyBox10cases1792008924489274967 PASSED incl all eight result slots,
+bad start/clock refusal and exactly8 fake resets. Exact image guard1792008925112359144
+PASSED (failure guardobserved, no reboot); independent validation IN PROGRESS.
+No retained-log dependency; don't flash before validation. Stock undo ready.
+
+### Bootstrap timing image validated; hardware observer extension ACTIVE
+
+Independent bootstrap-timing-validation PASSED parentv7/native/exact-image guard/
+exact startup delta/archive/kernel/cmdline/metadata/payload/model/57timingcases.
+Initial timing corpus exposed floating-point exact2s-boundary error; decoder now
+rounds residual to nanoseconds (not meaningful tolerance expansion), corpus passes.
+Hardware trial logs/boot-a-bootstrap-timing-trial-1792009047412492624.json
+accepted boot_a send/write OKAY and one reboot. LAST INSTALLED BOOT_A BOOTSTRAP
+TIMING DIAGNOSTIC; STOCK UNDO PENDING. Radio is not started by this image.
+
+Runner copied270s observer by mistake despite validated manifest360s; caught
+while phone still running, before observer expires. Separate passive continuation
+tools/extend_bootstrap_timing_observation.py inherits real original USB departure
+events and records fresh sysfs until reboot+360s; NO additional phone commands.
+Separate extension receipt retains seedSHA/source/gap/provenance. Original trial
+tool/receipt retained. Future tool lynx_boot_a_bootstrap_timing_v2_trial.py corrects
+both host deadline and displayed bound to360s. Await BOTH running observers;
+use extended receipt for timing if original270s misses return. On return fresh
+USBACL/supportedLK/stock restore(no reboot); on unexpected return or no recovery
+stop for physical input. Do not infer physical non-interference from silence.
+
+### Direct bootstrap timing identifies own boot_a payload failure
+
+Original270s observer missed return, retained as-is. Passive extension
+logs/bootstrap-timing-observer-extension-1792009132098377596.json captured return
+281.905898555s, field4/residual0.072397245: bootstrap child status154 (own boot_a
+payload read/verify/extract failed). Source image guarantees base34/storage7,
+UFS exact guard/helper/controlled binding and partition discovery preceded it.
+Still no successful physical block read, extracted payload, Wi-Fi or SSH proof.
+LK1792009455462475407 normal lk/NONRST28002003/wdt2. Stock undo
+logs/boot-a-bootstrap-timing-v2-trial-1792009469090148227.json accepted send/write
+OKAY exit0/no reboot. LAST INSTALLED BOOT_A STOCK; USB001/021. Both observers done.
+
+Native payload test emulated-native-payload-loop-1792009523537673393 PASSED:
+same stock kernel/real ARM64 BusyBox/actual loop block I/O,64MiB candidate image,
+block remained read-only, own payload hash verification/gzip/cpio extraction
+succeeded and Dropbear/WPA/radio module files present. Partition metadata fixture
+only; no physical UFS claim. Payload reader SHA2f7787ee... saved. Thus generic
+command/extraction chain works in this environment; hardware-specific failure
+still could be discovery/duplicate labels/device nodes/capacity/ioctl/read/hash.
+
+Prepared separately preserved busybox-payload-timing-v1 SHA
+9df9229dba14a1b29e17a5bcdb8c34fb813682998a63ff57718ed1bb7f6f9226,
+ramdisk1647730. Only init/token differ from prior bootstrap image;7RAM checkpoints
+before enumeration,blocknode,capacity/RO,metadata,rawread/head,hash,gzip/cpio.
+No block/calibration writes or radio activation. Direct9slots240+5code:
+0success,1enum/unique/name,2missingblocknode,3capacity/RO,4metadata,
+5read/head,6hash,7gzip/cpio,8otherbootresult/deadline/badprogress. Observer360s.
+Native classification10cases1792009762763455215 PASSED, exact-image reset guard
+1792009763087223729 PASSED. Real loopblock instrumented reader1792009763482688016
+PASSED hash a760ca8ab...; adds checkpoints without breaking reader. Final independent
+validation IN PROGRESS. Stock undo ready; do not flash before validation.
+
+### Payload step image validated; hardware trial ACTIVE
+
+payload-timing-validation PASSED parentbootstrap/v7 checks, exact executable delta,
+all protected archive/kernel/cmdline/AVB/payload bytes, native classification,
+real loop block reader, exact-image reset guard,63timingcases and boot model.
+Now logs/boot-a-payload-timing-trial-1792009882196341626.json accepted boot_a
+send/write OKAY and one reboot; passive observer360s (corrected from outset).
+LAST INSTALLED BOOT_A PAYLOAD STEP DIAGNOSTIC; STOCK UNDO PENDING.
+No radio/calibration/SSH activation. Await complete return and step interpretation;
+then fresh USBACL/LK/stock restoration(no reboot). Preserve all source/artifacts.
+Native module startup unchanged; physical payload access remains unproved.
+Source investigation/provenance saved docs/PAYLOAD-READ-INVESTIGATION.md.
+
+### Physical raw read and checksum verified; reproduced extraction conflicts fixed locally
+
+Payload step trial1792009882196341626 returned297.0393696050014s, field7,
+residual0.205868295. Instrumented code ensures raw boot_a read and exact payload
+SHA256 verification passed before gzip/cpio step7. Physical extraction still
+failed. LK1792010281876352783 succeeded; stock undo1792010288936728706 accepted
+send/writeOKAY exit0/no reboot. LAST INSTALLED BOOT_A STOCK; USB001/022.
+No radio/SSH proof and no active phone observer or collector.
+
+Native stock-vendor payload test1792010274494168590 reproduces cpio exit1:
+can't remove old file vendor/firmware: Is a directory. Actual stock vendor
+ramdisk has a directory, original payload tried symlink ../lib/firmware.
+Bare-root native tests missed this because they omitted vendor ramdisk.
+All subsequent extraction tests include actual vendor ramdisk.
+
+V8 unflashed intermediary SHA8c8879b5... was rejected before any hardware use:
+supplement was encoded with ramdisk LZ4 instead of required userspace gzip.
+Preserved as-is, flash_eligiblefalse. V9 gzip directory repair SHA0b0da995...
+never flashed: closer vendor test1792010574461580990 failed on odm/etc. Source
+root parent audit1792010793968083709 identifies EXACT stock /odm/etc symlink to
+/vendor/odm/etc, target absent. /odm itself is a directory (earlier conversational
+shorthand saying /odm symlink was imprecise). Both failure receipts preserved.
+
+V10 SHA bd0f541c93507b296865699e7c972c9468600bdc516e2bfed234dbb12497606f
+ramdisk1647321/payloadgzip12239410. Preserves v7 init/kernel/cmdline/modules/
+credentials; only token,payload count/hash and supplemental layout change.
+vendor/firmware becomes directory with11 byte-identical firmware mirrors from
+lib/firmware. Relocates only odm/etc entries beneath vendor/odm/etc; retains stock
+odm/etc alias. No stock partition data writes involved in these RAM layouts.
+Native exact-vendor loop read/extract1792012854305137664 PASSED, preservedfirmware
+directory and resolvedODM alias checked. Native journals1792012855485856780
+PASSED allguards/order/failure/separatechecksummedjournals; exact-image guard
+1792012856554390994 PASSED(no reboot). Independent validation finishing.
+V10 not flashed yet; stock undo ready. Corrected physical extraction and Wi-Fi/
+SSH remain unproved until a controlled hardware trial.
+
+### Corrected Wi-Fi v10 hardware trial starting
+
+Independent wifi-v10-image-validation PASSED exact first-stage metadata/token-only
+delta, unchanged kernel/init/modules/credentials, protected AVB/footer boundaries,
+gzippayload,11exact firmware mirrors, exact ODM relocation, actualstockvendor
+loop extraction, journals/resetguard/model/pinned SSH self-test. Parent directory
+vendor is added by put() helper; validator now explicitly requires mode40755,
+uid/gid0 and empty directory data rather than omitting this expected addition.
+
+Noobia interface wlx40a5ef5f66f1 verifiedUP192.168.100.106/24. Matching600s listener
+logs/wifi-v10-contact-1792013181798462283/result.json started. Now running
+lynx_boot_a_wifi_v10_trial.py --flash-linux --reboot with that live listener.
+On accepted boot_a write LAST INSTALLED BOOT_A WIFI V10; stock undo pending
+unless pinned native SSH identity is proved and fallback cancel acknowledged.
+Passive USB observer600s; no additional handset commands while active. Need
+actual trial receipt/fresh USBACL/LK/restore if Fastboot returns; if no return
+stop for physical input. Existing kernel/bootloader/recovery/slotB untouched.
+
+### Corrected-layout v10 returns without SSH; stock restored; direct network timing v11 prepared
+
+Wi-Fi v10 trial logs/boot-a-wifi-v10-trial-1792013198100225292.json accepted
+send/write/reboot, returned Fastboot without UDP beacon or native SSH. Physical
+cause UNKNOWN; native vendor layout fixes pass but actual physical extraction
+success not inferred from that fact. Supported LK1792013319715011280 saved;
+stock restore logs/boot-a-wifi-v10-trial-1792013336004299173.json send/writeOKAY
+exit0/no reboot. LAST INSTALLED BOOT_A STOCK; USB001/023. CollectorPID149959
+targeted SIGTERM; no active phone observer or network listener after this trial.
+
+Prepared Wi-Fi v11 SHA4aad96c499317fa7f6d46371657a8e8bb93043b99de6627f801c5508f40a1033,
+ramdisk1648120. Preserves correctedV10 payload/kernel/cmdline/modules/credentials.
+Original native reboot ELF copied byte-for-byte to bin/boot-proof-reboot-native;
+original call path becomes RAM-only shell timing reporter. First-stage init adds
+only common startuptime capture before bootstrap. Caller supervision/SSH fallback
+cancellation unchanged. Known watchdog/reboot-mode guard still precedes reporter.
+No extra storage/radio controls. On failure one normal native reset at480+5code,
+max600s from captured start; host720s. Allslots later than bounded180s bootstrap+
+240s Wi-Fi supervision. Code0worker0/nohostack,1..16worker131..146,
+17otherworker,18workermissing,19otherboot,20..23boot151..154,24bootmissing.
+
+Native25classificationcases+badstart/clock/refusal1792013546462034873 PASSED.
+Real loopblock exactvendor extraction1792013544834278794 PASSED incl preserved
+firmwaredir/ODM alias. Native guarded supervision+journals1792013545960294659
+PASSED. Exact-image resetguard1792013545648084937 PASSED(no reboot).
+Independent wifi-v11-image-validation currently finishing incl176timingcases,
+exact first-stage delta/nativehelperhash and protectedbytes. NOT FLASHED YET.
+Stock undo ready. Physical Wi-Fi/SSH and precisev10failure remain unproved.
+
+### Wi-Fi v11 validation passed; direct result trial ACTIVE
+
+Independent wifi-v11-image-validation PASSED parentV10 exactpayload repair,
+unchangedprotectedbytes/nativehelper, exactstart-anchor/timingwrapper delta,
+nativeclassification/journals/vendorloop/resetguard,176timingcases and pinned
+SSH/model checks. Matching listener
+logs/wifi-v11-contact-1792013706056953218/result.json started720s.
+Hardware logs/boot-a-wifi-v11-trial-1792013739729132952.json accepted boot_a
+send/writeOKAY and one reboot; passive observer720s. LAST INSTALLED BOOT_A
+WIFI V11; STOCK UNDO PENDING unless nativeSSH proved and fallbackcancelack0.
+No contact seen at last snapshot. Await direct field or verifiedSSH; no
+additional handsetcommands while observer active. On returnedFastboot fresh
+USBACL/LK/stockrestore(no reboot); on unexpectedrecovery stop for physical input.
+EXPERIMENT-INDEX refreshed114receipts, no parseerrors, currentV11write recorded.
+
+### Wi-Fi v11 reaches station power; stock restored; clock supplier investigation
+
+Wi-Fi v11 trial1792013739729132952 returned546.1061447219981s, field9,
+residual0.727356588: Wi-Fi worker139/station command failure. On this exact control
+path bootstrap payload verification/extraction, read-only factory calibration,
+radio-module insertion, MT6983 chip ioctl and calibration submission returned
+success first. Module insertion is not proof of every hardware supplier bound.
+No WLAN/association/DHCP/SSH proof. Interpretation remains conditional on normal
+reset evidence/physical non-interference; software timing alone isn't raw log.
+LK1792015057103459539 succeeded; stock restore1792015204936747053 accepted
+send/writeOKAY exit0/no reboot. LAST INSTALLED BOOT_A STOCK; USB001/024.
+Listener720s ended with no verified SSH; no observers or collectors active.
+
+Source says S already attempts power-on plus station/P2P setup, so no speculative
+1+S retry. Exact stock wmt module SHA96df60a8... has6diagnostic strings verified
+by station-error-string-audit-1792015402390510530. Preparing bounded same-boot
+kernel snapshot after an exact token-bound station marker, then direct timing
+of last recognized diagnostic. No raw retained/fullstream claim.
+
+Kernel CONFIG_MTK_CLKBUF=m; our startup omitted clkbuf.ko and mt6685-core.ko,
+which stock modules.load includes at124/132 after UFS. Source MT6685 core creates
+clock-buffer/consys child devices. MergedDT has uniqueMT6685 parent,
+MT6685 clock-buffer child, srclken-rc target and clock_buffer_ctrl configuration;
+Wi-Fi output XO_BBCK2. Initial inventory search used incomplete name patterns;
+corrected inventory1792016313460387074 shows actual clock_buffer/srclken targets.
+Stock-radio-clock-audit PASSED exact binaries/vermagic/OF tables/closed declared
+dependencies/shared imported CRCs and18criticalDT properties. Missing providers
+are a hypothesis, not independently proved physical cause. No helper loaded yet.
+Exact supplier modules supplied by unmodified vendor ramdisk, not rebuilt.
+
+Prepared radio-clock-guard.sh: reject preloaded helpers, missing/changed18property
+map, wrong modulebytes/ambiguous,busy,wrong-node targets; register only stockMFD
+then stockclkbuf; require canonicalMFD/clock/RCbindings. No unbind/register-force
+or partition/calibration write. Binding isn't independent clock measurement.
+Station parser ignores logs before last exactcurrenttoken marker and transport
+reports one lastmatching diagnostic, not complete log or exact CPUstop.
+PreparingV12 with these guards/diagnostics in supplementalRAM files. NoV12flash
+before nativeABI/fixtures/control/image checks. Stock undo ready.
+
+### Explicitly paused for the night — V12 prepared, never flashed
+
+Noob requested a pause; resume only after their next instruction. All trials,
+collectors and native checks have finished. No V12 listener or hardware trial
+was started. LAST INSTALLED BOOT_A remains STOCK, restored successfully by
+logs/boot-a-wifi-v11-trial-1792015204936747053.json (no reboot).
+Stock boot SHA256: a67f03d7b826b834c23653b67eaa6efa971eb70ef8af19eee4d33fb5fc7fe995.
+
+V12 candidate prepared and independently validated, NEVER FLASHED:
+linux-port/artifacts/busybox-wifi-ssh-twostage-v12/nord3-busybox-candidate.img
+SHA256: 1e51aeff4eae67f50c5bce85986d7f423a14c6274332b99d2e64015288f8b73b.
+Independent receipt: linux-port/docs/wifi-v12-image-validation.json PASSED.
+Native station classification, supplier module ABI, actual vendor loop extraction,
+reset guards and host guard/parser fixtures passed. These are local checks, not
+physical Wi-Fi proof. V11 reached station power; association/DHCP/SSH remain
+unverified. V12 adds guarded stock clock suppliers and bounded station-failure
+diagnostics while preserving the stock kernel and restoration procedure.
+
+Tomorrow: inspect current USB/state and receipts first. After user resumes,
+start matching V12 contact listener with 780-second lifetime, then use guarded
+V12 boot_a trial only with its fresh preflight and active collector receipt.
+Preserve slot B, bootloader and recovery partitions; restore stock boot_a on
+failed trial if Fastboot is available, and stop on unexpected recovery behavior.
+
+### Resumed: V12 hardware trial active
+
+User requested continuation. Fresh Fastboot identity/layout checks passed:
+logs/fastboot-preflight-1792080980573228473.json. Independent V12 validation
+passed again. Collector logs/wifi-v12-contact-1792080995509261151/result.json
+started with 780-second bound. Trial logs/boot-a-wifi-v12-trial-1792081041410152375.json
+accepted boot_a write and reboot; passive observer active. LAST INSTALLED BOOT_A
+V12 until a subsequent stock-restore receipt. Stock undo pending unless pinned
+native SSH and cancellation acknowledgment succeed. No other partitions written.
+
+### V12 completed: station power failure, stock restored
+
+Trial1792081041410152375 returned Fastboot after641.772544783s, field28,
+residual0.060956527s: last current-attempt station diagnostic power-on failed.
+This implies exact target guards and canonical clock-provider bindings passed
+first, not that clock outputs were independently measured. No UDP events/SSH.
+LK1792081735305073565 succeeded; NONRST_REG2=0x28002003, wdtstatus0x2,
+consistent with deliberate software return. Stock undo1792081742054266790
+accepted boot_a send/write OKAY exit0, no reboot. LAST INSTALLED BOOT_A STOCK.
+Collector ended at deadline; no active trial/listener. Preserve raw receipts.
+Next investigate inner wlanProbe failure/timeout using bounded same-boot log,
+without changing radio startup or adding power retries.
+
+### V13 diagnostic-only follow-up active
+
+Exact stock module literal audit1792081876604900695 passed. Added
+power-failure-parser.sh with current token/attempt boundary and committed
+inner diagnostic only before generic power failure. Reports timeout, invalid
+callback, or raw wlanProbe reason0..7 (source labels not binary-enum proof).
+25 host isolation/malformed/order cases passed1792081920927832261. Native
+39result paths/invalid-clock checks passed1792082058756757195; exact-image
+reset guard passed1792082139547154500. Independent wifi-v13-image-validation
+passed. CandidateSHA3b7d7962c8526e01b60f953f5f6b660e10cc6d599f7539d290f03857147165bb.
+Only parser/session token differ from V12; startup/payload/kernel unchanged.
+Trial1792082269466593399 accepted boot_a write and reboot, observer780s
+active. Collector wifi-v13-contact-1792082253154054090/result.json active.
+LAST INSTALLED BOOT_A V13, stock undo pending unless pinned nativeSSH+ack.
+
+### V13 completed: power-control timeout; stock restored
+
+Trial1792082269466593399 returned Fastboot after626.809410853s, code25,
+residual0.024090457s: current-attempt power-control timeout diagnostic before
+generic power failure. This is indirect timing evidence, not a complete log.
+No network beacon or SSH. LK1792083654392223770 succeeded, NONRST_REG2
+0x28002003 and wdtstatus0x2 consistent with software return.
+Stock restore1792084058209819698 accepted boot_a send/write OKAY exit0,
+no reboot. LAST INSTALLED BOOT_A STOCK. Collector ended; no hardware test active.
+
+Stock diagnostic literal inventory1792082365053606565 and exact function
+disassembly1792082568102840820 preserved for offline review. Source was a
+reference, not exact stock build provenance. Exact power controller waits
+0x9c4 ticks, emits timeout string with argument10, returns false on timeout;
+worker has an inlined status==1 sleep loop before indirect probe callback.
+Do NOT infer which wait timed out from code25 alone.
+
+Next useful diagnostic: capture the named kernel worker's /proc/PID/stack
+immediately after timeout, using standard read-only procfs (no kprobes needed).
+Stock kernel CONFIG_PROC_FS/STACKTRACE/KALLSYMS/FRAME_POINTER are enabled.
+An exact-module stack offset can distinguish the pre-calibration sleep loop
+from a callback blocked deeper in driver initialization. Must verify binary
+offsets and handle absent/ambiguous workers/unavailable stack explicitly.
+
+### V14 worker-stack diagnostic active; synchronized launch fixes approval gaps
+
+V14 imageSHA5bc287a9fea447edfe83eeb284d8371ea0ac093f3a17f74e3db66bb171cedded,
+ramdisk1648310, supplement12243212. One unchanged station attempt; on failure
+save immediate dmesg then bounded read-only /proc/PID/{stack,status,wchan} for
+the exact named Wi-Fi worker. No runtime tracing or module patching. Timing
+parser in verified supplement reports saved stack category only when previous
+parser proves current marked power-control timeout. Slots9/35 not produced.
+Independent wifi-v14-image-validation PASSED; procfs actual stockkernel test
+1792084670876055960, host19cases1792085033599447610, native38classification
+1792085116355944289, vendorloop1792085116855979394, resetguard1792085116492272075.
+Exact binary wifi-worker-wait-audit independently verifies pre_cal_ongoing byte,
+300ms msleep call and return offset0x214 in mtk_wland_thread_main. It does not
+prove why calibration remains pending. Captured stack is a post-timeout sample.
+
+First attempt1792085637546733376 REFUSED before phone contact/write: execution
+approval delay made collector older than90s. Preserve this guard failure. Old
+collector PID20435 stopped after exact ps verification; session26583.
+New tools/run_wifi_v14_trial.py launches fresh listener AFTER approval and then
+fixed trial without another approval gap. It owns collector lifetime and
+terminates its own listener after trial/failure; native SSH diagnostics get90s.
+Active collector logs/wifi-v14-contact-1792085809501301767/result.json.
+Active trial logs/boot-a-wifi-v14-trial-1792085818708701369.json accepted
+boot_a send/write OKAY and reboot. Observer780s. Unified runner session56157.
+LAST INSTALLED BOOT_A V14; stock undo pending unless pinned SSH+ack succeeds.
+No commands to handset while observer active. After returnedFastboot renew
+USBACL, capture LK/reset evidence, then verified stockrestore with no reboot.
+
+### V14 completed: readable worker stack in connectivity power; stock restored
+
+Active trial1792085818708701369 completed: return641.718921345s, code28,
+residual0.114579965s. Current marked timeout evidence plus unique readable
+Wi-Fi worker stack included connectivity power function(s). It did NOT match
+the exact pre_cal_ongoing sleep return0x214. Raw stack remains in phone RAM,
+not retrieved to host; only classified timing result is available. No UDP/SSH.
+Unified launcher1792085809472293419 ended and stopped its owned collector.
+LK1792086530240741463 captured; NONRST_REG2=0x28002003, wdtstatus0x2 consistent
+with deliberate reset. Stock restore1792086567796848435 send/write accepted
+exit0/no reboot. LAST INSTALLED BOOT_A STOCK; USB001/008. No active phone trials.
+
+Pinned manufacturer sources saved docs/wifi-wait-sources-1792085962321757460/:
+axi.c, pre_cal.c, conninfra_core.c, each manifest-hashed. Reference source has
+up-to60s pre-cal callback registration wait, while exact stock power controller
+times out after10s. This is a timing-mismatch hypothesis, not yet proved root
+cause. Exact worker normal idle return0xe4 independently verified by
+wifi-worker-idle-audit; actual Wi-Fi module name wlan_drv_gen4m_6983.
+Next candidate could passively await the initial asynchronous request after
+its timeout, then permit ONE additional normal S command ONLY with two stable
+samples of the exact worker-idle stack and a driver-bound Wi-Fi netdev. No
+retry while worker busy, no forced completion/calibration flags, no extra radio
+drivers or power-register writes. Needs implementation and host/native tests
+before any flash. Preserve first timeout log/stack and final readiness evidence.
+
+### V15 guarded asynchronous completion + faster timing trial ACTIVE
+
+User requested shorter waits and batched tests, retaining correctness first.
+CandidateSHA c08d19beb54ef6400912651539d6ce9f510632a94d04180f30b88114d48768f2,
+ramdisk1648369, gzip12244100. New wifi-station-async.sh permits an initial normal
+S request and at most one completion S request, only after current marked
+timeout, subsequent current-marked wlanProbe success, two stable exact worker
+idle stacks0xe4, samePID/ifindex and phy80211/netdev type1 bound to exact stock
+wlan_drv_gen4m_6983 module. Passive wait bounded90s. No overlap, forced flags,
+new radio drivers, register writes or calibration writes. First failure files
+preserved with .first suffix; current failure and async dmesg remain in RAM.
+Host20 +actual stockkernel ARM6readiness cases passed1792086852323476899;
+station-flow4cases passed1792087217429583161 (one/two request bound and original
+failure preservation). Parent clock/module/kernel/credential bytes unchanged.
+
+Timing now120+5*code, except slot9=525s. If chosen early slot has less than3s
+remaining, report only late-result slot9; if that slot also missed, refuse
+reset rather than emit false detail. Decoder lynx_fast_wifi_timing.py pins
+this exact grid. Observer/listener660s. Native batched38normal+1late reset,
+invalid clock/start and missed-all-slots refusal1792087237962666563 PASSED;
+vendor block/extract1792087238191491057, exact resetguard1792087238473370041,
+independent wifi-v15-image-validation with280decoder boundary cases PASSED.
+Validation reuses pinned V14image+passedreceipt, avoiding unchanged recursive
+test/model reruns. Legacy timing comment about all slots after420s is obsolete;
+the explicit new runtime margin/late-slot guard is authoritative.
+
+Synchronized launcher tools/run_wifi_v15_trial.py started after approval.
+Collector logs/wifi-v15-contact-1792087399255602486/result.json. Runner session
+75052; inspect its output for exact trial receipt/write status before assuming
+V15 was installed. Stock undo prepared, only boot_a allowed. No additional
+handset commands during observer. On returnedFastboot: freshACL, LK, stockundo
+no reboot unless pinned native SSH+ack succeeded. Native Wi-Fi/SSH still unproved.
+
+### V15 completed faster: worker waiting in firmware loader; stock restored
+
+Trial1792087400379311204 accepted boot_a write/reboot and returned in276.009155636s,
+code27, residual0.824345674s on new fast grid: current marked control timeout and
+readable unique worker stack including firmware loader. No UDP/nativeSSH. This
+is a sampled firmware-loading wait, not proof of a particular missing file or
+whether a second station call occurred. First-failure/current async diagnostics
+remain RAM-only, not retrieved. Faster result roughly4m36s versus prior10m42s.
+Launcher1792087399226788088 completed and stopped its collector.
+LK1792087763998089421 succeeded, NONRST_REG2=0x28002003/wdtstatus0x2 consistent
+with software return. Stock restore1792087772736487910 accepted send/write OKAY
+exit0/no reboot. LAST INSTALLED BOOT_A STOCK; USB001/009. No phone trial active.
+Stock CONFIG_FW_LOADER_USER_HELPER[_FALLBACK]=y, CONFIG_UEVENT_HELPER=n. Native
+mdev -s alone cannot imply a running firmware-uevent service. Next audit exact
+stock firmware coverage/search paths and identify pending request name; do not
+assume wrong firmware bytes or bypass calibration merely from this wait.
+
+### V16 standard firmware-event service trial ACTIVE
+
+Offline coverage inventory1792087868374880314: 11firmware files embedded;
+1883stock firmware files/412054628bytes inventoried. No absent simple literal
+matches, templates remain dynamic. Exact BusyBox1.37.0 SHA999cb969... supports
+mdev -df netlink daemon and firmware loading. Actual ARM stockkernel daemon
+test1792088009610432217 PASSED. Batched actual BusyBox synthetic sysfs firmware
+protocol test1792088104605085036 PASSED: correct file bytes delivered, loading
+sequence1then0, explicit-1 for absent filename. Not a physical firmware request.
+
+V16 adds firmware-events.sh before WIFI_DRIVERS. Start standard mdev -df -vv,
+reject nonempty/symlinked command config or existing PID file, require alive
+owned child and protocol15/group1 socket in /proc/net/netlink. Save mdev.log
+and firmware-events-ready in RAM. Firmware/module/kernel/keys and V15 station
+guard/timing unchanged. Native exact service+netlink/duplicate/config refusal
+and firmware transfer1792088320210496041 PASSED; exact resetguard
+1792088320433247704 PASSED. Independent wifi-v16-image-validation PASSED.
+CandidateSHA73311e9613a002a5bf3d3d4c4b5057840b7a427a06e1aff18a186e27e68614f6,
+ramdisk1648368/gzip12244544. No extra stock firmware guesses or custom loaders.
+BusyBox reference source reviewed upstream mirror/master; it is a reference,
+while tests exercise our exact binary. Do not assert root cause proved yet.
+
+Synchronized runner session24969 started; collector
+logs/wifi-v16-contact-1792088458962783571/result.json. Inspect runner output for
+exact trial receipt/accepted write before assuming installed image. Onlyboot_a
+authorized; no extra handset commands while passive observer active. On SSH
+proof+ack retain Linux; otherwise returnedFastboot freshACL/LK/stockundo.
+
+### V16 returned early payload failure; stock restored; V17 prepared, UNFLASHED
+
+Trial1792088460069768892 returned256.613597692s, code23, residual0.219903618s:
+bootstrap154/read-own-payload failure; Wi-Fi service therefore not yet physically
+proved. Preserve timing interpretation limits. LK1792088900885362409 succeeded,
+NONRST_REG2=0x28002003/wdtstatus0x2. Stock undo1792088922188623103 send/write
+accepted exit0/no reboot. LAST INSTALLED BOOT_A STOCK; USB001/010. No active
+phone collector/observer. Additional exact V16 real-loop/vendor extraction test
+1792088902300641153 PASSED, does not reproduce physical failure. Compressed
+payload12244544/expanded30448640 with /run128MiB; no identified RAM-size shortage.
+
+V17 prepared to capture10 own-payload phases and retain unchanged V16 radio/
+firmware service. Init adds only RAM phase file; no partition writes. Decoder
+expanded to50slots, 80+5*code exceptlate9=525, same3s margin guard and660observer.
+Bootstrap154 with phase1..10 maps40..49, unknownphase remains23. This diagnoses
+discovery/node/size/RO/metadata/read/hash/gzip/cpio/final-log separately in one
+boot. CandidateSHAe24e21797997312ec21bae8f07256a3cf17411462ac6c30518543fbb2677dcab,
+ramdisk1648523. UNFLASHED; native phase/fault/timing and independent validation
+required before trial. Payload/module/firmware bytes unchanged from V16.
+
+### V17 validation PASSED; trial ACTIVE
+
+Batched native49timing resets including late-slot/refusal passed1792089294576390735.
+Real loop/vendor payload read/extract plus10fault-phase injections passed
+1792089295277420728. Exact image resetguard passed1792089294836530621.
+Independent wifi-v17-image-validation PASSED with350decoder boundary cases.
+Marker steps distinguish payload operations without changing their behavior.
+Same V16 firmware daemon still awaiting physical proof. Station guard unchanged.
+Collector logs/wifi-v17-contact-1792089398405100243/result.json active.
+Trial logs/boot-a-wifi-v17-trial-1792089399288442769.json; runner session67652.
+Inspect receipt for accepted boot_a write/reboot; no commands while observer.
+On pinned nativeSSH+ack keep Linux and gather full logs; otherwise returned
+Fastboot freshACL/LK/verifiedstockundo(no reboot). Decoder is now
+tools/lynx_payload_fast_timing.py (50slots,80+5*code exceptlate9=525).
+
+### V17 reaches actual Wi-Fi interface-up and WPA start; stock restored
+
+Trial1792089399288442769 returned166.895728017s, code13, residual0.062226707s:
+worker143/WPA association deadline. On exact source path payload/storage/
+calibration, stock clock/module startup, firmware daemon, chip check, station
+command, netdev discovery, ip-link-up and wpa_supplicant startup all succeeded
+first. Does not prove scanning, authentication, DHCP or SSH. No UDP/nativeSSH.
+V16 early payload failure not reproduced here; V17 payload markers were not
+needed on this boot. Standard firmware service now has startup-path evidence,
+not independent capture of each physical firmware transaction.
+LK1792089735394606412 succeeded; NONRST_REG2=0x28002003/wdtstatus0x2.
+Stock restore1792089744635556434 accepted send/write OKAY exit0/no reboot.
+LAST INSTALLED BOOT_A STOCK; USB001/011. No active phone collector/observer.
+V17 candidate preserved as most advanced hardware-tested Linux image.
+
+Read-only active profile audit1792089829386746311: host profile Noobia MT7612U,
+SSID Noobia, key_mgmt wpa-psk; embedded PSK cryptographically matches (key never
+logged). Cached AP Noobia channel6/2437MHz/WPA2; not hidden. Embedded countryBG,
+protoRSN, ctrl_interface=/run/wpa_supplicant matches polling path. No credential
+request needed. Next gather current WPA status, cached scan list, rfkill and
+supplicant messages in one trial; classify current boot without key exposure.
+
+### V18 WPA diagnostic candidate prepared, UNFLASHED
+
+CandidateSHA62bfed751f3793f63132d2ca3181a5aa869f4f5ce6efcb640abbcaecc9ba4f40,
+ramdisk1648722/gzip12245495. Add wpa-diagnostics.sh/public targetSSID, bounded
+3s status+3s cached scan queries, read-only rfkill snapshot, -d supplicant log
+(no -K/show-keys). Bind snapshot to current token. If final status is COMPLETED,
+continue DHCP; otherwise report status/scan/key-error/rejection/rfkill/category.
+No credential changes, forced scans or radio state writes. Kernel/module/stock
+firmware/clock/daemon/station flow unchanged; keep V17 best tested image.
+New60-slot prioritized grid: WPA50..59=160..205s, payload40..49=210..255s,
+stack25..39=260..330s, generic0..24=335+5*code, late9=525; same3s margin guard.
+Observer660s. Association diagnostics target about3min; early stage regressions
+may take longer. UNFLASHED: tests/independent validation pending.
+
+### V18 validated; association diagnostic trial ACTIVE
+
+Host+actual ARM BusyBox24 WPA parser/snapshot cases passed1792090425998148659.
+Native58timing resets +late/refusal guards passed1792090547899679543;
+actual block/vendor extraction passed1792090550012668570; exact resetguard
+passed1792090550350855812. Independent wifi-v18-image-validation PASSED with
+420decoder boundary cases. Reuse pinned unchanged parent/module/credential
+checks rather than recursive retesting. TargetSSID/key unchanged and verified
+against active host Noobia profile. No firmware/module/radio state changes.
+Collector logs/wifi-v18-contact-1792090708114511204/result.json active;
+runner session86852. Inspect output for exact trial receipt and accepted write.
+Priority WPA codes50..59 at160..205seconds (+calibrated reboot baseline),
+decoder tools/lynx_wpa_timing.py. Observe without extra handsetcommands;
+on SSHproof+ack keep Linux; otherwise returnedFastboot freshACL/LK/stockundo.
+
+### V18 complete; stock restored; WPA launch root cause reproduced locally
+
+Trial1792090709237264802 returned181.733827879s: code50/control-status
+unavailable, residual0.099673431s. No nativeSSH or UDP proof. LK capture
+1792091551672357246 returned0; NONRST_REG2=0x28002003. Verified stock boot_a
+restore1792091559039878148 accepted send/write OKAY exit0, NO reboot.
+LAST INSTALLED BOOT_A STOCK; USB001/012. Other partitions unchanged.
+
+Exact WPA binaries dynamically linked: initial local fixture omitted loader/
+libraries (preserved1792091616234535443); corrected fixture included exact
+supplement libraries1792091646205899235. Actual wpa_supplicant2.11 does NOT
+support -f: original command prints usage and exits0 WITHOUT a daemon even
+with wired loopback. This invalidates earlier inference that -B exit0 proved
+daemon startup or that code13 proved association failure. Interface discovery
+and ip-link-up evidence remain valid. Remove -f: actual server/client PONG and
+wpa_state reply succeeded1792091691955569851 under exact stock ARM kernel.
+
+V19 replaces -B/-f launch with owned foreground daemon backgrounded by shell,
+stdout/stderr privateRAM log, PID tracking and bounded socket+PONG readiness.
+Exact launcher tested1792091882279471372: livePONG/status, logcapture and
+invaliddriverrefusal all passed in8.63s; no NIC or real credentials. Actual
+block/vendor payload1792091878654321570 passed. Kernel, firmware, modules,
+credentials, bootstrap, reset guards and timing unchanged (reuse pinned V18
+receipts rather than rerun identical code). CandidateSHA
+5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851;
+ramdisk1648718, supplement12245792. V19 currently UNFLASHED; independent
+validation in progress. User requests faster batched tests; local pair checks
+take about9s and payloadcheck ran concurrently. No physical action needed.
+
+### V19 validation passed; hardware trial ACTIVE
+
+Independent docs/wifi-v19-image-validation.json PASSED. Validator's initial
+unsupportedflag check also matched explanatory comment; narrowed to command
+argument bytes, candidate/source unchanged. Fresh collector
+logs/wifi-v19-contact-1792091967236871487/result.json; trial
+logs/boot-a-wifi-v19-trial-1792091968352709663.json. boot_a send/write accepted,
+one reboot accepted. Runner session29916 active; passive observation660s.
+CURRENT INSTALLED BOOT_A V19. No additional phonecommands during observer.
+If no pinned nativeSSH+cancelack: freshACL/read-onlyLK, restoreverifiedstock
+boot_a withoutreboot, then inspect current-token timing category. Do not treat
+original WPA -B exit0 as evidence of a live daemon (rootcause recorded above).
+
+### SUCCESS: native Wi-Fi, DHCP and pinned SSH verified on Lynx
+
+V19 trial1792091968352709663 succeeded. Contactreceipt
+logs/wifi-v19-contact-1792091967236871487/result.json state native-ssh-available:
+phone192.168.100.9; pinned hostkey/exactkernel/PID1BusyBox/initSHA/BusyBoxSHA/
+currenttoken/rootUID all matched. Tokenack exit0 cancelled automaticfallback.
+Collector received beacon after108.94s; logs show WPAstart85.14s,
+associationwait86.14s,DHCP87.15s,SSHready91.13s. No Fastbootreturn needed.
+Decoded/retrieved journals valid: supervisor2,bootstrap84,wifi105records.
+CURRENT BOOT_A V19; RUNNING NATIVE LINUX; DO NOT restore stock on this success.
+Runner29916 finishedexit0; no observer/collector remains running.
+
+Independent capture1792092117801695142 proof+health+dmesg succeeded. Broad
+tar of all /run/lynx included bulky payloaddata and timedout35s after32.7MB;
+partialarchive preserved. Narrowed to bounded runtime records; new capture
+1792092186336551640 allcommands exit0 in2.21s, archive282917bytes validated
+44members. Health confirms wlan0 UP192.168.100.9/24, routevia192.168.100.1,
+WPA2-PSK/Noobia/stateCOMPLETED. Full kernel log saved827344bytes. Real phone
+logs now available, no longer limited to timed reset inference.
+
+Working artifacts preserved under busybox-wifi-ssh-twostage-v19. BEST-LINUX-BOOT
+updated to actual authenticated hardware milestone. Connection helper
+tools/lynx-ssh (invoke via bash), capturetool tools/capture_lynx_live.py.
+Procedure docs/NATIVE-WIFI-SSH.md includes exact stock undo and requirement
+to start V19 collector before future reboots: fallback cancellation isRAMonly.
+Logs and runtime rootfs remain RAM onphone; archivedlocally before anyreboot.
+No further flash/reboot needed. No GUI/fullpostmarketOS installation yet.

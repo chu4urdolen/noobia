@@ -1,0 +1,5224 @@
+{
+  "version": 1,
+  "candidate_sha256": "5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851",
+  "stock_boot_sha256": "a67f03d7b826b834c23653b67eaa6efa971eb70ef8af19eee4d33fb5fc7fe995",
+  "image_bytes": 67108864,
+  "coverage_bytes": 21889024,
+  "payload_offset": 25165824,
+  "header_changes": [
+    [
+      12,
+      78
+    ],
+    [
+      13,
+      40
+    ],
+    [
+      44,
+      114
+    ],
+    [
+      45,
+      100
+    ],
+    [
+      46,
+      105
+    ],
+    [
+      47,
+      110
+    ],
+    [
+      48,
+      105
+    ],
+    [
+      49,
+      116
+    ],
+    [
+      50,
+      61
+    ],
+    [
+      51,
+      47
+    ],
+    [
+      52,
+      105
+    ],
+    [
+      53,
+      110
+    ],
+    [
+      54,
+      105
+    ],
+    [
+      55,
+      116
+    ],
+    [
+      56,
+      32
+    ],
+    [
+      57,
+      112
+    ],
+    [
+      58,
+      97
+    ],
+    [
+      59,
+      110
+    ],
+    [
+      60,
+      105
+    ],
+    [
+      61,
+      99
+    ],
+    [
+      62,
+      61
+    ],
+    [
+      63,
+      49
+    ],
+    [
+      64,
+      48
+    ],
+    [
+      65,
+      32
+    ],
+    [
+      66,
+      110
+    ],
+    [
+      67,
+      111
+    ],
+    [
+      68,
+      111
+    ],
+    [
+      69,
+      98
+    ],
+    [
+      70,
+      105
+    ],
+    [
+      71,
+      97
+    ],
+    [
+      72,
+      46
+    ],
+    [
+      73,
+      117
+    ],
+    [
+      74,
+      115
+    ],
+    [
+      75,
+      98
+    ],
+    [
+      76,
+      61
+    ],
+    [
+      77,
+      49
+    ],
+    [
+      78,
+      32
+    ],
+    [
+      79,
+      102
+    ],
+    [
+      80,
+      119
+    ],
+    [
+      81,
+      95
+    ],
+    [
+      82,
+      100
+    ],
+    [
+      83,
+      101
+    ],
+    [
+      84,
+      118
+    ],
+    [
+      85,
+      108
+    ],
+    [
+      86,
+      105
+    ],
+    [
+      87,
+      110
+    ],
+    [
+      88,
+      107
+    ],
+    [
+      89,
+      61
+    ],
+    [
+      90,
+      112
+    ],
+    [
+      91,
+      101
+    ],
+    [
+      92,
+      114
+    ],
+    [
+      93,
+      109
+    ],
+    [
+      94,
+      105
+    ],
+    [
+      95,
+      115
+    ],
+    [
+      96,
+      115
+    ],
+    [
+      97,
+      105
+    ],
+    [
+      98,
+      118
+    ],
+    [
+      99,
+      101
+    ],
+    [
+      100,
+      32
+    ],
+    [
+      101,
+      105
+    ],
+    [
+      102,
+      110
+    ],
+    [
+      103,
+      105
+    ],
+    [
+      104,
+      116
+    ],
+    [
+      105,
+      99
+    ],
+    [
+      106,
+      97
+    ],
+    [
+      107,
+      108
+    ],
+    [
+      108,
+      108
+    ],
+    [
+      109,
+      95
+    ],
+    [
+      110,
+      100
+    ],
+    [
+      111,
+      101
+    ],
+    [
+      112,
+      98
+    ],
+    [
+      113,
+      117
+    ],
+    [
+      114,
+      103
+    ],
+    [
+      115,
+      32
+    ],
+    [
+      116,
+      116
+    ],
+    [
+      117,
+      112
+    ],
+    [
+      118,
+      95
+    ],
+    [
+      119,
+      112
+    ],
+    [
+      120,
+      114
+    ],
+    [
+      121,
+      105
+    ],
+    [
+      122,
+      110
+    ],
+    [
+      123,
+      116
+    ],
+    [
+      124,
+      107
+    ]
+  ],
+  "kernel_sha256": "cbc9f5dc54b5198ddd1e82d5d7bde96f43cbb383a663726ddd68919b0639d3af",
+  "ramdisk_sha256": "1b32e26e6514a7b68a5e93bd2f281fab68ea42d45558bef8451f2a4887b2a17d",
+  "supplement_sha256": "1b44b5d52a960c644988ccd4a140145c3c3d059f2b403aed8bb54b2926ae5048",
+  "archives": {
+    "primary": [
+      {
+        "name": "bin",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "sbin",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "dev",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "proc",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "sys",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "sys/kernel",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "sys/kernel/config",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "run",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "tmp",
+        "mode": 17407,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "etc",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "lib",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "lib/modules",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "dev/console",
+        "mode": 8576,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 5,
+        "rdevminor": 1,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "dev/null",
+        "mode": 8630,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 1,
+        "rdevminor": 3,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "bin/busybox",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "999cb969d09093a71716cfc747bb53cdada3f332c05eb5046c56e0f66a4d6d22",
+        "bytes": 1116408
+      },
+      {
+        "name": "bin/sh",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/[",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/[[",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/acpid",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/add-shell",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/addgroup",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/adduser",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/adjtimex",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/arch",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/arp",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/arping",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ash",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/awk",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/base64",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/basename",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/bbconfig",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/bc",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/beep",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/blkdiscard",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/blkid",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/blockdev",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/brctl",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/bunzip2",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/bzcat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/bzip2",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/cal",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/cat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/chattr",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/chgrp",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/chmod",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/chown",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/chpasswd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/chroot",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/chvt",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/cksum",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/clear",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/cmp",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/comm",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/cp",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/cpio",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/crond",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/crontab",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/cryptpw",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/cut",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/date",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/dc",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/dd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/deallocvt",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/delgroup",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/deluser",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/depmod",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/df",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/diff",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/dirname",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/dmesg",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/dnsdomainname",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/dos2unix",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/du",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/dumpkmap",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/echo",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/egrep",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/eject",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/env",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ether-wake",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/expand",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/expr",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/factor",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fallocate",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/false",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fatattr",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fbset",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fbsplash",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fdflush",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fdisk",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fgrep",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/find",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/findfs",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/flock",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fold",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/free",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fsck",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fstrim",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fsync",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/fuser",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/getopt",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/getty",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/grep",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/groups",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/gunzip",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/gzip",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/halt",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/hd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/head",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/hexdump",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/hostid",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/hostname",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/hwclock",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/id",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ifconfig",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ifdown",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ifenslave",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ifup",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/init",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/inotifyd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/insmod",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/install",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ionice",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/iostat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ip",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ipaddr",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ipcalc",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ipcrm",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ipcs",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/iplink",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ipneigh",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/iproute",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/iprule",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/iptunnel",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/kbd_mode",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/kill",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/killall",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/killall5",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/klogd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/last",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/less",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/link",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/linux32",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/linux64",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ln",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/loadfont",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/loadkmap",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/logger",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/login",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/logread",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/losetup",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ls",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/lsattr",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/lsmod",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/lsof",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/lsusb",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/lzcat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/lzma",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/lzop",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/lzopcat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/makemime",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/md5sum",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mdev",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mesg",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/microcom",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mkdir",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mkdosfs",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mkfifo",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mkfs.vfat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mknod",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mkpasswd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mkswap",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mktemp",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/modinfo",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/modprobe",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/more",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mount",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mountpoint",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mpstat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/mv",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nameif",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nanddump",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nandwrite",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nbd-client",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nc",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/netstat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nice",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nl",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nmeter",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nohup",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nologin",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nproc",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nsenter",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/nslookup",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ntpd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/od",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/openvt",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/partprobe",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/passwd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/paste",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/pgrep",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/pidof",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ping",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ping6",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/pipe_progress",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/pivot_root",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/pkill",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/pmap",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/poweroff",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/printenv",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/printf",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ps",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/pscan",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/pstree",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/pwd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/pwdx",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/raidautorun",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/rdate",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/rdev",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/readahead",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/readlink",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/realpath",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/reboot",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/reformime",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/remove-shell",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/renice",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/reset",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/resize",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/rev",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/rfkill",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/rm",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/rmdir",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/rmmod",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/route",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/run-parts",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sed",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sendmail",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/seq",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/setconsole",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/setfont",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/setkeycodes",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/setlogcons",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/setpriv",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/setserial",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/setsid",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sha1sum",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sha256sum",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sha3sum",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sha512sum",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/showkey",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/shred",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/shuf",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/slattach",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sleep",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sort",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/split",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ssl_client",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/stat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/strings",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/stty",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/su",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sum",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/swapoff",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/swapon",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/switch_root",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sync",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/sysctl",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/syslogd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/tac",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/tail",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/tar",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/tee",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/test",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/time",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/timeout",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/top",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/touch",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/tr",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/traceroute",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/traceroute6",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/tree",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/true",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/truncate",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/tty",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/ttysize",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/tunctl",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/udhcpc",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/udhcpc6",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/umount",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/uname",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/unexpand",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/uniq",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/unix2dos",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/unlink",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/unlzma",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/unlzop",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/unshare",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/unxz",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/unzip",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/uptime",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/usleep",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/uudecode",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/uuencode",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/vconfig",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/vi",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/vlock",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/volname",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/watch",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/watchdog",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/wc",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/wget",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/which",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/who",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/whoami",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/whois",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/xargs",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/xxd",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/xzcat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/yes",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/zcat",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "bin/zcip",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9d75f0d7c398df565d7ac04c6819b62d6d8f9560f5eb4672596ecd8f7e96ae91",
+        "bytes": 7
+      },
+      {
+        "name": "init",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "68e5dd41e7f134b651308e2d510543483a1f5bc1a3a57908e4936128573088f2",
+        "bytes": 15822,
+        "public_source": "runtime/primary/init"
+      },
+      {
+        "name": "etc/usb-modules.load",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "5ebcbafe448c7d1de9e73589bcff0354eb06239f577f042ac41927a81bee610c",
+        "bytes": 379,
+        "public_source": "runtime/primary/etc/usb-modules.load"
+      },
+      {
+        "name": "lib/modules/oplusboot.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "72724f08575bd2c8d94373d86a4337d367c13b16a8ab2d6389aed2f8df16157f",
+        "bytes": 15040
+      },
+      {
+        "name": "lib/modules/buildvariant.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "f0ca2e1fd4ae9ad7e28be23ab459986f302a10816eb3a8688e91a23206f0783e",
+        "bytes": 10208
+      },
+      {
+        "name": "lib/modules/oplus_project.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "7ed6097961a89d2207c6f74ae8e1233c08fdbcaead18c589f9c2012cee22d489",
+        "bytes": 38168
+      },
+      {
+        "name": "lib/modules/pinctrl-mtk-v2.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e00b764e5f301172cf3b8fcbf0686ba4ebe766b3303de865954079dd4f9e63c3",
+        "bytes": 138104
+      },
+      {
+        "name": "lib/modules/pinctrl-mt6983.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "480f5f2b11ff750dd2b733b4187d20def2fe5b4e7fb9d385d5615ac0fe4c76f1",
+        "bytes": 196920
+      },
+      {
+        "name": "lib/modules/mrdump.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "2315df3f97aa8ffc8049f7c50c8f2a5725e7138cd5741bf9edfaa6fed88161e0",
+        "bytes": 340360
+      },
+      {
+        "name": "lib/modules/aee_aed.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "721de0eefe2dc5cb4d706e01a74af4d8c7c3d3a04ca40a82a1f9d322663a439d",
+        "bytes": 157008
+      },
+      {
+        "name": "lib/modules/clk-common.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "70b86559f315e2fedae3ff3320aeed49d3ad14bc0f0b18a53b2fd04ee13f34c2",
+        "bytes": 263672
+      },
+      {
+        "name": "lib/modules/clk-mt6983.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "eed6646d75d5dedb10f79b02b7a123356891d68200d8378743f6163a1f7f2d6f",
+        "bytes": 107368
+      },
+      {
+        "name": "lib/modules/mtk-pmic-wrap.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "fac6bcd7ed1c2819763c881e54d1990373c88b42a681d5e2e5732508a0be809a",
+        "bytes": 111944
+      },
+      {
+        "name": "lib/modules/regmap-spmi.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "418844f2902434a30379264709d45241b58012ebf3dcf8b687bba71c74a639ab",
+        "bytes": 17312
+      },
+      {
+        "name": "lib/modules/mtk-spmi-pmic.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "64c2d75c0ae412e8d762323096e54d2cb51542e8cf0a4c380e4b232e12fa4a34",
+        "bytes": 42488
+      },
+      {
+        "name": "lib/modules/spmi-mtk-pmif.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "52baf3f34576eb86933798c85759a2cebbfc1f4193a5ba4b7623c005ba8874a3",
+        "bytes": 119976
+      },
+      {
+        "name": "lib/modules/mt6363-regulator.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "320248afb3dc4509fd4243d8e68f57b72fdc3650ac04b15fab75f53d6fd7259c",
+        "bytes": 52440
+      },
+      {
+        "name": "lib/modules/mt6373-regulator.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "6f2f7fc496ab4b4349d298b7b97945e41e413a96af86a3787f35e4b3b4d369af",
+        "bytes": 51448
+      },
+      {
+        "name": "lib/modules/mt6315-regulator.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "c23fe15c0f88a24c5947207f51b8342b8680f4e5c70a0fe685b27aecdd9b48aa",
+        "bytes": 24608
+      },
+      {
+        "name": "lib/modules/mtk-scpsys.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "61449ace56da82dcafd10a612a9cc749a40d43cdde4d420eb1e0fee33baacf10",
+        "bytes": 133528
+      },
+      {
+        "name": "lib/modules/mtk-scpsys-mt6983.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "78068ff4a54db5c871cc27b0898c0b44aa8bb71efb13bc76202abbcb145c3d9e",
+        "bytes": 38928
+      },
+      {
+        "name": "lib/modules/phy-mtk-xsphy.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "d83486fe2a36bc122c107117851dfbc790f87440cd301720762be99299468f69",
+        "bytes": 126432
+      },
+      {
+        "name": "lib/modules/pd_dbg_info.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "f90c0332a5ff53921a542594ed62bd8162a902834865f095881364bb047f9231",
+        "bytes": 23240
+      },
+      {
+        "name": "lib/modules/tcpc_class.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "0e89af871d7343dfc83e2a4d6edc21c0877ed0cb6fa3a62e75bb5d89f4a948f4",
+        "bytes": 627280
+      },
+      {
+        "name": "lib/modules/tcpc_mt6375.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "91f06878fc510103c0d22c0587297321d24833ac1ccddfe99885247e300e4e5e",
+        "bytes": 87920
+      },
+      {
+        "name": "lib/modules/extcon-mtk-usb.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "11345126fd77c4374f95099f397afb306c90d06e6bb488928ae774c4ebd25213",
+        "bytes": 33696
+      },
+      {
+        "name": "lib/modules/mtu3.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "d3c59fa794a6e02f014dd0de660592bb66c9d7f8eb941c1d1183f8a3322bb467",
+        "bytes": 378560
+      },
+      {
+        "name": "bin/boot-proof-reboot",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "d711b7b7c7fbea49a25bbe4706bf88bf03b90363330366e1502c0c47ad2bd5ad",
+        "bytes": 3442,
+        "public_source": "runtime/primary/bin/boot-proof-reboot"
+      },
+      {
+        "name": "etc/lynx-checkpoint-modules.load",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "eabb6c3a85e722f1cf37b9677fafea27204e0341a79f38cc48b30dd76b1fd8ad",
+        "bytes": 552,
+        "public_source": "runtime/primary/etc/lynx-checkpoint-modules.load"
+      },
+      {
+        "name": "etc/lynx",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "etc/lynx/bootstrap-base-modules.load",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "17966497fcb3bac3c288d59a4fde4abc0f742a5197087d03d2edd0b2c4ecddce",
+        "bytes": 582,
+        "public_source": "runtime/primary/etc/lynx/bootstrap-base-modules.load"
+      },
+      {
+        "name": "etc/lynx/bootstrap-storage-modules.load",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "ab8632c163d5667accbbcc843012300b5befffb1ea2e78454d801d50ff30deb7",
+        "bytes": 109,
+        "public_source": "runtime/primary/etc/lynx/bootstrap-storage-modules.load"
+      },
+      {
+        "name": "etc/lynx/payload-bytes",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "2108ce1beb5494410847934b56f1e06713b3cd83c0bde96b618adba233f2b9fb",
+        "bytes": 9
+      },
+      {
+        "name": "etc/lynx/payload-sha256",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "ace14612dd72835ba71bd4f2a3a837482662c24e0d7fc2821d2eb4f7bed1fc6f",
+        "bytes": 65
+      },
+      {
+        "name": "etc/lynx/session-token",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "8915ca78fc0d21ad0e87658cbcd2855a48e8f317138e09e36cfb435711cb7321",
+        "bytes": 33
+      },
+      {
+        "name": "etc/lynx/diag-stage.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "a1def456830c4da0afb5450192a0f5d70a95244594100ee021cb1702afdb78c9",
+        "bytes": 2028,
+        "public_source": "runtime/primary/etc/lynx/diag-stage.sh"
+      },
+      {
+        "name": "etc/lynx/diag-hooks.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "f2b23d736489f15d1e68e46e679078e3a5d76c19eee96fe0095f27875c72363a",
+        "bytes": 22319,
+        "public_source": "runtime/primary/etc/lynx/diag-hooks.sh"
+      },
+      {
+        "name": "etc/lynx/diag-codebook.json",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "0d265a4910b4bd08ce62cefcf10592a01b0e9532ef3bc766768e5fac5879a148",
+        "bytes": 7614
+      },
+      {
+        "name": "lib/modules/clk-mt6983-cam.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "6b71f3a71508f327b1dae52d089f254aa5571f5c0b814886026986576b22a152",
+        "bytes": 39216
+      },
+      {
+        "name": "lib/modules/clk-mt6983-img.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "5cf1128bd502dfecf588e96cb83a3c439d6136077fa6386d4de7df14a5fed18f",
+        "bytes": 28160
+      },
+      {
+        "name": "lib/modules/clk-mt6983-mdp_grp.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "30a32d8a5fc91b6ce5958ea2ffedf86845d02eabece00375b7108c1bd93e877a",
+        "bytes": 26056
+      },
+      {
+        "name": "lib/modules/clk-mt6983-mm.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "d661afc163db21ffbc914d8f1a172475aab83d4e8232f8d5c986751f6c1a06e4",
+        "bytes": 36296
+      },
+      {
+        "name": "lib/modules/clk-mt6983-vcodec.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "7000992efcc202dcda3870b4cd599c95905313c05bf107cb8941a70fb829126b",
+        "bytes": 23992
+      },
+      {
+        "name": "bin/boot-proof-reboot-native",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e07fbe2825b8283f8c58f7f55eaf143fe9d983bd05c7478b659840dff36f8d08",
+        "bytes": 1088
+      }
+    ],
+    "supplement": [
+      {
+        "name": "lib/modules/connfem.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "f61a1d25485f05dc16e205ae12002c2aea5aee47e06484739d073ee9e4b404a0",
+        "bytes": 88208
+      },
+      {
+        "name": "lib/modules/rps_perf.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "c0935bb6a9c52c2c3d8b806d0dbadc6cc1fab8a44901cccc39fd575eeff8f04f",
+        "bytes": 12256
+      },
+      {
+        "name": "lib/modules/ccmni.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "be312b1c3e563e7cbf6dde111ed59ac79fc0871aba7a65c51e97f530635d7d3d",
+        "bytes": 63568
+      },
+      {
+        "name": "lib/modules/ccci_util_lib.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "9593a21a7202e1fda6e538a08bce953f87b98f0f8ffabd3387b41c907c391274",
+        "bytes": 247480
+      },
+      {
+        "name": "lib/modules/ccci_auxadc.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "b9baf405e1736b681036701db23d09beb48c2a33f7056e2dfd13201390404a31",
+        "bytes": 17168
+      },
+      {
+        "name": "lib/modules/ccci_md_all.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "985061bf95920f952bc094d23c03dc6d163c7aa305ee6117b700ac59a4284f06",
+        "bytes": 972560
+      },
+      {
+        "name": "lib/modules/connadp.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "0e7c3ed3481f8149c021fa51d42d46008d342628b50fbf30863fed67d90ca64f",
+        "bytes": 92008
+      },
+      {
+        "name": "lib/modules/conninfra.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "803364caab854ea3790e4b1e0181ad13b080de0e9981dc3d8f95e969cd9a2786",
+        "bytes": 1139728
+      },
+      {
+        "name": "lib/modules/wmt_chrdev_wifi_connac2.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "96df60a8a34fda03201826f44699b007a871f26e4b7644a1ce692ad7f9c88e56",
+        "bytes": 131560
+      },
+      {
+        "name": "lib/modules/mddp.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "5ba7ae66ae80bc5b87e7ba8f176c0a53faca8686d63b930d2cef90a573fc4ee6",
+        "bytes": 183672
+      },
+      {
+        "name": "lib/modules/wlan_drv_gen4m_6983.ko",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "8fb49294d1f4d43c86ee094e86a2102e45a67c210f08c65123c1e22f94ba3262",
+        "bytes": 7193224
+      },
+      {
+        "name": "etc/lynx",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "etc/lynx/wifi-base-modules.load",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "public_source": "runtime/supplement/etc/lynx/wifi-base-modules.load"
+      },
+      {
+        "name": "etc/lynx/wifi-storage-modules.load",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "public_source": "runtime/supplement/etc/lynx/wifi-storage-modules.load"
+      },
+      {
+        "name": "etc/lynx/wifi-radio-modules.load",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "506d478431fdc3329b8c5186a472c610ea8169ddd4e2f84a37a8903af640dfd9",
+        "bytes": 794,
+        "public_source": "runtime/supplement/etc/lynx/wifi-radio-modules.load"
+      },
+      {
+        "name": "lib/ld-musl-aarch64.so.1",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "b5afeb0dcc9e22e92f1088566b0d1c1562ef567a4abebaf4b0fd14000800b8ed",
+        "bytes": 723480
+      },
+      {
+        "name": "lib/libc.musl-aarch64.so.1",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "57ab7f8f42dee852d0491892f1e8abd2553b31eefeefb361f6ffe136689d1d37",
+        "bytes": 20
+      },
+      {
+        "name": "usr",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "usr/lib",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "usr/lib/libbsd.so.0",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "01879cc188796d4fbde39b4ffe90079a7b3721fb4645e84a2ad99733e5d12fb9",
+        "bytes": 16
+      },
+      {
+        "name": "usr/lib/libbsd.so.0.12.2",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "6304e54559e94174d59cd30f3f2876f6269f329bf7034952f94573ac49038d02",
+        "bytes": 68456
+      },
+      {
+        "name": "usr/lib/libcap.so.2",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "3bcca7490551fb3eebda910c7e8417ed5b99a933196cd004e8e073e729f7981a",
+        "bytes": 14
+      },
+      {
+        "name": "usr/lib/libcap.so.2.78",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "1f114a0ff9af5d2d4931cdc9c36f1ceb464154d83d84d5c6338d4afbf8b859e1",
+        "bytes": 67432
+      },
+      {
+        "name": "usr/lib/libcrypto.so.3",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "256f7a8a62afbcf989d0c47477d19892df822b05d50176f412d6b2e015e2a578",
+        "bytes": 4598680
+      },
+      {
+        "name": "usr/lib/libdbus-1.so.3",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "77235f30147bfabc1b7f8ce61f2cf21fcaf4f030d6db5b8bef8e0381002f6fc9",
+        "bytes": 19
+      },
+      {
+        "name": "usr/lib/libdbus-1.so.3.38.3",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "28995e441c0fc1defdd67881a735a4dcbb6331657685d53d7acf3d5ba31e72ea",
+        "bytes": 329760
+      },
+      {
+        "name": "usr/lib/libelf-0.193.so",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "ba5fcfee734c258c3ba5b666e6967bca47ba2ca63c6373cf439a617794c089bb",
+        "bytes": 133080
+      },
+      {
+        "name": "usr/lib/libelf.so.1",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "7169f6725020b73064e0281febcc283a709265ed249aa20b9178e41f83f7cd51",
+        "bytes": 15
+      },
+      {
+        "name": "usr/lib/libmd.so.0",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "8788f54532f653699d206321917975a522418170a0c4a5f037cd630a4880936a",
+        "bytes": 14
+      },
+      {
+        "name": "usr/lib/libmd.so.0.1.0",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e6555b271864e03a0229410b971d4e62541775fef7b846ff64f162450043bc85",
+        "bytes": 67536
+      },
+      {
+        "name": "usr/lib/libmnl.so.0",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "6d433549553a874214fab1613553c5c9ba1423fa8578cdb8ffc4245faa68184f",
+        "bytes": 15
+      },
+      {
+        "name": "usr/lib/libmnl.so.0.2.0",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "27a4a02ceb969ecb394de4d3e35b8ac05368dcbf0f1beafbfbce19c31b29048d",
+        "bytes": 67472
+      },
+      {
+        "name": "usr/lib/libnl-3.so.200",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "cec2be37e6b50f5d31d8434d502ab750f93a1a4d77a03e80ad2ad19aefc0be12",
+        "bytes": 19
+      },
+      {
+        "name": "usr/lib/libnl-3.so.200.26.0",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "355c91006d0f2f2a2b82f9bebcf4873cb545d276ef27d322600664545f0f2def",
+        "bytes": 133104
+      },
+      {
+        "name": "usr/lib/libnl-genl-3.so.200",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "b6a72cfd42d1bad0cbb04c5d139246426e723016ffc498c9e0bb884a3cd67110",
+        "bytes": 24
+      },
+      {
+        "name": "usr/lib/libnl-genl-3.so.200.26.0",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "c4eb1078bfc667517b0065badab7fd8f2b0d7be6ce8dcd53cfd1369d73abaa0e",
+        "bytes": 68240
+      },
+      {
+        "name": "usr/lib/libnl-idiag-3.so.200",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "45ee752f725743385ec5026c7a7fa014b18b7fe26135d7e4a77aad40610a1cdc",
+        "bytes": 25
+      },
+      {
+        "name": "usr/lib/libnl-idiag-3.so.200.26.0",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e9c9f329dc0e772285d05974c33ac96fc540a342cca930f7ed5a547138e6d2dc",
+        "bytes": 68360
+      },
+      {
+        "name": "usr/lib/libnl-nf-3.so.200",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e0efbdcc6f2e2c1f93bdc268fe8c9de063003377c9c6a2f75913d8340fb8072c",
+        "bytes": 22
+      },
+      {
+        "name": "usr/lib/libnl-nf-3.so.200.26.0",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "af9062b7d3f136a52a0b01e492e35bdbace970b6edbb4037f7a68b15d28f7606",
+        "bytes": 135976
+      },
+      {
+        "name": "usr/lib/libnl-route-3.so.200",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "67f23c2d764e97c7108fcb406433f5660d4cdcb3946e0d9d7bd800581094ebeb",
+        "bytes": 25
+      },
+      {
+        "name": "usr/lib/libnl-route-3.so.200.26.0",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "47145004431d9b37735847767bfa1696cb586ce4a349f0674f9b429a243adb4b",
+        "bytes": 543816
+      },
+      {
+        "name": "usr/lib/libnl-xfrm-3.so.200",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "a9a7a33056d8f87e83ea0d820fde211d66245dcfc4638eafde1d9e3a1b869c25",
+        "bytes": 24
+      },
+      {
+        "name": "usr/lib/libnl-xfrm-3.so.200.26.0",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "04ab361cdc8b30d438d684a02c3194669cea5c5cf67e511a20891505ebdaace5",
+        "bytes": 134576
+      },
+      {
+        "name": "usr/lib/libpcsclite.so",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "23f901dcbedd1ed1f2b0055e6d014ccba0b6646e02e628e0afe5117949130fee",
+        "bytes": 16
+      },
+      {
+        "name": "usr/lib/libpcsclite.so.1",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "70b97ae788e9737673de7cefe5a94090676a34c79220374ff938cfb9f15be27d",
+        "bytes": 67456
+      },
+      {
+        "name": "usr/lib/libpcsclite_real.so.1",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "a59f537fbb8578959e068bae9a44606f63b219625754b55373ca87e299965143",
+        "bytes": 67296
+      },
+      {
+        "name": "usr/lib/libpsx.so.2",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "3525482af289c7503bb91e22c73df21e8707c4808511709eba9effd5e291daa1",
+        "bytes": 14
+      },
+      {
+        "name": "usr/lib/libpsx.so.2.78",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "5d959149791e7897dd4423b7afc85acb9885e7ad3ab9a5d0e70b3b7fb34d2f4f",
+        "bytes": 67312
+      },
+      {
+        "name": "usr/lib/libskarnet.so.2.14",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "b0af6048cea64969088844f69bdde7175b223eebc6c0aef1dc9eaab369cadfa5",
+        "bytes": 22
+      },
+      {
+        "name": "usr/lib/libskarnet.so.2.14.4.0",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "7244025be37903d9735ab02931faf351f4ece07c6dac1764ecc2ea26741b0788",
+        "bytes": 265384
+      },
+      {
+        "name": "usr/lib/libssl.so.3",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "abcf0ff69cf1de1dfe744cea2a307c6960693f4164a585e297ed73ad6013aaba",
+        "bytes": 868240
+      },
+      {
+        "name": "usr/lib/libutmps.so.0.1",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "211847a21d3641b57b2cc327f70275fbd6de0b325f144f0997e5ce38b19fb3a4",
+        "bytes": 19
+      },
+      {
+        "name": "usr/lib/libutmps.so.0.1.3.1",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "fdb74b9362551e73dc0797115c814535b31e52cd3cc73debad8a03302f9552b7",
+        "bytes": 67312
+      },
+      {
+        "name": "usr/lib/libz.so.1",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "aca38988cbda420e300ac2f10ee427759d5805c859381683cd8aef7d054a5de4",
+        "bytes": 13
+      },
+      {
+        "name": "usr/lib/libz.so.1.3.2",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "ceb6a1bb9ae4f99b87e4dc8a70e9df45f6586139c314e06eac0ce85d999e11cb",
+        "bytes": 133008
+      },
+      {
+        "name": "usr/lib/libzstd.so.1",
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "82b174f1e1457721299d544c987b7e2506f26b9b27c64b1694c9b6ab6cd7b912",
+        "bytes": 16
+      },
+      {
+        "name": "usr/lib/libzstd.so.1.5.7",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "0261e625d796007a4688f12b5bea20ca8af9d6767d645286501245a0f0187699",
+        "bytes": 657240
+      },
+      {
+        "name": "usr/sbin",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "usr/sbin/dropbear",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "5f4585b5c6f880dd5189d2e81d774bdb80b501f5d80270661071e7452fa628be",
+        "bytes": 331256
+      },
+      {
+        "name": "usr/bin",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "usr/bin/dropbearkey",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "91b8cd4a133cc47ece37eff8898f90499cee3cccc07d3595e3e17bd3aba2b18a",
+        "bytes": 198672
+      },
+      {
+        "name": "sbin/wpa_supplicant",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "8e83750fea134c5146a602c4985bbbe5e02561d8477a02d1dc16c78c53f80784",
+        "bytes": 2169240
+      },
+      {
+        "name": "sbin/wpa_cli",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "a2b37f296d429a9f6ed671ef74187d751c0f0ec8488580bac77c41c256d29883",
+        "bytes": 135160
+      },
+      {
+        "name": "usr/bin/nc",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "3c6b12cff34e0b3408c703c00d0ae8ed0e7174c31607c43d2e6ccd59bd9b37da",
+        "bytes": 67888
+      },
+      {
+        "name": "usr/sbin/iw",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "1c5bbafbbaf588345ae5b122268e30eac1e704c7780177dd5c41347cd62ca129",
+        "bytes": 277848
+      },
+      {
+        "name": "etc/passwd",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "03bc2661c43692a63efcf8c726914c876b70d4b8d205d3d0a9173b33b289581c",
+        "bytes": 30
+      },
+      {
+        "name": "etc/shadow",
+        "mode": 33152,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "2c0bac5b19fcf4edc428043dae15184744a59b4fe9d28da776c7b01926991681",
+        "bytes": 21
+      },
+      {
+        "name": "etc/group",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "a9a579ce3fc0bf6fb139edb2b2ca9153a8b32343b5ecd852adb9501ffb847472",
+        "bytes": 19
+      },
+      {
+        "name": "etc/shells",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "a769faefd4d6187be0b7f25439217860168d3c8cb5b6b9e09b5943bef9dca8ec",
+        "bytes": 8
+      },
+      {
+        "name": "root",
+        "mode": 16832,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "root/.ssh",
+        "mode": 16832,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "bin/lynx-wifi-control",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "639e585900c44e076e91bdab41cd61a66850c8f2d0daaf82ea3ecdc041332994",
+        "bytes": 99768
+      },
+      {
+        "name": "bin/lynx-dhcp",
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "4521b3c04a006503e58d0853525c9266facb6667a982be204e98e32eb8b4409c",
+        "bytes": 1125,
+        "public_source": "runtime/supplement/bin/lynx-dhcp"
+      },
+      {
+        "name": "lib/firmware",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "lib/firmware/WIFI_RAM_CODE_soc7_0_1_1.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "c84250cc60ed5207dfbed661bceaaf31680b5ba6daac2169ac2598654fa49198",
+        "bytes": 1083644
+      },
+      {
+        "name": "lib/firmware/conninfra.cfg",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "47985608830ebb4038ea7b8645e5244dabe848f5033b3493b73a5ea9467993d9",
+        "bytes": 32
+      },
+      {
+        "name": "lib/firmware/soc7_0_ram_bt_1_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "dc703cfe3e184a423b659bde087ba487de3d3e1413e23a46765a6d549dd5efa8",
+        "bytes": 599476
+      },
+      {
+        "name": "lib/firmware/soc7_0_ram_bt_1a_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "34b370eaf7fd76f2c48b949cf03834f850cb3bc1d828e23f247b1dbb8711f243",
+        "bytes": 600756
+      },
+      {
+        "name": "lib/firmware/soc7_0_ram_bt_1b_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "51c76e389a660f698565601e6b7ecc215313247ce37d0466a6a0b619c2ed93c1",
+        "bytes": 599084
+      },
+      {
+        "name": "lib/firmware/soc7_0_ram_mcu_1_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "23671bbbc285ecbf78a34cd2e67464aeee79a8cb1658b0d1dce9cd0923f5c5a0",
+        "bytes": 147324
+      },
+      {
+        "name": "lib/firmware/soc7_0_ram_mcu_1a_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "430d6c0e60d9e047917ec1b0d2720c9e20b7590bddc61efd3e0ff62f7cb32980",
+        "bytes": 143354
+      },
+      {
+        "name": "lib/firmware/soc7_0_ram_mcu_1b_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "4bcb71c31f3c146c977cd7545e9732f5e9b86c98339ec1eb410fb84154381ccc",
+        "bytes": 147120
+      },
+      {
+        "name": "lib/firmware/soc7_0_ram_wmmcu_1_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "0139cc25163d7f019199588e68fad1a95a6865ecd18f8eb56d889ec324830f8c",
+        "bytes": 479904
+      },
+      {
+        "name": "vendor/firmware",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "lib/firmware/wifi.cfg",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "aa02db92f229ede902e70cd5bb8406afdf0c50b5696c7466bbe671b61b0e6f7e",
+        "bytes": 899
+      },
+      {
+        "name": "lib/firmware/wifisar.cfg",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "22e9df16c93ffb836bc28142309585562878030bbbdfc3e533312cb80d4367f7",
+        "bytes": 16355
+      },
+      {
+        "name": "etc/lynx/wpa_supplicant.conf",
+        "mode": 33152,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "ec0fec9136ea313f9cbcc7aa5a69af8de10c0bc39b91835466cf91725ed9ab5f",
+        "bytes": 192
+      },
+      {
+        "name": "etc/dropbear",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "etc/dropbear/lynx_ed25519_host_key",
+        "mode": 33152,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "34a013da8b40bc9eaea3147162199d0733d49307c37d1d6a6ab600ecbff1b706",
+        "bytes": 83
+      },
+      {
+        "name": "root/.ssh/authorized_keys",
+        "mode": 33152,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "cc704983526ba7fbb5295a055e610619f75b2baf66ba2fe9685bd7aa05af7250",
+        "bytes": 92
+      },
+      {
+        "name": "etc/lynx/host-ip",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e6d404e6e3034c582e25f0034651588e4801359a83fe523bc23158cea0c83f1b",
+        "bytes": 16
+      },
+      {
+        "name": "etc/lynx/wifi-runtime.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "d60151dc1f1adb0f57a4324f188ba7db21f1cd7892d75e586323d8e71fc67865",
+        "bytes": 5131,
+        "public_source": "runtime/supplement/etc/lynx/wifi-runtime.sh"
+      },
+      {
+        "name": "etc/lynx/calibration-readonly.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "1290919a5fe53e8cbb05ee4205acbb0cd610208a99e5c1119760babdc63e009e",
+        "bytes": 1835,
+        "public_source": "runtime/supplement/etc/lynx/calibration-readonly.sh"
+      },
+      {
+        "name": "etc",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "vendor",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "vendor/firmware/WIFI_RAM_CODE_soc7_0_1_1.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "c84250cc60ed5207dfbed661bceaaf31680b5ba6daac2169ac2598654fa49198",
+        "bytes": 1083644
+      },
+      {
+        "name": "vendor/firmware/conninfra.cfg",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "47985608830ebb4038ea7b8645e5244dabe848f5033b3493b73a5ea9467993d9",
+        "bytes": 32
+      },
+      {
+        "name": "vendor/firmware/soc7_0_ram_bt_1_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "dc703cfe3e184a423b659bde087ba487de3d3e1413e23a46765a6d549dd5efa8",
+        "bytes": 599476
+      },
+      {
+        "name": "vendor/firmware/soc7_0_ram_bt_1a_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "34b370eaf7fd76f2c48b949cf03834f850cb3bc1d828e23f247b1dbb8711f243",
+        "bytes": 600756
+      },
+      {
+        "name": "vendor/firmware/soc7_0_ram_bt_1b_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "51c76e389a660f698565601e6b7ecc215313247ce37d0466a6a0b619c2ed93c1",
+        "bytes": 599084
+      },
+      {
+        "name": "vendor/firmware/soc7_0_ram_mcu_1_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "23671bbbc285ecbf78a34cd2e67464aeee79a8cb1658b0d1dce9cd0923f5c5a0",
+        "bytes": 147324
+      },
+      {
+        "name": "vendor/firmware/soc7_0_ram_mcu_1a_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "430d6c0e60d9e047917ec1b0d2720c9e20b7590bddc61efd3e0ff62f7cb32980",
+        "bytes": 143354
+      },
+      {
+        "name": "vendor/firmware/soc7_0_ram_mcu_1b_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "4bcb71c31f3c146c977cd7545e9732f5e9b86c98339ec1eb410fb84154381ccc",
+        "bytes": 147120
+      },
+      {
+        "name": "vendor/firmware/soc7_0_ram_wmmcu_1_1_hdr.bin",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "0139cc25163d7f019199588e68fad1a95a6865ecd18f8eb56d889ec324830f8c",
+        "bytes": 479904
+      },
+      {
+        "name": "vendor/firmware/wifi.cfg",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "aa02db92f229ede902e70cd5bb8406afdf0c50b5696c7466bbe671b61b0e6f7e",
+        "bytes": 899
+      },
+      {
+        "name": "vendor/firmware/wifisar.cfg",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "22e9df16c93ffb836bc28142309585562878030bbbdfc3e533312cb80d4367f7",
+        "bytes": 16355
+      },
+      {
+        "name": "vendor/odm",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "vendor/odm/etc",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "vendor/odm/etc/wifi",
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "vendor/odm/etc/wifi/wifi.cfg",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "aa02db92f229ede902e70cd5bb8406afdf0c50b5696c7466bbe671b61b0e6f7e",
+        "bytes": 899
+      },
+      {
+        "name": "vendor/odm/etc/wifi/wifisar.cfg",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "22e9df16c93ffb836bc28142309585562878030bbbdfc3e533312cb80d4367f7",
+        "bytes": 16355
+      },
+      {
+        "name": "etc/lynx/radio-clock-guard.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "48c4e11084fd1586204f22938dc6182025460f5167705ca1a1b6cb2f012ac4ab",
+        "bytes": 4010,
+        "public_source": "runtime/supplement/etc/lynx/radio-clock-guard.sh"
+      },
+      {
+        "name": "etc/lynx/radio-clock-properties",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "4b44276fb865725a1dba5f9aa720d68290a2af7b5648f3f126dafa728a928890",
+        "bytes": 1924
+      },
+      {
+        "name": "etc/lynx/power-stack-parser.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "c45547adbaca8ead183c310057310f03fd43ffd324eab75896d9b76923b0c642",
+        "bytes": 2568,
+        "public_source": "runtime/supplement/etc/lynx/power-stack-parser.sh"
+      },
+      {
+        "name": "etc/lynx/wifi-worker-stack.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "43c94928eb797e0c6174118e5266bc06ee58197085a4eacf19c67f4d18e88055",
+        "bytes": 1163,
+        "public_source": "runtime/supplement/etc/lynx/wifi-worker-stack.sh"
+      },
+      {
+        "name": "etc/lynx/wifi-async-ready.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "3eb134bf19abcd5d15201af89099c789b917aa33ec6c8779ffcd5b82713a0cb2",
+        "bytes": 2764,
+        "public_source": "runtime/supplement/etc/lynx/wifi-async-ready.sh"
+      },
+      {
+        "name": "etc/lynx/wifi-station-async.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "ae93e1122ea0b36a6f736dbc0ad0c2954e3ba143c13f43f50b071bc82f98ea52",
+        "bytes": 1314,
+        "public_source": "runtime/supplement/etc/lynx/wifi-station-async.sh"
+      },
+      {
+        "name": "etc/lynx/firmware-events.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "4252d42d4fcb801bd3f24ac4b44943a10939244a3350bcca473b32b541d6c637",
+        "bytes": 1112,
+        "public_source": "runtime/supplement/etc/lynx/firmware-events.sh"
+      },
+      {
+        "name": "etc/lynx/wpa-diagnostics.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "7f3927cb7fb5778b157b0d4a6744ef1d7f06da5d005d8cf588ed381e3d8945a0",
+        "bytes": 2945,
+        "public_source": "runtime/supplement/etc/lynx/wpa-diagnostics.sh"
+      },
+      {
+        "name": "etc/lynx/wpa-target-ssid",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "8aeb9c4af11f5517ba535cb21a67a253e4ad34baff136d7bd7fbb653ae59c138",
+        "bytes": 7
+      },
+      {
+        "name": "etc/lynx/wpa-launch.sh",
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "rdevmajor": 0,
+        "rdevminor": 0,
+        "sha256": "947901bd03ca02ab6d23344ea00d64cd552d592f5eb52727948c14cdcd828860",
+        "bytes": 1046,
+        "public_source": "runtime/supplement/etc/lynx/wpa-launch.sh"
+      }
+    ]
+  },
+  "limits": "Private objects include credentials and proprietary assets; never publish the checkpoint or a bootable image. Source snapshots and hashes alone do not include firmware or keys."
+}

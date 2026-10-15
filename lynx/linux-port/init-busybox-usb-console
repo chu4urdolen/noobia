@@ -1,0 +1,91 @@
+#!/bin/sh
+# Native BusyBox PID1. Runtime storage is RAM; no partitions are mounted.
+export PATH=/bin:/sbin
+BB=/bin/busybox
+stop() { while :; do "$BB" sleep 60; done; }
+$BB mount -t proc proc /proc || stop
+$BB mount -t sysfs sysfs /sys || stop
+$BB mount -t tmpfs tmpfs /dev || stop
+$BB mknod -m 666 /dev/null c 1 3
+$BB mknod -m 600 /dev/console c 5 1
+$BB mknod -m 600 /dev/kmsg c 1 11
+$BB mknod -m 666 /dev/tty c 5 0
+$BB mount -t tmpfs -o size=8m tmpfs /run || stop
+log() {
+    printf '%s\n' "$*" >> /run/lynx-init.log
+    printf '<6>LYNX_BUSYBOX: %s\n' "$*" > /dev/kmsg
+}
+log "NATIVE_PID1_ENTERED pid=$$"
+for module in mtk_wdt reboot-mode syscon-reboot-mode; do
+    $BB insmod "/lib/modules/$module.ko" || log "Baseline module failure: $module"
+done
+# Insert the exact proven driver-binding/property guard here at build time.
+# LYNX_RESET_GUARD
+return_fastboot() {
+    log "USB_SETUP_FAILED: $*"
+    if [ "$wdt_ready" = 1 ] && [ "$mode_ready" = 1 ]; then
+        log 'REQUESTING_ONE_RESTART2_BOOTLOADER'
+        /bin/boot-proof-reboot
+        log 'REBOOT_RETURNED; NO_RETRY'
+    else
+        log 'RESET_GUARD_REFUSED'
+    fi
+    stop
+}
+# Insert the preserved, tested peripheral-mode helper here at build time.
+# LYNX_USB_ROLE_HELPER
+while IFS= read -r module; do
+    [ -n "$module" ] || continue
+    [ "$module" = mtk_wdt.ko ] && continue
+    if [ "$module" = mtu3.ko ] && [ ! -d /sys/module/xhci_mtk_hcd ]; then
+        return_fastboot 'xHCI module missing before MTU3'
+    fi
+    log "MODULE_BEGIN $module"
+    $BB insmod "/lib/modules/$module" && log "MODULE_OK $module" || log "MODULE_ERROR $module"
+done < /etc/lynx-usb-modules.load
+$BB mdev -s
+lynx_usb_device_mode
+$BB mount -t configfs configfs /sys/kernel/config || return_fastboot 'configfs mount'
+gadget=/sys/kernel/config/usb_gadget/lynx
+$BB mkdir -p "$gadget" || return_fastboot 'gadget directory'
+printf '0x1d6b\n' > "$gadget/idVendor" || return_fastboot 'vendor ID'
+printf '0x0104\n' > "$gadget/idProduct" || return_fastboot 'product ID'
+$BB mkdir -p "$gadget/strings/0x409" "$gadget/configs/c.1/strings/0x409" || return_fastboot 'strings'
+printf 'Noobia\n' > "$gadget/strings/0x409/manufacturer"
+printf 'Lynx BusyBox console\n' > "$gadget/strings/0x409/product"
+printf 'lynx-busybox\n' > "$gadget/strings/0x409/serialnumber"
+printf 'BusyBox serial console\n' > "$gadget/configs/c.1/strings/0x409/configuration"
+printf '100\n' > "$gadget/configs/c.1/MaxPower"
+$BB mkdir "$gadget/functions/acm.usb0" || return_fastboot 'ACM function'
+$BB ln -s "$gadget/functions/acm.usb0" "$gadget/configs/c.1/acm.usb0" || return_fastboot 'ACM configuration'
+udc=
+attempt=0
+while [ "$attempt" -lt 30 ]; do
+    lynx_usb_device_mode
+    for controller in /sys/class/udc/11201000.*; do
+        [ -e "$controller" ] || continue
+        udc=${controller##*/}
+        break
+    done
+    [ -n "$udc" ] && break
+    attempt=$((attempt+1))
+    $BB sleep 1
+done
+[ -n "$udc" ] || return_fastboot 'primary device controller unavailable'
+printf '%s\n' "$udc" > "$gadget/UDC" || return_fastboot 'gadget binding'
+log "ACM_GADGET_BOUND $udc"
+# Kernel /dev node discovery runs after driver startup, using BusyBox mdev.
+while :; do
+    $BB mdev -s
+    if [ -c /dev/ttyGS0 ]; then
+        (
+            printf '\nLYNX_NATIVE_BUSYBOX_SHELL\n'
+            $BB uname -a
+            $BB cat /proc/1/comm /proc/cmdline /run/lynx-init.log
+            printf '\nKernel log follows:\n'
+            $BB dmesg
+            exec "$BB" setsid -c "$BB" sh -i
+        ) < /dev/ttyGS0 > /dev/ttyGS0 2>&1
+    fi
+    $BB sleep 1
+done

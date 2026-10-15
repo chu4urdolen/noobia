@@ -1,0 +1,23 @@
+{
+  "device": "OnePlus Nord 3 5G CPH2493",
+  "soc": "MediaTek MT6983",
+  "milestone": "Native BusyBox PID1, Wi-Fi, DHCP and pinned key-only SSH",
+  "kernel_release": "5.10.149-android12-9-o-g311738fbb5a8",
+  "candidate_version": "V19",
+  "candidate_sha256": "5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851",
+  "candidate_bytes": 67108864,
+  "stock_boot_sha256": "a67f03d7b826b834c23653b67eaa6efa971eb70ef8af19eee4d33fb5fc7fe995",
+  "recipe_sha256": "c75d33cd3d051c81281708b4beb9013b416fe5b3c9350508fe7f64862ab1649e",
+  "byte_identical_reconstruction_verified": true,
+  "native_ssh_identity_checks": ["pinned host key", "kernel release", "PID1 executable", "init hash", "BusyBox hash", "current boot token", "root UID"],
+  "fallback_cancellation_acknowledged": true,
+  "live_wpa_state": "COMPLETED",
+  "journal_records": {"supervisor": 2, "bootstrap": 84, "wifi": 105},
+  "validated_runtime_archive_members": 44,
+  "host_discovery_seconds_approximately": 109,
+  "current_trial_partition_writes": ["boot_a"],
+  "full_postmarketos_installation": false,
+  "display_initialized": false,
+  "usb_gadget_networking_verified": false,
+  "private_images_and_raw_logs_published": false
+}

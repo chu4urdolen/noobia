@@ -1,0 +1,7 @@
+reset-ti-syscon.ko
+phy-mtk-ufs.ko
+rpmb.ko
+device_info.ko
+ufs-mediatek-dbg.ko
+blocktag.ko
+ufs-mediatek-mod.ko

@@ -1,0 +1,21 @@
+# Publish source and curated documentation only. Images contain credentials.
+/*
+!/.gitignore
+!/AGENTS.md
+!/README.md
+!/tools/
+!/linux-port/
+/tools/*
+!/tools/*.py
+!/tools/*.c
+!/tools/*.h
+!/tools/*.sh
+!/tools/README.md
+!/tools/lynx-ssh
+!/tools/mtk-requirements.lock.txt
+!/tools/ram-log-reader/
+/tools/ram-log-reader/*
+!/tools/ram-log-reader/*.py
+!/tools/ram-log-reader/*.c
+!/tools/ram-log-reader/*.h
+!/tools/ram-log-reader/README.md

@@ -1,0 +1,12 @@
+{
+  "candidate": "/noobia/lynx/linux-port/artifacts/busybox-wifi-ssh-twostage-v19/nord3-busybox-candidate.img",
+  "sha256": "5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851",
+  "hardware_receipt": "/noobia/lynx/logs/boot-a-wifi-v19-trial-1792091968352709663.json",
+  "evidence": "Pinned key-only SSH verified exact kernel, BusyBox PID1, init/BusyBox hashes, current trial token and root UID. Independent live status confirms COMPLETED on Noobia, DHCP and route. Automatic fallback cancellation acknowledged exit0.",
+  "association_verified": true,
+  "ssh_verified": true,
+  "phone_ip": "192.168.100.9",
+  "contact_receipt": "/noobia/lynx/logs/wifi-v19-contact-1792091967236871487/result.json",
+  "live_capture_receipt": "/noobia/lynx/logs/native-live-1792092186336551640/result.json",
+  "last_installed_boot_a": "V19, currently running native Linux; no stock restoration required"
+}

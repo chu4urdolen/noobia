@@ -1,0 +1,114 @@
+#!/bin/sh
+# Native Linux PID 1. All writes are confined to initramfs, tmpfs and configfs.
+export PATH=/bin:/sbin
+BB=/bin/busybox
+fatal() {
+    printf 'Lynx init failed: %s\n' "$*" > /dev/console 2>/dev/null
+    # Keep PID 1 alive without touching partitions or restarting into a loop.
+    while :; do "$BB" sleep 5; done
+}
+$BB mount -t proc proc /proc || fatal 'proc mount'
+$BB mount -t sysfs sysfs /sys || fatal 'sysfs mount'
+$BB mount -t tmpfs -o mode=0755,nosuid tmpfs /dev || fatal 'device tmpfs mount'
+$BB mknod -m 666 /dev/null c 1 3
+$BB mknod -m 600 /dev/console c 5 1 || fatal 'console device node'
+$BB mknod -m 666 /dev/tty c 5 0
+$BB mknod -m 600 /dev/kmsg c 1 11
+$BB mknod -m 666 /dev/random c 1 8
+$BB mknod -m 666 /dev/urandom c 1 9
+$BB mount -t tmpfs -o mode=0755,size=8m tmpfs /run || fatal 'runtime tmpfs mount'
+$BB mount -t tmpfs -o mode=1777,size=8m tmpfs /tmp || fatal 'temporary tmpfs mount'
+
+log() {
+    printf '%s\n' "$*" >> /run/nord3-init.log
+    printf '<6>noobia-init: %s\n' "$*" > /dev/kmsg 2>/dev/null
+}
+log "NORD3_NATIVE_LINUX_PID1_OK pid=$$"
+log "$($BB uname -a)"
+$BB mdev -s
+log "Initial sysfs device scan completed"
+
+# No partition mounting, Android init, HALs, or firmware-flashing tools.
+if $BB grep -q 'noobia.usb=1' /proc/cmdline; then
+    while IFS= read -r module; do
+        [ -n "$module" ] || continue
+        if $BB insmod "/lib/modules/$module"; then
+            log "Loaded $module"
+        else
+            log "Module failed or was already loaded: $module"
+        fi
+    done < /etc/usb-modules.load
+    $BB mdev -s
+    $BB mount -t configfs configfs /sys/kernel/config
+    gadget=/sys/kernel/config/usb_gadget/noobia
+    if $BB mkdir -p "$gadget"; then
+        printf '0x1d6b\n' > "$gadget/idVendor"
+        printf '0x0104\n' > "$gadget/idProduct"
+        $BB mkdir -p "$gadget/strings/0x409" "$gadget/configs/c.1/strings/0x409"
+        printf 'Noobia\n' > "$gadget/strings/0x409/manufacturer"
+        printf 'Nord 3 native Linux bring-up\n' > "$gadget/strings/0x409/product"
+        printf 'noobia-nord3\n' > "$gadget/strings/0x409/serialnumber"
+        printf 'USB serial and Ethernet\n' > "$gadget/configs/c.1/strings/0x409/configuration"
+        printf '100\n' > "$gadget/configs/c.1/MaxPower"
+        $BB mkdir -p "$gadget/functions/acm.usb0" "$gadget/functions/ecm.usb0"
+        printf '02:00:00:00:42:01\n' > "$gadget/functions/ecm.usb0/dev_addr"
+        printf '02:00:00:00:42:02\n' > "$gadget/functions/ecm.usb0/host_addr"
+        $BB ln -s "$gadget/functions/acm.usb0" "$gadget/configs/c.1/acm.usb0"
+        $BB ln -s "$gadget/functions/ecm.usb0" "$gadget/configs/c.1/ecm.usb0"
+        udc=
+        attempts=0
+        while [ "$attempts" -lt 15 ]; do
+            for controller in /sys/class/udc/*; do
+                [ -e "$controller" ] || continue
+                case "$controller" in *dummy*) continue ;; esac
+                udc=${controller##*/}
+                break
+            done
+            [ -n "$udc" ] && break
+            attempts=$((attempts + 1))
+            $BB sleep 1
+        done
+        if [ -n "$udc" ]; then
+            if printf '%s\n' "$udc" > "$gadget/UDC"; then
+                log "USB gadget bound to $udc"
+                $BB mdev -s
+                $BB ip addr add 172.16.42.1/30 dev usb0
+                $BB ip link set usb0 up
+                log 'USB Ethernet target address: 172.16.42.1/30'
+            else
+                log "USB gadget binding failed: $udc"
+            fi
+        else
+            log 'No physical USB device controller appeared'
+        fi
+    fi
+fi
+
+# Exiting a diagnostic shell must never terminate PID 1.
+serial_shell() {
+    while :; do
+        $BB mdev -s
+        if [ -c /dev/ttyGS0 ]; then
+            (
+                printf '\nNORD3_NATIVE_LINUX_PID1_OK\n'
+                $BB cat /run/nord3-init.log
+                printf '\nRecent kernel diagnostics:\n'
+                $BB dmesg | $BB tail -n 80
+                exec "$BB" setsid -c "$BB" sh -i
+            ) < /dev/ttyGS0 > /dev/ttyGS0 2>&1
+        fi
+        $BB sleep 1
+    done
+}
+serial_shell &
+(
+    while :; do
+        "$BB" setsid -c "$BB" sh -i < /dev/console > /dev/console 2>&1
+        $BB sleep 2
+    done
+) &
+log 'Native PID 1 remains active; USB console marker is the success criterion'
+while :; do
+    $BB sleep 60 &
+    wait
+done

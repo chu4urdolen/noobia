@@ -1,0 +1,17 @@
+/*
+!/.gitignore
+!/README.md
+!/Makefile
+!/*.py
+!/*.c
+!/*.S
+!/*.sh
+!/*.awk
+!/init
+!/init-*
+!/docs/
+!/known-good-v19/
+/docs/*
+!/docs/*.md
+!/docs/BEST-LINUX-BOOT.json
+!/docs/PUBLIC-MILESTONE.json

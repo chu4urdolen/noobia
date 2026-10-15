@@ -18,6 +18,9 @@
   "current_trial_partition_writes": ["boot_a"],
   "full_postmarketos_installation": false,
   "display_initialized": false,
+  "thermal_safety_validated": false,
+  "heating_reported_after_milestone": true,
+  "hardware_testing_on_hold": true,
   "usb_gadget_networking_verified": false,
   "private_images_and_raw_logs_published": false
 }

@@ -3108,3 +3108,40 @@ Procedure docs/NATIVE-WIFI-SSH.md includes exact stock undo and requirement
 to start V19 collector before future reboots: fallback cancellation isRAMonly.
 Logs and runtime rootfs remain RAM onphone; archivedlocally before anyreboot.
 No further flash/reboot needed. No GUI/fullpostmarketOS installation yet.
+
+### Publication and thermal safety hold
+
+Published scoped source/docs/tools commit d304dcb on GitHub branch
+lynx/native-linux-wifi-ssh. Exact recipe rebuilt V19 byte-for-byte from private
+objects and stock boot, no earlier experimental image needed. Private cache
+checkpoints/native-wifi-ssh-v19 contains137deduplicated inputs and both boot
+images; never upload it. Publication audit812files/4262699bytes passed.
+
+Later SSH remained reachable after about100min. Read-only live inventory
+1792098110330311623 found ext4/f2fs/erofs support, complete UFS partition
+metadata, userdata sdc85 (466026432sectors), boot_a sdc39 readonly1. All other
+partitions unchanged/unmounted. No storage writes or new modules.
+
+Noob then reported heating and explicitly prioritized battery safety. Immediate
+read-only heat check at6219s: battery supply/temp absent; only MT6375 charger
+Notcharging/online0/typeUnknown;42of43thermaltemps EINVAL, consys33000only;
+no CPUfreqpolicies or coolingdevices; top99–100%idle. Cannot verify thermal
+protection or infer battery temperature from consys. No subsequent phonecommand
+needed; asked Noob to unplug USB and power off to cool. Power-off NOT confirmed.
+Hardware development paused; offline investigation only. THERMAL-SAFETY.md and
+active SAFETY-HOLD.json record this. V19flash action now refuses before phone
+access; stockrestore remains allowed. Never silently clear hold or treat V19
+as a thermally validated unattended image. All successfulboot artifacts intact.
+
+Noob subsequently CONFIRMED unplugged and shut down. No further phone commands.
+V19 thermal hold refusal tested: --flash-linux --reboot exits with expected
+safety exception before validation/USB/network access. Work continues offline.
+
+Offline module audit1792098400716154704: absent mediatek-cpufreq-hw,
+soc_temp_lvts,thermal_interface,thermal-generic-adc,mt6375-battery,oplus_chg,
+tcpc_mt6375; dependency closures miss2/1/11/1/9/8/1respectively. All resolve
+to matching stockfiles. First audit1792098391447688670 normalized index but
+not dependency references; fixed normalization and preserved both reports.
+Frameworks CPUfreq/thermal builtin; keyhardware drivers modular. PSCIidle
+builtin does not establish actual lowpowerstate. Cause of heat not proved;
+no driver loaded and no new bootimage built/flashed after safety report.

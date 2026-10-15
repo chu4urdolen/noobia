@@ -26,6 +26,11 @@ def main():
     parser.add_argument('--reboot', action='store_true', help='Reboot only after a successful Linux image write')
     parser.add_argument('--network-receipt', type=Path)
     args = parser.parse_args()
+    safety_path = PROJECT / 'docs/SAFETY-HOLD.json'
+    if args.flash_linux and safety_path.exists():
+        hold = json.loads(safety_path.read_text())
+        if hold.get('active'):
+            raise ValueError('Linux flash held for thermal safety: ' + hold['reason'])
     if args.reboot and not args.flash_linux:
         raise ValueError('Reboot is permitted only as part of the Linux trial')
     checks = []

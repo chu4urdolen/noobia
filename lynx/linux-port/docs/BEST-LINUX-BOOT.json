@@ -8,5 +8,7 @@
   "phone_ip": "192.168.100.9",
   "contact_receipt": "/noobia/lynx/logs/wifi-v19-contact-1792091967236871487/result.json",
   "live_capture_receipt": "/noobia/lynx/logs/native-live-1792092186336551640/result.json",
-  "last_installed_boot_a": "V19, currently running native Linux; no stock restoration required"
+  "thermal_safety_validated": false,
+  "thermal_safety_hold": true,
+  "last_installed_boot_a": "V19 installed; user confirmed unplugged and powered off after heating; thermal safety hold active"
 }

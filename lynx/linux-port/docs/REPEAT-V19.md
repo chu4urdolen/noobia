@@ -1,5 +1,9 @@
 # Repeat the proven V19 boot
 
+**Hardware safety hold:** do not repeat a hardware boot while the
+[thermal investigation](THERMAL-SAFETY.md) is unresolved. Offline reconstruction
+remains safe; the instructions below preserve the established procedure.
+
 ## Preserve these inputs
 
 The local checkpoint is `/noobia/lynx/checkpoints/native-wifi-ssh-v19`, mode0700.

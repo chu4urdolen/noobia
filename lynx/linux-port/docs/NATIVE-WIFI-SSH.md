@@ -1,5 +1,9 @@
 # Lynx: first verified native Wi-Fi and SSH
 
+**Current thermal safety hold:** Lynx was unplugged and shut down after heating
+was reported. Keep her off while the missing battery/CPU temperature and power
+management support is reviewed. See [thermal findings](THERMAL-SAFETY.md).
+
 V19 is running natively on the Nord 3 CPH2493. It uses the matching stock
 5.10.149 kernel and modules with our BusyBox PID 1/initramfs. No Android
 userspace is involved. Display initialization remains outside this milestone.

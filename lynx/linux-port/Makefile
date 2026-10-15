@@ -1,4 +1,12 @@
 .PHONY: build validate validate-arm64 check build-august check-august emulate-august check-august-lz4 emulate-august-lz4
+.PHONY: thermal-pack thermal-check
+
+# Offline preparation only; Lynx remains off and all hardware holds remain set.
+thermal-pack:
+	python3 ../tools/prepare_thermal_pack.py
+
+thermal-check:
+	python3 ../tools/test_thermal_pack.py
 
 # All compilation/packaging happens on Nexus. These targets never access Lynx.
 build:

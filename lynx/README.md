@@ -4,6 +4,7 @@
 temperature readings and verified throttling. Hardware trials are paused.
 See [the thermal findings](linux-port/docs/THERMAL-SAFETY.md). The image is a
 networking milestone, not yet a thermally validated operating environment.
+The next preparation uses a [RAM-only diagnostic pack after SSH](linux-port/docs/THERMAL-AFTER-SSH.md), with no automatic driver loading.
 
 Lynx is a OnePlus Nord 3 5G CPH2493, MediaTek MT6983, with an unlocked
 bootloader. **Native BusyBox Linux, Wi-Fi, DHCP and pinned key-only SSH are

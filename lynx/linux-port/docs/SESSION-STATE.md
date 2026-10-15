@@ -3145,3 +3145,30 @@ not dependency references; fixed normalization and preserved both reports.
 Frameworks CPUfreq/thermal builtin; keyhardware drivers modular. PSCIidle
 builtin does not establish actual lowpowerstate. Cause of heat not proved;
 no driver loaded and no new bootimage built/flashed after safety report.
+
+### Thermal modules prepared for manual stages AFTER Wi-Fi/SSH
+
+Noob requested Wi-Fi first to preserve diagnostic access. Chose RAM-only SSH
+pack instead of modifying boot_a; no new image or startupsequence change.
+tools/prepare_thermal_pack.py produced thermal-ssh-pack-1792098954724495751:
+2291277bytes/43matchingstockmodules, SHA
+e68329332419a9a95dbf6bfe0a632fd983272b1c2eb496294b6c1b57e28f4228.
+Exact vermagic/shared importCRC/dependencyorder checks passed, noCRCconflict.
+Enabled stockDT matches: /lvts@10315000, performance-controller@0011bc00,
+/soc/oplus-omrg. Stage1sensor missing1module; stage2CPUfreq missing2modules.
+Other groups (ADC/thermalintegration/battery/charging/TypeC) bundledreviewonly.
+
+thermal-step.sh defaultsreadonly. Pack REVIEW-HOLD blocks liveinsertion;
+checksumcovershold so do not simplyremoveit. Live path (future reviewedpack)
+requires SSH/currenttokenack/exactkernel/packhashes/DT hashes; CPUstage requires
+real soc_maxtemp0<value<50000 (conservativecutoff,NOT batteryguarantee).
+Perstagebefore/after snapshots, INSMOD_BEGIN andreturnjournal, noautoload,
+noretry/unload, no governor/charger/thermalregisterwrites. Kernelhang can still
+loseSSH anddefeat softwaredeadline; hardwaretestnotauthorizedbyofflinechecks.
+
+NativeARMguardcheck emulated-thermal-pack-guards-1792099050555858301 PASSED:
+hold/reviewonly/noSSH/token/hash/DT refusals, unchangedloadedmoduleinventory,
+cleanpoweroff. Fullpackintegrity andordereddependencies checked. Nophysical
+probe attempted. Doc THERMAL-AFTER-SSH.md, Makefilethermal-pack/thermal-check.
+PHONE REMAINS OFF. V19unchanged andboththermalholdsactive. Next offline review
+probe/clock/regulator sideeffects, then a separatelyreviewedshortsupervisedtest.

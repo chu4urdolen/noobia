@@ -12,6 +12,9 @@ PACK=P/'artifacts/thermal-ssh-pack-1792099635423460996'
 EXPECTED='edc011a45072b6c3baa13da4ba73462d7a0e049236719a54fb093fb2da0ebffb'
 TRIAL_SCOPE=['soc-temperature']
 REMOTE='/run/lynx/thermal-sensor-trial'
+TRIAL_PREFIX=None
+POST_CPU_HOOK=None
+EXTRA_DIAGNOSTIC=None
 def sha(data):return hashlib.sha256(data).hexdigest()
 def arm_command(token):
  assert re.fullmatch('[0-9a-f]{32}',token)
@@ -46,8 +49,9 @@ def main():
   print('Checked '+', '.join(TRIAL_SCOPE)+' pack/guards/identity/timer acknowledgement policy; no phone contacted.');return
  if not args.listen:print('Use --listen only for a cooled, supervised handset boot.');return
  assert 30<=args.seconds<=600;os.umask(0o077)
- out=R/'logs'/(('cpu-trial-' if 'cpu-frequency' in TRIAL_SCOPE else 'sensor-trial-')+str(time.time_ns()));out.mkdir(mode=0o700);receipt=out/'result.json'
+ out=R/'logs'/((TRIAL_PREFIX or ('cpu-trial-' if 'cpu-frequency' in TRIAL_SCOPE else 'sensor-trial-'))+str(time.time_ns()));out.mkdir(mode=0o700);receipt=out/'result.json'
  report={'state':'starting','started_ns':time.time_ns(),'phone_contacted':False,'native_identity_verified':False,'flash_performed':False,'cpu_frequency_modules_allowed':'cpu-frequency' in TRIAL_SCOPE,'trial_scope':TRIAL_SCOPE,'pack_sha256':EXPECTED,'operations':[]}
+ if EXTRA_DIAGNOSTIC is not None:report['extra_diagnostic_preflight']=EXTRA_DIAGNOSTIC
  def save():
   temp=receipt.with_suffix('.tmp');temp.write_text(json.dumps(report,indent=2)+'\n');temp.replace(receipt)
  def run(ip,name,command,timeout=8,stdin=None):
@@ -81,11 +85,15 @@ def main():
     raw,rc=run(ip,'sensor-stage','/bin/busybox sh '+REMOTE+'/thermal-step.sh --load soc-temperature',timeout=15);report['sensor_stage_exit_code']=rc;save()
     if rc==0 and 'cpu-frequency' in TRIAL_SCOPE:
      raw,rc=run(ip,'cpu-frequency-stage','/bin/busybox sh '+REMOTE+'/thermal-step.sh --load cpu-frequency',timeout=15);report['cpu_frequency_stage_exit_code']=rc;save()
+     if rc==0 and POST_CPU_HOOK is not None:
+      report['extra_diagnostic']=POST_CPU_HOOK(run,ip);save()
     _,diagrc=run(ip,'kernel-and-sensors',"dmesg; printf '\\nTHERMAL_FINAL\\n'; /bin/busybox sh "+REMOTE+"/thermal-step.sh --inspect; printf '\\nBINDINGS\\n'; ls -l /sys/bus/platform/devices/10315000.lvts/driver /sys/bus/platform/devices/11ee0000.efuse/driver; true",timeout=8)
     report.update(state='sensor-stage-returned' if rc==0 else 'sensor-stage-failed-or-hung',diagnostics_exit_code=diagrc)
     if 'cpu-frequency' in TRIAL_SCOPE:
      _,sample_rc=run(ip,'cpu-and-battery-observation',"/bin/busybox sleep 1; /bin/busybox sh "+REMOTE+"/thermal-step.sh --inspect; printf '\\nI2C_CLIENTS\\n'; for p in /sys/bus/i2c/devices/*; do [ -r \"$p/name\" ] || continue; echo \"$p\"; cat \"$p/name\"; readlink \"$p/driver\"; done; printf '\\nOMRG_RULES\\n'; for f in /sys/bus/platform/devices/*/oplus-omrg*/ruler_enable; do [ -r \"$f\" ] || continue; echo \"$f\"; cat \"$f\"; done; true",timeout=8)
      report.update(state='cpu-stage-returned' if rc==0 else 'cpu-stage-failed-or-hung',second_sample_exit_code=sample_rc)
+    if 'extra_diagnostic' in report:
+     report['state']='gauge-stage-returned' if report['extra_diagnostic']['exit_code']==0 else 'gauge-stage-failed-or-hung'
    except Exception as error:report.update(state='trial-error',error=str(error))
    finally:
     # Always request stop; the independent timer is never cancelled.

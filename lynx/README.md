@@ -11,6 +11,9 @@ remains unavailable. The [CPU trial](linux-port/docs/CPU-TRIAL-RESULT.md) verifi
 three stock frequency policies using schedutil and three CPU cooling interfaces.
 These additions were loaded into RAM after SSH; V19 itself remains unchanged.
 Actual throttling response and reduced heat remain unverified.
+The [custom gauge reader](linux-port/docs/GAUGE-RAW-RESULT.md) also returned a
+hardware raw word successfully; its temperature interpretation still needs
+gauge-model confirmation.
 
 Lynx is a OnePlus Nord 3 5G CPH2493, MediaTek MT6983, with an unlocked
 bootloader. **Native BusyBox Linux, Wi-Fi, DHCP and pinned key-only SSH are

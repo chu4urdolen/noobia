@@ -3311,3 +3311,81 @@ Offline CPU summary and coordinator self-test passed. Publication audit
 1792102663710714658 passed838files/4374024bytes, no secret/privatepathissues.
 No furtherphoneoperation afterpoweroffrequest. Before anynextsupervisedboot,
 confirmphysicaloff/coolstatus; currentdisplay/networkstateunknown.
+
+
+### Black display after CPU trial: one bounded reachability check
+
+Noob reports black screen, uncertain power state. Explained native V19 also
+has no display, so this is not power-off evidence. Reusable read-only helper
+check_shutdown_reachability.py targets the last pinned-identity CPU receipt,
+never scans/wakes/acks/reboots/loads. One SSH proof attempt to192.168.100.5
+returned255 after~3s, no native proof. Saved raw streams and hashes in
+logs/shutdown-reachability-1792103000932384332/result.json. Physical poweroff
+stillunconfirmed: could be off, changed lease, lostWiFi orhungkernel. No further
+phone operations. KeepUSBunplugged; askNoobwhethercool orwarm withoutbuttons.
+No GitHub upload for this state-only observation.
+
+
+### Continue on Noob's cool/unplugged confirmation; raw gauge module prepared
+
+Noob confirmed Lynx cool and instructed continue, USB unplugged. Accept this
+physical status; no repeated power-state confirmation loop. Offline work only
+so far. ExactGoogleAndroid7284624clang12.0.5/r416183b downloaded/identityverified,
+446466096bytes; tools/gauge-build-inputs-1792103708378707350. Pinned sparse
+Kbuild/API source checkout succeeded (81ec42a), so stopped exactowned slow full
+kernel downloader PID withSIGTERM; partial+receiptpreserved. No otherprocess
+orphoneaffected. Bootstrap defaults compiler-only now; no global installations.
+
+New one-shot lynx-gauge-sample.c defaults refusal; explicitenable requires
+exactDTpath/BQproperty/compatible/adapter7/address55. Only SMBusreadword0x06,
+cache rawword, no datawrite/config/calibration/charging/scan/retry/autoload.
+Modelunverified; not registered as batterytemp or used for safety decisions.
+SourceSHA c646f5c5897d3dcced770ec3c3c981ce2a59bff61ab7d1b913acf1ba54ed37c4.
+
+Logic mockedCtest passed1792103944676969260 (firststubcompileerrorpreserved
+1792103868286040388). Isolated Kbuildbasis usesunmodifiedsource+exactheaders,
+no configregeneration/kernelrebuild. Genuine OEMimportCRCs pairedwithverified
+sourceexportdeclarations; partialtable107symbols, no guessed/forcedversions.
+Firstbasis1792104422448881745 failedmacroexpanded_dev_info/_dev_err exports;
+macrochecked explicitly thennewbasis1792104554981554338. StaticCFIsectioncheck
+initiallyfailed althoughsymbolsvalid; archivedattempt beforecorrectedsymbol
+check. No CFI/LTOdisabled. SuccessfulmoduleSHA
+9b40f97120dc87329ef42aa74742dca51ddb56f40e78dcfa6df7b7c37662e374.
+
+Actualmodule stockARMkernelVM1792104678354338978 PASSEDdefaultrefusal,
+explicitregister, unload, cleanpoweroff/noCFIfailure. NoI2Cgauge/probe inVM.
+Remotecommand fixture1792104959339213259 PASSED6cases inclrawread+unload,
+boundclient/badmodule/hotguard/deadtimer/readerror. Early command composition
+mistakecaughtbyinspection/correctedbeforefixtureexecution; syntax-onlychecks
+wouldnotcatchit. No physicalmoduleloadyet.
+
+Separate lynx_gauge_trial.py pinsallreceipts/source/module/commandhashes;
+reusesfrozenCPU pack exactly; optionalafterCPUhook insharedcoordinator defaults
+None foroldprofiles. Sensor/CPU/gaugeselftestallpass. Stop90s remainsarmed before
+ack; freshCPUguard+unboundclient+modulehashchecks beforeone-shotread/unload;
+logs/snapshots/powerofffollow. V19/stockundo/flashhold unchanged. New detached
+bounded start_gauge_listener.py verifiesactualreadiness/PID beforepowercue,
+to avoidoldsessionloss. No GitHubpushuntilnewhardwaremilestone.
+
+
+### SUCCESS: custom gauge read on real Lynx; raw2937; unloaded and stoprequested
+
+Detached listener launch1792105072103874650 PID92629, actualreadyreceipt
+logs/gauge-trial-1792105072191821745/result.json. User saidokgo afterpowercue.
+Listenerremainedalive acrossuserturn; contact at~119s. Brief40sobserverwindow
+ended beforecontact; nextsavedreceipt alreadycontainedfullsuccessfultrial.
+No secondbuttons/reboot. Pinnednativeproofmatched. Sensor/CPUstagesreturned0,
+freshCPUguardmax34891mC/12samples. Newmodule uploadedhashverified, actualprobe
+returned0 in1546us; cachedsysfsword2937 matchedkernelLYNX_GAUGE_RAWword2937.
+Readonefixed0x06word, moduleunloaded0. No CFIerrors observed; noconfig/auth/
+chargingwrites, no partition changes. Thisproves realcustomnativekernelcode
+plusI2Cread, notyetexactgaugemodel orcalibratedbatterytemp. Expectedstockunits
+wouldyield20.6C; keepconditional. summarize_gauge_trial.py verifiedallstream
+hashes, identity/order/timer/stages/wordmatch/unload; analysis.jsonbesideraw.
+
+Stop90stimer armedbeforeack. Explicitpoweroffrequested6.868safterbeacon;
+SSHtimedout5s. Physicaloffunconfirmed; nofurtherphonecommands. Useralready
+confirmedcool/USBunplugged beforetrial; do notresumephysicalconfirmationloop.
+GAUGE-RAW-RESULT.md preservesmilestone; newworkinghardware qualifiesforone
+GitHubupload. Nextofflinework: documentednormalDeviceTypequery, notunsealing
+orfullchargingdriverload. V19image/undo/checkpoint/slots unchanged; holdactive.

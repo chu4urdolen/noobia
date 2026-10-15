@@ -12,7 +12,7 @@ GROUPS={'soc-temperature':'soc_temp_lvts.ko','cpu-frequency':'mediatek-cpufreq-h
 def norm(s):return s.removesuffix('.ko').replace('-','_')
 def sha(data):return hashlib.sha256(data).hexdigest()
 def main():
- parser=argparse.ArgumentParser();parser.add_argument('--sensor-trial',action='store_true',help='Prepare reviewed sensor-only supervised trial; never connect or load');args=parser.parse_args()
+ parser=argparse.ArgumentParser();modes=parser.add_mutually_exclusive_group();modes.add_argument('--sensor-trial',action='store_true',help='Prepare reviewed sensor-only supervised trial; never connect or load');modes.add_argument('--cpu-trial',action='store_true',help='Prepare sensor then CPU-frequency stages; never connect or load');args=parser.parse_args();trial=args.sensor_trial or args.cpu_trial;scope=['soc-temperature','cpu-frequency'] if args.cpu_trial else ['soc-temperature'] if args.sensor_trial else []
  os.umask(0o077);out=P/'artifacts'/('thermal-ssh-pack-'+str(time.time_ns()));out.mkdir(mode=0o700)
  inventory=(R/'logs/live-inventory-1792098110330311623/inventory.stdout').read_text();loaded={line.split()[0] for line in inventory.split('MODULES\n',1)[1].splitlines() if re.match(r'^\w+ \d+ ',line)}
  index={}
@@ -31,7 +31,7 @@ def main():
  for group,target in GROUPS.items():
   order=[]
   if group=='soc-temperature':add('nvmem_mtk-devinfo',order,set())
-  add(target,order,set());groups[group]={'target':norm(target),'full_dependency_order':order,'missing_in_saved_boot':[n for n in order if n not in loaded],'automatic_loading':False,'review_only':group!='soc-temperature' if args.sensor_trial else group not in ['soc-temperature','cpu-frequency']}
+  add(target,order,set());groups[group]={'target':norm(target),'full_dependency_order':order,'missing_in_saved_boot':[n for n in order if n not in loaded],'automatic_loading':False,'review_only':group not in scope if trial else group not in ['soc-temperature','cpu-frequency']}
  # Compare overlapping imported symbol CRCs with all saved-live stock modules.
  for name in sorted(selected|loaded):
   if name not in index:continue
@@ -58,21 +58,41 @@ def main():
  require(matches['nvmem_mtk_devinfo'],'Calibration provider DT node missing')
  modules={n:{'file':index[n].name,'source':str(index[n].relative_to(S)),'sha256':sha(blobs[n]),'bytes':len(blobs[n]),'srcversion':metadata[n].get('srcversion',[]),'depends':[norm(c) for c in ','.join(metadata[n].get('depends',[])).split(',') if c],'already_loaded_in_saved_boot':n in loaded} for n in sorted(selected)}
  manifest={'kernel_release':'5.10.149-android12-9-o-g311738fbb5a8','baseline_image_sha256':'5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851','groups':groups,'modules':modules,'shared_symbol_crc_conflicts':conflicts,'stock_merged_dt_sha256':sha(dt),'device_tree_matches':matches,'automatic_loading':False,'phone_contacted':False,'flash_performed':False,'live_trial_eligible':False,'limits':'Preparation only. Exact stock module ABI and candidate DT matches are not physical probe or heat-safety proof. Battery/charging/integration groups remain review-only. Global safety hold stays active.'}
- manifest['live_trial_eligible']=bool(args.sensor_trial)
- manifest['trial_scope']=['soc-temperature'] if args.sensor_trial else []
+ manifest['live_trial_eligible']=bool(trial)
+ manifest['trial_scope']=scope
  manifest['device_tree_provider_prerequisites']=['clk_mt6983','reset_ti_syscon','oplus_project']
  minimum=0
  for node in ['/efuse@11ee0000/data1','/efuse@11ee0000/data2','/efuse@11ee0000/data3']:
   offset,size=struct.unpack('>II',nodes[node]['reg']);minimum=max(minimum,offset+size)
  manifest['devinfo_min_bytes']=minimum
- files={'manifest.json':json.dumps(manifest,indent=2).encode()+b'\n','thermal-step.sh':(P/'thermal-step.sh').read_bytes(),'ALLOWED-STAGES':b'soc-temperature\n' if args.sensor_trial else b'soc-temperature\ncpu-frequency\n','DEVINFO-MIN-BYTES':(str(minimum)+'\n').encode()}
- if not args.sensor_trial:files['REVIEW-HOLD']=b'Preparation only. Hardware remains off; thermal safety review required.\n'
+ manifest['limits']='Short supervised sensor/CPU diagnostic only; battery/charging excluded. Exact stock ABI/DT checks do not establish physical safety. Global flash hold stays active.' if trial else manifest['limits']
+ files={'manifest.json':json.dumps(manifest,indent=2).encode()+b'\n','thermal-step.sh':(P/'thermal-step.sh').read_bytes(),'cpu-temperature-guard.sh':(P/'cpu-temperature-guard.sh').read_bytes(),'ALLOWED-STAGES':(''.join(s+'\n' for s in scope) if trial else 'soc-temperature\ncpu-frequency\n').encode(),'DEVINFO-MIN-BYTES':(str(minimum)+'\n').encode()}
+ if not trial:files['REVIEW-HOLD']=b'Preparation only. Hardware remains off; thermal safety review required.\n'
  checks={}
+ absent=[]
  for rows in matches.values():
   for row in rows:
    for prop,digest in row['property_hashes'].items():checks[row['node'].lstrip('/')+'/'+prop]=digest
  for node in ['/efuse@11ee0000/data1','/efuse@11ee0000/data2','/efuse@11ee0000/data3']:
   checks[node.lstrip('/')+'/reg']=sha(nodes[node]['reg'])
+ if args.cpu_trial:
+  provider='/soc/performance-controller@0011bc00';handle=nodes[provider]['phandle'];require(nodes[provider]['#performance-domain-cells']==struct.pack('>I',1),'CPU domain cell width differs')
+  domains={}
+  for node,props in nodes.items():
+   if props.get('device_type')!=b'cpu\0':continue
+   spec=props.get('performance-domains',b'');require(len(spec)==8 and spec[:4]==handle,'CPU performance provider differs');domain=int.from_bytes(spec[4:],'big');domains.setdefault(domain,[]).append(node)
+   for prop in ['reg','performance-domains','#cooling-cells']:
+    if prop in props:checks[node.lstrip('/')+'/'+prop]=sha(props[prop])
+  require(sorted(len(v) for v in domains.values())==[1,3,4] and set(domains)=={0,1,2},'Unexpected CPU domain topology')
+  manifest['cpu_domains']=domains
+  checks[provider.lstrip('/')+'/#performance-domain-cells']=sha(nodes[provider]['#performance-domain-cells'])
+  rules=[n for n in nodes if n.startswith('/soc/oplus-omrg/')];require(rules,'OMRG rules missing')
+  for node in rules:
+   props=nodes[node];require('up_limit_enable' in props and 'down_limit_enable' not in props,'OMRG may request a frequency floor')
+   for prop,data in props.items():checks[node.lstrip('/')+'/'+prop]=sha(data)
+   absent.append(node.lstrip('/')+'/down_limit_enable')
+  files['manifest.json']=json.dumps(manifest,indent=2).encode()+b'\n'
+ files['DT-ABSENT']=''.join(n+'\n' for n in absent).encode()
  files['DT-SHA256SUMS']=''.join(digest+'  '+name+'\n' for name,digest in sorted(checks.items())).encode()
  for n in modules:files['modules/'+index[n].name]=blobs[n]
  for group,row in groups.items():
@@ -83,5 +103,5 @@ def main():
  with tarfile.open(fileobj=memory,mode='w',format=tarfile.USTAR_FORMAT) as tar:
   for name,data in sorted(files.items()):
    entry=tarfile.TarInfo(name);entry.size=len(data);entry.mode=0o700 if name.endswith('.sh') else 0o600;entry.mtime=0;tar.addfile(entry,io.BytesIO(data))
- archive=gzip.compress(memory.getvalue(),mtime=0);(out/'thermal-ssh-pack.tar.gz').write_bytes(archive);(out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n');report={'prepared':True,'archive_sha256':sha(archive),'archive_bytes':len(archive),'modules':len(modules),'groups':{n:len(g['missing_in_saved_boot']) for n,g in groups.items()},'phone_contacted':False,'flash_performed':False,'live_trial_eligible':bool(args.sensor_trial)};(out/'result.json').write_text(json.dumps(report,indent=2)+'\n');print(out/'result.json');print(json.dumps(report,indent=2))
+ archive=gzip.compress(memory.getvalue(),mtime=0);(out/'thermal-ssh-pack.tar.gz').write_bytes(archive);(out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n');report={'prepared':True,'archive_sha256':sha(archive),'archive_bytes':len(archive),'modules':len(modules),'groups':{n:len(g['missing_in_saved_boot']) for n,g in groups.items()},'phone_contacted':False,'flash_performed':False,'live_trial_eligible':bool(trial)};(out/'result.json').write_text(json.dumps(report,indent=2)+'\n');print(out/'result.json');print(json.dumps(report,indent=2))
 if __name__=='__main__':main()

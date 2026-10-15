@@ -8,7 +8,7 @@ from network_userspace import put
 from prepare_busybox_diagnostics import pack
 def sha(data):return hashlib.sha256(data).hexdigest()
 def main():
- candidates=sorted((P/'artifacts').glob('thermal-ssh-pack-*/result.json'));F=candidates[-1].parent;m=json.loads((F/'manifest.json').read_text());report=json.loads((F/'result.json').read_text());raw=(F/'thermal-ssh-pack.tar.gz').read_bytes();require(sha(raw)==report['archive_sha256'],'Archive differs');require(not m['live_trial_eligible'] or m.get('trial_scope')==['soc-temperature'],'Pack trial scope differs')
+ candidates=sorted((P/'artifacts').glob('thermal-ssh-pack-*/result.json'));F=candidates[-1].parent;m=json.loads((F/'manifest.json').read_text());report=json.loads((F/'result.json').read_text());raw=(F/'thermal-ssh-pack.tar.gz').read_bytes();require(sha(raw)==report['archive_sha256'],'Archive differs');require(not m['live_trial_eligible'] or m.get('trial_scope') in [['soc-temperature'],['soc-temperature','cpu-frequency']],'Pack trial scope differs')
  with tarfile.open(fileobj=io.BytesIO(raw),mode='r:gz') as t:
   members=t.getmembers();require(all(x.isfile() and not x.name.startswith('/') and '..' not in Path(x.name).parts for x in members),'Unsafe archive path/type');files={x.name:t.extractfile(x).read() for x in members};require(len(files)==len(members),'Duplicate archive entry')
  for line in files['SHA256SUMS'].decode().splitlines():
@@ -26,6 +26,14 @@ def main():
  out=P/'artifacts'/('emulated-thermal-pack-guards-'+str(time.time_ns()));out.mkdir(mode=0o700)
  b=read_boot_v4((P/'artifacts/busybox-wifi-ssh-twostage-v19/nord3-busybox-candidate.img').read_bytes());e=read_newc(decompress(b['ramdisk']))
  for name,data in files.items():put(e,'fixture/'+name,data,0o100700 if name.endswith('.sh') else 0o100600)
+ guard=(P/'cpu-temperature-guard.sh').read_bytes();require(files['cpu-temperature-guard.sh']==guard,'CPU guard differs')
+ specs=[('good',[('soc_max','35000'),('cpu_big1','36000'),('cpu_little1','34000')],0),('consys-only',[('consys','33000')],1),('soc-hot',[('soc_max','50000'),('cpu_big1','35000'),('cpu_little1','34000')],1),('cpu-hot',[('soc_max','35000'),('cpu_big1','52000'),('cpu_little1','34000')],1),('zero',[('soc_max','0'),('cpu_big1','35000'),('cpu_little1','34000')],1),('negative',[('soc_max','35000'),('cpu_big1','-100'),('cpu_little1','34000')],1),('invalid',[('soc_max','35000'),('cpu_big1','bad'),('cpu_little1','34000')],1),('missing-read',[('soc_max','35000'),('cpu_big1',None),('cpu_little1','34000')],1),('duplicate-soc',[('soc_max','35000'),('soc_max','35000'),('cpu_big1','35000'),('cpu_little1','34000')],1),('one-cpu',[('soc_max','35000'),('cpu_big1','35000')],1)]
+ for case,zones,expected in specs:
+  root='/fixture/cpu-cases/'+case
+  for i,(kind,value) in enumerate(zones):
+   put(e,root.lstrip('/')+'/thermal_zone'+str(i)+'/type',(kind+'\n').encode(),0o100644)
+   if value is not None:put(e,root.lstrip('/')+'/thermal_zone'+str(i)+'/temp',(value+'\n').encode(),0o100644)
+  put(e,root.lstrip('/')+'/guard.sh',guard.replace(b'/sys/class/thermal',root.encode())+b'\nlynx_cpu_temperature_guard\n')
  init=b'''#!/bin/sh
 export PATH=/bin:/sbin
 BB=/bin/busybox
@@ -64,11 +72,14 @@ $BB cat /proc/modules > /fixture/modules.after
 if $BB cmp -s /fixture/modules.before /fixture/modules.after; then echo THERMAL_NO_MODULE_INSERTION=PASS; fi
 $BB poweroff -f
 '''
- put(e,'init',init);(out/'init-source').write_bytes(init);(out/'Image').write_bytes(gzip.decompress(b['kernel']));(out/'initramfs').write_bytes(pack(e))
+ extra=b''
+ for case,zones,expected in specs:
+  extra+=('/bin/busybox sh /fixture/cpu-cases/'+case+'/guard.sh > /fixture/cpu-check.out 2>&1\nrc=$?\nif [ "$rc" = '+str(expected)+' ]; then echo CPU_GUARD_'+case+'=PASS; else echo CPU_GUARD_'+case+'=FAIL; fi\n').encode()
+ init=init.replace(b'$BB poweroff -f\n',extra+b'$BB poweroff -f\n');put(e,'init',init);(out/'init-source').write_bytes(init);(out/'Image').write_bytes(gzip.decompress(b['kernel']));(out/'initramfs').write_bytes(pack(e))
  q=R/'tools/qemu/noble/root';env=dict(os.environ,LD_LIBRARY_PATH=str(q/'usr/lib/x86_64-linux-gnu'),QEMU_MODULE_DIR=str(q/'usr/lib/x86_64-linux-gnu/qemu'),TMPDIR=str(R/'tools/mtk-tmp'))
  cmd=[str(q/'usr/bin/qemu-system-aarch64'),'-L',str(q/'usr/share/qemu'),'-no-user-config','-nodefaults','-machine','virt,gic-version=3','-accel','tcg','-cpu','cortex-a710','-smp','2','-m','1024','-display','none','-monitor','none','-serial','stdio','-nic','none','-no-reboot','-kernel',str(out/'Image'),'-initrd',str(out/'initramfs'),'-append','console=ttyAMA0 rdinit=/init loglevel=7 panic=0']
  timedout=False
  try:p=subprocess.run(cmd,env=env,capture_output=True,timeout=50);console=p.stdout+p.stderr;rc=p.returncode
  except subprocess.TimeoutExpired as ex:console=(ex.stdout or b'')+(ex.stderr or b'');rc=None;timedout=True
- (out/'console.log').write_bytes(console);checks={name:('THERMAL_GUARD_'+name+'=PASS').encode() in console for name in ['HOLD','REVIEW_ONLY','NO_SSH','TOKEN','HASH','DT']};checks.update(no_module_insertion=b'THERMAL_NO_MODULE_INSERTION=PASS' in console,clean_poweroff=b'reboot: Power down' in console);result={'passed':rc==0 and not timedout and all(checks.values()),'checks':checks,'archive_sha256':sha(raw),'runtime_sha256':sha(files['thermal-step.sh']),'phone_contacted':False,'physical_probe_tested':False,'exit_code':rc,'timed_out':timedout};(out/'result.json').write_text(json.dumps(result,indent=2)+'\n');print(out/'result.json');print(json.dumps(result,indent=2));require(result['passed'],'Thermal pack checks failed')
+ (out/'console.log').write_bytes(console);checks={name:('THERMAL_GUARD_'+name+'=PASS').encode() in console for name in ['HOLD','REVIEW_ONLY','NO_SSH','TOKEN','HASH','DT']};checks.update({'cpu_'+case:('CPU_GUARD_'+case+'=PASS').encode() in console for case,_,_ in specs});checks.update(no_module_insertion=b'THERMAL_NO_MODULE_INSERTION=PASS' in console,clean_poweroff=b'reboot: Power down' in console);result={'passed':rc==0 and not timedout and all(checks.values()),'checks':checks,'archive_sha256':sha(raw),'runtime_sha256':sha(files['thermal-step.sh']),'cpu_guard_sha256':sha(guard),'phone_contacted':False,'physical_probe_tested':False,'exit_code':rc,'timed_out':timedout};(out/'result.json').write_text(json.dumps(result,indent=2)+'\n');print(out/'result.json');print(json.dumps(result,indent=2));require(result['passed'],'Thermal pack checks failed')
 if __name__=='__main__':main()

@@ -12,5 +12,8 @@
   "thermal_safety_hold": true,
   "ram_only_sensor_readings_verified": true,
   "ram_only_sensor_valid_zones": 29,
-  "last_installed_boot_a": "V19 unchanged; supervised RAM sensor trial completed and shutdown requested; physical confirmation pending"
+  "last_installed_boot_a": "V19 unchanged; supervised RAM sensor+CPU trial completed and shutdown requested; physical power-off unconfirmed",
+  "ram_only_cpu_frequency_policies_verified": 3,
+  "ram_only_cpu_cooling_interfaces_verified": 3,
+  "active_thermal_throttling_tested": false
 }

@@ -23,10 +23,15 @@ snapshot() {
     for p in /sys/devices/system/cpu/cpufreq/policy*; do
         [ -d "$p" ] || continue
         printf 'CPU_POLICY %s\n' "${p##*/}"
-        for a in scaling_governor scaling_cur_freq scaling_min_freq scaling_max_freq; do
+        for a in affected_cpus scaling_driver scaling_governor scaling_cur_freq scaling_min_freq scaling_max_freq; do
             [ -r "$p/$a" ] || continue
             printf '%s=' "$a"; "$BB" cat "$p/$a" 2>&1
         done
+    done
+    for p in /sys/class/thermal/cooling_device*; do
+        [ -r "$p/type" ] || continue
+        printf 'COOLING %s\n' "${p##*/}"
+        "$BB" cat "$p/type" "$p/cur_state" "$p/max_state" 2>&1
     done
 }
 case "$#:$1" in
@@ -45,6 +50,11 @@ IFS= read -r confirmed < /run/lynx/host-confirmed || fail 'pinned host has not c
 [ -n "$token" ] && [ "$confirmed" = "$token" ] || fail 'boot confirmation mismatch'
 (cd "$PACK" && "$BB" sha256sum -c SHA256SUMS) || fail 'pack hash mismatch'
 (cd /sys/firmware/devicetree/base && "$BB" sha256sum -c "$PACK/DT-SHA256SUMS") || fail 'device tree differs'
+while IFS= read -r prop; do
+    [ -n "$prop" ] || continue
+    case "$prop" in /*|*..*) fail 'invalid absent-property path' ;; esac
+    [ ! -e "/sys/firmware/devicetree/base/$prop" ] || fail 'unexpected frequency-floor device-tree setting'
+done < "$PACK/DT-ABSENT"
 for name in clk_mt6983 reset_ti_syscon oplus_project; do
     [ -d "/sys/module/$name" ] || fail 'stock clock/reset/project prerequisites missing'
 done
@@ -63,17 +73,8 @@ fi
 # Require a real SoC temperature before the CPU-frequency stage. This is a
 # conservative test cutoff, not a validated battery-temperature guarantee.
 if [ "$stage" = cpu-frequency ]; then
-    found=0
-    for p in /sys/class/thermal/thermal_zone*; do
-        [ -r "$p/type" ] || continue
-        IFS= read -r kind < "$p/type" || continue
-        [ "$kind" = soc_max ] || continue
-        IFS= read -r value < "$p/temp" || fail 'SoC temperature read failed'
-        case "$value" in ''|*[!0-9]*) fail 'invalid SoC temperature' ;; esac
-        [ "$value" -gt 0 ] && [ "$value" -lt 50000 ] || fail 'SoC outside conservative test range'
-        found=1
-    done
-    [ "$found" = 1 ] || fail 'SoC temperature not available'
+    . "$PACK/cpu-temperature-guard.sh" || fail 'CPU temperature guard unavailable'
+    lynx_cpu_temperature_guard || fail 'CPU/SoC temperatures unavailable or outside conservative test range'
 fi
 "$BB" mkdir -p "$PACK/logs" || fail 'cannot create RAM logs'
 [ ! -e "$PACK/logs/$stage.started" ] || fail 'stage already attempted; inspect logs before another attempt'

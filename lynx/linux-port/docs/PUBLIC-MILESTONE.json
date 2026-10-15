@@ -9,18 +9,37 @@
   "stock_boot_sha256": "a67f03d7b826b834c23653b67eaa6efa971eb70ef8af19eee4d33fb5fc7fe995",
   "recipe_sha256": "c75d33cd3d051c81281708b4beb9013b416fe5b3c9350508fe7f64862ab1649e",
   "byte_identical_reconstruction_verified": true,
-  "native_ssh_identity_checks": ["pinned host key", "kernel release", "PID1 executable", "init hash", "BusyBox hash", "current boot token", "root UID"],
+  "native_ssh_identity_checks": [
+    "pinned host key",
+    "kernel release",
+    "PID1 executable",
+    "init hash",
+    "BusyBox hash",
+    "current boot token",
+    "root UID"
+  ],
   "fallback_cancellation_acknowledged": true,
   "live_wpa_state": "COMPLETED",
-  "journal_records": {"supervisor": 2, "bootstrap": 84, "wifi": 105},
+  "journal_records": {
+    "supervisor": 2,
+    "bootstrap": 84,
+    "wifi": 105
+  },
   "validated_runtime_archive_members": 44,
   "host_discovery_seconds_approximately": 109,
-  "current_trial_partition_writes": ["boot_a"],
+  "current_trial_partition_writes": [
+    "boot_a"
+  ],
   "full_postmarketos_installation": false,
   "display_initialized": false,
   "thermal_safety_validated": false,
   "heating_reported_after_milestone": true,
-  "hardware_testing_on_hold": true,
   "usb_gadget_networking_verified": false,
-  "private_images_and_raw_logs_published": false
+  "private_images_and_raw_logs_published": false,
+  "ram_only_sensor_valid_zones": 29,
+  "ram_only_cpu_frequency_policies_verified": 3,
+  "ram_only_cpu_cooling_interfaces_verified": 3,
+  "active_thermal_throttling_tested": false,
+  "extended_hardware_runs_on_hold": true,
+  "supervised_ram_diagnostics_permitted": true
 }

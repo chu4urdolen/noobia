@@ -10,6 +10,7 @@ from lynx_wifi_v19_contact import BUILD,ssh_command,PROOF,proof_valid,beacon_val
 R=Path(__file__).resolve().parent.parent;P=R/'linux-port'
 PACK=P/'artifacts/thermal-ssh-pack-1792099635423460996'
 EXPECTED='edc011a45072b6c3baa13da4ba73462d7a0e049236719a54fb093fb2da0ebffb'
+TRIAL_SCOPE=['soc-temperature']
 REMOTE='/run/lynx/thermal-sensor-trial'
 def sha(data):return hashlib.sha256(data).hexdigest()
 def arm_command(token):
@@ -24,15 +25,15 @@ printf 'STOP_TIMER_ARMED\n'
 '''.replace('BOOT_TOKEN',token)
 def validate():
  data=(PACK/'thermal-ssh-pack.tar.gz').read_bytes();assert sha(data)==EXPECTED
- manifest=json.loads((PACK/'manifest.json').read_text());assert manifest['live_trial_eligible'] and manifest['trial_scope']==['soc-temperature'] and manifest['groups']['cpu-frequency']['review_only']
+ manifest=json.loads((PACK/'manifest.json').read_text());assert manifest['live_trial_eligible'] and manifest['trial_scope']==TRIAL_SCOPE and manifest['groups']['cpu-frequency']['review_only']==('cpu-frequency' not in TRIAL_SCOPE)
  with tarfile.open(fileobj=io.BytesIO(data),mode='r:gz') as t:
   members=t.getmembers();assert all(m.isfile() and not m.name.startswith('/') and '..' not in Path(m.name).parts for m in members)
   files={m.name:t.extractfile(m).read() for m in members};assert len(files)==len(members)
-  assert 'REVIEW-HOLD' not in files and files['ALLOWED-STAGES']==b'soc-temperature\n'
-  assert files['thermal-step.sh']==(P/'thermal-step.sh').read_bytes()
+  assert 'REVIEW-HOLD' not in files and files['ALLOWED-STAGES']==''.join(n+'\n' for n in TRIAL_SCOPE).encode()
   for line in files['SHA256SUMS'].decode().splitlines():
    digest,name=line.split('  ',1);assert sha(files[name])==digest
- checks=sorted((P/'artifacts').glob('emulated-thermal-pack-guards-*/result.json'));check=json.loads(checks[-1].read_text());assert check['passed'] and check['archive_sha256']==EXPECTED
+ checks=[(f,json.loads(f.read_text())) for f in sorted((P/'artifacts').glob('emulated-thermal-pack-guards-*/result.json'))];matching=[r for f,r in checks if r.get('passed') and r.get('archive_sha256')==EXPECTED];assert matching;check=matching[-1];assert check['runtime_sha256']==sha(files['thermal-step.sh'])
+ if 'cpu-frequency' in TRIAL_SCOPE:assert check['cpu_guard_sha256']==sha(files['cpu-temperature-guard.sh']) and all(v for k,v in check['checks'].items() if k.startswith('cpu_'))
  timers=sorted((P/'artifacts').glob('emulated-thermal-stop-*/result.json'));timer=json.loads(timers[-1].read_text());assert timer['passed'] and timer['source_sha256']==sha((P/'thermal-stop.sh').read_bytes())
  assert (P/'docs/SAFETY-HOLD.json').exists() # Do not clear the flash hold.
  return data
@@ -42,11 +43,11 @@ def main():
   assert beacon_valid(('LYNX_HELLO '+BUILD['session_token']).encode(),'192.168.100.9') and not beacon_valid(b'bad','192.168.100.9')
   arm=arm_command(BUILD['session_token']);assert "printf '%s\\n'" in arm
   p=subprocess.run(['sh','-c',"printf '%s\\n' probe"],capture_output=True);assert p.stdout==b'probe\n'
-  print('Sensor-only pack/guards/identity/timer acknowledgement policy checked; no phone contacted.');return
+  print('Checked '+', '.join(TRIAL_SCOPE)+' pack/guards/identity/timer acknowledgement policy; no phone contacted.');return
  if not args.listen:print('Use --listen only for a cooled, supervised handset boot.');return
  assert 30<=args.seconds<=600;os.umask(0o077)
- out=R/'logs'/('sensor-trial-'+str(time.time_ns()));out.mkdir(mode=0o700);receipt=out/'result.json'
- report={'state':'starting','started_ns':time.time_ns(),'phone_contacted':False,'native_identity_verified':False,'flash_performed':False,'cpu_frequency_modules_allowed':False,'pack_sha256':EXPECTED,'operations':[]}
+ out=R/'logs'/(('cpu-trial-' if 'cpu-frequency' in TRIAL_SCOPE else 'sensor-trial-')+str(time.time_ns()));out.mkdir(mode=0o700);receipt=out/'result.json'
+ report={'state':'starting','started_ns':time.time_ns(),'phone_contacted':False,'native_identity_verified':False,'flash_performed':False,'cpu_frequency_modules_allowed':'cpu-frequency' in TRIAL_SCOPE,'trial_scope':TRIAL_SCOPE,'pack_sha256':EXPECTED,'operations':[]}
  def save():
   temp=receipt.with_suffix('.tmp');temp.write_text(json.dumps(report,indent=2)+'\n');temp.replace(receipt)
  def run(ip,name,command,timeout=8,stdin=None):
@@ -78,8 +79,13 @@ def main():
     _,rc=run(ip,'upload-pack','test ! -e '+REMOTE+' && mkdir -m 700 '+REMOTE+' && tar -xz -C '+REMOTE,timeout=12,stdin=data);assert rc==0,'Pack transfer failed'
     _,rc=run(ip,'before',"cat /proc/uptime /proc/mounts; /bin/busybox sh "+REMOTE+"/thermal-step.sh --inspect",timeout=8);assert rc==0,'Snapshot failed'
     raw,rc=run(ip,'sensor-stage','/bin/busybox sh '+REMOTE+'/thermal-step.sh --load soc-temperature',timeout=15);report['sensor_stage_exit_code']=rc;save()
+    if rc==0 and 'cpu-frequency' in TRIAL_SCOPE:
+     raw,rc=run(ip,'cpu-frequency-stage','/bin/busybox sh '+REMOTE+'/thermal-step.sh --load cpu-frequency',timeout=15);report['cpu_frequency_stage_exit_code']=rc;save()
     _,diagrc=run(ip,'kernel-and-sensors',"dmesg; printf '\\nTHERMAL_FINAL\\n'; /bin/busybox sh "+REMOTE+"/thermal-step.sh --inspect; printf '\\nBINDINGS\\n'; ls -l /sys/bus/platform/devices/10315000.lvts/driver /sys/bus/platform/devices/11ee0000.efuse/driver; true",timeout=8)
     report.update(state='sensor-stage-returned' if rc==0 else 'sensor-stage-failed-or-hung',diagnostics_exit_code=diagrc)
+    if 'cpu-frequency' in TRIAL_SCOPE:
+     _,sample_rc=run(ip,'cpu-and-battery-observation',"/bin/busybox sleep 1; /bin/busybox sh "+REMOTE+"/thermal-step.sh --inspect; printf '\\nI2C_CLIENTS\\n'; for p in /sys/bus/i2c/devices/*; do [ -r \"$p/name\" ] || continue; echo \"$p\"; cat \"$p/name\"; readlink \"$p/driver\"; done; printf '\\nOMRG_RULES\\n'; for f in /sys/bus/platform/devices/*/oplus-omrg*/ruler_enable; do [ -r \"$f\" ] || continue; echo \"$f\"; cat \"$f\"; done; true",timeout=8)
+     report.update(state='cpu-stage-returned' if rc==0 else 'cpu-stage-failed-or-hung',second_sample_exit_code=sample_rc)
    except Exception as error:report.update(state='trial-error',error=str(error))
    finally:
     # Always request stop; the independent timer is never cancelled.

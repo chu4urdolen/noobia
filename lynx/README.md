@@ -1,12 +1,16 @@
 # Lynx: native Linux on the OnePlus Nord 3
 
-**Current safety hold:** heating was reported and V19 lacks working battery/CPU
-temperature readings and verified throttling. Hardware trials are paused.
+**Current safety hold:** heating was reported and V19 lacks working battery
+temperature readings and verified throttling. Extended runs and new Linux
+flashes remain on hold; short supervised RAM-only diagnostics are permitted.
 See [the thermal findings](linux-port/docs/THERMAL-SAFETY.md). The image is a
 networking milestone, not yet a thermally validated operating environment.
 The [RAM-only sensor trial](linux-port/docs/SENSOR-TRIAL-RESULT.md) now verified
 29 thermal readings after SSH, including SoC/CPU/GPU/memory. Battery temperature
-and CPU frequency control remain unverified; the safety hold remains active.
+remains unavailable. The [CPU trial](linux-port/docs/CPU-TRIAL-RESULT.md) verified
+three stock frequency policies using schedutil and three CPU cooling interfaces.
+These additions were loaded into RAM after SSH; V19 itself remains unchanged.
+Actual throttling response and reduced heat remain unverified.
 
 Lynx is a OnePlus Nord 3 5G CPH2493, MediaTek MT6983, with an unlocked
 bootloader. **Native BusyBox Linux, Wi-Fi, DHCP and pinned key-only SSH are

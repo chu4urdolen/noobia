@@ -63,6 +63,10 @@ The display remains uninitialized and a black screen does not establish power
 state. The battery tools do not change deep-idle or charger settings. A separate,
 verified [WFI fallback](IDLE-POWER.md) now disables repeatedly rejected deep CPU
 idle states in the current RAM session, with the original flags saved for undo.
+The separate [soft-throttle watcher](COOLING-CONTROL.md) requests the tested
+one-step CPU cooling limit at 45°C and releases it at 40°C or lower. Its decision
+logic passed on host and native BusyBox; no heat-triggered hardware test was
+performed. Neither addition is part of the unchanged V19 boot image.
 
 `collect_battery_session.py` saves cached observations to the host every ten
 seconds, including timestamps, hashes, failed-command captures and identity

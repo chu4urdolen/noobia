@@ -8,6 +8,8 @@ sensors, frequency controls and CPU cooling interfaces are also verified.
 The [CPU idle investigation](linux-port/docs/IDLE-POWER.md) identified repeated
 failed deep-sleep entries. A reversible WFI fallback eliminated those failures
 and reduced observed battery discharge current while SSH stayed available.
+A [tested one-step soft-throttle policy](linux-port/docs/COOLING-CONTROL.md)
+now runs alongside the independent temperature watchers in RAM.
 
 Continuous operation with USB unplugged is explicitly authorized. Routine
 timed/end-of-test shutdowns are disabled in the current session. Temperature

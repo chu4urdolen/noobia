@@ -3575,3 +3575,54 @@ session wfi-fallback.sh, hash-verifying summarize_idle_observation.py and
 summarize_battery_window.py. Counter time updates on exit; transition intervals
 can include long sleep spanning a capture boundary, so ratios can exceed1.
 Do not misreport these as instantaneous utilization. See IDLE-POWER.md.
+
+### Read-only charger status and bounded CPU cooling actuation
+
+`logs/live-thermal-policy-survey-1792173365809276850`: charger online0,
+statusNotcharging, battery23.7C/87percent/-71mA. CPUzone step_wise enabled but
+no exposed passive trips/cdev bindings; soc_max only116500mC criticaltrip.
+Do not infer automatic passive throttling from registered cooling devices.
+
+`logs/live-cooling-control-trial-1792173442046650278`: both watcher PIDs alive,
+soc_max<45000mC guard, exact3CPUcooling devices, originals0, max23/29/27.
+Detached30srollback armed before increasingeachstate by1 for~11seconds.
+Maxfreqs policy0 1800000->1700000, policy4 2850000->2750000,
+policy7 3050000->3000000kHz. Stayedlimited10s, allstates/freqlimits restored
+exactly, SSHcontinuous, battery23.5C/-58..-60mA, recentCPUmax~27.3C.
+No stress/heating/trip/regulator/charger writes, no permanentcoolingcap.
+Independentrollback logfile verification follows separately. WFI fallbackON.
+New cooling-control-trial.sh and COOLING-CONTROL.md preserve this working test.
+Next: implement a small RAM userspace soft-throttle policy, hysteresis,
+invalid-sensor handling and concurrent-controller ownership checks; validate
+decision logic on simulated readings, never heat hardware just to test it.
+
+### Soft-throttle watcher prepared, tested and running in RAM
+
+Cooling rollback confirmed by live-cooling-rollback-verification-
+1792173548004003162, states all0, battery23.3C/-68mA. New source
+thermal-cooling-watch.sh SHA5310290b6a8e981e2250910fb5b4b54428a1faa6b1f6177e36f5be2aade1233b.
+Host fixtures33 passed artifacts/thermal-cooling-policy-check-1792173709322403443;
+samehash actual BusyBox decisionfixtures33 passed live-native-thermal-cooling-
+decisions-1792173730554681342. These fixtures never access hardware paths.
+
+Started with pinned source hash, both existing watcher PIDs alive, valid
+soc_max+CPU set <40C, exact3cooling devices initiallystate0. Receipt
+live-start-thermal-cooling-watch-1792173775271871468: PID25373, READY, first
+maximum30316mC/desired0, allstates0, battery23.0C/87percent/-77mA. Ongoing
+proof live-soft-throttle-steady-check-1792173851879619153. No artificial heat.
+
+Policy onlyhardware-testedstate1 at>=45C, releaseownedlimits at<=40C,
+hysteresisbetween; invalidsensor set HOLD, no relaxinglimit. Externalstronger
+state neveroverridden; ownershiploss permanentlycedesdeviceforthisrun.
+Best-effort checksnotatomic arbitration. ExistingCPU60C/battery45Cconditional
+shutdownwatchersuntouched. No unconditionaltimers. Automatic hot hardware
+transition not exercised; manualactuation+actualnative decisionlogic separately
+verified. Onexitlastsoftcapretained; explicit--restore onlyafterverifiedownedPID
+exits, refuseswhilePIDalive, onlyrestoresownstate1. Noimage/resumeworkerchange.
+
+Updated host collector captures soft-throttlelog too. Replacement logger
+battery-session-1792173826897633981 watching3600s, sourcehash inlauncher.
+Verifiedhashfirstsample+softlog beforestopping oldexactownedPID15859; gone
+confirmed; oldreceiptstate'replaced', replacementlinkpreserved. Rotation
+battery-logger-rotation-1792173851845332051.json. Phonewatchers/SSHnotstopped.
+Currentloggerenddoesnotstopphone. KeepcurrentUSBunpluggedruntimecontinuous.

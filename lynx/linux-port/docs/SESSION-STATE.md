@@ -3688,3 +3688,89 @@ suspendhooks and sends firmwarepower-statevalidationSET; itsreturnisignoredby
 platforminit. Emptycore/platform exits prevent assuming rmmodundo. Next review
 MCUPM/SSPM mailbox+firmwarestartup before a controlledmoduletrial. No rawfirmware
 callissued, no lowpowermodule loaded. See LPM-PREREQUISITES.md.
+
+### MCU startup review completed; Alpine ARM64 userspace now runs on Lynx
+
+Same boot throughout; no flash/reboot/slot change/newkernelmodule. Health receipt
+live-mcu-review-health-1792179402546118773: battery21.8C/82percent/-66mA,
+originalthreewatcherPIDsalive. Preserved11pinnedMCUPM-v2/SSPM-v3sourcefiles in
+artifacts/mcu-startup-source-review-1792179403259415815, per-filetimings/hash.
+MCUPM remove/exit incomplete; initialization has IPI/mailbox/optional EMI setup,
+timesync and worker that canwriteMPAMcachepartitionregs. SSPM init configures
+SCMI/sharedmemory/timesync/EMI; probeignoresinternalinitreturn, exitslackcleanup.
+sspm_alive sysfsROactuallysends SCMISET. No MCU module or firmwarecallissued.
+
+Reserved-memory-analysis.json inthatreviewdir verifies actualstockmcupm.ko
+contains mediatek,reserve-memory-mcupm_share, absentfromactualFDT. Generic
+MCUPM-reservednode isnotthatspecificcompatible. Sourceexplicitlysupports
+missing sharednode by disablingloggerandcontinuing, so NOTprovedsleepcause.
+Memory-regionpropertyisnotwhatthismodulebranchuses; it looksupcompatible.
+Deeper-sleepdrivertrialdeferredinexistingusefulSSHsession becauseundoisnot
+ordinaryrmmod. ContinuednormalLinuxuserspacefoundation instead.
+
+OfficialAlpine downloads page verified3.24.2 ARM64 mini-rootfs+releaseprimary
+fingerprint0482D84022F52DF1C4E7CD43293ACD0907D9495A. Newfetch_alpine_rootfs.py
+downloadedHTTPSarchive,sha256,sha512,signature,ncopa.asc into
+downloads/alpine-rootfs-3.24.2-1792179591745064903. BothhashesandactualGPGVALIDSIG
+passedwithpinnedprimaryfingerprint. ArchiveSHA256
+9bf70a7f18ea44094cbb5f70c58f9af129c8214745743db0e68e5502cc2ce773.
+alpine_rootfs.py strictlyreadstarinmemory:514nonrootentries/8655157filebytes/
+17ARM64ELFs, requiredsymlink/interpreterchecks, parentpathguard, sizecaps.
+No hostextraction. Downloadedarchiveandkey/signaturesremainprivateinputs.
+
+Exactstockkernel NIC-freeVM artifacts/emulated-alpine-rootfs-1792179704020333357
+passednativechroot shell/musl/APK3.0.8/basepackageprobe+cleanpoweroff. VM didnot
+contactphone. Newinstall_alpine_rootfs.py requires verifiedarchive+VMreceipt,
+runtimepowerverification,recentbattery/noerrors/<35C/>=20percent, available
+RAM>=128MiB, chargeronline0 and /run tmpfs. PinsbootIDeachphase, freshpinned
+nativeidentity checks, refusesexistingrootfs/archive. NewfilesonlyRAM.
+
+Firsthardwarepreflight1792179843361874646 refusedBEFOREupload: Pythonconverted
+sed backreference into controlchar. Correctedtosimpleawk, addedcontrolchar
+rejection, retainedfailedreceipt. Secondtrial
+logs/alpine-rootfs-trial-1792179882804930040 SUCCEEDED: verifiedupload/extractto
+/run/lynx/alpine-3.24.2, realARM64shell/APKprobe and originalruntimepostcheck.
+Actualprobe live-alpine-probe-1792179887811619335 printsstockkernel,
+rootUID,musl/busybox/basekeys and LYNX_ALPINE_USERSPACE_PASS. PID1stilloriginal
+BusyBox; this isRAMchroot, NOTnewPID1boot or fullpostmarketOSport.
+
+Phoneclockwas1970, DNSexisting, HTTPSrepos/CApresent. New sync_lynx_clock.py
+explicitlysetLinuxwalltimefromNexus. live-wall-clock-sync-1792180049910851789
+passed epoch1792180049/unchangedbootID/beforeafteruptime. No RTCwrite,
+no precisionsyncclaim. WalltimecorrectionkeepsnormalHTTPScertchecksworking.
+
+alpine-diagnostics.sh createdbasicdevnodesONLYinsideRAMrootfs,copiedexisting
+resolverconfig, boundedAPKdownload40s, retainedTLS/packageverification,
+installedstrace6.19-r1+sixlibs, no services. Nativeproof
+live-alpine-package-diagnostics-1792180076545347560: sevenpackagesinstalled,
+23total/11.1MiB; realstracechild/bin/true execve/memory/getuid/exit_group0 PASS.
+Battery21.9C/82percent afterbriefpackageactivity. No attaches towatchers.
+
+Newtools/lynx-alpine +lynx_alpine.py executeboundedloggedcommands inmatching
+verifiedRAMrootfs,currentcontinuoussession+exactbootIDguard, freshnativeproof,
+argumentquotingandactualremotereturncode. Helperaddedpublicationallowlist.
+Actual apkinfo23packagesand wrapperstracechild/tailexit0 tested. No interactive
+terminaladded; eachcommandmax60s. Afterrebootoldrootfsreceiptrefused.
+
+NativeAPKcache fetched9files; cachecapture
+live-alpine-diagnostic-apk-cache-1792180285539775454 preservedbinary+hash.
+Resolverpickednewzlib1.3.2-r1 butrunningbasehasr0; filteredreplayONLYexactseven
+addedpackages, basealreadyprovidesmusl/zlib. Fresh NIC-freeexactkernelVM
+1792180385903910645 firstrefusedlocalpackageswithoutcaching(policy99), retained.
+Enabledcache-dir/cache-packageswithnetworkdisabledandnormalkeys; VM
+1792180457219474992 passed actualoffline7packageinstall+stracechild exit0,
+cleanpoweroff. No force-non-repository or signature/TLSbypass.
+
+export_alpine_apk_cache.py matchesVMpassedconsole/hash+sevenAPKhashes fromraw
+nativecapture,exportsfilteredtarandverifiesroundtrip. Result
+artifacts/alpine-offline-diagnostics-1792180536171444327/result.json; bundleSHA
+a1d0bbe5526bda51a176a458fb4cc1111b9289a59534069a04168c990fc22ca1.
+Nativeonlineinstall+VMofflinecoldreplay areseparateproofs; fullcombinedfreshboot
+hardwareworkflowunexercised. See ALPINE-USERSPACE.md forrepeatcommands/evidence.
+
+Finalruntimepowercheck1792180314504452043 ready, live-alpine-final-runtime-
+1792180315544413582 sameboot/PID1BusyBox/walltimecorrect/rootfs16396KiBincluding
+cache/battery22.0C/82percent/-60mA/recentCPUmax~27.3C. Fourhourhostlogger
+battery-session-1792178187012953274 continues; itsendingneverstopsLynx.
+Allnewbinaries/rootfs/APKs/keys/rawlogs remainlocal; publishonlyourtools/docs.
+GlobalLinuxflashholdactive, V19/stockundo/checkpointuntouched.

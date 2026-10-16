@@ -1,6 +1,11 @@
 # Lynx: native Linux on the OnePlus Nord 3
 
-**Current milestone:** native SSH plus live ZY0603 battery temperature, charge,
+**Current milestone:** [Alpine ARM64 userspace and native strace](linux-port/docs/ALPINE-USERSPACE.md)
+now run in a RAM chroot alongside the proven BusyBox PID 1 and SSH environment.
+The signed rootfs passed the exact-stock-kernel VM and hardware probes; a
+fresh VM also replayed the diagnostic packages completely offline.
+
+Native SSH plus live ZY0603 battery temperature, charge,
 pack voltage and signed current are verified on hardware. The
 [battery monitor and resume procedure](linux-port/docs/BATTERY-MONITOR.md)
 restored the tools automatically after a reboot of unchanged V19. SoC/CPU

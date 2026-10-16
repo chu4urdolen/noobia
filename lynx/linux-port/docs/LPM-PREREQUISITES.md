@@ -83,3 +83,32 @@ source-guided hypotheses until checked against the matching binaries/runtime.
 capture. It checks the capture hash, parses the tree, preserves selected power
 properties, resolves dependencies and checks shared stock import CRCs. It
 neither contacts Lynx nor inserts modules.
+
+## MCU startup follow-up
+
+Eleven pinned source files were preserved at
+`artifacts/mcu-startup-source-review-1792179403259415815`. MCUPM's probe sets up
+IPI/mailboxes, optional shared-memory/EMI protection, platform services and
+timesync, then starts a receive worker. That worker can write MPAM cache
+partition registers in response to firmware messages. The remove function
+explicitly leaves IPI/memory cleanup unimplemented; module exit does not
+unregister the driver or stop the worker.
+
+The published MCUPM source and matching stock binary both contain the shared
+memory compatible key `mediatek,reserve-memory-mcupm_share`. The live tree has
+no node with that exact compatible. Its differently named MCUPM reserved region
+does not prove equivalence. The source explicitly treats the missing shared
+node as a supported logger-disabled path, not a fatal probe failure; do not
+mistake this observation for proof of the sleep rejection's cause.
+
+SSPM v3 initializes reserved memory, SCMI platform service, timesync and EMI
+protection. Its probe ignores the internal module-init return, and its exit
+also lacks cleanup. Driver binding alone would not prove readiness. Even the
+read-only-looking `sspm_alive` sysfs attribute sends a SCMI SET request; it is
+not a passive memory observation.
+
+These findings argue for a separate, recoverable MCU trial rather than loading
+the drivers into the useful current session and expecting `rmmod` to undo
+everything. No MCU module or firmware command was used here. Work continued
+on the [normal Linux userspace foundation](ALPINE-USERSPACE.md), which now
+provides native APK and `strace` while the working power setup remains active.

@@ -12,6 +12,7 @@
 !/tools/*.sh
 !/tools/README.md
 !/tools/lynx-ssh
+!/tools/lynx-alpine
 !/tools/mtk-requirements.lock.txt
 !/tools/ram-log-reader/
 /tools/ram-log-reader/*

@@ -1,5 +1,12 @@
 # Thermal safety hold after the first native Linux session
 
+Current follow-up: [live battery monitoring](BATTERY-MONITOR.md) now works,
+including confirmed ZY0603-family readings, CPU/SoC sensors and frequency
+controls. Noob authorized continuous USB-unplugged development and revoked
+unconditional timed shutdown. Temperature-triggered watchers remain active.
+The Linux-flash hold and incomplete overall thermal validation remain in place.
+The findings below describe the original missing-driver state and history.
+
 Noob reported Lynx heating up after the successful V19 SSH session. Read-only
 diagnostics at about6219s uptime found:
 

@@ -41,7 +41,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--inputs', type=Path, required=True)
     parser.add_argument('--source-tree', type=Path, help='Optional clean sparse checkout of the pinned source; avoids full archive download')
+    parser.add_argument('--reader-source', type=Path, default=PORT / 'lynx-gauge-sample.c')
+    parser.add_argument('--module-name', default='lynx-gauge-sample')
     args = parser.parse_args()
+    if not re.fullmatch('[a-z][a-z0-9-]+', args.module_name):raise ValueError('Invalid module name')
     inputs = json.loads((args.inputs / 'result.json').read_text())
     compiler = next(r for r in inputs['sources'] if r['name'] == 'clang')
     if not compiler.get('compiler_identity_verified'):
@@ -121,6 +124,13 @@ def main():
                             if symbol in crcs and symbol not in conflicts:
                                 exports.setdefault(symbol, []).append({'source': name, 'kind': 'EXPORT_SYMBOL',
                                                                         'namespace': '', 'macro': 'define_dev_printk_level'})
+                    if name == 'kernel/params.c':
+                        body=data.split(b'#define STANDARD_PARAM_DEF(name, type, format, strtolfn)',1)[1].split(b'STANDARD_PARAM_DEF(byte,',1)[0]
+                        if b'EXPORT_SYMBOL(param_ops_##name)' not in body:raise ValueError('Parameter export macro differs')
+                        for short in re.findall(rb'(?m)^STANDARD_PARAM_DEF\((\w+),',data):
+                            symbol='param_ops_'+short.decode()
+                            if symbol in crcs and symbol not in conflicts:
+                                exports.setdefault(symbol,[]).append({'source':name,'kind':'EXPORT_SYMBOL','namespace':'','macro':'STANDARD_PARAM_DEF'})
     header_files = []
     with tarfile.open(header, 'r:xz') as headers:
         for member in headers:
@@ -152,14 +162,14 @@ def main():
     put(basis, 'Makefile.lynx', b'include Makefile\n.PHONY: lynx-host-tools\nlynx-host-tools: scripts_basic\n\t$(Q)$(MAKE) $(build)=scripts/mod\n\t$(Q)$(MAKE) $(build)=scripts scripts/module.lds\n')
     module = out / 'module'
     module.mkdir()
-    shutil.copyfile(PORT / 'lynx-gauge-sample.c', module / 'lynx-gauge-sample.c')
-    put(module, 'Makefile', b'obj-m := lynx-gauge-sample.o\n')
+    shutil.copyfile(args.reader_source, module / (args.module_name+'.c'))
+    put(module, 'Makefile', ('obj-m := '+args.module_name+'.o\n').encode())
     (out / 'header-inventory.json').write_text(json.dumps(header_files, indent=2) + '\n')
     (out / 'kbuild-inventory.json').write_text(json.dumps(copied, indent=2) + '\n')
     (out / 'stock-import-provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')
     report = {'phone_contacted': False, 'kernel_configuration_regenerated': False,
               'modules_built_or_loaded': False, 'basis': str(basis), 'module': str(module),
-              'compiler': compiler['destination'], 'kernel_commit': KERNEL,
+              'compiler': compiler['destination'], 'kernel_commit': KERNEL, 'reader_source': str(args.reader_source.resolve()), 'module_name':args.module_name,
               'header_sha256': HEADER_SHA, 'symbol_entries': len(lines),
               'conflicting_stock_imports_excluded': sorted(conflicts),
               'limits': 'Partial export table: genuine stock import CRCs plus unambiguous published reference export declarations. Unobserved/ambiguous symbols are absent and must cause build failure. Not proof of runtime CFI/ABI or hardware safety.'}

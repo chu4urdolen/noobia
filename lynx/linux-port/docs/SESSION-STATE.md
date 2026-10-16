@@ -3389,3 +3389,139 @@ confirmedcool/USBunplugged beforetrial; do notresumephysicalconfirmationloop.
 GAUGE-RAW-RESULT.md preservesmilestone; newworkinghardware qualifiesforone
 GitHubupload. Nextofflinework: documentednormalDeviceTypequery, notunsealing
 orfullchargingdriverload. V19image/undo/checkpoint/slots unchanged; holdactive.
+
+
+### Raw milestone uploaded; next DeviceType query prepared offline
+
+Rawreader source/tests/sanitizedfindings pushedaaa2549 onexistingLynxbranch.
+No images/rawlogs/compiler/secrets published; audit1792105528880448630 passed.
+No newphoneoperationafterfirstgaugepoweroffrequest. Offlinepreparedseparate
+lynx-gauge-identity.c: exactOEMDeviceType selector0x0001writewordtocontrol0x00,
+msleep20, readword0x00, cache raw_device_type. Fixedclientguards/defaultrefusal,
+no retries/othercommands. TIreferenceMACData convention differsfromOEMcontrol
+reply; recordactualresponse, comparestockheaderfamilyconstants, do notguess.
+
+SourceSHA92289b3be59b6ed71d7862e280874e87f54d16a9afb0c1634550e1bed33465d4,
+moduleSHA93f4fc1e15ece375dfabdedff9dd460fc513a752845f1e902dd08d8248b06df6.
+Newisolatedbasis1792105646594458259; pinned sparsecheckout addedkernel/time/timer.c
+forgenuinemsleepexportdeclaration. Build/stockCRC/fullCFI/LTOpassed. ActualC
+logic1792105646466821751 passed inclfixedquerywhitelist/writeerrornoread.
+StockARMVM1792105712214035956 passedrefusal/register/unload/cleanpoweroff;
+no gaugeprobe inVM. Hostcommandfixture1792105758653461063 passed6cases;
+firstfixture1792105745459818986 caughtoldmodulehash, preservedandcorrected.
+
+Newwrapper lynx_gauge_identity_trial.py pinsallnewreceipts; rawprofilepreserved.
+Sharedvalidator generalizedSOURCEpath only; nativeVM andcommandtests have
+explicitidentityflags. Allthreeprofiles identity/raw/CPUselftestpassed, andold
+rawhardwareanalysisstillverifies. summarizer --identity-query willrecordrawid
+andrecognizedstockfamilywithoutclaimingcalibratedbatterytemp. Newlistener
+launcher --identity-query retainsreadiness/PIDverification. GAUGE-IDENTITY-TRIAL.md
+preservesreview. NoGithubpushforprepared-onlyidentitycode. Nextactionarmbounded
+listener thenpowercue; USBstaysunplugged. Nootherphysicalconfirmationrequested.
+
+
+### USER REVOKED unconditional shutdown; continuous battery session authorized
+
+Noob explicitly requested keep Lynx running while possible, develop overSSH,
+and focus battery. This supersedes earlier90s/end-of-test shutdown policy for
+this USB-unplugged session. Stopped owned oldlistenerPID96226 beforecontact;
+receipt1792105856006154847 hadno phonecontact/timerarmed. No phonecommandissued.
+
+Sharedcoordinator now has --keep-running: upload/arm thermal-watch.sh BEFORE
+fallbackack; no elapsedtime shutdown and no finallypoweroff. After sensorstage
+activatewatch, thenCPU+gaugeidentityquery/logcapture and leaveSSHrunning. Old
+shorttrialmode preserved for historicalrepeat, but userrequestedcontinuousmode
+is selected now. Watch samplesSoC/CPUevery5s, temperature-triggeredpoweroffonly
+at>=60000mC; missing/invalid readings logged asunknown, not cool. No batterytemp
+safetyproof fromthis CPU-onlywatch. Doesnotchangecharging/thermaltripregisters.
+
+Watcher real-shellfixtures1792106083956166481 PASSED9cases; actualpoweroffmocked.
+SourceSHAdacb8380a8210db439e6abc30d16477e727bea40fb9f3c2798601850ae4c0c35.
+Continuousidentitycommandfixtures1792106084010347755 PASSED6cases; commandchecks
+thermal-watch.pid ratherthanoldtimerpid. Profile--self-test--keep-running passed.
+
+NewdetachedcontinuouslistenerPID97175 actualready:
+logs/gauge-listener-launch-1792106150629481131/result.json
+trialreceipt logs/gauge-identity-trial-1792106150717277643/result.json
+--identity-query --keep-running --seconds600. No contactyetatlaunch. Nextneed
+poweronifoff, USBunplugged. Oncecontactinspectreceipt and keepworkingoverSSH,
+doNOTrequestshutdownforroutinecapture/end-of-test. PreserveV19/boot_a/stockundo/
+recovery/slotB; Linuxflashholdremainsactive, runtimecontinuouspermissionexplicit.
+NoGithubpush forprepared-onlychanges untilnewhardwaremilestone.
+
+
+### User reconnected Fastboot; reboot blocked by host USB permissions
+
+After user-reported manualrestart intoFastboot, oldhostloggerPID105324 stopped,
+109savedsamplespreserved (lastSSHrc0). Nothing onphonewaschangedbythestop.
+BatteryhardwareworkBEFORErestart succeeded: ZY0603id0xa5ff, customread-only
+monitor moduleSHA10df9e698e020893e9d28796db8bd1a93ffdd6c2d9779463f678a3687f0c931d,
+sourceSHA24a3c1e82221c70ad0d0bdf17e92ab046f57e4bdd3cf6ff0e40c8e3a5a0b25f8.
+Successfulbasis1792107325426159905, Clogic1792107325293433508,
+stockARMVM1792107583177053380; actualinstallreceipt
+logs/battery-monitor-install-1792107625689113056/result.json.
+Initialactualsnapshot26.4C/96percent/8595mVpack/-282mAgaugesigned; all4errors0.
+Batterywatchtested1792107472499668309, SHA4c575f30a530821cbc3fc9f4aa0cce0bfb5a1d44eebd60f95f7b5cf2cdc8520e;
+startedlive1792107672666653598, samples5s, cutoff45CbatteryONLY, noelapsedstop.
+CPUwatch60Cunchanged. Hostcollectorlogs/battery-session-1792107674189909873.
+
+Read-onlyidlediagnostics: psci_idle/menu available, CPU0WFIusageonly, deepstates
+zero observed; iw powersaveoff. No idle/WiFi power settings were changed.
+PinnedWiFipowersourcefetch artifacts/wifi-power-source-review-* hadbeenstarted;
+inspectreceipt/sourcebeforeanyfuturepowersavetoggle. Nocharge/calibrationwrites.
+Several failedmonitorbasis/auditattempts retained; finalbuildusesunsignedint
+param_ops_uint with genuineCRC, explicitlycheckedSTANDARD_PARAM_DEF exportmacro.
+
+Newresume_battery_session.py automatesexistingV19RAMsetup: identityquery+
+sensors/CPUcontinuoussession, analyzeZY0603reply, verifiedbattery-monitorinstall,
+watchstart andhostlogger. NEVERflash/reboot/shutdownbyitself. Newwaitingworker
+logs/battery-resume-1792171173913624900/result.json PID14496, listenertrial
+logs/gauge-identity-trial-1792171174067380049/result.json,600sdeadline.
+USBnow0e8d:201c atbus001/device005, fastbootreportsno permissions. sudo-ngetvar
+failedpasswordrequired; no reboot/getvarpacket/flashissued. Read-onlyattempt
+logs/resume-fastboot-check-1792171198723239188.json. Needhumanhostpermission
+forcurrentUSBnode (temporaryACLaria:rw), thenverifyserial89BYAY5L4T9HFUOV,
+productk6983v1_64/unlockedyes/slota/bootloaderk6983v1_64_45ca337_202308100614,
+ensurelistenerstillready,andfastbootrebootONLY. ImmediatelytellNoobunplugUSB.
+AllRAMtoolswerelostbyuserrestart; V19boot_aunchanged. NoGitpushyetforbattery
+monitor milestone; latestpushedaaa2549rawreader. Preserve/audit/publishnewworking
+batteryproofonceconnected,withoutprivateassets/rawlogs/credentials.
+
+
+### Repeat boot SUCCESS: automatic battery resume and continuous SSH restored
+
+User grantedUSBACL; fastbootserial89BYAY5L4T9HFUOV visible. Fixedread-only
+preflight1792171508710722121 passedproduct/unlocked/slota/stockbootloader,
+slot-successfulyes/unbootableno/retry7, sizesunchanged. Listener/workeractual
+heartbeatverifiedand>160sremain beforefastbootrebootONLY. Rebootreceipt
+logs/resume-fastboot-reboot-1792171546511770322.json exit0; noflash/slotchange.
+ImmediatelytoldNoobunplugUSB; userreportedOrangeState, expectedunlockedwarning.
+
+Listener reachedpinnednativeSSHandidentifiedZY0603again; newDHCP192.168.100.9
+(previous.5). Automatedworker logs/battery-resume-1792171173913624900/result.json
+stateonline, allsteps0. Sessiongauge-identity-trial-1792171174067380049.
+Monitorinstall1792171660594161155 passedexactsource/module/VM/Cfixtures,
+firstsnapshot22.1C/91percent/8440mVpack/-265mAgaugesigned/allerrors0.
+CPUstageguardmax39696mC. No old90stimer/end-of-testshutdown, CPUwatch60C and
+batterywatch45Cconditionalonly. Hostloggerbattery-session-1792171663995277546
+statewatching, one-hourboundedhostcapture; phonewatchers/SSHremainongoingafter
+loggerends. Fullresumedkernel/watch/batteryproof savedlive-resumed-battery-proof-
+1792171777720519037. summarize_battery_monitor.py verifiesstreamsandwrites
+sanitizedBATTERY-HARDWARE-RESULT.json. Noexternaltempcalibration/fullthermalclaim.
+
+Fixedlynx-sshhelper toresolve newestverifiedcontinuoussessionaddress dynamically,
+strictpinnedkey/key-onlyauthunchanged. Wrappermadeexecutable; actualtestuname+
+battery-last passed, latest23.0C/90percent/-151mA. Do not hardcodeold.5lease.
+README/BATTERY-MONITOR.md/currentmetadata updated; runtimecontinuousauthorization
+supersedesoldextendedrunhold, Linux-flashholdstillactive. V19imageunchanged.
+
+WiFipowerreview sourceatartifacts/wifi-power-source-review-1792107802822693331
+showedcfg80211enabled/timeout-1 mapsFAST_PSP, disabledmapsCAM; TIMcheckfailsclosed.
+CPU0deepidlestatesdisable0buthadzeroentries, onlyWFIused; noidleconfigwrites.
+Reversible30sWiFiPStrial1792171973859561016: originaloff, onverified, sixliveSSH
+samples, independentrollbackreturned0/off. Battery23.4..23.5C/90percent,
+gaugecurrentoscillated~127..259mAdischarge. Shorttrialprovesconnectivity/support,
+NOTquantifiedpowerreduction. ReenablednormalWiFiPSforthisRAMsessionwithseparate
+pinnedlivecommand; noautomaticboot/persistentimagechange. Nochargerwrites.
+Newworkingbattery+repeatbootmilestonequalifiesGitHubupload; runpublicationaudit
+beforestagingonlylynx. Rawlogs/OEM/compiler/privateinputsneverpublish.

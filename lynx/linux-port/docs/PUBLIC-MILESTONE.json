@@ -1,7 +1,7 @@
 {
   "device": "OnePlus Nord 3 5G CPH2493",
   "soc": "MediaTek MT6983",
-  "milestone": "Native BusyBox PID1, Wi-Fi, DHCP and pinned key-only SSH",
+  "milestone": "Native BusyBox PID1, Wi-Fi, pinned SSH and live ZY0603 battery telemetry",
   "kernel_release": "5.10.149-android12-9-o-g311738fbb5a8",
   "candidate_version": "V19",
   "candidate_sha256": "5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851",
@@ -40,10 +40,21 @@
   "ram_only_cpu_frequency_policies_verified": 3,
   "ram_only_cpu_cooling_interfaces_verified": 3,
   "active_thermal_throttling_tested": false,
-  "extended_hardware_runs_on_hold": true,
+  "extended_hardware_runs_on_hold": false,
   "supervised_ram_diagnostics_permitted": true,
   "custom_ram_gauge_read_verified": true,
   "gauge_register_0x06_raw_word": 2937,
-  "gauge_model_verified": false,
-  "battery_temperature_validated": false
+  "gauge_model_verified": true,
+  "usb_unplugged_continuous_battery_session_user_authorized": true,
+  "unconditional_shutdown_policy_revoked": true,
+  "gauge_family": "ZY0603",
+  "gauge_device_type": "0xa5ff",
+  "gauge_identity_method": "Fixed stock DeviceType query interpreted through matching OEM family constants",
+  "battery_temperature_readings_verified_on_hardware": true,
+  "external_temperature_calibration_performed": false,
+  "read_only_battery_monitor_verified": true,
+  "battery_monitor_module_sha256": "10df9e698e020893e9d28796db8bd1a93ffdd6c2d9779463f678a3687f0c931d",
+  "repeat_boot_automatic_battery_setup_verified": true,
+  "linux_flash_hold_active": true,
+  "continuous_usb_unplugged_session": true
 }

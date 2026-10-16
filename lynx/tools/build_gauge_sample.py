@@ -28,6 +28,7 @@ def main():
     out = args.basis.resolve()
     info = json.loads((out / 'result.json').read_text())
     basis, module = Path(info['basis']), Path(info['module'])
+    module_name=info.get('module_name','lynx-gauge-sample')
     compiler = Path(info['compiler'])
     env = dict(os.environ)
     env.update(PATH=str(compiler / 'bin') + ':' + env['PATH'], TMPDIR=str(out))
@@ -37,7 +38,7 @@ def main():
               'M=' + str(module)]
     record = {'phone_contacted': False, 'module_loaded': False, 'passed': False,
               'started_ns': time.time_ns(), 'operations': [],
-              'source_sha256': sha((module / 'lynx-gauge-sample.c').read_bytes())}
+              'source_sha256': sha((module / (module_name+'.c')).read_bytes()), 'module_name':module_name}
     receipt = out / 'build-result.json'
     if receipt.exists():
         prior = out / 'build-attempts' / str(time.time_ns())
@@ -67,7 +68,8 @@ def main():
     try:
         run('host-tools', common + ['-f', 'Makefile.lynx', 'lynx-host-tools'])
         run('module', common + ['modules'])
-        data = (module / 'lynx-gauge-sample.ko').read_bytes()
+        module_path=module/(module_name+'.ko')
+        data = module_path.read_bytes()
         sections = elf64(data)['sections']
         metadata = module_metadata(data)['values']
         expected = '5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64'
@@ -84,14 +86,14 @@ def main():
             imports[name] = f'{crc:08x}'
         if 'module_layout' not in imports or 'i2c_smbus_read_word_data' not in imports:
             raise ValueError('Expected versioned imports absent')
-        cmd = (module / '.lynx-gauge-sample.o.cmd').read_text()
+        cmd = (module / ('.'+module_name+'.o.cmd')).read_text()
         if '-flto' not in cmd or '-fsanitize=cfi' not in cmd:
             raise ValueError('LTO/CFI compile flags missing')
-        run('defined-symbols', [str(compiler / 'bin/llvm-nm'), '--defined-only', str(module / 'lynx-gauge-sample.ko')])
+        run('defined-symbols', [str(compiler / 'bin/llvm-nm'), '--defined-only', str(module_path)])
         symbols = (out / 'defined-symbols.stdout').read_text()
         if not re.search(r'(?m)^[0-9a-f]+ T __cfi_check$', symbols) or '__cfi_jt_init_module' not in symbols:
             raise ValueError('CFI check/jump-table symbols missing')
-        run('undefined-symbols', [str(compiler / 'bin/llvm-nm'), '-u', str(module / 'lynx-gauge-sample.ko')])
+        run('undefined-symbols', [str(compiler / 'bin/llvm-nm'), '-u', str(module_path)])
         record.update(passed=True, module_sha256=sha(data), module_bytes=len(data),
                       imports=imports, metadata=metadata, lto_and_cfi_enabled=True,
                       limits='Build and static checks only. Runtime CFI/module loading and physical gauge behavior untested.')

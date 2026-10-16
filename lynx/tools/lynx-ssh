@@ -1,7 +1,3 @@
 #!/bin/sh
-# Current DHCP lease; rediscover through the pinned V19 collector after reboot.
-exec ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-    -o GlobalKnownHostsFile=/dev/null -o HostKeyAlias=lynx \
-    -o UserKnownHostsFile=/noobia/lynx/secrets/lynx_known_hosts \
-    -o ConnectTimeout=5 -i /noobia/lynx/secrets/nexus_lynx_ed25519 \
-    root@192.168.100.9 "$@"
+# Resolve the latest verified session; keep strict host-key and key-only auth.
+exec python3 /noobia/lynx/tools/lynx_session_ssh.py "$@"

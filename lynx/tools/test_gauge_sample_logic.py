@@ -2,6 +2,7 @@
 
 Tests driver logic only, not kernel ABI/CFI, bus timing, or physical hardware.
 """
+import argparse
 import hashlib
 import json
 import os
@@ -108,12 +109,32 @@ int main(void) {
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--identity-query', action='store_true')
+    args = parser.parse_args()
+    source_path = ROOT / 'linux-port/lynx-gauge-identity.c' if args.identity_query else SOURCE
     out = ROOT / 'linux-port/artifacts' / ('gauge-reader-logic-' + str(time.time_ns()))
     out.mkdir(mode=0o700)
-    raw = SOURCE.read_bytes()
+    raw = source_path.read_bytes()
     body = '\n'.join(line for line in raw.decode().splitlines() if not line.startswith('#include '))
+    mocks, tests = MOCKS, TESTS
+    if args.identity_query:
+        mocks = mocks.replace('reg == 0x06', 'reg == 0x00')
+        mocks += r'''
+static int write_calls, write_result, delay_calls;
+static int i2c_smbus_write_word_data(struct i2c_client *c, unsigned char reg, unsigned short word) {
+ assert(c->addr == 0x55 && c->adapter->nr == 7 && reg == 0x00 && word == 0x0001);
+ write_calls++; return write_result;
+}
+static void msleep(unsigned int millis) { assert(millis == 20); delay_calls++; }
+'''
+        tests = tests.replace('allow_raw_read', 'allow_identity_query').replace('raw_temperature_word_show', 'raw_device_type_show')
+        tests = tests.replace('read_result = 2981;', 'read_result = 2981; write_calls = write_result = delay_calls = 0;')
+        tests = tests.replace('assert(read_calls == 0);', 'assert(read_calls == 0 && write_calls == 0);')
+        tests = tests.replace('reset(); read_result = -EIO;', 'reset(); write_result = -EIO; assert(lynx_gauge_probe(&client) == -EIO && write_calls == 1 && read_calls == 0 && delay_calls == 0);\n reset(); read_result = -EIO;')
+        tests = tests.replace('assert(read_calls == 1); /* sysfs', 'assert(read_calls == 1 && write_calls == 1 && delay_calls == 1); /* sysfs')
     source = out / 'harness.c'
-    source.write_text(MOCKS + '\n' + body + '\n' + TESTS)
+    source.write_text(mocks + '\n' + body + '\n' + tests)
     env = dict(os.environ, TMPDIR=str(out))
     build = subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror',
                             '-Wno-unused-parameter', str(source), '-o', str(out / 'test')],
@@ -121,6 +142,7 @@ def main():
     (out / 'build.stdout').write_bytes(build.stdout)
     (out / 'build.stderr').write_bytes(build.stderr)
     result = {'source_sha256': hashlib.sha256(raw).hexdigest(),
+              'identity_query_variant': args.identity_query,
               'phone_contacted': False, 'kernel_abi_or_cfi_tested': False,
               'build_exit_code': build.returncode, 'passed': False}
     if build.returncode == 0:

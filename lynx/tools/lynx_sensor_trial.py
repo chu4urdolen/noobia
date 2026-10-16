@@ -26,6 +26,16 @@ kill -0 "$pid" || exit 1
 printf '%s\n' 'BOOT_TOKEN' > /run/lynx/host-confirmed.tmp && /bin/busybox mv /run/lynx/host-confirmed.tmp /run/lynx/host-confirmed || exit 1
 printf 'STOP_TIMER_ARMED\n'
 '''.replace('BOOT_TOKEN',token)
+def arm_watch_command(token):
+ assert re.fullmatch('[0-9a-f]{32}',token)
+ return r'''/bin/busybox nohup /bin/busybox sh /run/lynx/thermal-watch.sh > /run/lynx/thermal-watch.log 2>&1 < /dev/null &
+pid=$!
+printf '%s\n' "$pid" > /run/lynx/thermal-watch.pid
+/bin/busybox sleep 1
+kill -0 "$pid" || exit 1
+printf '%s\n' 'BOOT_TOKEN' > /run/lynx/host-confirmed.tmp && /bin/busybox mv /run/lynx/host-confirmed.tmp /run/lynx/host-confirmed || exit 1
+printf 'THERMAL_WATCH_ARMED\n'
+'''.replace('BOOT_TOKEN',token)
 def validate():
  data=(PACK/'thermal-ssh-pack.tar.gz').read_bytes();assert sha(data)==EXPECTED
  manifest=json.loads((PACK/'manifest.json').read_text());assert manifest['live_trial_eligible'] and manifest['trial_scope']==TRIAL_SCOPE and manifest['groups']['cpu-frequency']['review_only']==('cpu-frequency' not in TRIAL_SCOPE)
@@ -41,16 +51,20 @@ def validate():
  assert (P/'docs/SAFETY-HOLD.json').exists() # Do not clear the flash hold.
  return data
 def main():
- parser=argparse.ArgumentParser();parser.add_argument('--listen',action='store_true');parser.add_argument('--self-test',action='store_true');parser.add_argument('--seconds',type=int,default=300);args=parser.parse_args();data=validate()
+ parser=argparse.ArgumentParser();parser.add_argument('--listen',action='store_true');parser.add_argument('--self-test',action='store_true');parser.add_argument('--keep-running',action='store_true');parser.add_argument('--seconds',type=int,default=300);args=parser.parse_args();data=validate()
+ if args.keep_running:
+  receipts=[json.loads(f.read_text()) for f in (P/'artifacts').glob('thermal-watch-check-*/result.json')]
+  assert any(r.get('passed') and r.get('source_sha256')==sha((P/'thermal-watch.sh').read_bytes()) for r in receipts),'Temperature watcher needs matching offline checks'
  if args.self_test:
   assert beacon_valid(('LYNX_HELLO '+BUILD['session_token']).encode(),'192.168.100.9') and not beacon_valid(b'bad','192.168.100.9')
-  arm=arm_command(BUILD['session_token']);assert "printf '%s\\n'" in arm
+  arm=(arm_watch_command if args.keep_running else arm_command)(BUILD['session_token']);assert "printf '%s\\n'" in arm
   p=subprocess.run(['sh','-c',"printf '%s\\n' probe"],capture_output=True);assert p.stdout==b'probe\n'
   print('Checked '+', '.join(TRIAL_SCOPE)+' pack/guards/identity/timer acknowledgement policy; no phone contacted.');return
  if not args.listen:print('Use --listen only for a cooled, supervised handset boot.');return
  assert 30<=args.seconds<=600;os.umask(0o077)
  out=R/'logs'/((TRIAL_PREFIX or ('cpu-trial-' if 'cpu-frequency' in TRIAL_SCOPE else 'sensor-trial-'))+str(time.time_ns()));out.mkdir(mode=0o700);receipt=out/'result.json'
  report={'state':'starting','started_ns':time.time_ns(),'phone_contacted':False,'native_identity_verified':False,'flash_performed':False,'cpu_frequency_modules_allowed':'cpu-frequency' in TRIAL_SCOPE,'trial_scope':TRIAL_SCOPE,'pack_sha256':EXPECTED,'operations':[]}
+ report['keep_running_requested']=args.keep_running
  if EXTRA_DIAGNOSTIC is not None:report['extra_diagnostic_preflight']=EXTRA_DIAGNOSTIC
  def save():
   temp=receipt.with_suffix('.tmp');temp.write_text(json.dumps(report,indent=2)+'\n');temp.replace(receipt)
@@ -75,14 +89,18 @@ def main():
    if not proof_valid(proof.decode(errors='replace'),rc):report['state']='identity-failed';save();return
    report.update(native_identity_verified=True,state='identity-verified');save()
    try:
-    _,rc=run(ip,'upload-stop','cat > /run/lynx/thermal-stop.sh',stdin=(P/'thermal-stop.sh').read_bytes());assert rc==0,'Stop script transfer failed'
+    script='thermal-watch.sh' if args.keep_running else 'thermal-stop.sh'
+    _,rc=run(ip,'upload-stop','cat > /run/lynx/'+script,stdin=(P/script).read_bytes());assert rc==0,'Monitor script transfer failed'
     # Arm the independent timer BEFORE acknowledging/cancelling normal fallback.
     token=BUILD['session_token']
-    arm=arm_command(token)
-    raw,rc=run(ip,'arm-stop-and-confirm',arm);assert rc==0 and b'STOP_TIMER_ARMED' in raw,'Stop timer not armed';report['stop_timer_armed']=True;save()
+    arm=(arm_watch_command if args.keep_running else arm_command)(token)
+    marker=b'THERMAL_WATCH_ARMED' if args.keep_running else b'STOP_TIMER_ARMED'
+    raw,rc=run(ip,'arm-stop-and-confirm',arm);assert rc==0 and marker in raw,'Monitor not armed';report.update(stop_timer_armed=not args.keep_running,thermal_watch_armed=args.keep_running);save()
     _,rc=run(ip,'upload-pack','test ! -e '+REMOTE+' && mkdir -m 700 '+REMOTE+' && tar -xz -C '+REMOTE,timeout=12,stdin=data);assert rc==0,'Pack transfer failed'
     _,rc=run(ip,'before',"cat /proc/uptime /proc/mounts; /bin/busybox sh "+REMOTE+"/thermal-step.sh --inspect",timeout=8);assert rc==0,'Snapshot failed'
     raw,rc=run(ip,'sensor-stage','/bin/busybox sh '+REMOTE+'/thermal-step.sh --load soc-temperature',timeout=15);report['sensor_stage_exit_code']=rc;save()
+    if rc==0 and args.keep_running:
+     _,watchrc=run(ip,'activate-temperature-watch','test -r /sys/class/thermal/thermal_zone0/temp && /bin/busybox touch /run/lynx/thermal-watch.ready');assert watchrc==0,'Cannot activate sensor watcher'
     if rc==0 and 'cpu-frequency' in TRIAL_SCOPE:
      raw,rc=run(ip,'cpu-frequency-stage','/bin/busybox sh '+REMOTE+'/thermal-step.sh --load cpu-frequency',timeout=15);report['cpu_frequency_stage_exit_code']=rc;save()
      if rc==0 and POST_CPU_HOOK is not None:
@@ -97,7 +115,10 @@ def main():
    except Exception as error:report.update(state='trial-error',error=str(error))
    finally:
     # Always request stop; the independent timer is never cancelled.
-    raw,rc=run(ip,'request-poweroff','/bin/busybox poweroff -f',timeout=5);report.update(poweroff_request_exit_code=rc,physical_poweroff_confirmed=False,finished_ns=time.time_ns());save()
-   print('SENSOR TRIAL FINISHED:',receipt,flush=True);print('Confirm physical power-off; no further driver stages will run.',flush=True);return
+    if args.keep_running:
+     report.update(session_left_running=True,unconditional_poweroff_requested=False,finished_ns=time.time_ns());save()
+    else:
+     raw,rc=run(ip,'request-poweroff','/bin/busybox poweroff -f',timeout=5);report.update(poweroff_request_exit_code=rc,physical_poweroff_confirmed=False,finished_ns=time.time_ns());save()
+   print('SENSOR TRIAL FINISHED:',receipt,flush=True);print('SSH session left running with temperature watcher.' if args.keep_running else 'Confirm physical power-off; no further driver stages will run.',flush=True);return
  report.update(state='discovery-deadline',finished_ns=time.time_ns());save();print('No verified contact; receipt:',receipt,flush=True)
 if __name__=='__main__':main()

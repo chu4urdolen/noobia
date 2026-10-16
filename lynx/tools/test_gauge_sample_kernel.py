@@ -56,9 +56,12 @@ $BB poweroff -f
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--basis', type=Path, required=True)
+    parser.add_argument('--identity-query', action='store_true')
+    parser.add_argument('--battery-monitor', action='store_true')
     args = parser.parse_args()
     report = json.loads((args.basis / 'build-result.json').read_text())
-    module = (args.basis / 'module/lynx-gauge-sample.ko').read_bytes()
+    name=report.get('module_name','lynx-gauge-sample')
+    module = (args.basis / 'module' / (name+'.ko')).read_bytes()
     digest = hashlib.sha256(module).hexdigest()
     if not report['passed'] or digest != report['module_sha256']:
         raise ValueError('Successful build receipt does not match module')
@@ -69,13 +72,18 @@ def main():
     original = read_newc(decompress(boot['ramdisk']))
     entries = {}
     put(entries, 'bin/busybox', original['bin/busybox']['data'])
-    put(entries, 'init', INIT)
+    init = INIT.replace(b'allow_raw_read=1', b'allow_identity_query=1').replace(b'/drivers/lynx-gauge-sample', b'/drivers/lynx-gauge-identity') if args.identity_query else INIT
+    if args.battery_monitor:
+        init=INIT.replace(b'allow_raw_read=1',b'allow_reads=1 confirmed_device_type=42495').replace(b'lynx-gauge-sample',name.encode()).replace(b'lynx_gauge_sample',name.replace('-','_').encode())
+        # Preserve the fixture filename used by this isolated initramfs.
+        init=init.replace(('/fixture/'+name+'.ko').encode(),b'/fixture/lynx-gauge-sample.ko')
+    put(entries, 'init', init)
     put(entries, 'fixture/lynx-gauge-sample.ko', module, 0o100600)
     out = PORT / 'artifacts' / ('emulated-gauge-sample-' + str(time.time_ns()))
     out.mkdir(mode=0o700)
     (out / 'Image').write_bytes(gzip.decompress(boot['kernel']))
     (out / 'initramfs').write_bytes(pack(entries))
-    (out / 'init-source').write_bytes(INIT)
+    (out / 'init-source').write_bytes(init)
     q = ROOT / 'tools/qemu/noble/root'
     env = dict(os.environ, LD_LIBRARY_PATH=str(q / 'usr/lib/x86_64-linux-gnu'),
                QEMU_MODULE_DIR=str(q / 'usr/lib/x86_64-linux-gnu/qemu'), TMPDIR=str(out))
@@ -94,10 +102,10 @@ def main():
     checks = {name: ('GAUGE_' + name + '=PASS').encode() in console
               for name in ['DEFAULT_REFUSAL', 'DRIVER_REGISTERED', 'UNLOADED']}
     checks.update(clean_poweroff=b'reboot: Power down' in console,
-                  no_probe_sample=b'LYNX_GAUGE_RAW register=' not in console,
+                  no_probe_sample=b'LYNX_GAUGE_RAW register=' not in console and b'LYNX_GAUGE_DEVICE_TYPE word=' not in console,
                   no_panic_or_cfi_failure=not any(x in console for x in [b'Kernel panic', b'CFI failure', b'GAUGE_TEST_FAILURE=']))
     result = {'passed': rc == 0 and not timeout and all(checks.values()), 'checks': checks,
-              'module_sha256': digest, 'phone_contacted': False, 'physical_gauge_tested': False,
+              'module_sha256': digest, 'identity_query_variant': args.identity_query, 'phone_contacted': False, 'physical_gauge_tested': False,
               'i2c_probe_callback_tested': False, 'exit_code': rc, 'timed_out': timeout,
               'limits': 'Stock-kernel VM loader/CFI entry and register/unregister only. Does not prove gauge probe ABI, bus response, temperature accuracy, or physical safety.'}
     (out / 'result.json').write_text(json.dumps(result, indent=2) + '\n')

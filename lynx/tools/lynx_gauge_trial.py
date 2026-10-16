@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PORT = ROOT / 'linux-port'
 BASIS = PORT / 'artifacts/gauge-module-basis-1792104554981554338'
 MODULE = BASIS / 'module/lynx-gauge-sample.ko'
+SOURCE = PORT / 'lynx-gauge-sample.c'
 MODULE_SHA = '9b40f97120dc87329ef42aa74742dca51ddb56f40e78dcfa6df7b7c37662e374'
 SOURCE_SHA = 'c646f5c5897d3dcced770ec3c3c981ce2a59bff61ab7d1b913acf1ba54ed37c4'
 VM = PORT / 'artifacts/emulated-gauge-sample-1792104678354338978/result.json'
@@ -55,14 +56,19 @@ def validate_extra(require_command_test=True):
     if not vm['passed'] or vm['module_sha256'] != MODULE_SHA or vm['phone_contacted']:
         raise ValueError('Exact module stock-kernel VM test missing')
     if (not logic['passed'] or logic['source_sha256'] != SOURCE_SHA
-            or hashlib.sha256((PORT / 'lynx-gauge-sample.c').read_bytes()).hexdigest() != SOURCE_SHA
+            or hashlib.sha256(SOURCE.read_bytes()).hexdigest() != SOURCE_SHA
             or build['source_sha256'] != SOURCE_SHA):
         raise ValueError('Source/logic/build identity differs')
     check = subprocess.run(['sh', '-n'], input=COMMAND.encode(), capture_output=True)
     if check.returncode:
         raise ValueError('Remote command syntax failed')
     if require_command_test:
-        tested = json.loads(COMMAND_TEST.read_text())
+        if '/thermal-watch.pid' in COMMAND:
+            candidates=[json.loads(f.read_text()) for f in (PORT/'artifacts').glob('gauge-command-check-*/result.json')]
+            matching=[r for r in candidates if r.get('passed') and r.get('command_sha256')==hashlib.sha256(COMMAND.encode()).hexdigest() and r.get('module_sha256')==MODULE_SHA]
+            if not matching:raise ValueError('Continuous command needs matching fixture test')
+            tested=matching[-1]
+        else:tested = json.loads(COMMAND_TEST.read_text())
         if not tested['passed'] or tested['command_sha256'] != hashlib.sha256(COMMAND.encode()).hexdigest() or tested['module_sha256'] != MODULE_SHA:
             raise ValueError('Remote command has no matching successful fixture test')
     return data

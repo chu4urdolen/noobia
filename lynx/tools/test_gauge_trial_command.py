@@ -1,4 +1,5 @@
 """Run the real remote-command text against local fixtures, never hardware."""
+import argparse
 import hashlib
 import json
 import os
@@ -6,10 +7,18 @@ import subprocess
 import time
 from pathlib import Path
 
-from lynx_gauge_trial import COMMAND, MODULE, MODULE_SHA, ROOT, validate_extra
+import lynx_gauge_trial as gauge
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--identity-query', action='store_true')
+    parser.add_argument('--keep-running', action='store_true')
+    args = parser.parse_args()
+    if args.identity_query:
+        import lynx_gauge_identity_trial  # Select the separate hash-pinned profile.
+    COMMAND, MODULE, MODULE_SHA, ROOT, validate_extra = gauge.COMMAND, gauge.MODULE, gauge.MODULE_SHA, gauge.ROOT, gauge.validate_extra
+    attribute = 'raw_device_type' if args.identity_query else 'raw_temperature_word'
     validate_extra(require_command_test=False)
     out = ROOT / 'linux-port/artifacts' / ('gauge-command-check-' + str(time.time_ns()))
     out.mkdir(mode=0o700)
@@ -22,13 +31,14 @@ def main():
         (client / 'name').write_text('bq27541-battery\n')
         (client / 'of_node/qcom,batt_bq28z610').write_bytes(b'')
         if name != 'read-failed':
-            (client / 'raw_temperature_word').write_text('2981\n')
+            (client / attribute).write_text('2981\n')
         if name == 'already-bound':
             (client / 'driver').symlink_to(folder / 'nonexistent-driver')
         ram = folder / 'ram'
         ram.mkdir()
         (ram / 'gauge-sample.ko').write_bytes(MODULE.read_bytes() if name != 'bad-module' else b'bad')
-        (ram / 'thermal-stop.pid').write_text(str(os.getpid() if name != 'dead-timer' else 99999999) + '\n')
+        pid_file='thermal-watch.pid' if args.keep_running else 'thermal-stop.pid'
+        (ram / pid_file).write_text(str(os.getpid() if name != 'dead-timer' else 99999999) + '\n')
         (ram / 'thermal-cpu-trial').mkdir()
         (ram / 'thermal-cpu-trial/cpu-temperature-guard.sh').write_text(
             'lynx_cpu_temperature_guard() { return ' + ('1' if name == 'hot' else '0') + '; }\n')
@@ -58,6 +68,7 @@ esac
             passed = p.returncode != 0 and not invoked
         cases.append({'case': name, 'exit_code': p.returncode, 'mock_kernel_operations': invoked, 'passed': passed})
     result = {'passed': all(row['passed'] for row in cases), 'cases': cases,
+              'identity_query_variant': args.identity_query,
               'command_sha256': hashlib.sha256(COMMAND.encode()).hexdigest(),
               'module_sha256': MODULE_SHA, 'phone_contacted': False,
               'actual_kernel_operations_performed': False}

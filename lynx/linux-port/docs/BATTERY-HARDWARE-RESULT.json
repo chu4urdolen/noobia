@@ -1,0 +1,36 @@
+{
+  "device": "OnePlus Nord 3 CPH2493",
+  "kernel_release": "5.10.149-android12-9-o-g311738fbb5a8",
+  "gauge_family": "ZY0603",
+  "device_type_reply": "0xa5ff",
+  "native_ssh_identity_verified": true,
+  "ram_monitor_module_sha256": "10df9e698e020893e9d28796db8bd1a93ffdd6c2d9779463f678a3687f0c931d",
+  "fixed_read_registers": [
+    "0x06",
+    "0x08",
+    "0x0c",
+    "0x2c"
+  ],
+  "snapshot": {
+    "temperature_raw": 2952,
+    "temperature_millidegrees_celsius": 22100,
+    "pack_voltage_mv": 8440,
+    "gauge_current_ma_signed": -265,
+    "capacity_percent": 91
+  },
+  "all_snapshot_field_errors_zero": true,
+  "live_battery_observations_verified": true,
+  "configuration_or_charger_writes": false,
+  "current_session_partition_writes": false,
+  "unconditional_shutdown_enabled": false,
+  "cpu_soc_temperature_stop_millidegrees": 60000,
+  "battery_temperature_stop_millidegrees": 45000,
+  "phone_sampling_interval_seconds": 5,
+  "host_capture_interval_seconds": 10,
+  "host_logger_started": true,
+  "repeat_boot_and_automatic_ram_setup_verified": true,
+  "baseline_v19_boot_image_unchanged": true,
+  "thermal_safety_fully_validated": false,
+  "external_temperature_calibration_performed": false,
+  "limits": "Direct stock-family register observations. Temperature uses the rounded OEM kelvin offset without optional balancing compensation. Voltage is pack total, not individual-cell telemetry. Charging, active throttling response and deep idle are not validated; software cannot guarantee physical shutdown during a kernel hang."
+}

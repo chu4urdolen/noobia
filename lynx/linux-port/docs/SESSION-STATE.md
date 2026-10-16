@@ -3821,3 +3821,72 @@ Codexapprovalsettings separately updated atNoobexplicitrequest andsession
 restarted: never/fullaccessactive; sudo-n idverifiedroot. Sudo/confighelpers
 andbackupremainprivateunderlogs/permission-setup-1792181177389579893.
 ThesehostpermissionsdonotcancelLynxLinuxflashholdor authorizeunrelatedwrites.
+
+### Optional offline Alpine runtime stage and resume integration
+
+No flash/reboot/slot change/driver insertion. Same phone boot and original
+PID1 throughout. New linux-port/alpine-runtime-stage.sh is a post-network RAM
+stage, not a replacement init: verifies input hashes/boot/kernel, refuses an
+existing rootfs for --install, unpacks verified base and exact7APKs, installs
+with standard APK signatures and repository access disabled, creates basic
+chroot devnodes, mounts read-only proc/sysfs, checks base ELF hashes/package
+versions and traced child, and verifies outer PID1/mounts/boot unchanged.
+--verify checks existing package/base/mount state and writes only RAM trace;
+initial host staging also creates RAM files. No new services or driver loads.
+
+New prepare_alpine_runtime_stage.py validates base signature receipt/pinned
+archive, filtered7APKbundle/memberhashes+matching successfulofflineVM, packs
+actualsource/specs/checksums and private inputs, optionally runs cold exact-
+stockkernel VM with staticV19outerBB, noNIC/disk. FirstVM
+artifacts/alpine-runtime-stage-1792181938707011626 installed/verified packages
+but final fixture free outside PATH killed VMinit; failure retained. Corrected
+explicitAlpineBBprobe; VM-only EXITpoweroff trap and streaming console capture
+added. Defensive shell checks changed from AND-lists to independent checks so
+set-e cannot skip a root/input-symlink refusal. Observability source hardened
+similarly; no service restart needed.
+
+ColdVM1792182067017586771 passed8checks in8.78s; expandedVM1792182224695177330
+passed11checks in9.08s, adding wrongboot/symlinkinput/tamperedinput refusal.
+Actualstage script installed/verified, refused existingrootfs and preserved
+outerPID1+fixtureprocess; fixtureisnot thermalwatcher/hardwaredriver proof.
+
+New configure_alpine_runtime.py requires matching VM console/kernel/current
+input+source bytes, verifies nativepowerbefore/after, pins boot, requires
+battery<35C/>=20percent/chargeronline0, tracks all3watcherPIDs. New RAM inputs
+hashed before extraction; later reuse requires exactmanifestandallfilehashes.
+Refuses partial/mismatched state, preserves failures, no cleanup/shutdown.
+Install mode emits compatible rootfs-trial receipt for lynx-alpine wrapper.
+Default no contact. Hostwrapper initialattempt1792182105396077127 failed before
+contact on relative session path vs childcwd; fixed resolve beforelaunch.
+Second1792182118685111977 stopped afterread-onlypreflight on missingioimport,
+beforeupload. Bothrawreceiptsretained. Correctednativeverify
+logs/alpine-runtime-verify-1792182146999702470 SUCCEEDED; existingrootfs not
+reinstalled/newmountsnotcreated. Reuse1792182198922562268 SUCCEEDED without
+reupload. All3watcherPIDs unchanged. Input RAMdir
+/run/lynx/alpine-stage-231af54bb4b8a034a2f0; retainedinputtar costs extra5MiB.
+Offlineverifiedstageinputtests1792182105649581952 accepted valid and rejected
+failedVM/changedconsole/sourcehashmismatch.
+
+resume_battery_session.py optional --alpine-stage-receipt requires
+--runtime-power, validates offline beforelistener, forwards flag toworker,
+starts hostlogger BEFORE optionalLinuxwallclocksync(noRTCwrite) and Alpine
+--install. Default previousbehaviorretained. Failed laterstage recordsfailure
+withoutstopping existingSSH/watchers/logger. Fixture
+artifacts/alpine-resume-sequence-1792182261633323623 passed13checks: default,
+success, clockfail, Alpinefail, loggerreceiptretention, ordering, detached
+flagpropagation. It starts no realsubprocesses, not hardwarestartup evidence.
+FULL COMBINED FRESHBOOT HARDWARE SEQUENCE REMAINS UNTESTED. Do not reboot
+usefulsessionjusttotest. ColdinstallpassedVM; existing-rootfsverify/reusepassed
+phone. Those are distinct proofs, not a new handsetPID1boot.
+
+Finalhealth logs/live-alpine-stage-final-health-1792182291044366468 sameboot,
+PIDs17580/18190/25373, battery22.2C/80percent/-101mA/noerrors, SoCsoftwatch
+29.463C, run33920KiBfree. Host4hrlogger continues. ExistingV19/stockundo/slotB/
+recovery unchanged and globalLinuxflashholdactive. See ALPINE-RUNTIME-STAGE.md.
+
+Final wrapper review added an explicit tmpfs/non-symlink parent check BEFORE
+upload (rather than relying only on the stage after upload), plus dangling
+symlink refusal for new staging/archive paths. Live verification against the
+expanded successful VM receipt passed again at
+logs/alpine-runtime-verify-1792182448802972450, reusing verified inputs and
+preserving watcher PID inventory. No fresh installation or reboot occurred.

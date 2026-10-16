@@ -8,10 +8,12 @@ root=/run/lynx/alpine-3.24.2
 case "$mode" in --apply|--status) ;; *) echo 'Expected --apply or --status' >&2; exit 2;; esac
 [ -n "$expected_boot" ]
 [ "$(cat /proc/sys/kernel/random/boot_id)" = "$expected_boot" ]
-[ ! -L "$root" ] && [ -d "$root" ]
+[ ! -L "$root" ]
+[ -d "$root" ]
 [ "$(cat "$root/etc/alpine-release")" = 3.24.2 ]
 for path in "$root/proc" "$root/sys"; do
-    [ ! -L "$path" ] && [ -d "$path" ]
+    [ ! -L "$path" ]
+    [ -d "$path" ]
 done
 outer_before=$(awk '$2 == "/proc" || $2 == "/sys" {print}' /proc/mounts)
 for fs in proc sysfs; do

@@ -54,6 +54,12 @@ application passed on the already-configured phone; a complete fresh-boot
 execution of the new combined workflow remains untested. Separate hardware
 trials already verified initial WFI application and soft-watcher startup.
 
+An [optional offline Alpine stage](ALPINE-RUNTIME-STAGE.md) can now follow
+power setup using `--alpine-stage-receipt STAGE_VM_RECEIPT`. It requires
+`--runtime-power`, starts host logging before Alpine, and preserves the earlier
+runtime if userspace setup fails. Its cold installation passed in a VM;
+the complete fresh-boot hardware sequence remains untested.
+
 ## Validation
 
 `test_runtime_power_setup.py` runs the actual generated shell against a private

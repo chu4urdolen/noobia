@@ -16,6 +16,11 @@ added no mounts; the later observability step mounted read-only proc and sysfs
 inside the chroot. This is a userspace foundation for further Linux work, not
 a completed postmarketOS port or a replacement PID 1 boot on the handset.
 
+The later [offline runtime stage](ALPINE-RUNTIME-STAGE.md) combines the verified
+inputs and read-only kernel views into an optional step after host-assisted
+power setup, with cold VM tests and live verification of the existing phone
+environment.
+
 ## Use it now
 
 From `/noobia/lynx`:

@@ -9,13 +9,19 @@ ROOT=Path(__file__).resolve().parent.parent
 PORT=ROOT/'linux-port'
 BASIS=PORT/'artifacts/gauge-module-basis-1792107325426159905'
 def main():
- parser=argparse.ArgumentParser();parser.add_argument('--start',action='store_true');parser.add_argument('--worker',type=Path);parser.add_argument('--runtime-power',action='store_true');args=parser.parse_args();os.umask(0o077)
- if not args.start and args.worker is None:print('Use --start [--runtime-power] before booting existing V19, USB unplugged. No image is flashed.');return
+ parser=argparse.ArgumentParser();parser.add_argument('--start',action='store_true');parser.add_argument('--worker',type=Path);parser.add_argument('--runtime-power',action='store_true');parser.add_argument('--alpine-stage-receipt',type=Path);args=parser.parse_args();os.umask(0o077)
+ if not args.start and args.worker is None:print('Use --start [--runtime-power [--alpine-stage-receipt RECEIPT]] before booting existing V19, USB unplugged. No image is flashed.');return
+ if args.alpine_stage_receipt:
+  if not args.runtime_power:parser.error('--alpine-stage-receipt requires --runtime-power')
+  args.alpine_stage_receipt=args.alpine_stage_receipt.resolve(strict=True)
+  from configure_alpine_runtime import load_stage
+  load_stage(args.alpine_stage_receipt) # Offline validation before starting a physical-boot listener.
  if args.worker is None:
   out=ROOT/'logs'/('battery-resume-'+str(time.time_ns()));out.mkdir(mode=0o700)
   with (out/'worker.stdout').open('wb') as stdout,(out/'worker.stderr').open('wb') as stderr:
    worker_args=[sys.executable,str(Path(__file__).resolve()),'--worker',str(out)]
    if args.runtime_power:worker_args.append('--runtime-power')
+   if args.alpine_stage_receipt:worker_args.extend(['--alpine-stage-receipt',str(args.alpine_stage_receipt)])
    child=subprocess.Popen(worker_args,cwd=ROOT,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,start_new_session=True)
   (out/'launcher.json').write_text(json.dumps({'pid':child.pid,'started_ns':time.time_ns(),'source_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},indent=2)+'\n')
   deadline=time.monotonic()+10
@@ -26,7 +32,7 @@ def main():
    if child.poll() is not None:raise SystemExit('Resume worker exited; inspect '+str(out))
    time.sleep(.1)
   print(json.dumps({'result':str(out/'result.json'),'pid':child.pid,'state':'starting'}));return
- out=args.worker;report={'state':'starting','started_ns':time.time_ns(),'operations':[],'flash_performed':False,'unconditional_shutdown':False,'runtime_power_requested':args.runtime_power}
+ out=args.worker;report={'state':'starting','started_ns':time.time_ns(),'operations':[],'flash_performed':False,'unconditional_shutdown':False,'runtime_power_requested':args.runtime_power,'alpine_stage_receipt':str(args.alpine_stage_receipt) if args.alpine_stage_receipt else None}
  def save():
   p=out/'result.tmp';p.write_text(json.dumps(report,indent=2)+'\n');p.replace(out/'result.json')
  def run(name,argv,timeout=20):
@@ -65,6 +71,15 @@ def main():
    report['runtime_power_receipt']=power['result'];save()
   logger=json.loads(run('host-logger',tool('collect_battery_session.py','--session',session,'--seconds','3600')))
   if logger['state']!='watching':raise ValueError('Host logger not ready')
+  report['host_logger_receipt']=logger['result'];save()
+  if args.alpine_stage_receipt:
+   report['state']='configuring-alpine-runtime';save()
+   clock=json.loads(run('alpine-clock',tool('sync_lynx_clock.py','--session',session,'--sync'),timeout=45))
+   if not clock['passed']:raise ValueError('Wall-clock verification failed; retain native runtime')
+   report['clock_analysis']=clock['analysis'];save()
+   alpine=json.loads(run('alpine-runtime',tool('configure_alpine_runtime.py','--session',session,'--stage-receipt',args.alpine_stage_receipt,'--install'),timeout=240))
+   if alpine['state']!='native-userspace-verified':raise ValueError('Alpine stage not ready; existing SSH, watchers and host logger remain online')
+   report['alpine_runtime_receipt']=alpine['result'];save()
   report.update(state='online',monitor_install_receipt=str(install_receipt),host_logger_receipt=logger['result'],finished_ns=time.time_ns())
  except Exception as error:report.update(state='failed',error=str(error),finished_ns=time.time_ns())
  save()

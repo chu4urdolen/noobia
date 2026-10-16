@@ -2,12 +2,16 @@
 
 **Current milestone:** [Alpine ARM64 userspace and native strace](linux-port/docs/ALPINE-USERSPACE.md)
 
-[Next-stage evidence](linux-port/docs/ALPINE-STARTUP-STORAGE.md): Alpine boots
-directly as PID 1 in an isolated stock-kernel VM; the live RAM chroot now has
+Alpine and `strace` run in a RAM chroot alongside the proven BusyBox PID 1
+and SSH environment. The [optional offline startup stage](linux-port/docs/ALPINE-RUNTIME-STAGE.md)
+reconstructs that environment from pinned local inputs in a cold VM and
+verifies the working phone runtime without replacing its services. It can be
+selected after power setup in the existing host-assisted boot-resume helper.
+The complete combined fresh-boot hardware sequence remains untested.
+
+[Further evidence](linux-port/docs/ALPINE-STARTUP-STORAGE.md): Alpine also boots
+directly as PID 1 in an isolated stock-kernel VM; the live RAM chroot has
 read-only kernel visibility, and the phone's UFS partition map is validated.
-now run in a RAM chroot alongside the proven BusyBox PID 1 and SSH environment.
-The signed rootfs passed the exact-stock-kernel VM and hardware probes; a
-fresh VM also replayed the diagnostic packages completely offline.
 
 Native SSH plus live ZY0603 battery temperature, charge,
 pack voltage and signed current are verified on hardware. The

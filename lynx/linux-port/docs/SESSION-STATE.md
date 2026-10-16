@@ -3626,3 +3626,65 @@ Verifiedhashfirstsample+softlog beforestopping oldexactownedPID15859; gone
 confirmed; oldreceiptstate'replaced', replacementlinkpreserved. Rotation
 battery-logger-rotation-1792173851845332051.json. Phonewatchers/SSHnotstopped.
 Currentloggerenddoesnotstopphone. KeepcurrentUSBunpluggedruntimecontinuous.
+
+### Repeatable RAM power setup and live sleep-prerequisite audit
+
+Lynx remained on the same boot throughout this work; no reboot/flash/slot
+change, no driver insertion. Initial live-next-power-preflight-
+1792176272086038203: battery22.0C/85percent/-59mA, allthreewatchersalive,
+WiFiPSon. Kernel boot ID captured and unchanged during installer checks.
+
+New configure_runtime_power.py pins exact hardware-reviewed WFI source
+866c9d2429a10d6cb4294136622668a840d761cfba65037bd95e3cabf290fab0 and
+softwatchsource5310290b6a8e981e2250910fb5b4b54428a1faa6b1f6177e36f5be2aade1233b.
+Default no contact; --verify-only validates existing complete state; --apply
+installs missing RAM scripts/stages or adopts matching live state. Never
+overwrites original flags, restarts a dead watcher, clears incomplete markers,
+changes charging, requests suspend/reboot, flashes, or arms shutdown timers.
+Verifies native identity before/after, matches boot ID, checks watcher command
+lines, requires recent error-free battery sample, verifies8CPUWFI+deepflags and
+saved inventory. WiFiPS onlyreported, notchanged. Failures preserve useful
+already-running stages and evidence; no forced cleanup or poweroff.
+
+Synthetic actual-shell checks11cases+embeddedbytehash verification passed at
+artifacts/runtime-power-setup-check-1792178926641896816. Initial failedfixture
+1792178126960507552 preserved: sequential mockpath replacement corrupted
+/proc/sys; correctedsinglepassmapping. No phonecontactbeforecorrectedtests.
+Tests cover check/adopt existing state and refusal paths, not fresh daemon
+installation. Live verify-only1792178227391006803 and apply-existing
+1792178354915012108 ready; original watcher PIDs17580/18190/25373 retained.
+Finalverify1792178927139363263 includes post-operation boot-ID comparison.
+
+resume_battery_session.py --start --runtime-power now optionally runs the RAM
+power stage after batterywatch and before logger; flag propagates into worker
+and receipts. Default oldresume retained. Full new combinedfreshboot sequence
+UNTESTED: do not reboot merely to exercise it while usefulSSHsession exists.
+See RUNTIME-POWER.md. CurrentV19 unchanged, globalLinuxflashholdstillactive.
+
+Previous hostlogger battery-session-1792173826897633981 ended normally after
+348samples at1hour. Recovered full RAMlogs in live-power-watch-history-
+1792178187548078626, snapshot21.8C/83percent/-62mA. Newbounded4hrhostlogger
+battery-session-1792178187012953274 watching, allrecentSSHsamples0. Its end
+doesnotstopphone/watchers. FullRAMhistories preserved across the host-log gap.
+
+Read-only sleep-prerequisite survey1792178843537269212: no LPM/MCUPM/SSPM/SCMI
+modules resident; firmware:scmi stilldeferred; MTKcmdqfoundation resident.
+Captured actualkernelFDT445089bytes in live-live-fdt-power-review-
+1792178869180168988. New offline audit_live_power_tree.py verifies native/raw
+capturehash, parses49selectedpowernodes, resolves25stockmodules across6roots,
+checks exactkernelvermagicand sharedimportCRCs(no conflicts), preservesprivate
+power-tree-analysis.json. This doesNOTprove safe init or firmware readiness.
+
+Live tree has suspend-method enable, lpm-kernel-suspend0, MCUPM/SSPM reserved
+memory, cpupmSRAM, mcusyscontrol and SCMI. Actual driverlinks checked via
+live-sleep-driver-binding-check-1792179002427206853: MCUPM,SSPM,SCMI,mtk_lpm
+allUNBOUND. Battery21.8C/83percent/-70mA; originalthreewatcherPIDsalive.
+Missing initialization is a concrete lead; exact PSCI rejecting path unknown.
+
+Preserved11morevendorfiles at artifacts/lpm-firmware-source-review-
+1792178466467282731 plus4bootstrapheaders1792179001805511237; allcommit/hash
+recorded. Core replaces idle callbacks, platform clearsSRAM/installshotplug+
+suspendhooks and sends firmwarepower-statevalidationSET; itsreturnisignoredby
+platforminit. Emptycore/platform exits prevent assuming rmmodundo. Next review
+MCUPM/SSPM mailbox+firmwarestartup before a controlledmoduletrial. No rawfirmware
+callissued, no lowpowermodule loaded. See LPM-PREREQUISITES.md.

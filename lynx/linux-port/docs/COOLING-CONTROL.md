@@ -92,9 +92,10 @@ sh /run/lynx/thermal-cooling-watch.sh --restore
 
 Restoration refuses while the recorded PID is alive and releases only limits
 still marked owned and still equal to state one. Reboot clears the RAM setup.
-Neither this watcher nor the WFI fallback is baked into V19 or automatically
-started by the existing battery resume worker yet. No elapsed-time shutdown
-was added.
+Neither this watcher nor the WFI fallback is baked into V19. The optional
+[runtime power stage](RUNTIME-POWER.md) adds them after battery resume using
+`--runtime-power`; default resume behavior is retained. The new combined
+fresh-boot sequence remains untested. No elapsed-time shutdown was added.
 
 The updated bounded host collector also captures the soft-throttle log. The
 new logger is `logs/battery-session-1792173826897633981`; the old logger was

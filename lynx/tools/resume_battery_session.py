@@ -9,12 +9,14 @@ ROOT=Path(__file__).resolve().parent.parent
 PORT=ROOT/'linux-port'
 BASIS=PORT/'artifacts/gauge-module-basis-1792107325426159905'
 def main():
- parser=argparse.ArgumentParser();parser.add_argument('--start',action='store_true');parser.add_argument('--worker',type=Path);args=parser.parse_args();os.umask(0o077)
- if not args.start and args.worker is None:print('Use --start before booting existing V19, USB unplugged. No image is flashed.');return
+ parser=argparse.ArgumentParser();parser.add_argument('--start',action='store_true');parser.add_argument('--worker',type=Path);parser.add_argument('--runtime-power',action='store_true');args=parser.parse_args();os.umask(0o077)
+ if not args.start and args.worker is None:print('Use --start [--runtime-power] before booting existing V19, USB unplugged. No image is flashed.');return
  if args.worker is None:
   out=ROOT/'logs'/('battery-resume-'+str(time.time_ns()));out.mkdir(mode=0o700)
   with (out/'worker.stdout').open('wb') as stdout,(out/'worker.stderr').open('wb') as stderr:
-   child=subprocess.Popen([sys.executable,str(Path(__file__).resolve()),'--worker',str(out)],cwd=ROOT,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,start_new_session=True)
+   worker_args=[sys.executable,str(Path(__file__).resolve()),'--worker',str(out)]
+   if args.runtime_power:worker_args.append('--runtime-power')
+   child=subprocess.Popen(worker_args,cwd=ROOT,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,start_new_session=True)
   (out/'launcher.json').write_text(json.dumps({'pid':child.pid,'started_ns':time.time_ns(),'source_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},indent=2)+'\n')
   deadline=time.monotonic()+10
   while time.monotonic()<deadline:
@@ -24,7 +26,7 @@ def main():
    if child.poll() is not None:raise SystemExit('Resume worker exited; inspect '+str(out))
    time.sleep(.1)
   print(json.dumps({'result':str(out/'result.json'),'pid':child.pid,'state':'starting'}));return
- out=args.worker;report={'state':'starting','started_ns':time.time_ns(),'operations':[],'flash_performed':False,'unconditional_shutdown':False}
+ out=args.worker;report={'state':'starting','started_ns':time.time_ns(),'operations':[],'flash_performed':False,'unconditional_shutdown':False,'runtime_power_requested':args.runtime_power}
  def save():
   p=out/'result.tmp';p.write_text(json.dumps(report,indent=2)+'\n');p.replace(out/'result.json')
  def run(name,argv,timeout=20):
@@ -56,6 +58,11 @@ def main():
   run('upload-battery-watch',tool('lynx_live_command.py','--session',session,'--name','upload-battery-watch','--command','test ! -e /run/lynx/battery-watch.sh && cat > /run/lynx/battery-watch.sh','--stdin-file',PORT/'battery-watch.sh'))
   command='set -e; test ! -e /run/lynx/battery-watch.pid; echo "'+digest+'  /run/lynx/battery-watch.sh" | /bin/busybox sha256sum -c -; /bin/busybox nohup /bin/busybox sh /run/lynx/battery-watch.sh > /run/lynx/battery-watch.log 2>&1 < /dev/null & pid=$!; echo "$pid" > /run/lynx/battery-watch.pid; /bin/busybox sleep 1; kill -0 "$pid"; cat /run/lynx/battery-last'
   run('start-battery-watch',tool('lynx_live_command.py','--session',session,'--name','start-battery-watch','--command',command))
+  if args.runtime_power:
+   report['state']='configuring-runtime-power';save()
+   power=json.loads(run('runtime-power',tool('configure_runtime_power.py','--session',session,'--apply'),timeout=90))
+   if power['state']!='ready':raise ValueError('Runtime power setup not ready; leave existing watchers online')
+   report['runtime_power_receipt']=power['result'];save()
   logger=json.loads(run('host-logger',tool('collect_battery_session.py','--session',session,'--seconds','3600')))
   if logger['state']!='watching':raise ValueError('Host logger not ready')
   report.update(state='online',monitor_install_receipt=str(install_receipt),host_logger_receipt=logger['result'],finished_ns=time.time_ns())

@@ -81,6 +81,11 @@ From `/noobia/lynx`, with the private, hash-pinned inputs present:
 python3 tools/resume_battery_session.py --start
 ```
 
+The optional `--runtime-power` stage also installs/verifies the tested WFI
+fallback and soft-throttle watcher after both temperature watchers are ready.
+See [runtime power setup](RUNTIME-POWER.md) for its validation and fresh-boot
+test limitation. The default command above retains the original resume path.
+
 Verify the detached listener is ready before booting the existing V19 image.
 The resume worker discovers the DHCP address and proves pinned native identity,
 loads the unchanged sensor/CPU pack, verifies the gauge reply, checks the exact

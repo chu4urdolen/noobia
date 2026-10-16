@@ -39,12 +39,12 @@ in `/run/lynx/wfi-fallback/original-flags`. Undo over pinned SSH:
 tools/lynx-ssh 'sh /run/lynx/wfi-fallback.sh --restore'
 ```
 
-Reboot also clears it. It is not baked into V19 or the automatic battery resume
-worker. After a newly verified continuous session, use `lynx_live_command.py`
-with that session's receipt, `--stdin-file linux-port/wfi-fallback.sh`, and
-`--command 'cat > /run/lynx/wfi-fallback.sh && sh /run/lynx/wfi-fallback.sh --apply'`.
-The helper preserves a fresh identity check, raw captures and timestamps.
-The script refuses overlapping application and restores on a partial failure.
+Reboot also clears it. It is not baked into V19. The optional
+[runtime power stage](RUNTIME-POWER.md) now installs or verifies both the
+fallback and soft-throttle watcher after battery resume. Use
+`resume_battery_session.py --start --runtime-power` for the next otherwise-needed
+boot; the new combined fresh-boot sequence has not yet been exercised.
+The installer preserves identity checks, original state and raw captures.
 
 ## Deeper sleep still needs investigation
 
@@ -67,6 +67,10 @@ The published source commit is
 `81ec42ad5e803be0cba619f9f7bb298db7d33d7b`; stock binaries report
 `g311738fbb5a8`. Source findings guide investigation but are not proof that
 these two builds are identical.
+
+The follow-up [live-tree and dependency review](LPM-PREREQUISITES.md) confirms
+the platform nodes exist but the corresponding drivers are unbound, and records
+the matching stock module dependency closure without loading it.
 
 ## Saved evidence and tools
 

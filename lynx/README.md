@@ -10,6 +10,8 @@ failed deep-sleep entries. A reversible WFI fallback eliminated those failures
 and reduced observed battery discharge current while SSH stayed available.
 A [tested one-step soft-throttle policy](linux-port/docs/COOLING-CONTROL.md)
 now runs alongside the independent temperature watchers in RAM.
+The [repeatable runtime power setup](linux-port/docs/RUNTIME-POWER.md) verifies
+existing settings and is available as an optional stage after battery resume.
 
 Continuous operation with USB unplugged is explicitly authorized. Routine
 timed/end-of-test shutdowns are disabled in the current session. Temperature
@@ -46,5 +48,6 @@ with the exact V19 snapshot. Inspect the inputs, guards and current handset
 state before running a hardware tool.
 
 The display is not initialized. USB gadget networking remains unproved. This
-is not yet a full postmarketOS installation. Only boot_a changes are part of
-the current repeat procedure; retain the matching stock restoration path.
+is not yet a full postmarketOS installation. Authorized image trials are limited
+to boot_a; current runtime additions stay in RAM. Retain the matching stock
+restoration path.

@@ -3774,3 +3774,50 @@ cache/battery22.0C/82percent/-60mA/recentCPUmax~27.3C. Fourhourhostlogger
 battery-session-1792178187012953274 continues; itsendingneverstopsLynx.
 Allnewbinaries/rootfs/APKs/keys/rawlogs remainlocal; publishonlyourtools/docs.
 GlobalLinuxflashholdactive, V19/stockundo/checkpointuntouched.
+
+### Alpine direct-PID1 VM, live read-only observability and UFS map
+
+Same handset boot cf5e2ccf-5c49-485e-9403-b12e3d6bb574; no flash, reboot,
+slot change, disk mount or kernel module insertion. Initial inventory
+logs/live-system-storage-inventory-1792181341591807206: battery22.0C/81percent/
+-59mA, allthreewatcherPIDsalive, UFSbound, 86partitions, no disk mounts.
+
+Read-only map logs/live-partition-map-1792181379560943113 records main sdc
+255919652864bytes, logical/physical4096, sysfssectors512. Boot_a sdc39 is64MiB;
+read-only fullhash matches frozenV19 5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851.
+New audit_partition_map.py validates captureproof/hash, geometry/labels/devnums,
+bounds/alignment/overlaps and boot hash; offline negativechecks7passed in
+logs/partition-map-negative-check-1792181517015425625.json. Sysfs map isnot
+independent GPTCRC verification or proof otherpartitionsarevalid.
+
+New test_alpine_pid1_kernel.py boots verifiedAlpine atinitramfsroot inNIC-free,
+disk-freeQEMU withsameexactstockkernel. No outerBB/chroot. DynamicAlpine
+/bin/sh asPID1 validated $$=1, /proc/1/exe path+signedarchiveELFSHA, manual
+proc/sysfs/tmpfsdev+nodes/devpts/run, APKprobe,RAMwrite,CPUvisibility, clean
+poweroff. artifacts/emulated-alpine-pid1-1792181417394955482 passedall9checks in
+3.97seconds. ThisisVM-only shellPID1proof, NOTnewhandsetboot/OpenRCintegration;
+itsinitramfsisnotaflashablephoneimage.
+
+New linux-port/alpine-observability.sh --apply BOOT_ID createsONLYro,nosuid,
+nodev,noexec proc/sysfsmounts insideexistingRAMchroot, checksboot/release,
+refusessymlinktargets/incompatiblemounts, verifiesoriginaloutermountentries
+unchanged. --status makesnochanges; retains partialstateonfailure. Actualapply
+logs/live-alpine-readonly-observability-1792181496340538362 passed. Firstprobe
+live-alpine-cli-1792181517068390838 stoppedaftergrep expectedouterpathsinside
+chroot. Correctedcheckuseschrootrelative/proc,/sys; no mountchange. Nativeprobe
+live-alpine-cli-1792181526852271892 passedfree,readonlyflags,Wifistateup,
+strace-f childO_RDONLY opens/proc/meminfo and/sys/class/net/wlan0/operstate.
+OriginalSSH/Wifi/watchersstilloutsidechroot. Read-onlymountflagsarenota
+securityboundaryagainstprivilegedremounts. No devbind/blocknodesadded.
+
+Runtimepowerpostcheck1792181527526386651 ready, mountstatuscapture
+1792181528516466130 passed. Bounded4096bytereaduserdata sdc85 in
+logs/live-userdata-header-1792181546190048618 foundnoext4/F2FSfirstsuperblock
+magic andnotallzero; doesNOTproveencryption,emptiness,orcorruption. No mount/
+repair/formatfollowed. Persistentrootfsplacementstillunresolved.
+See ALPINE-STARTUP-STORAGE.md forrepeatcommands/limits/evidence.
+
+Codexapprovalsettings separately updated atNoobexplicitrequest andsession
+restarted: never/fullaccessactive; sudo-n idverifiedroot. Sudo/confighelpers
+andbackupremainprivateunderlogs/permission-setup-1792181177389579893.
+ThesehostpermissionsdonotcancelLynxLinuxflashholdor authorizeunrelatedwrites.

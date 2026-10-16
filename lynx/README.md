@@ -1,6 +1,10 @@
 # Lynx: native Linux on the OnePlus Nord 3
 
 **Current milestone:** [Alpine ARM64 userspace and native strace](linux-port/docs/ALPINE-USERSPACE.md)
+
+[Next-stage evidence](linux-port/docs/ALPINE-STARTUP-STORAGE.md): Alpine boots
+directly as PID 1 in an isolated stock-kernel VM; the live RAM chroot now has
+read-only kernel visibility, and the phone's UFS partition map is validated.
 now run in a RAM chroot alongside the proven BusyBox PID 1 and SSH environment.
 The signed rootfs passed the exact-stock-kernel VM and hardware probes; a
 fresh VM also replayed the diagnostic packages completely offline.

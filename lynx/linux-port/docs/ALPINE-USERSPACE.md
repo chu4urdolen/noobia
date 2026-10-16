@@ -4,14 +4,17 @@ Alpine 3.24.2 ARM64 now executes on Lynx in
 `/run/lynx/alpine-3.24.2`. Its shell, musl runtime and APK 3.0.8 package manager
 passed the same probe in an isolated exact-stock-kernel VM and on the phone.
 APK then installed `strace` 6.19-r1 and its dependencies from the signed Alpine
-repositories; a real traced `/bin/true` child exited successfully.
+repositories; a real traced `/bin/true` child exited successfully. A later
+isolated VM test also booted the Alpine shell directly as PID 1; see
+[Alpine startup and storage](ALPINE-STARTUP-STORAGE.md).
 
 This is a RAM chroot under the already-running native Linux kernel. PID 1
 remains the proven BusyBox init. Wi-Fi, pinned SSH and the three temperature
 watchers remain in the original environment. No partition was written, no
-service replaced, and no new mounts or network namespace were created. This
-is a userspace foundation for further Linux work, not a completed postmarketOS
-port or a replacement PID 1 boot.
+service replaced, and no new network namespace was created. The initial trial
+added no mounts; the later observability step mounted read-only proc and sysfs
+inside the chroot. This is a userspace foundation for further Linux work, not
+a completed postmarketOS port or a replacement PID 1 boot on the handset.
 
 ## Use it now
 

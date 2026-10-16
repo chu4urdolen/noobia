@@ -5,6 +5,9 @@ pack voltage and signed current are verified on hardware. The
 [battery monitor and resume procedure](linux-port/docs/BATTERY-MONITOR.md)
 restored the tools automatically after a reboot of unchanged V19. SoC/CPU
 sensors, frequency controls and CPU cooling interfaces are also verified.
+The [CPU idle investigation](linux-port/docs/IDLE-POWER.md) identified repeated
+failed deep-sleep entries. A reversible WFI fallback eliminated those failures
+and reduced observed battery discharge current while SSH stayed available.
 
 Continuous operation with USB unplugged is explicitly authorized. Routine
 timed/end-of-test shutdowns are disabled in the current session. Temperature

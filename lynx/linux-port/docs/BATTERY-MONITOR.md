@@ -60,7 +60,9 @@ seconds and requests shutdown at 45°C battery temperature. Missing/invalid
 temperatures are logged as unavailable. These are conservative development
 cutoffs, not factory thermal policy; a kernel hang can defeat software shutdown.
 The display remains uninitialized and a black screen does not establish power
-state. No deep-idle or charger setting is changed by these tools.
+state. The battery tools do not change deep-idle or charger settings. A separate,
+verified [WFI fallback](IDLE-POWER.md) now disables repeatedly rejected deep CPU
+idle states in the current RAM session, with the original flags saved for undo.
 
 `collect_battery_session.py` saves cached observations to the host every ten
 seconds, including timestamps, hashes, failed-command captures and identity

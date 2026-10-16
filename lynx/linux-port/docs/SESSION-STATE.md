@@ -3525,3 +3525,53 @@ NOTquantifiedpowerreduction. ReenablednormalWiFiPSforthisRAMsessionwithseparate
 pinnedlivecommand; noautomaticboot/persistentimagechange. Nochargerwrites.
 Newworkingbattery+repeatbootmilestonequalifiesGitHubupload; runpublicationaudit
 beforestagingonlylynx. Rawlogs/OEM/compiler/privateinputsneverpublish.
+
+### CPU idle rejection loop identified; session-only WFI fallback verified
+
+Read-only full-CPU capture added the previously omitted `rejected` counters.
+Baseline receipt `logs/live-idle-paired-observation-1792172753457126879`:
+12,943,805 rejected entries / 30.42 seconds, successful deep entries zero.
+Global CPU latency limit 2,000,000,000us (default), no userspace latency fd
+holders. Per-CPU sysfs latency 0 means no userspace constraint, not an effective
+0us limit. Kernel source confirms rejection is a negative idle-entry return;
+exact rejecting callback/firmware reason remains unknown.
+
+Bounded WFI trial `live-wfi-fallback-trial-1792172856667668114` preserved all
+disable flags, kept WFI enabled, disabled only deeper states, and armed an
+independent 45s rollback. Three ~10s intervals: zero rejections, SSH continuous,
+current -128 before / -102,-62,-64mA during. Normal restore plus detached restore
+completed. `live-wfi-rollback-check-1792172907224246832` verified all original
+flags restored; current -130mA again. Do not rerun that same-boot trial directory.
+
+Applied `linux-port/wfi-fallback.sh --apply` with separate live receipt
+`live-enable-wfi-fallback-1792172983731470335`. Active ONLY in current RAM session;
+original flags saved `/run/lynx/wfi-fallback/original-flags`. Undo is pinned SSH
+`sh /run/lynx/wfi-fallback.sh --restore`; reboot also clears it. No shutdown timer.
+Not automatically applied by resume_battery_session.py and not baked into V19.
+Follow-up `live-wfi-session-observation-1792172984704283588`: zero rejections
+over 30.41s. 23 later host samples over225s: median -62mA, range -79..-59mA;
+66 earlier PS-on samples over676s: median -130.5mA. Unmatched windows/observer
+activity mean these are observed distributions, not calibrated idle power or
+battery-life estimates. Summaries saved beside the observation receipts.
+
+Final proof `live-wfi-battery-confirmation-1792173245383940426`: pinned native
+SSH exit0, battery24.0C/88percent/-86mA sample/allfield-errors0, WiFi power saveON,
+both watchers alive, recent valid13 CPU/soc samples max~28.1C. All WFI states
+enabled, deeper states disabled. USB remains unplugged; no physical action needed.
+Host logger `battery-session-1792171663995277546` continues its original1hr bound;
+its end never stops Lynx or the RAM watchers. No flash/slot/recovery writes.
+
+Offline source review saved ten excerpts plus exact commit/hashes and module
+metadata at `artifacts/idle-power-source-review-1792173148909952121`.
+Stock low-power modules exist but are not resident: mtk-lpm, dbg-common-v1,
+plat-v1. Platform initialization includes SRAM writes, CPU hotplug hooks,
+suspend registration and VALIDATE_PWR_STATE_CTRL secure-firmware call. Missing
+initialization is a candidate cause, not proved. Core/platform module exits
+are empty; unloading must not be assumed to undo callbacks. No LPM module loaded.
+Keep WFI fallback while reviewing full init/dependencies before an invasive test.
+
+New durable tools: idle-observation.sh, bounded wfi-fallback-trial.sh,
+session wfi-fallback.sh, hash-verifying summarize_idle_observation.py and
+summarize_battery_window.py. Counter time updates on exit; transition intervals
+can include long sleep spanning a capture boundary, so ratios can exceed1.
+Do not misreport these as instantaneous utilization. See IDLE-POWER.md.

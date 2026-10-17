@@ -1,4 +1,4 @@
-"""Run the bounded V20 contact -> temperature -> battery -> OpenRC gate sequence.
+"""Run the bounded V21 contact -> temperature -> battery -> OpenRC gate sequence.
 
 Default mode is a local preflight. --listen contacts Lynx only after the
 hash-pinned candidate is already booted and emitting its native beacon.
@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CANDIDATE = ROOT / 'linux-port/artifacts/openrc-gated-v20-guardv6'
+CANDIDATE = ROOT / 'linux-port/artifacts/openrc-gated-v21-fastboot-timeout'
 
 
 def verified_candidate():
@@ -42,7 +42,7 @@ def main():
         print('Candidate hash, private mode, and staged order passed; no phone contacted.')
         return
     if not args.listen:
-        print('Preflight passed. --listen starts the supervised multi-stage host workflow; Lynx must already be booted from this V20 image.')
+        print('Preflight passed. --listen starts the supervised multi-stage host workflow; Lynx must already be booted from this V21 image.')
         return
     if not args.usb_unplugged_confirmed:
         parser.error('The supervised handset sequence requires current confirmation that Lynx is physically unplugged from USB')

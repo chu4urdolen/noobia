@@ -201,9 +201,9 @@ must explicitly include the Alpine root's parent directories. This remains a
 QEMU handoff-mechanics test. It does not exercise V19's phone-specific driver,
 Wi-Fi, SSH, or battery/thermal setup, and it is not a handset image.
 
-## Opt-in OpenRC candidate with a fail-closed power gate
+## Original V20 OpenRC candidate (superseded)
 
-`tools/build_openrc_gated_candidate.py` builds a separate local V20 candidate
+An earlier version of `tools/build_openrc_gated_candidate.py` built a local V20 candidate
 from the unchanged V19 image, embeds the exported OpenRC root, and changes only
 the initramfs policy. The 64 MiB image is
 `linux-port/artifacts/openrc-gated-v20-guardv6/nord3-openrc-gated-candidate.img`
@@ -238,10 +238,39 @@ The VM substitutes a passing guard fixture because it has no Lynx sensors.
 This still is not a handset boot, and OpenRC does not yet manage Lynx's Wi-Fi
 or SSH services. No phone was contacted and no partition was changed.
 
-For a future supervised V20 boot, one bounded host coordinator runs the
+Review found a failure path in V20: after pinned host contact, a missing or
+failed sensor/battery stage could leave BusyBox PID 1 running without those
+watchers after its 30-minute gate wait. V20 is retained for history and must
+not be used for a handset trial.
+
+## V21 bounded Fastboot return candidate (offline only)
+
+The builder now creates a separate V21 image from unchanged V19 at
+`linux-port/artifacts/openrc-gated-v21-fastboot-timeout/nord3-openrc-gated-candidate.img`,
+SHA256 `23fec5b5f319dfcd5bf8555478f843cd7bb9be3a902afc8061ea09c8a0457e4f`.
+It remains 64 MiB; its 16,686,499-byte supplement fits the strict 40,000,000-byte
+bound. It inherits private V19 network credentials and stays local at mode
+0600. The source and receipt preserve V20 separately.
+
+After pinned host contact, V21 waits at most 180 seconds for the current-boot
+thermal, battery, cooling, and OpenRC gate checks. A missing gate, failed
+guard, bad root archive, or unexpected handoff return requests the supported
+software return to Fastboot once. A failed original V19 Wi-Fi supervisor keeps
+its own one-reset path. This bounds an unmonitored post-contact session; it
+does not prove a hardware reboot on every failure or validate V21 on Lynx.
+
+Offline checks passed: five exact-packed-init and real shell timeout cases at
+`artifacts/openrc-failclosed-check-1792253102353807990/result.json`; nine
+guard cases; four armer receipt cases; pinned contact self-test; and the
+production handoff in the exact stock-kernel QEMU VM at
+`artifacts/openrc-pid1-handoff-vm-1792253064445885469/result.json`.
+The VM uses a passing guard fixture because it has no Lynx sensors. OpenRC
+still inherits the existing Wi-Fi/SSH processes rather than supervising them.
+
+For a future supervised V21 boot, one bounded host coordinator runs the
 contact, temperature, battery/power, and arming stages in order. Its default
 mode only validates the local candidate; `--listen` begins the network
-workflow and expects V20 to be booted already:
+workflow and expects V21 to be booted already with USB physically unplugged:
 
 ```sh
 python3 tools/run_openrc_handoff_sequence.py --listen --usb-unplugged-confirmed
@@ -249,7 +278,7 @@ python3 tools/run_openrc_handoff_sequence.py --listen --usb-unplugged-confirmed
 
 The coordinator preserves each stage receipt and starts no flashing or reboot.
 The contact and runtime-power receipts must belong to the same boot; the armer
-checks the V20 image hash, pinned native identity, token, boot ID, live watcher
+checks the V21 image hash, pinned native identity, token, boot ID, live watcher
 scripts, and current sensor/gauge state before writing the marker. The complete
 fresh-boot sequence remains untested together on Lynx. Keep the existing stock
 restore procedure and bootloader/recovery path intact; the offline candidate

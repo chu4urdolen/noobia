@@ -4040,3 +4040,29 @@ slot A, bootloader, bootable-slot flags, partition sizes and download limit
 all matched. No write/reboot/slot command was issued. Current observed mode is
 Fastboot; last recorded installed `boot_a` remains V19, and the global Linux
 flash hold is still active.
+
+Read-only LK export `logs/pllk-1792252927082455922.json` returned successfully
+with raw output retained. NONRST_REG2=0x28002003, watchdog status0x2, and LK
+boot mode99 match previous supported bootloader-return signatures. This
+supports V19's unacknowledged-boot fallback as the path to Fastboot; the raw
+label says `rst from: lk`, so do not claim exact reset origin beyond the
+recorded fields. No further phone command was issued.
+
+### V21 OpenRC candidate built offline; V20 superseded
+
+Review of V20 found that a failed post-contact sensor/battery stage could
+leave BusyBox running indefinitely after its 30-minute gate wait. No V20
+hardware trial was run. The builder now produces local-only V21 from unchanged
+V19 with a 180-second post-contact gate deadline and one supported Fastboot
+return request on gate/handoff failure. V19's original Wi-Fi failure path
+retains its own one-reset behavior. Candidate SHA256
+23fec5b5f319dfcd5bf8555478f843cd7bb9be3a902afc8061ea09c8a0457e4f;
+64 MiB; private mode0600; supplement16,686,499bytes under40,000,000. Stock
+undo and V19 remain unchanged. Tests passed: exact packed init failure paths
+and live shell timeout fixture
+`artifacts/openrc-failclosed-check-1792253102353807990/result.json`, guard
+fixtures, armer receipts, contact/sequence self-tests, and exact-stock-kernel
+production handoff VM
+`artifacts/openrc-pid1-handoff-vm-1792253064445885469/result.json`.
+No phone contact or partition write occurred for V21. Flash hold remains active;
+OpenRC Wi-Fi/SSH supervision and full hardware sequence are still untested.

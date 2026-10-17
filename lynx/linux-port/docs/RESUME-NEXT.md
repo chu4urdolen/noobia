@@ -31,9 +31,10 @@ running. That earlier result does not describe the later verified V19 boot.
 This older result is superseded by the fresh Fastboot preflight above.
 
 The Linux-flash hold remains active in `docs/SAFETY-HOLD.json` because thermal
-validation is incomplete. Do not install V20 or another Linux image while the
-hold is active. V20 is an offline OpenRC handoff candidate, not a handset-tested
-image; its combined fresh-boot sensor/battery/runtime sequence is untested.
+validation is incomplete. Do not install V20, V21, or another Linux image while
+the hold is active. V20 is superseded because a failed gate could leave Lynx
+running without thermal monitoring. V21 bounds that interval and has offline
+tests, but no handset test; its combined fresh-boot sequence remains untested.
 The exact August stock `boot_a` image and tested Fastboot restore command are
 available; offline verification is recorded in
 `docs/OFFLINE-RECOVERY-AUDIT-20261017.md`. Restoration still requires a fresh

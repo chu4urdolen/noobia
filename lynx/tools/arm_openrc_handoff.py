@@ -1,4 +1,4 @@
-"""Arm V20's RAM-only OpenRC gate after current power and native identity checks.
+"""Arm V21's RAM-only OpenRC gate after current power and native identity checks.
 
 Without --arm this is a local receipt audit. Arming contacts Lynx over pinned
 SSH and writes only /run/lynx/openrc-handoff-ready for the current boot.
@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PORT = ROOT / 'linux-port'
 BASE = PORT / 'artifacts/busybox-wifi-ssh-twostage-v19'
-CANDIDATE = PORT / 'artifacts/openrc-gated-v20-guardv6'
+CANDIDATE = PORT / 'artifacts/openrc-gated-v21-fastboot-timeout'
 GUARD = PORT / 'openrc-handoff-guard.sh'
 KERNEL = '5.10.149-android12-9-o-g311738fbb5a8'
 BB_SHA = '999cb969d09093a71716cfc747bb53cdada3f332c05eb5046c56e0f66a4d6d22'

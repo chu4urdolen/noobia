@@ -1,4 +1,4 @@
-"""Build a local-only V20 image: V19 plus an opt-in, safety-gated OpenRC handoff.
+"""Build a local-only V21 image: V19 plus a bounded OpenRC handoff.
 
 This never contacts or flashes Lynx. The resulting image inherits private Wi-Fi
 and SSH credentials from V19 and must remain local with mode 0600.
@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PORT = ROOT / 'linux-port'
 BASE = PORT / 'artifacts/busybox-wifi-ssh-twostage-v19'
 EXPORT = PORT / 'artifacts/openrc-rootfs-export'
-OUT = PORT / 'artifacts/openrc-gated-v20-guardv6'
+OUT = PORT / 'artifacts/openrc-gated-v21-fastboot-timeout'
 sys.path.insert(0, str(PORT))
 from image_formats import read_boot_v4, read_newc, require
 from prepare_busybox_diagnostics import pack
@@ -76,10 +76,12 @@ def main():
     init = primary['init']['data']
     old_tail = b'lynx_wifi_supervise\nlog \'WIFI_SUPERVISOR_FINISHED; PID1_REMAINS_ALIVE\'\nstop\n'
     require(init.endswith(old_tail), 'V19 init tail differs from the expected exact source')
-    new_tail = (b"lynx_wifi_supervise\n"
+    new_tail = (b"lynx_wifi_supervise || stop\n"
                 b"log 'WIFI_SUPERVISOR_FINISHED; CHECKING_OPT_IN_OPENRC_GATE'\n"
-                b". /etc/lynx/openrc-handoff.sh || stop\n"
-                b"lynx_openrc_handoff || stop\n"
+                b". /etc/lynx/openrc-handoff.sh || { log 'OPENRC_SCRIPT_LOAD_FAILED; REQUESTING_FASTBOOT'; /bin/boot-proof-reboot; stop; }\n"
+                b"lynx_openrc_handoff\n"
+                b"log 'OPENRC_HANDOFF_FAILED; REQUESTING_FASTBOOT'\n"
+                b"/bin/boot-proof-reboot\n"
                 b"stop\n")
     primary['init']['data'] = init[:-len(old_tail)] + new_tail
     ramdisk = pack(primary)
@@ -119,7 +121,7 @@ def main():
         'flash_performed': False, 'phone_contacted': False,
         'inherits_private_v19_wifi_and_ssh_credentials': True,
         'candidate_mode': '0600',
-        'limitations': 'Offline candidate only. No fresh-boot phone proof or real-device OpenRC PID 1 handoff. Host installs and verifies the existing RAM-only thermal/battery watchers after the native beacon; OpenRC does not yet manage Wi-Fi/SSH services. No flash authorization is implied.'
+        'limitations': 'Offline candidate only. No fresh-boot phone proof or real-device OpenRC PID 1 handoff. Missing/failed gate returns to Fastboot after at most 180 seconds following pinned contact. Host installs and verifies RAM-only thermal/battery watchers; OpenRC does not yet manage Wi-Fi/SSH services. No flash authorization is implied.'
     }
     (OUT / 'build-result.json').write_text(json.dumps(report, indent=2) + '\n')
     (OUT / 'build-result.json').chmod(0o600)

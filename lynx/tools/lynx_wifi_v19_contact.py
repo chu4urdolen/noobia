@@ -9,16 +9,17 @@ KERNEL='5.10.149-android12-9-o-g311738fbb5a8'
 BB_SHA='999cb969d09093a71716cfc747bb53cdada3f332c05eb5046c56e0f66a4d6d22'
 def expected_init_hashes():
  hashes={BUILD['init_sha256']}
- candidate=ROOT/'linux-port/artifacts/openrc-gated-v20-guardv6'
- try:
-  result=json.loads((candidate/'build-result.json').read_text())
-  image=(candidate/'nord3-openrc-gated-candidate.img').read_bytes()
-  if (result.get('state')=='offline-openrc-gated-candidate-built' and
-      result.get('parent_v19_sha256')==BUILD['candidate_sha256'] and
-      hashlib.sha256(image).hexdigest()==result.get('candidate_sha256') and
-      re.fullmatch('[0-9a-f]{64}',result.get('init_sha256',''))):
-   hashes.add(result['init_sha256'])
- except (OSError,ValueError,KeyError): pass
+ for name in ('openrc-gated-v20-guardv6','openrc-gated-v21-fastboot-timeout'):
+  candidate=ROOT/'linux-port/artifacts'/name
+  try:
+   result=json.loads((candidate/'build-result.json').read_text())
+   image=(candidate/'nord3-openrc-gated-candidate.img').read_bytes()
+   if (result.get('state')=='offline-openrc-gated-candidate-built' and
+       result.get('parent_v19_sha256')==BUILD['candidate_sha256'] and
+       hashlib.sha256(image).hexdigest()==result.get('candidate_sha256') and
+       re.fullmatch('[0-9a-f]{64}',result.get('init_sha256',''))):
+    hashes.add(result['init_sha256'])
+  except (OSError,ValueError,KeyError): pass
  return hashes
 def ssh_command(ip,command):
  return ['ssh','-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=yes','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlias=lynx','-o','UserKnownHostsFile='+str(ROOT/'secrets/lynx_known_hosts'),'-o','ConnectTimeout=5','-i',str(ROOT/'secrets/nexus_lynx_ed25519'),'root@'+ip,command]

@@ -148,6 +148,39 @@ before using that command. The offline replay passed in the exact-kernel VM;
 the phone's actual package install used HTTPS. A complete fresh-boot combined
 hardware replay has not been performed.
 
+## OpenRC as a real init process
+
+Alpine's signed `openrc` and `openrc-init` 0.63.2-r0 packages have now been
+installed into a separate scratch copy of the verified ARM64 rootfs with APK
+signature verification enabled. A QEMU test packs that complete root at the
+initramfs root, mounts proc/sysfs and tmpfs `/dev`, then `exec`s OpenRC from
+`/init` so it becomes PID 1. With the frozen V19 stock kernel it reached the
+default runlevel, ran a test service, handled `openrc-shutdown --poweroff now`,
+and powered down cleanly. Result and console:
+`linux-port/artifacts/openrc-userspace-vm-1792236559134667736/`.
+The repeatable harness is `tools/test_openrc_userspace_vm.py`.
+
+This proves OpenRC itself can run on the exact ARM64 kernel/userspace pairing
+in a VM. It is not a handset boot, and its scratch root intentionally lacks
+normal package post-install service links; the test service supplies only the
+default-runlevel proof. The phone's proven V19 init still owns early hardware,
+Wi-Fi, SSH and battery/thermal guards. Do not replace that startup sequence
+until the OpenRC handoff is integrated after those safeguards and tested on a
+reachable native session.
+
+The stock OTA also identifies a real integration constraint for Wi-Fi: its
+`wlan_drv_gen4m_6983.ko` matches the exact 5.10.149 kernel, but depends on the
+MediaTek/Oplus connectivity stack (`conninfra`, `wmt_chrdev_wifi_connac2`,
+`connfem`, `connadp`, `mddp`, `ccci_md_all`, `oplus_wificapcenter`,
+`oplus_project`, `pmic_lbat_service`, and `emi-mpu`). Android init waits for
+`vendor.connsys.driver.ready=yes` before inserting the radio modules. The OTA's
+`wmt_loader` and `conninfra_loader` use Android's `/system/bin/linker64`, so
+they cannot be assumed to run inside Alpine/musl. V19 already has its own
+tested native module/firmware startup path; reuse that path rather than trying
+to start the Android loader from OpenRC. The August OTA contains the `soc7_0`
+firmware family and `WIFI_RAM_CODE_soc7_0_1_1.bin`; this inventory alone does
+not establish which calibration or firmware files the Linux path should load.
+
 ## Development layer and recoverable checkpoint
 
 During one verified continuous native session, the existing RAM chroot grew

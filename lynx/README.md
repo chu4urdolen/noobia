@@ -14,6 +14,9 @@ The complete combined fresh-boot hardware sequence remains untested.
 [Further evidence](linux-port/docs/ALPINE-STARTUP-STORAGE.md): Alpine also boots
 directly as PID 1 in an isolated stock-kernel VM; the live RAM chroot has
 read-only kernel visibility, and the phone's UFS partition map is validated.
+Alpine OpenRC 0.63.2-r0 has now also reached its default runlevel and powered
+down cleanly as PID 1 under QEMU with the frozen stock kernel. This is still a
+VM result; the handset's guarded V19 startup remains the hardware baseline.
 
 Native SSH plus live ZY0603 battery temperature, charge,
 pack voltage and signed current are verified on hardware. The

@@ -8,6 +8,10 @@ from pathlib import Path
 from lynx_wifi_v19_contact import PROOF,proof_valid,ssh_command
 ROOT=Path(__file__).resolve().parent.parent
 COMMAND="printf 'UPTIME\\n'; cat /proc/uptime; printf 'CPU_WATCH\\n'; tail -n 2 /run/lynx/thermal-watch.log; printf 'BATTERY_SNAPSHOT\\n'; cat /run/lynx/battery-last || echo BATTERY_SNAPSHOT_UNAVAILABLE; printf 'BATTERY_WATCH\\n'; tail -n 2 /run/lynx/battery-watch.log; printf 'SOFT_THROTTLE_WATCH\\n'; tail -n 4 /run/lynx/thermal-cooling-watch.log 2>/dev/null || echo SOFT_THROTTLE_NOT_INSTALLED; printf 'HEALTH_SUPERVISOR\\n'; tail -n 4 /run/lynx/health-supervisor/events.log 2>/dev/null || echo HEALTH_SUPERVISOR_NOT_INSTALLED; true"
+def verified_running_session(session):
+ continuous=(session.get('native_identity_verified') and session.get('session_left_running'))
+ fresh_contact=(session.get('native_ssh_verified') and session.get('state')=='native-ssh-available' and session.get('fallback_cancel_ack_exit_code')==0)
+ return bool(continuous or fresh_contact)
 def main():
  p=argparse.ArgumentParser();p.add_argument('--session',type=Path,required=True);p.add_argument('--seconds',type=int,default=3600);p.add_argument('--run',type=Path);a=p.parse_args()
  if not 10<=a.seconds<=14400:raise ValueError('Bounded logging duration must be 10–14400 seconds')
@@ -26,7 +30,7 @@ def main():
    time.sleep(.1)
   print(json.dumps({'result':str(out/'result.json'),'pid':child.pid,'state':'starting'}));return
  out=a.run;session=json.loads(a.session.read_text())
- if not(session.get('native_identity_verified') and session.get('session_left_running')):raise ValueError('Verified continuous session required')
+ if not verified_running_session(session):raise ValueError('Verified running V19 session required')
  report={'state':'starting','phone_ip':session['phone_ip'],'started_ns':time.time_ns(),'samples':0,'seconds':a.seconds,'implicit_shutdown':False}
  def save():
   t=out/'result.tmp';t.write_text(json.dumps(report,indent=2)+'\n');t.replace(out/'result.json')

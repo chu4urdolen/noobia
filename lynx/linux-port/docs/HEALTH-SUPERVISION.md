@@ -120,6 +120,20 @@ PID 1 replacement, health service adoption, and clean power-off all passed.
 The VM has no Lynx sensor hardware or Wi-Fi and does not boot the actual V24
 image. V24 must not be flashed while `SAFETY-HOLD.json` is active.
 
+The next handset proof is designed to leave the installed V19 image untouched:
+`tools/launch_autonomous_health_ram_trial.py --prepare` validates the exact
+archive, scripts, and offline fixtures without contacting Lynx. A bounded
+`tools/arm_autonomous_health_trial.py` listener can be armed **before** a
+fresh, unplugged V19 reboot. After a pinned SSH identity and Fastboot-fallback
+acknowledgement, the worker will refuse an old boot, connected charger, loaded
+sensor module, or stale RAM state before uploading anything. It then verifies
+the archive and scripts on Lynx, runs the read-only hardware preflight, and
+starts the health stage in RAM with raw receipts for each step. On a failed
+unprotected session it requests power-off. On success it starts a bounded
+four-hour host logger while on-phone watchers remain independent. This sequence has not been armed or
+run on the phone yet; it requires Noob's current unplugged confirmation and a
+coordinated fresh V19 boot. No partition write is part of the trial.
+
 After the first one-hour host logger ended, Lynx remained reachable and the
 on-phone health supervisor passed again at
 `logs/live-health-after-logger-1792275511617151253/result.json`: 23.5°C

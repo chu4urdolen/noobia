@@ -12,6 +12,9 @@ fixtures, complete image-member audits, and a stock-kernel VM handoff with
 fake hardware passed. No handset boot has exercised it. Real module startup
 remains untested and the Linux flash hold remains active. Neither V23 nor V24
 is installed on Lynx.
+The prepared next hardware step is a fresh, unplugged **RAM-only** V19 health
+startup trial using `tools/arm_autonomous_health_trial.py`; it is not armed.
+Start its listener before asking Noob to reboot Lynx. Do not flash V24 first.
 
 Latest live update: Lynx booted V19 with a black screen and sent a valid beacon
 from `192.168.100.7`. Pinned SSH acknowledged boot ID

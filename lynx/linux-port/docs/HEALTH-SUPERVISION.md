@@ -145,6 +145,9 @@ current boot, on-phone health supervisor, and unplugged charger state before
 requesting power-off over SSH; it records the raw result without claiming
 physical shutdown. Only after that should Noob press Power once to start a
 fresh V19 boot. These steps have not been executed yet.
+The helper's **read-only** preflight passed on the current boot at
+`logs/safe-v19-poweroff-1792276331596267479/result.json`; no power-off was
+requested. The physical confirmation and listener arm are still pending.
 
 After the first one-hour host logger ended, Lynx remained reachable and the
 on-phone health supervisor passed again at

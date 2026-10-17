@@ -16,10 +16,13 @@ from lynx_wifi_v19_contact import PROOF, proof_valid, ssh_command
 ROOT = Path(__file__).resolve().parent.parent
 PREFLIGHT = '''set -e
 /bin/busybox sh /run/lynx/lynx-health-supervisor.sh --once
+supplies=0
 for p in /sys/class/power_supply/*; do
   [ -r "$p/online" ] || continue
   [ "$(cat "$p/online")" = 0 ]
+  supplies=$((supplies+1))
 done
+[ "$supplies" -ge 1 ]
 cat /run/lynx/battery-last
 echo SAFE_POWEROFF_PREFLIGHT_PASS'''
 
@@ -40,14 +43,16 @@ def run(ip, out, name, command, timeout):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--session', type=Path)
-    parser.add_argument('--run', action='store_true')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--run', action='store_true')
+    mode.add_argument('--preflight-only', action='store_true')
     parser.add_argument('--usb-unplugged-confirmed', action='store_true')
     args = parser.parse_args()
-    if not args.run:
-        print('Use --run --session EXISTING_V19_RECEIPT --usb-unplugged-confirmed after listener is ready. No phone contacted.')
+    if not (args.run or args.preflight_only):
+        print('Use --preflight-only --session EXISTING_V19_RECEIPT for read-only checks, or --run with current unplugged confirmation after listener readiness. No phone contacted.')
         return
-    if not args.session or not args.usb_unplugged_confirmed:
-        parser.error('Current pinned V19 session and unplugged confirmation required')
+    if not args.session or (args.run and not args.usb_unplugged_confirmed):
+        parser.error('Current pinned V19 session required; --run also needs unplugged confirmation')
     session = json.loads(args.session.read_text())
     if not (session.get('native_identity_verified') and session.get('session_left_running')):
         raise ValueError('Existing proven continuous V19 session required')
@@ -56,7 +61,7 @@ def main():
     out.mkdir(mode=0o700)
     report = {'state': 'starting', 'started_ns': time.time_ns(),
               'session': str(args.session.resolve()), 'phone_ip': session['phone_ip'],
-              'usb_unplugged_confirmed': True, 'partition_writes': False,
+              'usb_unplugged_confirmed': bool(args.usb_unplugged_confirmed), 'partition_writes': False,
               'flash_performed': False, 'physical_shutdown_confirmed': False}
     def save():
         (out / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
@@ -69,6 +74,9 @@ def main():
         if rc != 0 or b'LYNX_HEALTH_OK' not in pre or b'SAFE_POWEROFF_PREFLIGHT_PASS' not in pre:
             raise ValueError('Health or unplugged power-off preflight refused')
         report['health_preflight_sha256'] = hashlib.sha256(pre).hexdigest()
+        if args.preflight_only:
+            report['state'] = 'read-only-poweroff-preflight-passed'
+            return
         report['state'] = 'requesting-poweroff'
         save()
         raw, rc = run(session['phone_ip'], out, 'poweroff-request',

@@ -138,10 +138,13 @@ now=$(cut -d. -f1 /proc/uptime)
 start=$(cat /run/lynx/network-timing-start)
 case "$now:$start" in *[!0-9:]*) exit 1;; esac
 [ "$now" -ge "$start" ] && [ "$((now-start))" -lt 240 ]
+supplies=0
 for p in /sys/class/power_supply/*; do
     [ -r "$p/online" ] || continue
     [ "$(cat "$p/online")" = 0 ]
+    supplies=$((supplies+1))
 done
+[ "$supplies" -ge 1 ]
 echo FRESH_UNPLUGGED_V19_RAM_TRIAL_READY'''
         pre, rc = run('fresh-boot-precheck', precheck)
         if rc != 0 or b'FRESH_UNPLUGGED_V19_RAM_TRIAL_READY' not in pre:

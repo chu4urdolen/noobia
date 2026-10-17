@@ -1,4 +1,12 @@
-# Current handoff — 2026-10-17
+# Current handoff — 2026-10-18
+
+Lynx remains on the same V19 RAM boot and answered pinned SSH after the first
+host logger expired. A fresh on-phone health check passed with 23.5°C battery,
+63% charge, and about 30°C CPU/SoC; runtime power verification passed. A new
+bounded host logger is active at
+`logs/battery-session-1792275518601564562/result.json`. The autonomous
+preflight gate and six offline refusal checks are in `HEALTH-SUPERVISION.md`.
+The gate has no boot hook and the Linux flash hold remains active.
 
 Latest live update: Lynx booted V19 with a black screen and sent a valid beacon
 from `192.168.100.7`. Pinned SSH acknowledged boot ID

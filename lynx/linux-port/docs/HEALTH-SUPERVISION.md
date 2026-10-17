@@ -60,6 +60,27 @@ does not authorize automatic module insertion. Each boot must also repeat the
 device-tree/calibration checks and the gauge DeviceType query before enabling
 the battery monitor.
 
+`linux-port/autonomous-health-preflight.sh` is a read-only gate for that next
+stage. It requires the exact kernel release, the bootstrap modules proved by
+the closure audit, matching device-tree hashes and absent-property checks,
+valid bootloader calibration bounds, the unbound expected gauge topology, and
+all six packed drivers. A six-case filesystem fixture at
+`artifacts/autonomous-health-preflight-check-1792264353611654369/result.json`
+passed, including refusals for a missing bootstrap module, changed device
+tree, truncated calibration, already-bound gauge, and missing packed driver.
+It has not been run at a fresh handset boot and performs no insertion. Its
+input archive must be hash-verified by the boot loader before extraction.
+
+After the first one-hour host logger ended, Lynx remained reachable and the
+on-phone health supervisor passed again at
+`logs/live-health-after-logger-1792275511617151253/result.json`: 23.5°C
+battery, 63% charge, roughly 30°C CPU/SoC, and three cooling controls.
+`configure_runtime_power.py --verify-only` passed at
+`logs/runtime-power-setup-1792275522742700027/result.json`. A second,
+four-hour host capture was started at
+`logs/battery-session-1792275518601564562/result.json`; it is observational
+only and may finish while the on-phone protection continues.
+
 An OpenRC `lynx-health` service is now prepared in
 `linux-port/openrc-lynx-health`. It adopts a verified early health process or
 starts one after the live prerequisites pass; routine service stop leaves that

@@ -1,7 +1,7 @@
 #!/bin/sh
-# Offline candidate only. Run from a supervised init child after pinned SSH
-# contact, after verifying/extracting the health input archive. Do not invoke
-# on a live V19 session or install in a boot image while SAFETY-HOLD is active.
+# Offline candidate only. --run preserves the proven host-confirmed trial.
+# --run-local is for a future init-owned autonomous boot after the payload
+# archive is verified. Neither mode changes the installed V19 image.
 set -eu
 BB=/bin/busybox
 RUN=/run/lynx
@@ -20,14 +20,22 @@ case "${1:-}" in
             gauge-identity battery-monitor battery-watch wfi-fallback \
             cooling-watch health-supervisor
         exit 0;;
-    --run) [ "$#" = 2 ] || fail 'use --run EXTRACTED_PACK';;
-    *) fail 'use --plan or --run EXTRACTED_PACK';;
+    --run|--run-local) [ "$#" = 2 ] || fail 'use --run[-local] EXTRACTED_PACK';;
+    *) fail 'use --plan or --run[-local] EXTRACTED_PACK';;
 esac
 
-[ -f "$RUN/host-confirmed" ] || fail 'pinned host has not confirmed this boot'
 token=$(cat /etc/lynx/session-token) || fail 'boot token unavailable'
-confirmed=$(cat "$RUN/host-confirmed") || fail 'host confirmation unavailable'
-[ -n "$token" ] && [ "$confirmed" = "$token" ] || fail 'host confirmation mismatch'
+case "$1" in
+    --run)
+        [ -f "$RUN/host-confirmed" ] || fail 'pinned host has not confirmed this boot'
+        confirmed=$(cat "$RUN/host-confirmed") || fail 'host confirmation unavailable'
+        [ -n "$token" ] && [ "$confirmed" = "$token" ] || fail 'host confirmation mismatch';;
+    --run-local)
+        [ -f "$RUN/local-boot-ready" ] || fail 'local init has not approved this boot'
+        local_ready=$(cat "$RUN/local-boot-ready") || fail 'local init marker unavailable'
+        [ -n "$token" ] && [ "$local_ready" = "$token" ] || fail 'local init marker mismatch'
+        [ "$(cat "$RUN/bootstrap-result")" = 0 ] || fail 'stock bootstrap incomplete';;
+esac
 [ ! -e "$RUN/health-bootstrap" ] || fail 'bootstrap already attempted'
 mkdir "$RUN/health-bootstrap" || fail 'cannot reserve bootstrap state'
 

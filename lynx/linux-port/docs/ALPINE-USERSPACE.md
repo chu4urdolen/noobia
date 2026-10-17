@@ -1,5 +1,10 @@
 # Native Alpine userspace and syscall tracing on Lynx
 
+Current self-booting Alpine/OpenRC development, including the private V26
+offline image and persistence boundary, is in [SELFBOOT-ALPINE.md](SELFBOOT-ALPINE.md).
+The historical RAM chroot and host-gated candidates below remain useful
+evidence; V26 has not been flashed to Lynx.
+
 Alpine 3.24.2 ARM64 now executes on Lynx in
 `/run/lynx/alpine-3.24.2`. Its shell, musl runtime and APK 3.0.8 package manager
 passed the same probe in an isolated exact-stock-kernel VM and on the phone.

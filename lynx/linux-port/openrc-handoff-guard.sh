@@ -27,16 +27,27 @@ require_process() {
 }
 
 lynx_openrc_handoff_guard() {
-    [ -r "$RUN/host-confirmed" ] || { fail 'pinned host has not confirmed this boot'; return 1; }
     token=$(cat "$ETC/session-token") || return 1
     [ -n "$token" ] || { fail 'empty boot token'; return 1; }
-    IFS= read -r confirmed < "$RUN/host-confirmed" || return 1
-    [ "$confirmed" = "$token" ] || { fail 'host confirmation token mismatch'; return 1; }
-    if [ "${LYNX_OPENRC_ARMING:-0}" != 1 ]; then
-        [ -r "$RUN/openrc-handoff-ready" ] || { fail 'host has not armed the OpenRC handoff'; return 1; }
-        IFS= read -r ready < "$RUN/openrc-handoff-ready" || return 1
-        [ "$ready" = "$token" ] || { fail 'handoff token mismatch'; return 1; }
-    fi
+    case "${LYNX_OPENRC_AUTHORITY:-host}" in
+        host)
+            [ -r "$RUN/host-confirmed" ] || { fail 'pinned host has not confirmed this boot'; return 1; }
+            IFS= read -r confirmed < "$RUN/host-confirmed" || return 1
+            [ "$confirmed" = "$token" ] || { fail 'host confirmation token mismatch'; return 1; }
+            if [ "${LYNX_OPENRC_ARMING:-0}" != 1 ]; then
+                [ -r "$RUN/openrc-handoff-ready" ] || { fail 'host has not armed the OpenRC handoff'; return 1; }
+                IFS= read -r ready < "$RUN/openrc-handoff-ready" || return 1
+                [ "$ready" = "$token" ] || { fail 'handoff token mismatch'; return 1; }
+            fi;;
+        local)
+            [ -r "$RUN/local-boot-ready" ] || { fail 'local init marker absent'; return 1; }
+            IFS= read -r ready < "$RUN/local-boot-ready" || return 1
+            [ "$ready" = "$token" ] || { fail 'local init token mismatch'; return 1; }
+            [ "$(cat "$RUN/bootstrap-result")" = 0 ] || { fail 'stock bootstrap incomplete'; return 1; }
+            [ -f "$RUN/health-bootstrap/ready" ] || { fail 'automatic health startup incomplete'; return 1; }
+            [ -f "$RUN/ssh-ready" ] || { fail 'local SSH startup incomplete'; return 1; };;
+        *) fail 'invalid handoff authority'; return 1;;
+    esac
 
     echo "$THERMAL_WATCH_SHA  $RUN/thermal-watch.sh" | sha256sum -c - >/dev/null || { fail 'thermal watcher source hash differs'; return 1; }
     echo "$BATTERY_WATCH_SHA  $RUN/battery-watch.sh" | sha256sum -c - >/dev/null || { fail 'battery watcher source hash differs'; return 1; }

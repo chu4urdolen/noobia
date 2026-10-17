@@ -1,5 +1,6 @@
 """Exercise the inert health startup's process order with fake hardware only."""
 import hashlib
+import argparse
 import json
 import os
 import re
@@ -17,6 +18,9 @@ ARCHIVE = PORT / 'artifacts/autonomous-health-inputs/inputs.tar.gz'
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--mode', choices=('host', 'local'), default='host')
+    args = parser.parse_args()
     os.umask(0o077)
     with tempfile.TemporaryDirectory(prefix='lynx-health-start-', dir=PORT / 'artifacts') as temp:
         base = Path(temp)
@@ -102,10 +106,22 @@ def main():
         if (refused.returncode == 0 or 'pinned host has not confirmed' not in refused.stdout
                 or (run / 'health-bootstrap').exists() or list((sys / 'module').iterdir())):
             raise AssertionError('Unconfirmed boot was not refused before module insertion')
-        (run / 'host-confirmed').write_text('fixture-token\n')
+        if args.mode == 'host':
+            (run / 'host-confirmed').write_text('fixture-token\n')
+            start_mode = '--run'
+        else:
+            local_refused = subprocess.run(['sh', str(script), '--run-local', str(pack)],
+                                           capture_output=True, text=True, timeout=5)
+            if (local_refused.returncode == 0 or
+                    'local init has not approved' not in local_refused.stdout or
+                    (run / 'health-bootstrap').exists() or list((sys / 'module').iterdir())):
+                raise AssertionError('Missing local marker was not refused before insertion')
+            (run / 'local-boot-ready').write_text('fixture-token\n')
+            (run / 'bootstrap-result').write_text('0\n')
+            start_mode = '--run-local'
         result = None
         try:
-            result = subprocess.run(['sh', str(script), '--run', str(pack)],
+            result = subprocess.run(['sh', str(script), start_mode, str(pack)],
                                     capture_output=True, text=True, timeout=15)
             if result.returncode or 'READY_ON_PHONE_MONITORING_ACTIVE' not in result.stdout:
                 raise AssertionError(f'Fixture startup failed: {result.returncode} {result.stdout} {result.stderr}')
@@ -130,7 +146,8 @@ def main():
                         os.kill(int(path.read_text().strip()), signal.SIGTERM)
                     except (ValueError, ProcessLookupError):
                         pass
-        report = {'passed': True, 'host_gate_refused_before_module_insertion': True,
+        report = {'passed': True, 'mode': args.mode,
+                  'host_gate_refused_before_module_insertion': True,
                   'module_order': stages, 'source_sha256': hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
                   'fake_poweroff_invoked': 'MOCK_POWEROFF' in result.stderr,
                   'phone_contacted': False, 'flash_performed': False,

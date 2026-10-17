@@ -1,6 +1,6 @@
 {
   "active": true,
-  "reason": "Heating was reported. A fresh V19 RAM trial verified battery/CPU monitoring, soft cooling, and the health supervisor after a guarded host-assisted boot. V19 still cannot start those protections by itself; native charging and the V24 automatic boot image remain untested on the handset.",
+  "reason": "Heating was reported. A fresh V19 RAM trial verified battery/CPU monitoring, soft cooling, and the health supervisor after a guarded host-assisted boot. V19 still cannot start those protections by itself; native charging and the new V25c/V26 local-start images remain untested on the handset.",
   "linux_flash_allowed": false,
   "stock_restore_allowed": true,
   "reference": "THERMAL-SAFETY.md"

@@ -10,7 +10,7 @@ SOURCE = ROOT / 'linux-port/openrc-handoff-guard.sh'
 OUT = ROOT / 'linux-port/artifacts' / f'openrc-handoff-guard-check-{time.time_ns()}'
 
 
-def fixture(name, changes=None):
+def fixture(name, changes=None, authority='host'):
     folder = OUT / name
     run = folder / 'run/lynx'
     proc = folder / 'proc'
@@ -28,6 +28,14 @@ def fixture(name, changes=None):
     (gauge / 'battery_snapshot').write_text('fixture\n')
     (run / 'host-confirmed').write_text(token + '\n')
     (run / 'openrc-handoff-ready').write_text(token + '\n')
+    if authority == 'local':
+        (run / 'host-confirmed').unlink()
+        (run / 'openrc-handoff-ready').unlink()
+        (run / 'local-boot-ready').write_text(token + '\n')
+        (run / 'bootstrap-result').write_text('0\n')
+        (run / 'health-bootstrap').mkdir()
+        (run / 'health-bootstrap/ready').touch()
+        (run / 'ssh-ready').touch()
     for filename, expected in (
         ('thermal-watch.pid', '/run/lynx/thermal-watch.sh'),
         ('battery-watch.pid', '/run/lynx/battery-watch.sh'),
@@ -69,6 +77,7 @@ SYS='{sysroot}'
 THERMAL='{thermal}'
 PROC='{proc}'
 ETC='{folder / 'etc/lynx'}'
+LYNX_OPENRC_AUTHORITY='{authority}'
 pid=$$
 mkdir -p "$PROC/$pid"
 for item in thermal-watch battery-watch thermal-cooling-watch; do :; done
@@ -84,8 +93,8 @@ lynx_openrc_handoff_guard
     return runner
 
 
-def reject(name, change):
-    runner = fixture(name, change)
+def reject(name, change, authority='host'):
+    runner = fixture(name, change, authority)
     result = subprocess.run([str(runner)], text=True, capture_output=True, timeout=5)
     return result.returncode != 0 and 'OPENRC_HANDOFF_GUARD_PASS' not in result.stdout
 
@@ -93,8 +102,14 @@ def reject(name, change):
 def main():
     OUT.mkdir(parents=True)
     good = subprocess.run([str(fixture('valid'))], text=True, capture_output=True, timeout=5)
+    local_good = subprocess.run([str(fixture('local-valid', authority='local'))],
+                                text=True, capture_output=True, timeout=5)
     cases = {
         'valid_fixture_passes': good.returncode == 0 and 'OPENRC_HANDOFF_GUARD_PASS' in good.stdout,
+        'local_without_host_passes': local_good.returncode == 0 and 'OPENRC_HANDOFF_GUARD_PASS' in local_good.stdout,
+        'local_missing_marker_refused': reject('local-no-marker', lambda f, t: (f / 'run/lynx/local-boot-ready').unlink(), 'local'),
+        'local_missing_health_refused': reject('local-no-health', lambda f, t: (f / 'run/lynx/health-bootstrap/ready').unlink(), 'local'),
+        'local_missing_ssh_refused': reject('local-no-ssh', lambda f, t: (f / 'run/lynx/ssh-ready').unlink(), 'local'),
         'wrong_token_refused': reject('wrong-token', lambda f, t: (f / 'run/lynx/openrc-handoff-ready').write_text('b' * 32 + '\n')),
         'stale_battery_sample_refused': reject('stale-battery', lambda f, t: (f / 'run/lynx/battery-last').write_text((f / 'run/lynx/battery-last').read_text().replace('95.00', '80.00'))),
         'battery_gauge_error_refused': reject('battery-error', lambda f, t: (f / 'run/lynx/battery-last').write_text((f / 'run/lynx/battery-last').read_text().replace('temperature_error=0', 'temperature_error=1'))),

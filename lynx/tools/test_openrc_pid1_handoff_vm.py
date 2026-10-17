@@ -55,9 +55,15 @@ def main():
                         help='Exercise the OpenRC health service with a test-only RAM watcher')
     parser.add_argument('--exercise-autonomous-handoff', action='store_true',
                         help='Exercise post-SSH archive extraction and the production OpenRC handoff')
+    parser.add_argument('--exercise-local-handoff', action='store_true',
+                        help='Exercise host-independent Alpine handoff with fake handset sensors')
     args = parser.parse_args()
     if args.exercise_autonomous_handoff and not (args.exercise_production_handoff and args.exercise_health_service):
         parser.error('--exercise-autonomous-handoff requires --exercise-production-handoff and --exercise-health-service')
+    if args.exercise_local_handoff and not (args.exercise_production_handoff and args.exercise_health_service):
+        parser.error('--exercise-local-handoff requires --exercise-production-handoff and --exercise-health-service')
+    if args.exercise_local_handoff and args.exercise_autonomous_handoff:
+        parser.error('Choose only one autonomous handoff fixture')
     runtime = None
     if args.rootfs_cpio_gz:
         archive_path = args.rootfs_cpio_gz.resolve(strict=True)
@@ -200,6 +206,19 @@ start() {
                   stat.S_IFREG | 0o755)
         add_outer('etc/lynx/openrc-handoff.sh', (ROOT / 'linux-port/openrc-handoff.sh').read_bytes(),
                   stat.S_IFREG | 0o755)
+        if args.exercise_local_handoff:
+            add_outer('etc/lynx/openrc-local-handoff.sh',
+                      (ROOT / 'linux-port/openrc-local-handoff.sh').read_bytes(),
+                      stat.S_IFREG | 0o755)
+            add_outer('etc/lynx/openrc-handoff-guard.sh',
+                      b'''lynx_openrc_handoff_guard() {
+[ "${LYNX_OPENRC_AUTHORITY:-}" = local ] &&
+    [ "$(cat /run/lynx/local-boot-ready)" = test-openrc-token ] &&
+    [ -f /run/lynx/health-bootstrap/ready ] &&
+    [ -f /run/lynx/ssh-ready ] || return 1
+echo LOCAL_OPENRC_HANDOFF_TEST_GUARD_PASS
+}
+''', stat.S_IFREG | 0o755)
         if args.exercise_autonomous_handoff:
             inputs = (ROOT / 'linux-port/artifacts/autonomous-health-inputs/inputs.tar.gz').read_bytes()
             add_outer('usr/share/lynx/health-inputs.tar.gz', inputs)
@@ -218,6 +237,16 @@ start() {
             init = init.replace(armed, b'').replace(
                 old_call,
                 b'. /etc/lynx/autonomous-health-handoff.sh\nlynx_autonomous_health_handoff\n')
+        if args.exercise_local_handoff:
+            old_call = b'. /etc/lynx/openrc-handoff.sh\nlynx_openrc_handoff\n'
+            require(init.count(old_call) == 1, 'VM local handoff substitution point differs')
+            init = init.replace(old_call,
+                b'''$BB printf '%s\\n' test-openrc-token > /run/lynx/local-boot-ready
+$BB mkdir -p /run/lynx/health-bootstrap
+$BB touch /run/lynx/health-bootstrap/ready /run/lynx/ssh-ready
+. /etc/lynx/openrc-local-handoff.sh
+lynx_openrc_local_handoff
+''')
     else:
         init = b'''#!/bin/busybox sh\nset -eu\nBB=/bin/busybox\n$BB mkdir -p /proc /sys /dev /run/lynx /mnt/alpine/proc /mnt/alpine/sys /mnt/alpine/dev /mnt/alpine/run\n$BB mount -t proc -o nosuid,nodev,noexec proc /proc\n$BB mount -t sysfs -o nosuid,nodev,noexec sysfs /sys\n$BB mount -t tmpfs -o mode=0755,size=16m tmpfs /dev\n$BB mknod -m 600 /dev/console c 5 1\n$BB mknod -m 666 /dev/null c 1 3\nexec </dev/console >/dev/console 2>&1\n$BB mount -t tmpfs -o mode=0755,size=32m tmpfs /run\n$BB mkdir -p /run/lynx\n$BB sh -c 'echo $$ > /run/lynx/handoff-worker.pid; while :; do /bin/busybox sleep 1; done' &\n$BB mount -o bind /proc /mnt/alpine/proc\n$BB mount -o bind /sys /mnt/alpine/sys\n$BB mount -o bind /dev /mnt/alpine/dev\n$BB mount -o bind /run /mnt/alpine/run\n$BB ls -l /mnt/alpine/sbin/openrc-init /mnt/alpine/lib/ld-musl-aarch64.so.1 > /dev/console\n$BB chroot /mnt/alpine /bin/busybox echo LYNX_CHROOT_EXEC_PASS > /dev/console\necho LYNX_BUSYBOX_EARLY_INIT_READY > /dev/console\nexec $BB chroot /mnt/alpine /sbin/openrc-init\n'''
     if args.exercise_health_service:
@@ -266,7 +295,10 @@ start() {
                                         b'LYNX_CHROOT_EXEC_PASS' in output),
         'openrc_replaced_pid1': b'OpenRC init version 0.63.2 starting' in output,
         'production_handoff_guard_invoked': (not args.exercise_production_handoff or
+                                             args.exercise_local_handoff or
                                              b'OPENRC_HANDOFF_TEST_GUARD_PASS' in output),
+        'local_handoff_guard_invoked': (not args.exercise_local_handoff or
+                                       b'LOCAL_OPENRC_HANDOFF_TEST_GUARD_PASS' in output),
         'inherited_early_worker_survived': b'LYNX_OPENRC_INHERITED_WORKER_PASS' in output,
         'health_service_started': (not args.exercise_health_service or
                                    b'LYNX_OPENRC_HEALTH_SERVICE_PASS' in output),
@@ -288,6 +320,7 @@ start() {
         'phone_boot_or_partition_changed': False,
         'production_handoff_script_tested': args.exercise_production_handoff,
         'autonomous_handoff_script_tested': args.exercise_autonomous_handoff,
+        'local_handoff_script_tested': args.exercise_local_handoff,
         'limits': 'QEMU-only PID 1 handoff proof; test guard is stubbed because the VM has no Lynx sensor hardware. Does not test V19 phone-specific driver/Wi-Fi startup or a handset boot image.',
     }
     (out / 'result.json').write_text(json.dumps(report, indent=2) + '\n')

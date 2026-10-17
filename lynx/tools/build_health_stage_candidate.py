@@ -39,6 +39,7 @@ def put(entries, name, data, mode=0o600):
         parent = '/'.join(Path(name).parts[:index])
         entries.setdefault(parent, {'mode': stat.S_IFDIR | 0o755, 'uid': 0, 'gid': 0,
                                     'rdevmajor': 0, 'rdevminor': 0, 'data': b''})
+        require(stat.S_ISDIR(entries[parent]['mode']), 'Supplement parent is not a directory: ' + parent)
     require(name not in entries, 'Refuse to replace existing supplement member: ' + name)
     entries[name] = {'mode': stat.S_IFREG | mode, 'uid': 0, 'gid': 0,
                      'rdevmajor': 0, 'rdevminor': 0, 'data': data}

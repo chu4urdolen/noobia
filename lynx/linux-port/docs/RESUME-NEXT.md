@@ -6,7 +6,9 @@ host logger expired. A fresh on-phone health check passed with 23.5°C battery,
 bounded host logger is active at
 `logs/battery-session-1792275518601564562/result.json`. The autonomous
 preflight gate and six offline refusal checks are in `HEALTH-SUPERVISION.md`.
-The gate has no boot hook and the Linux flash hold remains active.
+The guarded startup sequence is now scripted and packed into an inert V23
+offline layout candidate, but no boot hook invokes it. Its real module startup
+remains untested and the Linux flash hold remains active.
 
 Latest live update: Lynx booted V19 with a black screen and sent a valid beacon
 from `192.168.100.7`. Pinned SSH acknowledged boot ID

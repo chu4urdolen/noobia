@@ -7,6 +7,19 @@ F=ROOT/'linux-port/artifacts/busybox-wifi-ssh-twostage-v19'
 BUILD=json.loads((F/'build-validation.json').read_text())
 KERNEL='5.10.149-android12-9-o-g311738fbb5a8'
 BB_SHA='999cb969d09093a71716cfc747bb53cdada3f332c05eb5046c56e0f66a4d6d22'
+def expected_init_hashes():
+ hashes={BUILD['init_sha256']}
+ candidate=ROOT/'linux-port/artifacts/openrc-gated-v20-guardv6'
+ try:
+  result=json.loads((candidate/'build-result.json').read_text())
+  image=(candidate/'nord3-openrc-gated-candidate.img').read_bytes()
+  if (result.get('state')=='offline-openrc-gated-candidate-built' and
+      result.get('parent_v19_sha256')==BUILD['candidate_sha256'] and
+      hashlib.sha256(image).hexdigest()==result.get('candidate_sha256') and
+      re.fullmatch('[0-9a-f]{64}',result.get('init_sha256',''))):
+   hashes.add(result['init_sha256'])
+ except (OSError,ValueError,KeyError): pass
+ return hashes
 def ssh_command(ip,command):
  return ['ssh','-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=yes','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlias=lynx','-o','UserKnownHostsFile='+str(ROOT/'secrets/lynx_known_hosts'),'-o','ConnectTimeout=5','-i',str(ROOT/'secrets/nexus_lynx_ed25519'),'root@'+ip,command]
 def beacon_valid(data,ip):
@@ -14,7 +27,9 @@ def beacon_valid(data,ip):
  except ValueError:return False
  return network_ok and data.strip()==('LYNX_HELLO '+BUILD['session_token']).encode()
 def proof_valid(text,exit_code):
- return exit_code==0 and 'LYNX_NATIVE_SSH_PROOF\n' in text and KERNEL+'\n' in text and '/bin/busybox\n' in text and BUILD['init_sha256']+'  /init' in text and BB_SHA+'  /bin/busybox' in text and BUILD['session_token']+'\n' in text and 'uid=0(root)' in text
+ return (exit_code==0 and 'LYNX_NATIVE_SSH_PROOF\n' in text and KERNEL+'\n' in text and
+         '/bin/busybox\n' in text and any(digest+'  /init' in text for digest in expected_init_hashes()) and
+         BB_SHA+'  /bin/busybox' in text and BUILD['session_token']+'\n' in text and 'uid=0(root)' in text)
 PROOF="printf 'LYNX_NATIVE_SSH_PROOF\\n'; uname -r; readlink /proc/1/exe; sha256sum /init /bin/busybox; cat /etc/lynx/session-token; id"
 DIAGNOSTICS="printf 'BOOT_LOG\\n'; cat /run/lynx/boot.log; printf 'KERNEL_LOG\\n'; dmesg; printf 'NETWORK_STATE\\n'; ip addr; ip route; for n in wlan0 wlan1; do [ -d /sys/class/net/$n ] && /sbin/wpa_cli -p /run/wpa_supplicant -i $n status; done; printf 'PSTORE_RECORDS\\n'; ls -l /sys/fs/pstore; for f in /sys/fs/pstore/*; do [ -f \"$f\" ] && { printf '\\nPSTORE %s\\n' \"$f\"; cat \"$f\"; }; done; printf 'MOUNTS\\n'; cat /proc/mounts; printf 'DRIVER_LOGS\\n'; cat /run/lynx/wpa.log /run/lynx/dropbear.log; true"
 DIAGNOSTICS += "; printf 'ASYNC_COMPLETION_EVIDENCE\\n'; cat /run/lynx/wifi-async-ready /run/lynx/station-result.first /run/lynx/station-result /run/lynx/wifi-worker-stack.first /run/lynx/wifi-worker-stack /run/lynx/wifi-async-dmesg; true"
@@ -25,6 +40,8 @@ def main():
  if args.self_test:
   text='LYNX_NATIVE_SSH_PROOF\n'+KERNEL+'\n/bin/busybox\n'+BUILD['init_sha256']+'  /init\n'+BB_SHA+'  /bin/busybox\n'+BUILD['session_token']+'\nuid=0(root)\n'
   assert proof_valid(text,0) and not proof_valid(text,1) and not proof_valid(text.replace(KERNEL,'wrong-kernel'),0) and not proof_valid(text.replace(BUILD['init_sha256'],'wrong-init'),0)
+  for digest in expected_init_hashes():
+   assert proof_valid(text.replace(BUILD['init_sha256'],digest),0)
   assert beacon_valid(('LYNX_HELLO '+BUILD['session_token']).encode(),'192.168.100.42')
   assert not beacon_valid(b'LYNX_HELLO wrong','192.168.100.42') and not beacon_valid(('LYNX_HELLO '+BUILD['session_token']).encode(),'192.168.8.42')
   print('Beacon and pinned-identity proof checks passed; no phone contacted.');return

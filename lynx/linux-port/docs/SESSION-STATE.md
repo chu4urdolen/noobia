@@ -3950,3 +3950,38 @@ symlink refusal for new staging/archive paths. Live verification against the
 expanded successful VM receipt passed again at
 logs/alpine-runtime-verify-1792182448802972450, reusing verified inputs and
 preserving watcher PID inventory. No fresh installation or reboot occurred.
+
+### OpenRC handoff gate built offline
+
+Found a real ordering gap: the proven V19 boot starts Wi-Fi/SSH, while battery
+and thermal watchers are installed later by separate host workflows. The V19
+contact marker therefore cannot safely authorize an immediate PID 1 change.
+Added an opt-in gate that leaves BusyBox as PID 1 until the host's sensor,
+battery, and runtime-power stages have completed and current readings pass.
+The guard checks matching tokens, exact watcher script hashes and live command
+lines, battery monitor/gauge availability, a recent clean sample (<35C and
+>=20% charge), complete CPU/SoC sensors (<40C), and the three expected cooling
+controls. The host armer verifies the same live guard and boot ID before it
+atomically creates the marker.
+
+`tools/build_openrc_gated_candidate.py` created a local-only 64 MiB V20 image
+at `linux-port/artifacts/openrc-gated-v20-guardv6/`, SHA256
+53156a5f9722eb799f2e27c777d3f63a143fbde339851a3f81683bb0bf9a2dad. It embeds
+the verified Alpine/OpenRC root and keeps the existing V19 kernel, boot layout,
+and native network startup. The 16,686,490-byte payload fits the existing
+40,000,000-byte exclusive bound. Candidate inherits private Wi-Fi/SSH
+credentials, mode 0600; binary candidate and fixtures remain ignored local
+artifacts. Existing V19 and stock restoration files were not changed.
+
+Offline checks passed: synthetic guard tests at
+`artifacts/openrc-handoff-guard-check-1792238268512849510/`; receipt checks at
+`artifacts/openrc-handoff-armer-check-1792238268802038131/`; the production
+handoff shell (test-only passing guard fixture) booted OpenRC as PID 1 under
+the exact V19 kernel, preserved an early worker, ran its test service, and
+powered off in QEMU at
+`artifacts/openrc-pid1-handoff-vm-1792238269248471845/`. No phone contact,
+boot, reboot, or partition write occurred. The combined fresh-boot sensor +
+battery + runtime-power sequence and a real handset OpenRC handoff remain
+untested. OpenRC does not yet supervise Lynx Wi-Fi/SSH itself. Keep the flash
+hold and require a separately supervised hardware trial after the candidate
+and restoration procedure are reviewed.

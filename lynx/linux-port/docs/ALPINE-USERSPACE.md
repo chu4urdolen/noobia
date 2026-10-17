@@ -201,6 +201,61 @@ must explicitly include the Alpine root's parent directories. This remains a
 QEMU handoff-mechanics test. It does not exercise V19's phone-specific driver,
 Wi-Fi, SSH, or battery/thermal setup, and it is not a handset image.
 
+## Opt-in OpenRC candidate with a fail-closed power gate
+
+`tools/build_openrc_gated_candidate.py` builds a separate local V20 candidate
+from the unchanged V19 image, embeds the exported OpenRC root, and changes only
+the initramfs policy. The 64 MiB image is
+`linux-port/artifacts/openrc-gated-v20-guardv6/nord3-openrc-gated-candidate.img`
+with SHA256
+`53156a5f9722eb799f2e27c777d3f63a143fbde339851a3f81683bb0bf9a2dad`.
+Its combined payload is 16,686,490 bytes, below the existing strict 40,000,000
+byte limit. The file inherits the V19 Wi-Fi and SSH credentials and is mode
+0600; it and all binary inputs stay local and are not published.
+
+After the original pinned SSH contact, the candidate keeps the BusyBox PID 1
+and the V19 beacon alive for up to 30 minutes while separate host tools load
+the reviewed SoC temperature module, install the battery gauge monitor, and
+start the existing temperature, battery, and soft-throttle watchers. No valid
+gate means the original BusyBox Wi-Fi/SSH environment remains running. The
+gate requires matching per-boot tokens, live watcher processes with exact
+source hashes, the identified battery monitor and readable gauge, a fresh
+error-free battery sample below 35°C with at least 20% charge, one SoC and two
+CPU sensors all below 40°C, and exactly three present CPU cooling controls.
+`tools/arm_openrc_handoff.py` writes the one-boot marker only after a fresh
+pinned identity/boot-ID check and the same live guard passes. A refusal leaves
+the marker unwritten.
+
+Validation: `tools/test_openrc_handoff_guard.py` passes nine synthetic safety
+cases; `tools/test_arm_openrc_handoff.py` accepts only the matching candidate,
+native contact, and successful runtime-power receipts. The production
+`openrc-handoff.sh` itself passed an isolated QEMU run with the exact V19 stock
+kernel: it verified the root archive hash, extracted Alpine, bound proc/sys/dev/run,
+replaced PID 1 with OpenRC, preserved a worker from BusyBox, ran a test service,
+and powered down cleanly. Latest receipt:
+`linux-port/artifacts/openrc-pid1-handoff-vm-1792238269248471845/`.
+The VM substitutes a passing guard fixture because it has no Lynx sensors.
+This still is not a handset boot, and OpenRC does not yet manage Lynx's Wi-Fi
+or SSH services. No phone was contacted and no partition was changed.
+
+For a future supervised V20 boot, the host stages must run in this order:
+
+```sh
+python3 tools/lynx_wifi_v19_contact.py --listen --seconds 600
+python3 tools/lynx_sensor_trial.py --listen --keep-running --seconds 300
+python3 tools/resume_battery_session.py --start --runtime-power
+python3 tools/arm_openrc_handoff.py --session CONTACT_RECEIPT \
+  --runtime-power RUNTIME_POWER_RECEIPT --arm
+```
+
+The first listener receipt and runtime-power receipt must belong to that same
+boot; the armer checks the V20 image hash, pinned native identity, token, boot
+ID, live watcher scripts, and current sensor/gauge state before writing the
+marker. The first three host-side steps and the complete fresh-boot sequence
+remain untested together on Lynx. Keep the existing stock restore procedure
+and bootloader/recovery path intact; do not treat the offline candidate or VM
+pass as a reason to flash before that supervised hardware validation.
+
 The stock OTA also identifies a real integration constraint for Wi-Fi: its
 `wlan_drv_gen4m_6983.ko` matches the exact 5.10.149 kernel, but depends on the
 MediaTek/Oplus connectivity stack (`conninfra`, `wmt_chrdev_wifi_connac2`,

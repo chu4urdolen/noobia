@@ -1,7 +1,28 @@
-# Lynx automatic health supervision — current RAM session
+# Lynx automatic health supervision — fresh-boot RAM trial
 
-Lynx's V19 native BusyBox boot is reachable through pinned SSH on this boot
-(`e1af6ca5-ca54-46e9-8cdf-9a1dbea56994`). The existing thermal watcher reads
+On 2026-10-18, the guarded fresh-boot V19 RAM trial succeeded on Lynx with USB
+unplugged. The listener was armed before the checked power-off request; a new
+V19 boot sent its Wi-Fi beacon 143 seconds after listener arm, pinned SSH
+answered, and the
+Fastboot fallback was acknowledged. The trial refused stale RAM state and an
+online charger, verified hashes after upload, passed the handset hardware
+preflight, and loaded the reviewed modules in order. The gauge returned
+DeviceType 42495 before the battery monitor was enabled. All four on-phone
+watchers started and the health supervisor passed its final live check.
+No partition was written. Receipts:
+`logs/autonomous-health-window-1792276571479014331/result.json`,
+`logs/wifi-v19-contact-1792276571534186723/result.json`, and
+`logs/autonomous-health-ram-trial-1792276717955774721/result.json`.
+The four-hour observational logger is active at
+`logs/battery-session-1792276725293904387/result.json`. Its first two samples
+showed 24.0–24.1°C battery, 61% charge, CPU/SoC sensors around 30–38°C,
+three cooling controls, and repeated `LYNX_HEALTH_OK`. Charging and V24's
+automatic image hook still require handset validation, so the Linux flash hold
+remains active and Lynx should stay unplugged.
+
+Lynx's V19 native BusyBox boot is reachable through pinned SSH. The earlier
+supervised boot had ID `e1af6ca5-ca54-46e9-8cdf-9a1dbea56994`. The existing
+thermal watcher reads
 CPU/SoC sensors every five seconds and requests power-off at 60°C. The existing
 battery watcher reads the identified ZY0603-family gauge every five seconds and
 requests power-off at 45°C. The tested cooling watcher applies one CPU cooling
@@ -68,8 +89,8 @@ all six packed drivers. A six-case filesystem fixture at
 `artifacts/autonomous-health-preflight-check-1792264353611654369/result.json`
 passed, including refusals for a missing bootstrap module, changed device
 tree, truncated calibration, already-bound gauge, and missing packed driver.
-It has not been run at a fresh handset boot and performs no insertion. Its
-input archive must be hash-verified by the boot loader before extraction.
+It passed the fresh handset preflight above and performs no insertion. Its input
+archive was hash-verified on Lynx before extraction.
 
 `linux-port/autonomous-health-start.sh` is the next **offline candidate** for
 the supervised post-SSH stage. It runs that preflight, inserts only the four
@@ -78,10 +99,10 @@ same-boot gauge DeviceType query, loads the gated battery monitor, starts the
 battery watcher, applies the tested WFI fallback, waits for a below-40°C
 cooling start, then starts the health supervisor. An independent 180-second
 timer requests power-off if an insertion blocks. Its plan and shell syntax
-pass local checks. The script is not packaged into V19/V22 or run on Lynx;
-module insertion, gauge setup, timing, and failure handling at unattended
-cold boot remain unproven. A supervised trial and recovery review must precede
-any flash.
+pass local checks. The script is not packaged into V19/V22. It passed the
+supervised fresh V19 RAM trial above; the V24 image hook and failure handling
+in an unattended cold boot remain unproven. Recovery review must precede any
+flash.
 The startup control flow also passed a disposable filesystem fixture at
 `artifacts/autonomous-health-start-check-1792275808786171502/result.json`:
 an unconfirmed boot was refused before insertion, and a confirmed fake boot
@@ -131,23 +152,22 @@ the archive and scripts on Lynx, runs the read-only hardware preflight, and
 starts the health stage in RAM with raw receipts for each step. On a failed
 unprotected session it requests power-off. On success it starts a bounded
 four-hour host logger while on-phone watchers remain independent. This sequence
-has not been armed or run on the phone yet; it requires Noob's current
-unplugged confirmation and a coordinated fresh V19 boot. No partition write
-is part of the trial.
+passed on the phone with Noob's unplugged confirmation and a coordinated fresh
+V19 boot. No partition write was part of the trial.
 The detached worker's offline sequence test passed at
 `artifacts/autonomous-window-check-1792276271144450533/result.json`:
 listener readiness precedes the RAM trial, a successful trial starts the host
 logger, and missing unplugged confirmation is refused. It uses mocks and did
 not arm the real listener.
-When Noob confirms Lynx is still physically unplugged and ready, arm that
-listener first. `tools/request_safe_v19_poweroff.py` then rechecks the pinned
-current boot, on-phone health supervisor, and unplugged charger state before
-requesting power-off over SSH; it records the raw result without claiming
-physical shutdown. Only after that should Noob press Power once to start a
-fresh V19 boot. These steps have not been executed yet.
+Noob confirmed Lynx was unplugged, the listener was armed, and
+`tools/request_safe_v19_poweroff.py` rechecked the pinned boot and power state
+before sending power-off. Noob was then asked to press Power once. The
+power-off receipt records only that the command was sent; the new pinned V19
+beacon and fresh-state checks establish that a new boot occurred.
 The helper's **read-only** preflight passed on the current boot at
 `logs/safe-v19-poweroff-1792276331596267479/result.json`; no power-off was
-requested. The physical confirmation and listener arm are still pending.
+requested in that preflight. The executed power-off request is recorded at
+`logs/safe-v19-poweroff-1792276593071806724/result.json`.
 
 After the first one-hour host logger ended, Lynx remained reachable and the
 on-phone health supervisor passed again at

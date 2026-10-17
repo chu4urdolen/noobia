@@ -1,20 +1,23 @@
 # Current handoff — 2026-10-18
 
-Lynx remains on the same V19 RAM boot and answered pinned SSH after the first
-host logger expired. A fresh on-phone health check passed with 23.5°C battery,
-63% charge, and about 30°C CPU/SoC; runtime power verification passed. A new
-bounded host logger is active at
-`logs/battery-session-1792275518601564562/result.json`. The autonomous
-preflight gate and six offline refusal checks are in `HEALTH-SUPERVISION.md`.
+Lynx completed a fresh, USB-unplugged V19 boot and a supervised RAM-only
+automatic health startup trial. Pinned Wi-Fi/SSH returned, all reviewed
+sensor/CPU and battery modules loaded in the guarded order, and thermal,
+battery, cooling, and health watchers passed live checks. Battery was
+24.0–24.1°C at 61%; CPU/SoC sensors were around 30–38°C during startup.
+The four-hour host logger is active at
+`logs/battery-session-1792276725293904387/result.json`. The full trial
+receipt is `logs/autonomous-health-window-1792276571479014331/result.json`;
+see `HEALTH-SUPERVISION.md` for the module and safety details. No partition was
+written, and Lynx remains physically unplugged.
 The guarded startup sequence is scripted and packed into an inert V23 layout
 candidate. A separate V24 offline prototype adds a post-SSH boot hook; host
 fixtures, complete image-member audits, and a stock-kernel VM handoff with
-fake hardware passed. No handset boot has exercised it. Real module startup
-remains untested and the Linux flash hold remains active. Neither V23 nor V24
-is installed on Lynx.
-The prepared next hardware step is a fresh, unplugged **RAM-only** V19 health
-startup trial using `tools/arm_autonomous_health_trial.py`; it is not armed.
-Start its listener before asking Noob to reboot Lynx. Do not flash V24 first.
+fake hardware passed. The guarded module startup now has fresh-boot handset
+evidence in RAM, but the V24 image hook, unattended failure path, and native
+charging remain untested. The Linux flash hold remains active. Neither V23 nor
+V24 is installed on Lynx. Do not flash V24 without a specific recovery and
+safety review.
 
 Latest live update: Lynx booted V19 with a black screen and sent a valid beacon
 from `192.168.100.7`. Pinned SSH acknowledged boot ID

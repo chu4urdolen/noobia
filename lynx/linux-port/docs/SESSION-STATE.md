@@ -3979,9 +3979,16 @@ Offline checks passed: synthetic guard tests at
 handoff shell (test-only passing guard fixture) booted OpenRC as PID 1 under
 the exact V19 kernel, preserved an early worker, ran its test service, and
 powered off in QEMU at
-`artifacts/openrc-pid1-handoff-vm-1792238269248471845/`. No phone contact,
+`artifacts/openrc-pid1-handoff-vm-1792238374125268640/`. No phone contact,
 boot, reboot, or partition write occurred. The combined fresh-boot sensor +
 battery + runtime-power sequence and a real handset OpenRC handoff remain
 untested. OpenRC does not yet supervise Lynx Wi-Fi/SSH itself. Keep the flash
 hold and require a separately supervised hardware trial after the candidate
 and restoration procedure are reviewed.
+
+Added `tools/run_openrc_handoff_sequence.py` as a one-command host coordinator
+for a future boot of this exact candidate. It serializes pinned contact, the
+RAM-only SoC sensor/watch trial, the existing battery/runtime-power resume,
+and the OpenRC gate armer; it preserves per-stage receipts and performs no
+flash or reboot. Local preflight/self-test passed. It will not be started until
+the candidate is actually booted, which is not the current phone state.

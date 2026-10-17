@@ -233,28 +233,27 @@ native contact, and successful runtime-power receipts. The production
 kernel: it verified the root archive hash, extracted Alpine, bound proc/sys/dev/run,
 replaced PID 1 with OpenRC, preserved a worker from BusyBox, ran a test service,
 and powered down cleanly. Latest receipt:
-`linux-port/artifacts/openrc-pid1-handoff-vm-1792238269248471845/`.
+`linux-port/artifacts/openrc-pid1-handoff-vm-1792238374125268640/`.
 The VM substitutes a passing guard fixture because it has no Lynx sensors.
 This still is not a handset boot, and OpenRC does not yet manage Lynx's Wi-Fi
 or SSH services. No phone was contacted and no partition was changed.
 
-For a future supervised V20 boot, the host stages must run in this order:
+For a future supervised V20 boot, one bounded host coordinator runs the
+contact, temperature, battery/power, and arming stages in order. Its default
+mode only validates the local candidate; `--listen` begins the network
+workflow and expects V20 to be booted already:
 
 ```sh
-python3 tools/lynx_wifi_v19_contact.py --listen --seconds 600
-python3 tools/lynx_sensor_trial.py --listen --keep-running --seconds 300
-python3 tools/resume_battery_session.py --start --runtime-power
-python3 tools/arm_openrc_handoff.py --session CONTACT_RECEIPT \
-  --runtime-power RUNTIME_POWER_RECEIPT --arm
+python3 tools/run_openrc_handoff_sequence.py --listen
 ```
 
-The first listener receipt and runtime-power receipt must belong to that same
-boot; the armer checks the V20 image hash, pinned native identity, token, boot
-ID, live watcher scripts, and current sensor/gauge state before writing the
-marker. The first three host-side steps and the complete fresh-boot sequence
-remain untested together on Lynx. Keep the existing stock restore procedure
-and bootloader/recovery path intact; do not treat the offline candidate or VM
-pass as a reason to flash before that supervised hardware validation.
+The coordinator preserves each stage receipt and starts no flashing or reboot.
+The contact and runtime-power receipts must belong to the same boot; the armer
+checks the V20 image hash, pinned native identity, token, boot ID, live watcher
+scripts, and current sensor/gauge state before writing the marker. The complete
+fresh-boot sequence remains untested together on Lynx. Keep the existing stock
+restore procedure and bootloader/recovery path intact; the offline candidate
+and VM pass do not establish a phone boot.
 
 The stock OTA also identifies a real integration constraint for Wi-Fi: its
 `wlan_drv_gen4m_6983.ko` matches the exact 5.10.149 kernel, but depends on the

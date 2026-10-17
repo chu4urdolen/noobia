@@ -1,4 +1,4 @@
-"""Build a private offline V26 Alpine/OpenRC self-boot prototype from V25c.
+"""Build a private offline V26b Alpine/OpenRC self-boot prototype from V25c.
 
 No handset contact or partition write. This image is not eligible for flashing
 under the active thermal safety hold.
@@ -14,7 +14,7 @@ import build_health_stage_candidate as stage
 
 ROOT, PORT = stage.ROOT, stage.PORT
 BASE = PORT / 'artifacts/selfboot-health-v25c-offline'
-OUT = PORT / 'artifacts/selfboot-alpine-v26-offline'
+OUT = PORT / 'artifacts/selfboot-alpine-v26b-offline'
 sys.path.insert(0, str(PORT))
 from image_formats import read_boot_v4, read_newc, require
 from ramdisk_codec import decompress
@@ -25,15 +25,15 @@ stop
 '''
 NEW_TAIL = b'''log 'LOCAL_SELFBOOT_WIFI_SSH_HEALTH_ACTIVE; ATTEMPTING_ALPINE_PID1'
 . /etc/lynx/openrc-local-handoff.sh || { log 'LOCAL_OPENRC_SCRIPT_LOAD_FAILED; BUSYBOX_RESCUE_ACTIVE'; stop; }
-lynx_openrc_local_handoff
-log 'LOCAL_OPENRC_HANDOFF_REFUSED; BUSYBOX_RESCUE_ACTIVE'
+lynx_openrc_local_handoff || { log 'LOCAL_OPENRC_HANDOFF_REFUSED; BUSYBOX_RESCUE_ACTIVE'; stop; }
+log 'LOCAL_OPENRC_HANDOFF_RETURNED; BUSYBOX_RESCUE_ACTIVE'
 stop
 '''
 
 
 def main():
     os.umask(0o077)
-    require(not OUT.exists(), 'Refuse to replace V26 prototype')
+    require(not OUT.exists(), 'Refuse to replace V26b prototype')
     parent = json.loads((BASE / 'build-result.json').read_text())
     source = (BASE / 'nord3-selfboot-health-untested.img').read_bytes()
     require(parent.get('state') == 'offline-selfboot-health-candidate-untested' and

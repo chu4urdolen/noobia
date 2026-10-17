@@ -2,7 +2,7 @@
 
 New offline development toward a Nexus-independent Alpine boot is recorded in
 `SELFBOOT-ALPINE.md`. V25c starts the reviewed health stage before Wi-Fi and
-keeps BusyBox PID 1; V26 adds an Alpine/OpenRC PID 1 handoff. Local gates and
+keeps BusyBox PID 1; V26b adds an Alpine/OpenRC PID 1 handoff. Local gates and
 the handoff passed host fixtures and an exact-stock-kernel VM with fake
 hardware. Both images remain **unflashed** under `SAFETY-HOLD.json`; V19 is
 still installed. The Alpine base payload is immutable in `boot_a`; writable

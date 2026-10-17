@@ -13,6 +13,11 @@ No partition was written. Receipts:
 `logs/autonomous-health-window-1792276571479014331/result.json`,
 `logs/wifi-v19-contact-1792276571534186723/result.json`, and
 `logs/autonomous-health-ram-trial-1792276717955774721/result.json`.
+The offline V24 equivalence audit at
+`artifacts/v24-trial-equivalence-1792276839228038762/result.json` confirms
+that the image contains byte-identical health scripts and module archive to
+this successful RAM trial. V24's new init hook and handoff are separate code
+paths and still need handset validation.
 The four-hour observational logger is active at
 `logs/battery-session-1792276725293904387/result.json`. Its first two samples
 showed 24.0–24.1°C battery, 61% charge, CPU/SoC sensors around 30–38°C,

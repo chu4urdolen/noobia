@@ -71,6 +71,18 @@ tree, truncated calibration, already-bound gauge, and missing packed driver.
 It has not been run at a fresh handset boot and performs no insertion. Its
 input archive must be hash-verified by the boot loader before extraction.
 
+`linux-port/autonomous-health-start.sh` is the next **offline candidate** for
+the supervised post-SSH stage. It runs that preflight, inserts only the four
+reviewed stock sensor/CPU modules, starts the temperature watcher, repeats the
+same-boot gauge DeviceType query, loads the gated battery monitor, starts the
+battery watcher, applies the tested WFI fallback, waits for a below-40°C
+cooling start, then starts the health supervisor. An independent 180-second
+timer requests power-off if an insertion blocks. Its plan and shell syntax
+pass local checks. The script is not packaged into V19/V22 or run on Lynx;
+module insertion, gauge setup, timing, and failure handling at unattended
+cold boot remain unproven. A supervised trial and recovery review must precede
+any flash.
+
 After the first one-hour host logger ended, Lynx remained reachable and the
 on-phone health supervisor passed again at
 `logs/live-health-after-logger-1792275511617151253/result.json`: 23.5°C

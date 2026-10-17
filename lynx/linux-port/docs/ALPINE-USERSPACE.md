@@ -148,6 +148,41 @@ before using that command. The offline replay passed in the exact-kernel VM;
 the phone's actual package install used HTTPS. A complete fresh-boot combined
 hardware replay has not been performed.
 
+## Development layer and recoverable checkpoint
+
+During one verified continuous native session, the existing RAM chroot grew
+from 23 to 49 signed Alpine packages. Python 3.14.8 passed ARM64, OpenSSL,
+SQLite in-memory query, and thread/hash checks; Git 2.54.0 and Make 4.4.1
+started successfully. All 23 earlier package versions were pinned during the
+APK transaction. The command preserved the original boot ID and all three
+thermal/battery watcher processes. It increased the `/run` tmpfs size limit
+from 128 to 256 MiB; it did not preallocate that memory. The package install
+itself used about 65 MiB in the chroot. Receipt and raw output:
+`logs/live-alpine-development-1792183223446552019/`.
+
+That development layer was RAM-only and was lost when Lynx left the session.
+The earlier base Alpine checkpoint remains on Nexus at
+`checkpoints/alpine-runtime-1792183113469592155/`; its gzip archive SHA256 is
+`8777d923ad8473066026d2a62f3c050581be4b28c5bfa53d0dde0e9a8c83559c`.
+The package/world inventory was stable across capture. Its exact Alpine tree
+was reconstructed without extracting files onto Nexus and booted in an
+isolated QEMU VM with the frozen V19 stock kernel. The APK inventory and world
+file matched byte-for-byte, and the VM powered down cleanly:
+`linux-port/artifacts/alpine-checkpoint-restore-1792234450094278990/`.
+This restore proves the saved **base** userspace can be reconstructed; it does
+not include Python, Git or Make, and it is not a phone boot or a write to a
+phone partition. Earlier failed VM harnesses are retained beside the passing
+receipt.
+
+`tools/continue_alpine_development.py --resume-receipt RECEIPT` waits for the
+guarded resume workflow to bring the native session and Alpine base back. It
+then verifies the existing power watchers, installs the pinned development
+layer, runs the read-only Python system report, captures a new checkpoint,
+and tests that exact development checkpoint under QEMU. The workflow is bounded
+and records partial failures; it does not reboot, flash, or stop the phone.
+The current unattended continuation is recorded under
+`logs/alpine-development-continuation-*`.
+
 ## Private evidence
 
 - Download/signature receipt: `downloads/alpine-rootfs-3.24.2-1792179591745064903`.

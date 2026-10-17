@@ -1,18 +1,16 @@
 """Run the VM-proven optional RAM stage after native SSH and power setup."""
 import argparse
-import io
 import json
 import os
 import shlex
 import subprocess
 import sys
-import tarfile
 import time
 import uuid
 from pathlib import Path
 
 from alpine_rootfs import ROOT
-from prepare_alpine_runtime_stage import prepare, sha
+from prepare_alpine_runtime_stage import prepare, pack_inputs, sha
 
 
 def load_stage(path):
@@ -35,9 +33,10 @@ def main():
     action = parser.add_mutually_exclusive_group()
     action.add_argument('--install', action='store_true')
     action.add_argument('--verify-existing', action='store_true')
+    action.add_argument('--isolated-replay', action='store_true')
     args = parser.parse_args()
-    if not args.install and not args.verify_existing:
-        print('Use --session RECEIPT --stage-receipt RECEIPT --install or --verify-existing. No phone contacted.')
+    if not any([args.install, args.verify_existing, args.isolated_replay]):
+        print('Use --session RECEIPT --stage-receipt RECEIPT with --install, --verify-existing or --isolated-replay. No phone contacted.')
         return
     if args.session is None or args.stage_receipt is None:
         parser.error('--session and --stage-receipt required')
@@ -45,14 +44,21 @@ def main():
     args.session = args.session.resolve(strict=True)
     args.stage_receipt = args.stage_receipt.resolve(strict=True)
     members, inventory = load_stage(args.stage_receipt)
+    replay = None
+    if args.isolated_replay:
+        stage_vm = json.loads(args.stage_receipt.read_text())
+        replay = (ROOT / 'linux-port/alpine-isolated-replay.sh').read_bytes()
+        if not (stage_vm.get('isolated_replay_requested') and stage_vm['checks'].get('isolated_cold_replay')
+                and stage_vm['checks'].get('isolated_parent_preserved') and sha(replay) == stage_vm.get('replay_sha256')):
+            raise ValueError('Matching successful isolated-replay VM evidence required')
     os.umask(0o077)
-    label = 'alpine-rootfs-trial-' if args.install else 'alpine-runtime-verify-'
+    label = 'alpine-isolated-replay-' if args.isolated_replay else ('alpine-rootfs-trial-' if args.install else 'alpine-runtime-verify-')
     out = ROOT / 'logs' / (label + str(time.time_ns()))
     out.mkdir(mode=0o700)
     report = {'state': 'starting', 'started_ns': time.time_ns(), 'operations': [],
               'session': str(args.session.resolve()), 'stage_receipt': str(args.stage_receipt.resolve()),
               'rootfs_inventory': inventory, 'destination': '/run/lynx/alpine-3.24.2',
-              'mode': 'install' if args.install else 'verify-existing', 'flash_performed': False,
+              'mode': 'isolated-replay' if args.isolated_replay else ('install' if args.install else 'verify-existing'), 'flash_performed': False,
               'new_services': False, 'unconditional_shutdown': False}
     def save():
         temporary = out / 'result.tmp'
@@ -117,10 +123,7 @@ cat /run/lynx/thermal-watch.pid /run/lynx/battery-watch.pid /run/lynx/thermal-co
             report['input_upload'] = 'reused-verified-existing'
         elif existing == 'LYNX_STAGE_INPUTS_ABSENT\n':
             archive = out / 'inputs.tar'
-            with tarfile.open(archive, 'w') as target:
-                for name, data in sorted(members.items()):
-                    member = tarfile.TarInfo(name); member.mode = 0o600; member.size = len(data)
-                    target.addfile(member, io.BytesIO(data))
+            archive.write_bytes(pack_inputs(members))
             archive_hash = sha(archive.read_bytes())
             # Refuse partial state; never overwrite or clean failed work.
             upload = guard + 'test ! -e ' + destination + '; test ! -L ' + destination + '; test ! -e ' + destination + '.tar.partial; test ! -L ' + destination + '.tar.partial; '
@@ -130,9 +133,31 @@ cat /run/lynx/thermal-watch.pid /run/lynx/battery-watch.pid /run/lynx/thermal-co
             report['input_upload'] = 'created-new'
         else:
             raise ValueError('Unexpected input inventory response')
-        stage_mode = '--install' if args.install else '--verify'
-        proof = live('run', guard + '/bin/busybox sh ' + destination + '/stage.sh ' + shlex.join([stage_mode, boot_id, destination]), timeout=55)
-        if 'LYNX_ALPINE_RUNTIME_STAGE_READY\n' not in proof:
+        if args.isolated_replay:
+            payload = out / 'replay-source'
+            payload.write_bytes(replay)
+            archive_hash = sha(pack_inputs(members))
+            command = guard + 'echo "' + archive_hash + '  ' + destination + '.tar.partial" | sha256sum -c -; '
+            command += '''parent_namespace=$(/bin/busybox readlink /proc/self/ns/mnt)
+test "$parent_namespace" = "$(/bin/busybox readlink /proc/1/ns/mnt)"
+mounts_before=$(/bin/busybox sha256sum /proc/self/mountinfo)
+pid1_before=$(/bin/busybox sha256sum /proc/1/exe)
+'''
+            command += '/bin/busybox unshare -m --propagation private /bin/busybox sh -s -- ' + boot_id + ' "$parent_namespace" 3< ' + destination + '.tar.partial\n'
+            command += '''test "$parent_namespace" = "$(/bin/busybox readlink /proc/self/ns/mnt)"
+test "$mounts_before" = "$(/bin/busybox sha256sum /proc/self/mountinfo)"
+test "$pid1_before" = "$(/bin/busybox sha256sum /proc/1/exe)"
+echo LYNX_ALPINE_ISOLATED_PARENT_PRESERVED
+'''
+            proof = live('run', command, payload, timeout=55)
+            marker = 'LYNX_ALPINE_ISOLATED_COLD_REPLAY_PASS\n'
+            if 'LYNX_ALPINE_ISOLATED_PARENT_PRESERVED\n' not in proof:
+                raise ValueError('Parent runtime not verified after isolated replay')
+        else:
+            stage_mode = '--install' if args.install else '--verify'
+            proof = live('run', guard + '/bin/busybox sh ' + destination + '/stage.sh ' + shlex.join([stage_mode, boot_id, destination]), timeout=55)
+            marker = 'LYNX_ALPINE_RUNTIME_STAGE_READY\n'
+        if marker not in proof:
             raise ValueError('Missing stage success marker')
         after = run('power-after', tool('configure_runtime_power.py', '--session', args.session, '--verify-only'))
         if after['state'] != 'ready' or json.loads(Path(after['result']).read_text())['boot_id'] != boot_id:
@@ -140,13 +165,13 @@ cat /run/lynx/thermal-watch.pid /run/lynx/battery-watch.pid /run/lynx/thermal-co
         pids_after = live('watchers-after', guard + 'cat /run/lynx/thermal-watch.pid /run/lynx/battery-watch.pid /run/lynx/thermal-cooling-watch/pid').strip().splitlines()
         if pids_after != pids_before:
             raise ValueError('Watcher PID inventory changed')
-        report.update(state='native-userspace-verified', native_rootfs_verified=True,
-                      original_runtime_verified=True, rootfs_left_in_ram=True, watcher_pids_unchanged=True)
+        report.update(state='isolated-replay-verified' if args.isolated_replay else 'native-userspace-verified', native_rootfs_verified=True,
+                      original_runtime_verified=True, rootfs_left_in_ram=not args.isolated_replay, watcher_pids_unchanged=True)
     except Exception as error:
         report.update(state='failed', error=str(error))
     report['finished_ns'] = time.time_ns(); save()
     print(json.dumps({'state': report['state'], 'result': str(out / 'result.json')}))
-    if report['state'] != 'native-userspace-verified':
+    if report['state'] not in ['native-userspace-verified', 'isolated-replay-verified']:
         raise SystemExit(1)
 
 

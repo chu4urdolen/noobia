@@ -25,6 +25,15 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def pack_inputs(members):
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode='w') as target:
+        for name, data in sorted(members.items()):
+            member = tarfile.TarInfo(name); member.mode = 0o600; member.size = len(data)
+            target.addfile(member, io.BytesIO(data))
+    return buffer.getvalue()
+
+
 def prepare(rootfs_receipt, package_receipt):
     rootfs, inventory = read_rootfs(rootfs_receipt)
     receipt = json.loads(package_receipt.read_text())
@@ -68,7 +77,10 @@ def main():
     parser.add_argument('--rootfs-receipt', type=Path, required=True)
     parser.add_argument('--package-receipt', type=Path, required=True)
     parser.add_argument('--test-vm', action='store_true')
+    parser.add_argument('--isolated-replay', action='store_true')
     args = parser.parse_args()
+    if args.isolated_replay and not args.test_vm:
+        parser.error('--isolated-replay requires --test-vm')
     os.umask(0o077)
     members, inventory = prepare(args.rootfs_receipt, args.package_receipt)
     out = ROOT / 'linux-port/artifacts' / ('alpine-runtime-stage-' + str(time.time_ns()))
@@ -141,6 +153,23 @@ $BB chroot /run/lynx/alpine-3.24.2 /bin/sh -c 'test "$(cat /proc/sys/kernel/rand
 echo LYNX_ALPINE_STAGE_VM_PASS
 $BB poweroff -f
 '''
+        if args.isolated_replay:
+            replay = (ROOT / 'linux-port/alpine-isolated-replay.sh').read_bytes()
+            put(entries, 'replay-inputs.tar', pack_inputs(members), 0o100600)
+            put(entries, 'isolated-replay.sh', replay, 0o100600)
+            (out / 'replay-source').write_bytes(replay)
+            report.update(isolated_replay_requested=True, replay_sha256=sha(replay))
+            extra = b'''
+parent_namespace=$($BB readlink /proc/self/ns/mnt)
+mounts_before=$($BB sha256sum /proc/self/mountinfo)
+$BB unshare -m --propagation private $BB sh /isolated-replay.sh "$boot" "$parent_namespace" 3< /replay-inputs.tar
+test "$parent_namespace" = "$($BB readlink /proc/self/ns/mnt)"
+test "$mounts_before" = "$($BB sha256sum /proc/self/mountinfo)"
+test -r /run/lynx/alpine-3.24.2/proc/meminfo
+kill -0 "$witness"
+echo LYNX_ALPINE_ISOLATED_PARENT_PRESERVED
+'''
+            init = init.replace(b'echo LYNX_ALPINE_STAGE_VM_PASS\n', extra + b'echo LYNX_ALPINE_STAGE_VM_PASS\n')
         put(entries, 'init', init)
         (out / 'init-source').write_bytes(init)
         (out / 'Image').write_bytes(gzip.decompress(boot['kernel']))
@@ -168,6 +197,9 @@ $BB poweroff -f
         checks = {name.lower(): ('LYNX_ALPINE_STAGE_' + name + '\r\n').encode() in console for name in markers}
         checks.update(clean_poweroff=b'reboot: Power down' in console, no_panic=b'Kernel panic' not in console,
                       no_unexpected_reinstall=b'LYNX_ALPINE_STAGE_UNEXPECTED_REINSTALL\r\n' not in console)
+        if args.isolated_replay:
+            checks.update(isolated_cold_replay=b'LYNX_ALPINE_ISOLATED_COLD_REPLAY_PASS\r\n' in console,
+                          isolated_parent_preserved=b'LYNX_ALPINE_ISOLATED_PARENT_PRESERVED\r\n' in console)
         report.update(vm_passed=rc == 0 and not timed_out and all(checks.values()), checks=checks,
                       console_sha256=sha(console), elapsed_seconds=time.monotonic() - started,
                       exit_code=rc, timed_out=timed_out)

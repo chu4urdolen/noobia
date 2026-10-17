@@ -3879,6 +3879,46 @@ FULL COMBINED FRESHBOOT HARDWARE SEQUENCE REMAINS UNTESTED. Do not reboot
 usefulsessionjusttotest. ColdinstallpassedVM; existing-rootfsverify/reusepassed
 phone. Those are distinct proofs, not a new handsetPID1boot.
 
+### Development userspace, checkpoint recovery, and unattended continuation
+
+In the same verified handset boot cf5e2ccf-5c49-485e-9403-b12e3d6bb574, the
+RAM Alpine chroot received signed Python 3.14.8, Git 2.54.0 and Make 4.4.1.
+All 23 pre-existing packages were pinned; the final environment had 49 packages
+and used about65.4MiB. Python's AArch64, OpenSSL, SQLite and thread checks
+passed, as did Git/Make version execution. The `/run` tmpfs limit was safely
+raised from128 to256MiB to provide headroom. Original BusyBox PID1 and the
+three thermal/battery watchers remained live at the time of installation.
+Evidence: `logs/live-alpine-development-1792183223446552019/`.
+
+The development rootfs was volatile and disappeared after Lynx left that
+session. The earlier base-only checkpoint at
+`checkpoints/alpine-runtime-1792183113469592155/` remains on Nexus; it has
+10,082,382 compressed bytes and SHA
+8777d923ad8473066026d2a62f3c050581be4b28c5bfa53d0dde0e9a8c83559c. The new
+`tools/test_alpine_checkpoint_restore.py` reconstructs members in memory,
+checks archive paths and parents, builds an initramfs without host extraction,
+then boots the exact stock kernel in a NIC/disk-free QEMU VM. After correcting
+CPIO parent ordering, the base checkpoint matched its saved APK/world
+inventory byte-for-byte and powered off cleanly:
+`linux-port/artifacts/alpine-checkpoint-restore-1792234450094278990/`.
+This is a tested restore on Nexus, not a handset boot. Earlier failed
+reconstruction attempts and logs remain preserved.
+
+The user reached Fastboot, then proceeded through Orange State into normal
+boot and stepped away. No flash or reboot command was issued. To resume without
+physical interaction, a guarded 600-second identity-beacon listener was
+started through `tools/resume_battery_session.py --start --runtime-power`
+with the already VM-verified Alpine stage. Launcher/worker receipt:
+`logs/battery-resume-1792234503946756474/result.json`; listener receipt:
+`logs/gauge-identity-trial-1792234504186045668/result.json`. It is waiting for
+Lynx's native identity beacon. If that workflow reaches its guarded online
+state, `tools/continue_alpine_development.py --resume-receipt ...` runs the
+fresh battery/thermal checks, reinstalls Python/Git/Make, executes the
+read-only Python report, checkpoints the resulting rootfs, and validates that
+development checkpoint under QEMU. Each step saves captures and stops on an
+unexpected state. No unconditional shutdown, partition change, slot change or
+bootloader/recovery operation is part of it.
+
 Finalhealth logs/live-alpine-stage-final-health-1792182291044366468 sameboot,
 PIDs17580/18190/25373, battery22.2C/80percent/-101mA/noerrors, SoCsoftwatch
 29.463C, run33920KiBfree. Host4hrlogger continues. ExistingV19/stockundo/slotB/

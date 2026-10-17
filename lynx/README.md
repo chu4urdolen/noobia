@@ -1,9 +1,11 @@
 # Lynx: native Linux on the OnePlus Nord 3
 
-**Current milestone:** [Alpine ARM64 userspace and native strace](linux-port/docs/ALPINE-USERSPACE.md)
+**Current milestone:** [Alpine ARM64 userspace, Python/Git/Make and a tested Nexus restore](linux-port/docs/ALPINE-USERSPACE.md)
 
-Alpine and `strace` run in a RAM chroot alongside the proven BusyBox PID 1
-and SSH environment. The [optional offline startup stage](linux-port/docs/ALPINE-RUNTIME-STAGE.md)
+Alpine, `strace`, Python, Git and Make ran in a RAM chroot alongside the
+proven BusyBox PID 1 and SSH environment. A base-only checkpoint has been
+restored under QEMU with the exact stock kernel; the development checkpoint
+is queued for the next native session. The [optional offline startup stage](linux-port/docs/ALPINE-RUNTIME-STAGE.md)
 reconstructs that environment from pinned local inputs in a cold VM and
 verifies the working phone runtime without replacing its services. It can be
 selected after power setup in the existing host-assisted boot-resume helper.

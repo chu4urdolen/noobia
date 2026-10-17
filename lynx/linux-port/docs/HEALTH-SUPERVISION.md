@@ -82,6 +82,12 @@ pass local checks. The script is not packaged into V19/V22 or run on Lynx;
 module insertion, gauge setup, timing, and failure handling at unattended
 cold boot remain unproven. A supervised trial and recovery review must precede
 any flash.
+The startup control flow also passed a disposable filesystem fixture at
+`artifacts/autonomous-health-start-check-1792275808786171502/result.json`:
+an unconfirmed boot was refused before insertion, and a confirmed fake boot
+inserted six mocked modules in the reviewed order and started four fake
+watchers without invoking the power-off timer. The fixture substitutes all
+hardware, kernel modules, and watcher bodies; it is not phone evidence.
 
 An offline V23 packaging check now places the exact inert input archive and
 both health-stage scripts into a separate 64 MiB boot image at

@@ -15,6 +15,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CANDIDATE = ROOT / 'linux-port/artifacts/openrc-gated-v21-fastboot-timeout'
+GATE_BUDGET_SECONDS = 165  # Leave 15 seconds for the handset's 180-second gate.
+
+
+def gate_remaining(verified_ns, now_ns=None):
+    if not isinstance(verified_ns, int) or verified_ns <= 0:
+        raise ValueError('Pinned contact receipt has no valid verification time')
+    if now_ns is None:
+        now_ns = time.time_ns()
+    remaining = GATE_BUDGET_SECONDS - (now_ns - verified_ns) / 1_000_000_000
+    if remaining <= 0:
+        raise TimeoutError('V21 post-contact gate budget expired')
+    return remaining
 
 
 def verified_candidate():
@@ -22,7 +34,7 @@ def verified_candidate():
     image = CANDIDATE / 'nord3-openrc-gated-candidate.img'
     digest = hashlib.sha256(image.read_bytes()).hexdigest()
     if result.get('state') != 'offline-openrc-gated-candidate-built' or digest != result.get('candidate_sha256'):
-        raise ValueError('The local V20 candidate does not match its build receipt')
+        raise ValueError('The local V21 candidate does not match its build receipt')
     if image.stat().st_mode & 0o777 != 0o600:
         raise ValueError('Candidate must remain private mode 0600')
     return result
@@ -39,6 +51,13 @@ def main():
     if args.self_test:
         assert candidate['candidate_sha256'] and steps[-1] == 'arm-openrc-gate'
         assert not args.listen
+        assert gate_remaining(1_000_000_000, 2_000_000_000) == 164
+        try:
+            gate_remaining(1_000_000_000, 166_000_000_000)
+        except TimeoutError:
+            pass
+        else:
+            raise AssertionError('Expired gate budget was accepted')
         print('Candidate hash, private mode, and staged order passed; no phone contacted.')
         return
     if not args.listen:
@@ -54,6 +73,7 @@ def main():
               'steps': steps, 'phone_contacted': False, 'flash_performed': False,
               'boot_or_partition_changed': False, 'started_ns': time.time_ns()}
     receipt = out / 'result.json'
+    verified_ns = None
 
     def save():
         tmp = receipt.with_suffix('.tmp')
@@ -61,6 +81,8 @@ def main():
         tmp.replace(receipt)
 
     def run(name, argv, timeout):
+        if verified_ns is not None:
+            timeout = min(timeout, gate_remaining(verified_ns))
         report['state'] = name
         report['current_step_started_ns'] = time.time_ns()
         save()
@@ -88,8 +110,10 @@ def main():
         contact = contact_dir / 'result.json'
         if json.loads(contact.read_text()).get('state') != 'native-ssh-available':
             raise ValueError('Pinned contact did not reach its completed state')
+        verified_ns = json.loads(contact.read_text()).get('verified_ns')
         report.update(phone_contacted=True, contact_receipt=str(contact))
         save()
+        gate_remaining(verified_ns)
 
         sensor_output = run('temperature-sensor-and-watch',
                             [sys.executable, str(ROOT / 'tools/lynx_sensor_trial.py'), '--listen', '--keep-running', '--usb-unplugged-confirmed', '--seconds', '300'], 330)
@@ -105,7 +129,7 @@ def main():
         worker_receipt = Path(launch['result']).resolve(strict=True)
         if not worker_receipt.is_relative_to(ROOT / 'logs'):
             raise ValueError('Battery resume receipt escaped the Lynx logs directory')
-        deadline = time.monotonic() + 700
+        deadline = time.monotonic() + gate_remaining(verified_ns)
         while time.monotonic() < deadline:
             stage = json.loads(worker_receipt.read_text())
             if stage.get('state') in ('online', 'failed'):
@@ -115,6 +139,7 @@ def main():
             raise ValueError('Battery/runtime-power workflow exceeded its bounded deadline')
         if stage.get('state') != 'online' or not stage.get('runtime_power_receipt'):
             raise ValueError('Battery/runtime-power stage did not reach its guarded online state')
+        gate_remaining(verified_ns)
         power = Path(stage['runtime_power_receipt']).resolve(strict=True)
         report.update(battery_resume_receipt=str(worker_receipt), runtime_power_receipt=str(power))
         save()

@@ -284,6 +284,15 @@ fresh-boot sequence remains untested together on Lynx. Keep the existing stock
 restore procedure and bootloader/recovery path intact; the offline candidate
 and VM pass do not establish a phone boot.
 
+The host coordinator now uses the pinned contact receipt's verification time to
+cap each later stage and its battery-worker wait to 165 seconds total. This
+leaves 15 seconds before the handset's 180-second post-contact timeout. A slow
+stage fails locally and the handset's own gate returns to Fastboot; the longer
+per-tool discovery limits no longer imply that the overall handoff can wait
+for them. This timing policy passed the offline self-test and exact packed-init
+failure checks, but has not been timed in a full phone session. The Linux flash
+hold remains active.
+
 The stock OTA also identifies a real integration constraint for Wi-Fi: its
 `wlan_drv_gen4m_6983.ko` matches the exact 5.10.149 kernel, but depends on the
 MediaTek/Oplus connectivity stack (`conninfra`, `wmt_chrdev_wifi_connac2`,

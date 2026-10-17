@@ -133,6 +133,11 @@ unprotected session it requests power-off. On success it starts a bounded
 four-hour host logger while on-phone watchers remain independent. This sequence has not been armed or
 run on the phone yet; it requires Noob's current unplugged confirmation and a
 coordinated fresh V19 boot. No partition write is part of the trial.
+The detached worker's offline sequence test passed at
+`artifacts/autonomous-window-check-1792276271144450533/result.json`:
+listener readiness precedes the RAM trial, a successful trial starts the host
+logger, and missing unplugged confirmation is refused. It uses mocks and did
+not arm the real listener.
 
 After the first one-hour host logger ended, Lynx remained reachable and the
 on-phone health supervisor passed again at

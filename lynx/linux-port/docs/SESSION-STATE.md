@@ -2,22 +2,20 @@
 
 ## Newest status — 2026-10-17
 
-The human reports Lynx is on the Orange State screen. The host has not detected
-the handset over USB, and the native identity listener has received no beacon
-or SSH reply at the previously used address. A guarded 10-minute resume listener
-is running; it will only continue if it proves native Lynx identity. No
-partition, slot, boot image, or phone power state has been changed by this
-attempt. If the listener expires, a physical transition back to the proven V19
-Linux runtime will be needed before handset work can resume.
+The human most recently reported Lynx in Fastboot, then confirmed she is not on
+USB. Without the cable there is no live device query. The last guarded identity
+listener expired with no phone contact; no partition, slot, boot image, or phone
+power state was changed by that attempt. Offline development can continue, but a
+device-side test will require a later connection and a fresh identity check.
 
 Offline progress: Alpine 3.24.2 ARM64 with signed OpenRC 0.63.2-r0 now boots as
 PID 1 under QEMU using the exact frozen V19 stock kernel, reaches a test service
 in the default runlevel, and powers off cleanly. The six signed package APKs
-also replayed from a private bundle with networking and package scripts
-disabled, then passed the same VM boot test. Evidence and repeatable tools are
-in [ALPINE-USERSPACE.md](ALPINE-USERSPACE.md). This is a VM-only result; no
-OpenRC image has been booted on Lynx. Keep the proven V19 Wi-Fi, SSH, and
-battery/thermal startup as the boundary for any future OpenRC handoff.
+replay offline, and a second QEMU test passes the BusyBox-to-OpenRC PID 1
+handoff while keeping a pre-existing worker alive. Evidence and repeatable
+tools are in [ALPINE-USERSPACE.md](ALPINE-USERSPACE.md). These are VM-only
+results; no OpenRC image has been booted on Lynx. Keep the proven V19 Wi-Fi,
+SSH, and battery/thermal startup as the boundary for any future handoff.
 
 Goal remains native Linux on OnePlus Nord 3 CPH2493 / MT6983, with a minimal
 BusyBox boot first. User permits recoverable controlled boot_a trials and broader

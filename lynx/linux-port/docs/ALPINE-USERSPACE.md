@@ -173,6 +173,19 @@ Wi-Fi, SSH and battery/thermal guards. Do not replace that startup sequence
 until the OpenRC handoff is integrated after those safeguards and tested on a
 reachable native session.
 
+`tools/test_openrc_pid1_handoff_vm.py` adds a second, more realistic VM check:
+BusyBox mounts the early kernel interfaces, starts a long-lived worker, binds
+proc/sys/dev/run into an Alpine root and replaces itself with `openrc-init`.
+An OpenRC default-runlevel service confirms the earlier worker survived the
+PID 1 handoff, then requests a clean VM poweroff. It passed against the same
+V19 kernel fixture at
+`linux-port/artifacts/openrc-pid1-handoff-vm-1792237272891534016/` in 8.78s.
+Two earlier harness failures are preserved alongside it: one exposed missing
+parent directories in the synthetic initramfs; the next exposed that the VM
+must explicitly include the Alpine root's parent directories. This remains a
+QEMU handoff-mechanics test. It does not exercise V19's phone-specific driver,
+Wi-Fi, SSH, or battery/thermal setup, and it is not a handset image.
+
 The stock OTA also identifies a real integration constraint for Wi-Fi: its
 `wlan_drv_gen4m_6983.ko` matches the exact 5.10.149 kernel, but depends on the
 MediaTek/Oplus connectivity stack (`conninfra`, `wmt_chrdev_wifi_connac2`,

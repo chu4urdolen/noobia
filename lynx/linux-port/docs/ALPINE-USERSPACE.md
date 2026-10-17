@@ -244,7 +244,7 @@ mode only validates the local candidate; `--listen` begins the network
 workflow and expects V20 to be booted already:
 
 ```sh
-python3 tools/run_openrc_handoff_sequence.py --listen
+python3 tools/run_openrc_handoff_sequence.py --listen --usb-unplugged-confirmed
 ```
 
 The coordinator preserves each stage receipt and starts no flashing or reboot.

@@ -42,7 +42,7 @@ tools/lynx-ssh 'sh /run/lynx/wfi-fallback.sh --restore'
 Reboot also clears it. It is not baked into V19. The optional
 [runtime power stage](RUNTIME-POWER.md) now installs or verifies both the
 fallback and soft-throttle watcher after battery resume. Use
-`resume_battery_session.py --start --runtime-power` for the next otherwise-needed
+`resume_battery_session.py --start --usb-unplugged-confirmed --runtime-power` for the next otherwise-needed
 boot; the new combined fresh-boot sequence has not yet been exercised.
 The installer preserves identity checks, original state and raw captures.
 

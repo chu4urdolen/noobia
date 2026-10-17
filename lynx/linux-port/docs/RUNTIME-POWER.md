@@ -40,7 +40,7 @@ receipt identifies the failed stage; saved state is retained for diagnosis.
 For the next otherwise-needed boot of unchanged V19:
 
 ```sh
-python3 tools/resume_battery_session.py --start --runtime-power
+python3 tools/resume_battery_session.py --start --usb-unplugged-confirmed --runtime-power
 ```
 
 Wait for the existing listener-ready receipt before any physical boot action.

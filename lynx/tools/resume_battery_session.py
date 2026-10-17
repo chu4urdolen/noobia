@@ -9,8 +9,9 @@ ROOT=Path(__file__).resolve().parent.parent
 PORT=ROOT/'linux-port'
 BASIS=PORT/'artifacts/gauge-module-basis-1792107325426159905'
 def main():
- parser=argparse.ArgumentParser();parser.add_argument('--start',action='store_true');parser.add_argument('--worker',type=Path);parser.add_argument('--runtime-power',action='store_true');parser.add_argument('--alpine-stage-receipt',type=Path);args=parser.parse_args();os.umask(0o077)
- if not args.start and args.worker is None:print('Use --start [--runtime-power [--alpine-stage-receipt RECEIPT]] before booting existing V19, USB unplugged. No image is flashed.');return
+ parser=argparse.ArgumentParser();parser.add_argument('--start',action='store_true');parser.add_argument('--worker',type=Path);parser.add_argument('--runtime-power',action='store_true');parser.add_argument('--alpine-stage-receipt',type=Path);parser.add_argument('--usb-unplugged-confirmed',action='store_true');args=parser.parse_args();os.umask(0o077)
+ if not args.start and args.worker is None:print('Use --start --usb-unplugged-confirmed [--runtime-power [--alpine-stage-receipt RECEIPT]] before booting existing V19. No image is flashed.');return
+ if not args.usb_unplugged_confirmed:parser.error('Supervised battery resume requires current confirmation that Lynx is physically unplugged from USB')
  if args.alpine_stage_receipt:
   if not args.runtime_power:parser.error('--alpine-stage-receipt requires --runtime-power')
   args.alpine_stage_receipt=args.alpine_stage_receipt.resolve(strict=True)
@@ -20,6 +21,7 @@ def main():
   out=ROOT/'logs'/('battery-resume-'+str(time.time_ns()));out.mkdir(mode=0o700)
   with (out/'worker.stdout').open('wb') as stdout,(out/'worker.stderr').open('wb') as stderr:
    worker_args=[sys.executable,str(Path(__file__).resolve()),'--worker',str(out)]
+   worker_args.append('--usb-unplugged-confirmed')
    if args.runtime_power:worker_args.append('--runtime-power')
    if args.alpine_stage_receipt:worker_args.extend(['--alpine-stage-receipt',str(args.alpine_stage_receipt)])
    child=subprocess.Popen(worker_args,cwd=ROOT,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,start_new_session=True)
@@ -47,7 +49,7 @@ def main():
   watch=(PORT/'battery-watch.sh').read_bytes();digest=hashlib.sha256(watch).hexdigest()
   tests=[json.loads(p.read_text()) for p in (PORT/'artifacts').glob('battery-watch-check-*/result.json')]
   if not any(r.get('passed') and r.get('source_sha256')==digest for r in tests):raise ValueError('Matching battery watcher tests missing')
-  ready=json.loads(run('listener',tool('start_gauge_listener.py','--run-supervised-trial','--identity-query','--keep-running','--seconds','600')))
+  ready=json.loads(run('listener',tool('start_gauge_listener.py','--run-supervised-trial','--usb-unplugged-confirmed','--identity-query','--keep-running','--seconds','600')))
   if not ready['ready_verified']:raise ValueError('Listener not ready')
   session=Path(ready['trial_receipt']);report.update(state='waiting-native-ssh',listener_ready=True,session=str(session));save();deadline=time.monotonic()+620
   while time.monotonic()<deadline:

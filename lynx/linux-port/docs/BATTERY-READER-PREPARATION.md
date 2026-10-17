@@ -120,7 +120,8 @@ fixed-client/unbound/hash checks, RAM module upload and one sample, unload,
 host capture, then power-off request. No boot image or partition write.
 All operations retain timestamped raw stdout/stderr, including failed reads.
 
-`tools/start_gauge_listener.py --run-supervised-trial` starts a bounded detached
+`tools/start_gauge_listener.py --run-supervised-trial --usb-unplugged-confirmed`
+starts a bounded detached
 active trial and verifies its actual readiness/PID. It can load RAM modules
 and request power-off after contact. Use `tools/lynx_identity_observer.py`
 for a passive boot check. This avoids losing a session-bound listener while

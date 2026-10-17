@@ -7,12 +7,15 @@ gauge, and requested power-off. Its power-off SSH call timed out; physical
 power-off is unconfirmed. Noob had reported a black screen earlier, before the
 beacon and diagnostic. No partition was changed.
 Later, the passive observer proved a fresh V19 boot on real hardware without
-changing the phone. SSH subsequently stopped responding, and the host still
-sees no phone USB/Fastboot endpoint. The current screen and temperature are
-awaiting Noob's observation. See the later section of `docs/CONTACT-20261017.md`.
+changing the phone. SSH subsequently stopped responding, and Lynx then
+enumerated in Fastboot. Fresh read-only identity/slot/partition preflight
+passed: `logs/fastboot-preflight-1792252863616678507.json`. No partition was
+written. Physical warmth still requires Noob's observation. See
+`docs/CONTACT-20261017.md`.
 See `docs/CONTACT-20261017.md` and its raw receipt. The active launcher now
 requires an explicit flag; use `tools/lynx_identity_observer.py` for passive
-contact checks. No phone listener remains active. Do not initiate another
+contact checks. Active trials additionally require current confirmation that
+USB is physically unplugged. No phone listener remains active. Do not initiate another
 hardware run merely to clarify the black screen.
 
 The latest recorded installed image is V19 on `boot_a`. It reached a proven
@@ -25,7 +28,7 @@ An earlier guarded identity-listener window ended without contacting Lynx:
 resume workflow failed closed with no flash, reboot, or shutdown:
 `logs/battery-resume-1792236213199437795/result.json`. No listener remains
 running. That earlier result does not describe the later verified V19 boot.
-The present physical mode is unknown; do not infer Fastboot or power-off.
+This older result is superseded by the fresh Fastboot preflight above.
 
 The Linux-flash hold remains active in `docs/SAFETY-HOLD.json` because thermal
 validation is incomplete. Do not install V20 or another Linux image while the

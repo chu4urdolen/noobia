@@ -42,7 +42,7 @@ For a reviewed, supervised repeat with Lynx cool and USB unplugged:
 
 ```sh
 python3 tools/lynx_cpu_trial.py --self-test
-python3 tools/lynx_cpu_trial.py --listen --seconds 300
+python3 tools/lynx_cpu_trial.py --listen --usb-unplugged-confirmed --seconds 300
 ```
 
 Start the listener and verify its ready receipt before the physical power cue.

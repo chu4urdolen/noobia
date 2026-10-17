@@ -68,7 +68,7 @@ def main():
             kwargs['stdout'].write(json.dumps(responses[name]).encode())
             return subprocess.CompletedProcess(argv, rc)
 
-        argv = ['resume_battery_session.py', '--worker', str(worker), '--runtime-power']
+        argv = ['resume_battery_session.py', '--worker', str(worker), '--usb-unplugged-confirmed', '--runtime-power']
         if case != 'without-alpine':
             argv.extend(['--alpine-stage-receipt', str(stage)])
         with patch.object(resume, 'ROOT', root), patch.object(resume, 'PORT', port), \
@@ -95,10 +95,11 @@ def main():
         (worker / 'result.json').write_text(json.dumps({'state': 'waiting-native-ssh', 'listener_ready': True}))
         return SimpleNamespace(pid=123456)
     with patch.object(resume, 'ROOT', launcher_root), patch.object(sys, 'argv',
-            ['resume_battery_session.py', '--start', '--runtime-power', '--alpine-stage-receipt', str(stage)]), \
+            ['resume_battery_session.py', '--start', '--usb-unplugged-confirmed', '--runtime-power', '--alpine-stage-receipt', str(stage)]), \
             patch.object(resume.subprocess, 'Popen', fake_popen):
         resume.main()
     checks['launcher-forwards-power-and-stage'] = len(captured) == 1 and '--runtime-power' in captured[0] and captured[0][-2:] == ['--alpine-stage-receipt', str(stage)]
+    checks['launcher-forwards-usb-precondition'] = len(captured) == 1 and '--usb-unplugged-confirmed' in captured[0]
     report = {'passed': all(checks.values()), 'checks': checks, 'phone_contacted': False,
               'real_subprocesses_started': False,
               'limits': 'Worker ordering, propagation and failure reporting only; not hardware discovery, driver startup or logger behavior.'}

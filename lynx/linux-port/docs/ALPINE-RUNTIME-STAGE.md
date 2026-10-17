@@ -90,7 +90,7 @@ anything on the phone.
 ## Install after an otherwise-needed V19 boot
 
 ```sh
-python3 tools/resume_battery_session.py --start --runtime-power \
+python3 tools/resume_battery_session.py --start --usb-unplugged-confirmed --runtime-power \
   --alpine-stage-receipt STAGE_VM_RECEIPT
 ```
 

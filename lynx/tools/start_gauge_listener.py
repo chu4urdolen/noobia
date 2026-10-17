@@ -23,9 +23,13 @@ def main():
     parser.add_argument('--keep-running', action='store_true')
     parser.add_argument('--run-supervised-trial', action='store_true',
                         help='Required acknowledgement: this loads RAM modules and may power off Lynx')
+    parser.add_argument('--usb-unplugged-confirmed', action='store_true',
+                        help='Required physical precondition for this reviewed hardware trial')
     args = parser.parse_args()
     if not args.run_supervised_trial:
         parser.error('Active trial requires --run-supervised-trial; use lynx_identity_observer.py for read-only contact')
+    if not args.usb_unplugged_confirmed:
+        parser.error('Active trial requires current confirmation that Lynx is physically unplugged from USB')
     if not 30 <= args.seconds <= 600:
         raise ValueError('Listener deadline must be 30–600 seconds')
     os.umask(0o077)
@@ -33,6 +37,7 @@ def main():
     folder.mkdir(mode=0o700)
     tool = ROOT / 'tools' / ('lynx_gauge_identity_trial.py' if args.identity_query else 'lynx_gauge_trial.py')
     command = [sys.executable, str(tool), '--listen', '--seconds', str(args.seconds)]
+    command.append('--usb-unplugged-confirmed')
     if args.keep_running:
         if not args.identity_query:raise ValueError('Continuous mode is currently reviewed only for the identity profile')
         command.append('--keep-running')

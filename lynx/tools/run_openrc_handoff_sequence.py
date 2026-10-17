@@ -32,6 +32,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--listen', action='store_true')
     parser.add_argument('--self-test', action='store_true')
+    parser.add_argument('--usb-unplugged-confirmed', action='store_true')
     args = parser.parse_args()
     candidate = verified_candidate()
     steps = ['pinned-contact', 'temperature-sensor-and-watch', 'battery-and-runtime-power', 'arm-openrc-gate']
@@ -43,6 +44,8 @@ def main():
     if not args.listen:
         print('Preflight passed. --listen starts the supervised multi-stage host workflow; Lynx must already be booted from this V20 image.')
         return
+    if not args.usb_unplugged_confirmed:
+        parser.error('The supervised handset sequence requires current confirmation that Lynx is physically unplugged from USB')
 
     os.umask(0o077)
     out = ROOT / 'logs' / ('openrc-handoff-sequence-' + str(time.time_ns()))
@@ -89,7 +92,7 @@ def main():
         save()
 
         sensor_output = run('temperature-sensor-and-watch',
-                            [sys.executable, str(ROOT / 'tools/lynx_sensor_trial.py'), '--listen', '--keep-running', '--seconds', '300'], 330)
+                            [sys.executable, str(ROOT / 'tools/lynx_sensor_trial.py'), '--listen', '--keep-running', '--usb-unplugged-confirmed', '--seconds', '300'], 330)
         sensor = receipt_from(sensor_output, r'SENSOR TRIAL FINISHED: ([^\s]+)')
         if json.loads(sensor.read_text()).get('state') != 'sensor-stage-returned':
             raise ValueError('Temperature sensor stage did not return cleanly')
@@ -97,7 +100,7 @@ def main():
         save()
 
         battery_output = run('battery-and-runtime-power',
-                             [sys.executable, str(ROOT / 'tools/resume_battery_session.py'), '--start', '--runtime-power'], 20)
+                             [sys.executable, str(ROOT / 'tools/resume_battery_session.py'), '--start', '--usb-unplugged-confirmed', '--runtime-power'], 20)
         launch = json.loads(battery_output)
         worker_receipt = Path(launch['result']).resolve(strict=True)
         if not worker_receipt.is_relative_to(ROOT / 'logs'):

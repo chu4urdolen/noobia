@@ -4024,3 +4024,19 @@ At uptime 189 seconds host confirmation was absent; SSH still answered at
 uptime 261 seconds and later timed out. No phone USB/Fastboot endpoint appeared.
 Current physical mode awaits Noob's screen report. Do not claim power-off or
 Fastboot without that evidence.
+
+The incident also exposed an ignored physical precondition: the short trial
+was reviewed for a USB-unplugged phone, but USB was connected. The active
+gauge launcher, direct sensor trial, battery-resume coordinator, and V20
+OpenRC coordinator now require `--usb-unplugged-confirmed` before a live run.
+Four offline refusal checks passed without contacting Lynx; the revised
+14-check resume fixture and V20 offline self-test passed. The flag requires a
+current human observation, not an electrical measurement.
+
+Lynx subsequently enumerated as USB `0e8d:201c` on bus001/device005. A
+device-specific ACL allowed the fixed read-only Fastboot preflight:
+`logs/fastboot-preflight-1792252863616678507.json`. Product, unlocked state,
+slot A, bootloader, bootable-slot flags, partition sizes and download limit
+all matched. No write/reboot/slot command was issued. Current observed mode is
+Fastboot; last recorded installed `boot_a` remains V19, and the global Linux
+flash hold is still active.

@@ -51,7 +51,7 @@ def validate():
  assert (P/'docs/SAFETY-HOLD.json').exists() # Do not clear the flash hold.
  return data
 def main():
- parser=argparse.ArgumentParser();parser.add_argument('--listen',action='store_true');parser.add_argument('--self-test',action='store_true');parser.add_argument('--keep-running',action='store_true');parser.add_argument('--seconds',type=int,default=300);args=parser.parse_args();data=validate()
+ parser=argparse.ArgumentParser();parser.add_argument('--listen',action='store_true');parser.add_argument('--self-test',action='store_true');parser.add_argument('--keep-running',action='store_true');parser.add_argument('--usb-unplugged-confirmed',action='store_true');parser.add_argument('--seconds',type=int,default=300);args=parser.parse_args();data=validate()
  if args.keep_running:
   receipts=[json.loads(f.read_text()) for f in (P/'artifacts').glob('thermal-watch-check-*/result.json')]
   assert any(r.get('passed') and r.get('source_sha256')==sha((P/'thermal-watch.sh').read_bytes()) for r in receipts),'Temperature watcher needs matching offline checks'
@@ -61,6 +61,7 @@ def main():
   p=subprocess.run(['sh','-c',"printf '%s\\n' probe"],capture_output=True);assert p.stdout==b'probe\n'
   print('Checked '+', '.join(TRIAL_SCOPE)+' pack/guards/identity/timer acknowledgement policy; no phone contacted.');return
  if not args.listen:print('Use --listen only for a cooled, supervised handset boot.');return
+ if not args.usb_unplugged_confirmed:parser.error('Supervised sensor trial requires current confirmation that Lynx is physically unplugged from USB')
  assert 30<=args.seconds<=600;os.umask(0o077)
  out=R/'logs'/((TRIAL_PREFIX or ('cpu-trial-' if 'cpu-frequency' in TRIAL_SCOPE else 'sensor-trial-'))+str(time.time_ns()));out.mkdir(mode=0o700);receipt=out/'result.json'
  report={'state':'starting','started_ns':time.time_ns(),'phone_contacted':False,'native_identity_verified':False,'flash_performed':False,'cpu_frequency_modules_allowed':'cpu-frequency' in TRIAL_SCOPE,'trial_scope':TRIAL_SCOPE,'pack_sha256':EXPECTED,'operations':[]}

@@ -78,7 +78,7 @@ All raw captures, module binaries and build inputs remain local/private.
 From `/noobia/lynx`, with the private, hash-pinned inputs present:
 
 ```sh
-python3 tools/resume_battery_session.py --start
+python3 tools/resume_battery_session.py --start --usb-unplugged-confirmed
 ```
 
 The optional `--runtime-power` stage also installs/verifies the tested WFI

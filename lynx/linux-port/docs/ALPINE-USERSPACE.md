@@ -156,14 +156,19 @@ signature verification enabled. A QEMU test packs that complete root at the
 initramfs root, mounts proc/sysfs and tmpfs `/dev`, then `exec`s OpenRC from
 `/init` so it becomes PID 1. With the frozen V19 stock kernel it reached the
 default runlevel, ran a test service, handled `openrc-shutdown --poweroff now`,
-and powered down cleanly. Result and console:
-`linux-port/artifacts/openrc-userspace-vm-1792236559134667736/`.
-The repeatable harness is `tools/test_openrc_userspace_vm.py`.
+and powered down cleanly. `tools/test_openrc_bundle_replay.py` now reproduces
+the full step offline from the GPG-verified Alpine rootfs and six cached APKs:
+it checks each APK signature, installs with network and package scripts
+disabled, then boots the result. The final VM result and console are
+`linux-port/artifacts/openrc-userspace-vm-1792236672087913929/`; the whole
+replay receipt is `linux-port/artifacts/openrc-bundle-replay-1792236671965134306/`.
+`tools/export_openrc_apks.py` re-verifies and hashes the local APK bundle.
 
 This proves OpenRC itself can run on the exact ARM64 kernel/userspace pairing
-in a VM. It is not a handset boot, and its scratch root intentionally lacks
-normal package post-install service links; the test service supplies only the
-default-runlevel proof. The phone's proven V19 init still owns early hardware,
+in a VM using an offline, signature-checked package replay. It is not a handset
+boot, and its scratch root intentionally lacks normal package post-install
+service links; the test service supplies only the default-runlevel proof. The
+phone's proven V19 init still owns early hardware,
 Wi-Fi, SSH and battery/thermal guards. Do not replace that startup sequence
 until the OpenRC handoff is integrated after those safeguards and tested on a
 reachable native session.

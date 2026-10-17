@@ -6,6 +6,7 @@ import stat
 import subprocess
 import sys
 import time
+import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,14 +24,18 @@ def sha(data):
 
 
 def main():
-    if not (RUNTIME / 'sbin/openrc-init').is_file():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--runtime-root', type=Path, default=RUNTIME)
+    args = parser.parse_args()
+    runtime = args.runtime_root.resolve(strict=True)
+    if not (runtime / 'sbin/openrc-init').is_file():
         raise SystemExit('OpenRC runtime root not prepared')
-    if (RUNTIME / 'sbin/openrc-init').is_symlink():
+    if (runtime / 'sbin/openrc-init').is_symlink():
         raise SystemExit('Unexpected OpenRC init symlink')
     out = ROOT / 'linux-port/artifacts' / ('openrc-userspace-vm-' + str(time.time_ns()))
     out.mkdir(mode=0o700)
     report = {'state': 'prepared', 'started_ns': time.time_ns(),
-              'runtime_root': str(RUNTIME), 'phone_contacted': False,
+              'runtime_root': str(runtime), 'phone_contacted': False,
               'phone_boot_or_partition_changed': False, 'network_enabled': False}
 
     source = ROOT / 'linux-port/artifacts/busybox-wifi-ssh-twostage-v19/nord3-busybox-candidate.img'
@@ -44,7 +49,7 @@ def main():
     def walk(directory):
         nonlocal total
         for path in sorted(directory.iterdir()):
-            name = path.relative_to(RUNTIME).as_posix()
+            name = path.relative_to(runtime).as_posix()
             info = path.lstat()
             mode = info.st_mode
             if stat.S_ISDIR(mode):
@@ -64,7 +69,7 @@ def main():
             if stat.S_ISDIR(info.st_mode):
                 walk(path)
 
-    walk(RUNTIME)
+    walk(runtime)
     require(total <= 128 * 1024 * 1024, 'Runtime root exceeds bounded VM input size')
     for required in ('bin/busybox', 'lib/ld-musl-aarch64.so.1', 'sbin/openrc-init',
                      'sbin/openrc-shutdown', 'sbin/openrc-run', 'etc/inittab'):

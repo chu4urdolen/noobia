@@ -24,7 +24,8 @@ def main():
     out = resume.ROOT / 'linux-port/artifacts' / ('alpine-resume-sequence-' + str(time.time_ns()))
     out.mkdir(mode=0o700)
     checks = {}
-    for case in ['without-alpine', 'alpine-success', 'alpine-failure', 'clock-failure']:
+    for case in ['without-alpine', 'alpine-success', 'alpine-failure', 'clock-failure',
+                 'cooling-retry', 'cooling-nonretry']:
         root = out / case
         port = root / 'linux-port'
         worker = root / 'worker'
@@ -42,6 +43,14 @@ def main():
         (monitor / 'load-and-snapshot.stdout').write_text('temperature_error=0\nvoltage_error=0\ncurrent_error=0\ncapacity_error=0\n')
         calls = []
         logger_started = []
+        cooling_failure = root / 'logs/cooling-fixture'
+        cooling_failure.mkdir(parents=True)
+        (cooling_failure / 'result.json').write_text(json.dumps({
+            'mode': 'apply', 'error': 'configure failed; raw captures retained'}))
+        (cooling_failure / 'configure.stdout').write_text('WFI_FALLBACK_VERIFIED\n')
+        (cooling_failure / 'configure.stderr').write_text(
+            "cat: can't open '/run/lynx/thermal-cooling-watch/pid': No such file or directory\n"
+            if case == 'cooling-retry' else 'different failure\n')
 
         def fake_run(argv, **kwargs):
             name = Path(argv[1]).name
@@ -65,6 +74,9 @@ def main():
                 raise AssertionError('Alpine stage attempted before host logger')
             if name == 'configure_alpine_runtime.py' and case == 'alpine-failure':
                 rc = 1
+            if name == 'configure_runtime_power.py' and case.startswith('cooling-') and calls.count(name) == 1:
+                rc = 1
+                responses[name] = {'state': 'failed', 'result': str(cooling_failure / 'result.json')}
             kwargs['stdout'].write(json.dumps(responses[name]).encode())
             return subprocess.CompletedProcess(argv, rc)
 
@@ -72,12 +84,13 @@ def main():
         if case != 'without-alpine':
             argv.extend(['--alpine-stage-receipt', str(stage)])
         with patch.object(resume, 'ROOT', root), patch.object(resume, 'PORT', port), \
-                patch.object(sys, 'argv', argv), patch.object(resume.subprocess, 'run', fake_run):
+                patch.object(sys, 'argv', argv), patch.object(resume.subprocess, 'run', fake_run), \
+                patch.object(resume.time, 'sleep', lambda seconds: None):
             resume.main()
         result = json.loads((worker / 'result.json').read_text())
-        expected = 'failed' if case.endswith('failure') else 'online'
+        expected = 'failed' if case.endswith('failure') or case == 'cooling-nonretry' else 'online'
         checks[case + '-state'] = result['state'] == expected
-        checks[case + '-logger-preserved'] = bool(logger_started) and result['host_logger_receipt'] == 'fixture-logger'
+        checks[case + '-logger-preserved'] = (bool(logger_started) and result['host_logger_receipt'] == 'fixture-logger') if expected == 'online' or case.endswith('failure') else not logger_started
         if case == 'without-alpine':
             checks['default-skips-alpine-and-clock'] = not any(name in calls for name in ['sync_lynx_clock.py', 'configure_alpine_runtime.py'])
         elif case == 'clock-failure':
@@ -85,6 +98,10 @@ def main():
         elif case == 'alpine-success':
             checks['logging-clock-alpine-order'] = calls.index('collect_battery_session.py') < calls.index('sync_lynx_clock.py') < calls.index('configure_alpine_runtime.py')
             checks['alpine-receipt-recorded'] = result['alpine_runtime_receipt'] == 'fixture-alpine'
+        elif case == 'cooling-retry':
+            checks['cooling-refusal-retried-once'] = calls.count('configure_runtime_power.py') == 2 and len(result.get('cooling_start_deferrals', [])) == 1
+        elif case == 'cooling-nonretry':
+            checks['other-power-failure-not-retried'] = calls.count('configure_runtime_power.py') == 1
         (worker / 'fixture-calls.json').write_text(json.dumps(calls, indent=2) + '\n')
     launcher_root = out / 'launcher'
     (launcher_root / 'logs').mkdir(parents=True)

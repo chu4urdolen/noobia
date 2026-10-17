@@ -1,6 +1,6 @@
 {
   "active": true,
-  "reason": "Heating reported; battery temperature, CPU temperatures and thermal throttling are unavailable on V19.",
+  "reason": "Heating was reported. The current V19 RAM session now has verified battery/CPU monitoring and soft cooling, but V19 cannot start those protections autonomously after a cold boot; charging safety and the next boot image are not hardware-validated.",
   "linux_flash_allowed": false,
   "stock_restore_allowed": true,
   "reference": "THERMAL-SAFETY.md"

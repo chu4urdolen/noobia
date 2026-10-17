@@ -1,0 +1,43 @@
+#!/sbin/openrc-run
+# Adopt the early BusyBox health supervisor or start it after its prerequisites
+# are proven. Keeping it outside OpenRC's process cgroup preserves monitoring
+# across an init handoff and routine service changes.
+description="Lynx battery, thermal and cooling health supervision"
+health_script=/usr/libexec/lynx-health-supervisor.sh
+[ -r "$health_script" ] || health_script=/run/lynx/lynx-health-supervisor.sh
+health_state=/run/lynx/health-supervisor
+
+start() {
+    ebegin "Starting Lynx health supervision"
+    [ -r "$health_script" ] || { eend 1 "health script missing"; return 1; }
+    /bin/sh "$health_script" --once >/dev/null || { eend 1 "health prerequisites failed"; return 1; }
+    if [ -e "$health_state" ]; then
+        [ -r "$health_state/pid" ] || { eend 1 "stale health state"; return 1; }
+        pid=$(cat "$health_state/pid") || return 1
+        case "$pid" in ''|*[!0-9]*) eend 1 "invalid health PID"; return 1;; esac
+        kill -0 "$pid" 2>/dev/null || { eend 1 "dead health process"; return 1; }
+        eend 0
+        return 0
+    fi
+    /bin/sh "$health_script" --watch > /run/lynx/health-supervisor.log 2>&1 < /dev/null &
+    launched=$!
+    sleep 1
+    [ -r "$health_state/pid" ] && [ "$(cat "$health_state/pid")" = "$launched" ] &&
+        kill -0 "$launched" 2>/dev/null || { eend 1 "health process did not start"; return 1; }
+    eend 0
+}
+
+status() {
+    [ -r "$health_state/pid" ] || return 1
+    pid=$(cat "$health_state/pid") || return 1
+    case "$pid" in ''|*[!0-9]*) return 1;; esac
+    kill -0 "$pid" 2>/dev/null || return 1
+    /bin/sh "$health_script" --once >/dev/null
+}
+
+stop() {
+    # The kernel powers down the RAM supervisor with the rest of the system.
+    # A service stop must never silently disable thermal protection.
+    ewarn "Lynx health supervisor remains active until system power-off"
+    return 0
+}

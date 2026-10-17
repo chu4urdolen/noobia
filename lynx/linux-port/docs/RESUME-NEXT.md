@@ -1,5 +1,15 @@
 # Current handoff — 2026-10-17
 
+Latest live update: Lynx booted V19 with a black screen and sent a valid beacon
+from `192.168.100.7`. Pinned SSH acknowledged boot ID
+`e1af6ca5-ca54-46e9-8cdf-9a1dbea56994`, cancelling V19's automatic
+Fastboot fallback. Sensor, CPU, battery and cooling watchers now run in RAM;
+the additional health supervisor monitors them and the host logger records
+their readings. Alpine 3.24.2 plus Python, Git and Make run in a RAM chroot,
+with a verified host checkpoint and VM restore. See `HEALTH-SUPERVISION.md`.
+The current session is live over Wi-Fi/SSH and remains unplugged from USB. The
+Linux flash hold remains active; no new image was installed in this session.
+
 Later update: the phone did boot V19 and answered a pinned Wi-Fi/SSH identity
 check after about 80 seconds. An active gauge diagnostic was started under an
 incorrect read-only description, loaded RAM sensor/CPU modules, queried the

@@ -19,6 +19,17 @@ from ramdisk_codec import decompress
 V19_SHA256 = '5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851'
 RUNTIME = ROOT / 'linux-port/artifacts/openrc-runtime-root'
 ROOTFS_ARCHIVE = ROOT / 'linux-port/artifacts/openrc-rootfs-export/alpine-openrc-rootfs.cpio.gz'
+HEALTH_FIXTURE = b'''#!/bin/sh
+case "${1:-}" in
+    --once) echo LYNX_HEALTH_TEST_ONCE; exit 0;;
+    --watch)
+        mkdir /run/lynx/health-supervisor || exit 1
+        echo "$$" > /run/lynx/health-supervisor/pid
+        echo LYNX_HEALTH_TEST_WATCH
+        while :; do /bin/busybox sleep 1; done;;
+    *) exit 2;;
+esac
+'''
 
 
 def sha(data):
@@ -32,6 +43,8 @@ def main():
     sources.add_argument('--rootfs-cpio-gz', type=Path)
     parser.add_argument('--exercise-production-handoff', action='store_true',
                         help='Exercise openrc-handoff.sh itself with a test-only guard fixture')
+    parser.add_argument('--exercise-health-service', action='store_true',
+                        help='Exercise the OpenRC health service with a test-only RAM watcher')
     args = parser.parse_args()
     runtime = None
     if args.rootfs_cpio_gz:
@@ -39,10 +52,15 @@ def main():
         manifest_path = archive_path.parent / 'manifest.json'
         manifest = json.loads(manifest_path.read_text())
         archive_bytes = archive_path.read_bytes()
-        require(manifest.get('state') == 'verified-openrc-rootfs-payload' and
+        require(manifest.get('state') in ('verified-openrc-rootfs-payload',
+                                         'verified-openrc-health-rootfs-payload') and
                 sha(archive_bytes) == manifest.get('archive_sha256'),
                 'OpenRC rootfs archive does not match its manifest')
         base_entries = read_newc(gzip.decompress(archive_bytes))
+        if args.exercise_health_service and 'usr/libexec/lynx-health-supervisor.sh' in base_entries:
+            # The VM has no Lynx gauge or SoC sensors. Keep the exact service,
+            # but replace only its sensor-dependent worker in this VM copy.
+            base_entries['usr/libexec/lynx-health-supervisor.sh']['data'] = HEALTH_FIXTURE
         require({'bin/busybox', 'lib/ld-musl-aarch64.so.1', 'sbin/openrc-init'}
                 <= set(base_entries), 'OpenRC rootfs archive lacks required files')
         source_label = str(archive_path)
@@ -101,6 +119,17 @@ def main():
         'rdevmajor': 0, 'rdevminor': 0,
         'data': b'''#!/sbin/openrc-run\n\nstart() {\n    pid=$(cat /run/lynx/handoff-worker.pid) || return 1\n    kill -0 "$pid" || return 1\n    echo LYNX_OPENRC_INHERITED_WORKER_PASS > /dev/console\n    ( /bin/busybox sleep 2; echo LYNX_OPENRC_HANDOFF_SHUTDOWN > /dev/console; /sbin/openrc-shutdown --poweroff now ) </dev/null >/dev/console 2>&1 &\n    return 0\n}\n''',
     }
+    if args.exercise_health_service:
+        test_service['data'] = test_service['data'].replace(
+            b'start() {\n',
+            b'''depend() { need lynx-health; }
+
+start() {
+    health=$(cat /run/lynx/health-supervisor/pid) || return 1
+    kill -0 "$health" || return 1
+    /bin/sh /run/lynx/lynx-health-supervisor.sh --once || return 1
+    echo LYNX_OPENRC_HEALTH_SERVICE_PASS > /dev/console
+''')
     test_link = {
         'mode': stat.S_IFLNK | 0o777, 'uid': 0, 'gid': 0,
         'rdevmajor': 0, 'rdevminor': 0,
@@ -108,13 +137,32 @@ def main():
     }
     entries['mnt/alpine/etc/init.d/lynx-handoff-proof'] = test_service
     entries['mnt/alpine/etc/runlevels/default/lynx-handoff-proof'] = test_link
+    health_service = None
+    health_link = None
+    if args.exercise_health_service:
+        health_service = {
+            'mode': stat.S_IFREG | 0o755, 'uid': 0, 'gid': 0,
+            'rdevmajor': 0, 'rdevminor': 0,
+            'data': (ROOT / 'linux-port/openrc-lynx-health').read_bytes(),
+        }
+        health_link = {
+            'mode': stat.S_IFLNK | 0o777, 'uid': 0, 'gid': 0,
+            'rdevmajor': 0, 'rdevminor': 0,
+            'data': b'../../init.d/lynx-health',
+        }
+        entries['mnt/alpine/etc/init.d/lynx-health'] = health_service
+        entries['mnt/alpine/etc/runlevels/default/lynx-health'] = health_link
     if args.exercise_production_handoff:
         # Repack the exact exported OpenRC root plus only the existing test
         # service, then exercise the production extraction/hash/mount/exec
         # script. The safety guard is stubbed because QEMU has no Lynx sensors.
         root_entries = dict(base_entries)
-        for name, item in (('etc/init.d/lynx-handoff-proof', test_service),
-                           ('etc/runlevels/default/lynx-handoff-proof', test_link)):
+        overlay = [('etc/init.d/lynx-handoff-proof', test_service),
+                   ('etc/runlevels/default/lynx-handoff-proof', test_link)]
+        if args.exercise_health_service:
+            overlay.extend([('etc/init.d/lynx-health', health_service),
+                            ('etc/runlevels/default/lynx-health', health_link)])
+        for name, item in overlay:
             for index in range(1, len(Path(name).parts)):
                 parent = '/'.join(Path(name).parts[:index])
                 root_entries.setdefault(parent, {'mode': stat.S_IFDIR | 0o755, 'uid': 0, 'gid': 0,
@@ -143,6 +191,15 @@ def main():
         init = b'''#!/bin/busybox sh\nset -eu\nexport PATH=/bin:/sbin:/usr/bin:/usr/sbin\nBB=/bin/busybox\nlog() { echo "$*" > /dev/kmsg; }\n$BB mkdir -p /proc /sys /dev /run/lynx\n$BB mount -t proc -o nosuid,nodev,noexec proc /proc\n$BB mount -t sysfs -o nosuid,nodev,noexec sysfs /sys\n$BB mount -t tmpfs -o mode=0755,size=16m tmpfs /dev\n$BB mknod -m 600 /dev/console c 5 1\n$BB mknod -m 666 /dev/null c 1 3\nexec </dev/console >/dev/console 2>&1\n$BB mount -t tmpfs -o mode=0755,size=32m tmpfs /run\n$BB mkdir -p /run/lynx\n$BB printf '%s\\n' test-openrc-token > /run/lynx/host-confirmed\n$BB printf '%s\\n' test-openrc-token > /run/lynx/openrc-handoff-ready\n$BB sh -c 'echo $$ > /run/lynx/handoff-worker.pid; while :; do /bin/busybox sleep 1; done' &\necho LYNX_BUSYBOX_EARLY_INIT_READY > /dev/console\n. /etc/lynx/openrc-handoff.sh\nlynx_openrc_handoff\n'''
     else:
         init = b'''#!/bin/busybox sh\nset -eu\nBB=/bin/busybox\n$BB mkdir -p /proc /sys /dev /run/lynx /mnt/alpine/proc /mnt/alpine/sys /mnt/alpine/dev /mnt/alpine/run\n$BB mount -t proc -o nosuid,nodev,noexec proc /proc\n$BB mount -t sysfs -o nosuid,nodev,noexec sysfs /sys\n$BB mount -t tmpfs -o mode=0755,size=16m tmpfs /dev\n$BB mknod -m 600 /dev/console c 5 1\n$BB mknod -m 666 /dev/null c 1 3\nexec </dev/console >/dev/console 2>&1\n$BB mount -t tmpfs -o mode=0755,size=32m tmpfs /run\n$BB mkdir -p /run/lynx\n$BB sh -c 'echo $$ > /run/lynx/handoff-worker.pid; while :; do /bin/busybox sleep 1; done' &\n$BB mount -o bind /proc /mnt/alpine/proc\n$BB mount -o bind /sys /mnt/alpine/sys\n$BB mount -o bind /dev /mnt/alpine/dev\n$BB mount -o bind /run /mnt/alpine/run\n$BB ls -l /mnt/alpine/sbin/openrc-init /mnt/alpine/lib/ld-musl-aarch64.so.1 > /dev/console\n$BB chroot /mnt/alpine /bin/busybox echo LYNX_CHROOT_EXEC_PASS > /dev/console\necho LYNX_BUSYBOX_EARLY_INIT_READY > /dev/console\nexec $BB chroot /mnt/alpine /sbin/openrc-init\n'''
+    if args.exercise_health_service:
+        entries['etc/lynx/health-fixture.sh'] = {
+            'mode': stat.S_IFREG | 0o755, 'uid': 0, 'gid': 0,
+            'rdevmajor': 0, 'rdevminor': 0, 'data': HEALTH_FIXTURE,
+        }
+        needle = b'$BB mkdir -p /run/lynx\n'
+        require(init.count(needle) == 1, 'VM init has no unique RAM setup point')
+        init = init.replace(needle, needle +
+                            b'$BB cp /etc/lynx/health-fixture.sh /run/lynx/lynx-health-supervisor.sh\n')
     entries['init'] = {'mode': stat.S_IFREG | 0o755, 'uid': 0, 'gid': 0,
                        'rdevmajor': 0, 'rdevminor': 0, 'data': init}
     for name, major, minor, mode in [('dev/console', 5, 1, 0o600),
@@ -182,6 +239,8 @@ def main():
         'production_handoff_guard_invoked': (not args.exercise_production_handoff or
                                              b'OPENRC_HANDOFF_TEST_GUARD_PASS' in output),
         'inherited_early_worker_survived': b'LYNX_OPENRC_INHERITED_WORKER_PASS' in output,
+        'health_service_started': (not args.exercise_health_service or
+                                   b'LYNX_OPENRC_HEALTH_SERVICE_PASS' in output),
         'clean_poweroff': b'reboot: Power down' in output,
         'no_kernel_panic': b'Kernel panic' not in output,
     }

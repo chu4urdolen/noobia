@@ -146,7 +146,10 @@ $BB poweroff -f
 $BB chroot /rootfs /usr/bin/git --version
 $BB chroot /rootfs /usr/bin/make --version
 $BB mkdir -p /rootfs/tmp/lynx-build-check
-printf 'answer:\n\tprintf "42\\n" > answer\n' > /rootfs/tmp/lynx-build-check/Makefile
+cat > /rootfs/tmp/lynx-build-check/Makefile <<'LYNX_MAKEFILE'
+answer:
+	printf "42\\n" > answer
+LYNX_MAKEFILE
 $BB chroot /rootfs /usr/bin/make -C /tmp/lynx-build-check
 test "$(cat /rootfs/tmp/lynx-build-check/answer)" = 42
 echo LYNX_CHECKPOINT_PYTHON_GIT_MAKE_PASS

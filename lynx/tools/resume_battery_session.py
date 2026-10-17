@@ -8,6 +8,25 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 PORT=ROOT/'linux-port'
 BASIS=PORT/'artifacts/gauge-module-basis-1792107325426159905'
+
+
+def cooling_start_was_deferred(output_path):
+ """Recognize only the reviewed hot-start refusal; all other failures stop."""
+ try:
+  launch=json.loads(output_path.read_text())
+  receipt=Path(launch['result']).resolve(strict=True)
+  if not receipt.is_relative_to(ROOT/'logs') or launch.get('state')!='failed':return False
+  result=json.loads(receipt.read_text())
+  if result.get('mode')!='apply' or result.get('error')!='configure failed; raw captures retained':return False
+  stdout=(receipt.parent/'configure.stdout').read_text()
+  stderr=(receipt.parent/'configure.stderr').read_text()
+  return ('WFI_FALLBACK_VERIFIED' in stdout and
+          'SOFT_THROTTLE_STARTED' not in stdout and
+          "cat: can't open '/run/lynx/thermal-cooling-watch/pid': No such file or directory" in stderr)
+ except (OSError,ValueError,KeyError,TypeError):
+  return False
+
+
 def main():
  parser=argparse.ArgumentParser();parser.add_argument('--start',action='store_true');parser.add_argument('--worker',type=Path);parser.add_argument('--runtime-power',action='store_true');parser.add_argument('--alpine-stage-receipt',type=Path);parser.add_argument('--usb-unplugged-confirmed',action='store_true');args=parser.parse_args();os.umask(0o077)
  if not args.start and args.worker is None:print('Use --start --usb-unplugged-confirmed [--runtime-power [--alpine-stage-receipt RECEIPT]] before booting existing V19. No image is flashed.');return
@@ -68,7 +87,15 @@ def main():
   run('start-battery-watch',tool('lynx_live_command.py','--session',session,'--name','start-battery-watch','--command',command))
   if args.runtime_power:
    report['state']='configuring-runtime-power';save()
-   power=json.loads(run('runtime-power',tool('configure_runtime_power.py','--session',session,'--apply'),timeout=90))
+   for attempt in range(4):
+    name='runtime-power' if attempt==0 else 'runtime-power-retry-'+str(attempt)
+    try:
+     power=json.loads(run(name,tool('configure_runtime_power.py','--session',session,'--apply'),timeout=90))
+     break
+    except ValueError:
+     if attempt==3 or not cooling_start_was_deferred(out/(name+'.stdout')):raise
+     report.setdefault('cooling_start_deferrals',[]).append({'attempt':attempt,'at_ns':time.time_ns()});save()
+     time.sleep(10)
    if power['state']!='ready':raise ValueError('Runtime power setup not ready; leave existing watchers online')
    report['runtime_power_receipt']=power['result'];save()
   logger=json.loads(run('host-logger',tool('collect_battery_session.py','--session',session,'--seconds','3600')))

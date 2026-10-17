@@ -168,18 +168,33 @@ This proves OpenRC itself can run on the exact ARM64 kernel/userspace pairing
 in a VM using an offline, signature-checked package replay. It is not a handset
 boot, and its scratch root intentionally lacks normal package post-install
 service links; the test service supplies only the default-runlevel proof. The
-phone's proven V19 init still owns early hardware,
-Wi-Fi, SSH and battery/thermal guards. Do not replace that startup sequence
-until the OpenRC handoff is integrated after those safeguards and tested on a
-reachable native session.
+phone's proven V19 init still owns early hardware, Wi-Fi and SSH startup.
+Battery and thermal watchers have been verified in separate native sessions;
+their startup from a cold V19 boot must be included and verified before any
+OpenRC PID 1 handoff. Do not replace that startup sequence until those
+safeguards and the OpenRC handoff are integrated and tested on a reachable
+native session.
+
+`tools/export_openrc_rootfs.py` now exports the signed-package replay as a
+deterministic standalone Alpine/OpenRC `newc` root archive. It omits only the
+downloaded APK cache, verifies a round trip, and records the package and base
+rootfs provenance. Archive:
+`linux-port/artifacts/openrc-rootfs-export/alpine-openrc-rootfs.cpio.gz`,
+SHA256 `88efe68505c7b98645d24e4e1cff7678073fbfd610011928ee3f92b76399571a`,
+4,496,025 bytes. `tools/measure_openrc_payload_fit.py` inserts that archive into
+a temporary copy of the V19 supplement in memory and round-trip checks it. The
+combined payload measures 16,682,636 bytes, below V19's strict 40,000,000-byte
+loader limit by 23,317,364 bytes. This is a size measurement only: no updated
+boot image has been built and the root archive remains inert.
 
 `tools/test_openrc_pid1_handoff_vm.py` adds a second, more realistic VM check:
 BusyBox mounts the early kernel interfaces, starts a long-lived worker, binds
-proc/sys/dev/run into an Alpine root and replaces itself with `openrc-init`.
+proc/sys/dev/run into the exported Alpine root and replaces itself with
+`openrc-init`.
 An OpenRC default-runlevel service confirms the earlier worker survived the
 PID 1 handoff, then requests a clean VM poweroff. It passed against the same
 V19 kernel fixture at
-`linux-port/artifacts/openrc-pid1-handoff-vm-1792237272891534016/` in 8.78s.
+`linux-port/artifacts/openrc-pid1-handoff-vm-1792237351578370070/` in 8.75s.
 Two earlier harness failures are preserved alongside it: one exposed missing
 parent directories in the synthetic initramfs; the next exposed that the VM
 must explicitly include the Alpine root's parent directories. This remains a

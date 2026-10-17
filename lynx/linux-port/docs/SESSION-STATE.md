@@ -12,10 +12,13 @@ Offline progress: Alpine 3.24.2 ARM64 with signed OpenRC 0.63.2-r0 now boots as
 PID 1 under QEMU using the exact frozen V19 stock kernel, reaches a test service
 in the default runlevel, and powers off cleanly. The six signed package APKs
 replay offline, and a second QEMU test passes the BusyBox-to-OpenRC PID 1
-handoff while keeping a pre-existing worker alive. Evidence and repeatable
-tools are in [ALPINE-USERSPACE.md](ALPINE-USERSPACE.md). These are VM-only
-results; no OpenRC image has been booted on Lynx. Keep the proven V19 Wi-Fi,
-SSH, and battery/thermal startup as the boundary for any future handoff.
+handoff from the exported 4.5 MB rootfs while keeping a pre-existing worker
+alive. The inert archive fits inside V19's supplementary payload budget by
+measurement; no updated image was built. Evidence and repeatable tools are in
+[ALPINE-USERSPACE.md](ALPINE-USERSPACE.md). These remain VM/size-only results;
+no OpenRC image has been booted on Lynx. Keep V19's proven Wi-Fi/SSH startup
+and separately validated battery/thermal watchers as prerequisites for any
+future handoff; cold-boot watcher startup still needs verification.
 
 Goal remains native Linux on OnePlus Nord 3 CPH2493 / MT6983, with a minimal
 BusyBox boot first. User permits recoverable controlled boot_a trials and broader

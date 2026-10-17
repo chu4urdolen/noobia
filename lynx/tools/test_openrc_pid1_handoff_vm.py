@@ -1,6 +1,7 @@
 """Test a BusyBox-to-Alpine/OpenRC PID 1 handoff under the frozen stock kernel."""
 import argparse
 import hashlib
+import gzip
 import json
 import os
 import stat
@@ -17,6 +18,7 @@ from ramdisk_codec import decompress
 
 V19_SHA256 = '5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851'
 RUNTIME = ROOT / 'linux-port/artifacts/openrc-runtime-root'
+ROOTFS_ARCHIVE = ROOT / 'linux-port/artifacts/openrc-rootfs-export/alpine-openrc-rootfs.cpio.gz'
 
 
 def sha(data):
@@ -25,11 +27,29 @@ def sha(data):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--runtime-root', type=Path, default=RUNTIME)
+    sources = parser.add_mutually_exclusive_group()
+    sources.add_argument('--runtime-root', type=Path, default=RUNTIME)
+    sources.add_argument('--rootfs-cpio-gz', type=Path)
     args = parser.parse_args()
-    runtime = args.runtime_root.resolve(strict=True)
-    require((runtime / 'sbin/openrc-init').is_file() and
-            not (runtime / 'sbin/openrc-init').is_symlink(), 'OpenRC runtime missing')
+    runtime = None
+    if args.rootfs_cpio_gz:
+        archive_path = args.rootfs_cpio_gz.resolve(strict=True)
+        manifest_path = archive_path.parent / 'manifest.json'
+        manifest = json.loads(manifest_path.read_text())
+        archive_bytes = archive_path.read_bytes()
+        require(manifest.get('state') == 'verified-openrc-rootfs-payload' and
+                sha(archive_bytes) == manifest.get('archive_sha256'),
+                'OpenRC rootfs archive does not match its manifest')
+        base_entries = read_newc(gzip.decompress(archive_bytes))
+        require({'bin/busybox', 'lib/ld-musl-aarch64.so.1', 'sbin/openrc-init'}
+                <= set(base_entries), 'OpenRC rootfs archive lacks required files')
+        source_label = str(archive_path)
+    else:
+        runtime = args.runtime_root.resolve(strict=True)
+        require((runtime / 'sbin/openrc-init').is_file() and
+                not (runtime / 'sbin/openrc-init').is_symlink(), 'OpenRC runtime missing')
+        base_entries = {}
+        source_label = str(runtime)
 
     out = ROOT / 'linux-port/artifacts' / ('openrc-pid1-handoff-vm-' + str(time.time_ns()))
     out.mkdir(mode=0o700)
@@ -45,23 +65,32 @@ def main():
 
     # Embed the Alpine root at /mnt/alpine. The existing PID 1 binds the live
     # proc, sys, dev and run mounts into it, then replaces itself with OpenRC.
-    for path in sorted(runtime.rglob('*')):
-        rel = path.relative_to(runtime).as_posix()
-        info = path.lstat()
-        mode = info.st_mode
-        if stat.S_ISDIR(mode):
-            data, cpio_mode = b'', stat.S_IFDIR | stat.S_IMODE(mode)
-        elif stat.S_ISREG(mode):
-            data, cpio_mode = path.read_bytes(), stat.S_IFREG | stat.S_IMODE(mode)
-            total += len(data)
-        elif stat.S_ISLNK(mode):
-            data, cpio_mode = os.readlink(path).encode(), stat.S_IFLNK | stat.S_IMODE(mode)
-        else:
-            raise ValueError('Unsupported OpenRC root member: ' + rel)
-        entries['mnt/alpine/' + rel] = {
-            'mode': cpio_mode, 'uid': 0, 'gid': 0,
-            'rdevmajor': 0, 'rdevminor': 0, 'data': data,
-        }
+    if runtime is not None:
+        for path in sorted(runtime.rglob('*')):
+            rel = path.relative_to(runtime).as_posix()
+            info = path.lstat()
+            mode = info.st_mode
+            if stat.S_ISDIR(mode):
+                data, cpio_mode = b'', stat.S_IFDIR | stat.S_IMODE(mode)
+            elif stat.S_ISREG(mode):
+                data, cpio_mode = path.read_bytes(), stat.S_IFREG | stat.S_IMODE(mode)
+            elif stat.S_ISLNK(mode):
+                data, cpio_mode = os.readlink(path).encode(), stat.S_IFLNK | stat.S_IMODE(mode)
+            else:
+                raise ValueError('Unsupported OpenRC root member: ' + rel)
+            base_entries[rel] = {'mode': cpio_mode, 'uid': 0, 'gid': 0,
+                                 'rdevmajor': 0, 'rdevminor': 0, 'data': data}
+    for rel, item in base_entries.items():
+        target = 'mnt/alpine/' + rel
+        if (rel.startswith('/') or '..' in Path(rel).parts or
+                not rel or target in entries):
+            raise ValueError('Unsafe or duplicate OpenRC root member: ' + rel)
+        mode = item['mode']
+        if not (stat.S_ISDIR(mode) or stat.S_ISREG(mode) or stat.S_ISLNK(mode)):
+            raise ValueError('Unsupported OpenRC root member type: ' + rel)
+        if stat.S_ISREG(mode):
+            total += len(item['data'])
+        entries[target] = item
 
     # The runtime image contains no default service links by design. This one
     # checks that a process started under the old PID 1 survived the handoff.
@@ -119,7 +148,7 @@ def main():
     report = {
         'state': 'openrc-pid1-handoff-verified' if passed else 'failed',
         'started_ns': started_ns, 'finished_ns': time.time_ns(),
-        'runtime_root': str(runtime),
+        'runtime_root_source': source_label,
         'runtime_root_regular_bytes': total,
         'kernel_sha256': sha(boot['kernel']), 'ramdisk_sha256': sha(ramdisk),
         'ramdisk_bytes': len(ramdisk), 'checks': checks, 'exit_code': rc,

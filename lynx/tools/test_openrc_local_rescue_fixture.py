@@ -1,4 +1,4 @@
-"""Check that the exact V26b init tail survives a refused OpenRC handoff."""
+"""Check that the exact V26c init tail survives a refused OpenRC handoff."""
 import hashlib
 import json
 import os
@@ -18,15 +18,15 @@ from ramdisk_codec import decompress  # noqa: E402
 
 def main():
     os.umask(0o077)
-    folder = PORT / 'artifacts/selfboot-alpine-v26b-offline'
+    folder = PORT / 'artifacts/selfboot-alpine-v26c-offline'
     image = (folder / 'nord3-selfboot-alpine-untested.img').read_bytes()
     manifest = json.loads((folder / 'build-result.json').read_text())
     if hashlib.sha256(image).hexdigest() != manifest['image_sha256']:
-        raise ValueError('V26b image changed')
+        raise ValueError('V26c image changed')
     init = read_newc(decompress(read_boot_v4(image)['ramdisk']))['init']['data']
     tail_start = b"log 'LOCAL_SELFBOOT_WIFI_SSH_HEALTH_ACTIVE; ATTEMPTING_ALPINE_PID1'\n"
     if init.count(tail_start) != 1:
-        raise ValueError('Expected V26b handoff site missing')
+        raise ValueError('Expected V26c handoff site missing')
     tail = init[init.index(tail_start):].decode()
     with tempfile.TemporaryDirectory(prefix='lynx-rescue-', dir=PORT / 'artifacts') as temp:
         base = Path(temp)
@@ -49,7 +49,7 @@ def main():
                                  result.stdout + result.stderr)
     out = PORT / 'artifacts' / ('openrc-local-rescue-check-' + str(time.time_ns()))
     out.mkdir(mode=0o700)
-    report = {'state': 'v26b-refusal-keeps-busybox-pid1',
+    report = {'state': 'v26c-refusal-keeps-busybox-pid1',
               'image_sha256': manifest['image_sha256'],
               'init_sha256': hashlib.sha256(init).hexdigest(),
               'test_exit_code': result.returncode,

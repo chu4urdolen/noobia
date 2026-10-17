@@ -28,6 +28,9 @@ def main():
         run.mkdir(parents=True)
         sys = base / 'sys'
         (sys / 'module').mkdir(parents=True)
+        supply = sys / 'class/power_supply/charger'
+        supply.mkdir(parents=True)
+        (supply / 'online').write_text('0\n')
         for index, (name, value) in enumerate([('cpu_0', 31000), ('cpu_1', 32000), ('soc_max', 33000)]):
             zone = sys / 'class/thermal' / ('thermal_zone' + str(index))
             zone.mkdir(parents=True)
@@ -93,6 +96,7 @@ def main():
             '/dev/kmsg': str(base / 'kmsg'),
             '/sys/module/': str(sys / 'module') + '/',
             '/sys/class/thermal/': str(sys / 'class/thermal') + '/',
+            '/sys/class/power_supply/': str(sys / 'class/power_supply') + '/',
         }
         for old, new in replacements.items():
             if old not in source:
@@ -118,6 +122,13 @@ def main():
                 raise AssertionError('Missing local marker was not refused before insertion')
             (run / 'local-boot-ready').write_text('fixture-token\n')
             (run / 'bootstrap-result').write_text('0\n')
+            (supply / 'online').write_text('1\n')
+            connected = subprocess.run(['sh', str(script), '--run-local', str(pack)],
+                                       capture_output=True, text=True, timeout=5)
+            if (connected.returncode == 0 or 'charging unvalidated' not in connected.stdout or
+                    (run / 'health-bootstrap').exists() or list((sys / 'module').iterdir())):
+                raise AssertionError('Online charger was not refused before insertion')
+            (supply / 'online').write_text('0\n')
             start_mode = '--run-local'
         result = None
         try:

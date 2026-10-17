@@ -1,6 +1,6 @@
-"""Build a private offline V25c BusyBox self-boot health prototype.
+"""Build a private offline V25d BusyBox self-boot health prototype.
 
-V25c starts health monitoring before Wi-Fi/SSH, without Nexus confirmation. It
+V25d starts health monitoring before Wi-Fi/SSH, without Nexus confirmation. It
 does not hand over PID 1 to Alpine yet and must not be flashed while the
 thermal safety hold remains active.
 """
@@ -15,7 +15,7 @@ import build_health_stage_candidate as stage
 
 ROOT, PORT = stage.ROOT, stage.PORT
 BASE = PORT / 'artifacts/health-stage-v23-offline'
-OUT = PORT / 'artifacts/selfboot-health-v25c-offline'
+OUT = PORT / 'artifacts/selfboot-health-v25d-offline'
 sys.path.insert(0, str(PORT))
 from image_formats import read_boot_v4, read_newc, require
 from ramdisk_codec import decompress
@@ -49,7 +49,7 @@ stop
 
 def main():
     os.umask(0o077)
-    require(not OUT.exists(), 'Refuse to replace V25c prototype')
+    require(not OUT.exists(), 'Refuse to replace V25d prototype')
     parent = json.loads((BASE / 'build-result.json').read_text())
     source = (BASE / 'nord3-health-stage-inert.img').read_bytes()
     require(parent.get('state') == 'offline-inert-health-stage-packaged' and

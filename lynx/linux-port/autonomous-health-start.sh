@@ -34,7 +34,15 @@ case "$1" in
         [ -f "$RUN/local-boot-ready" ] || fail 'local init has not approved this boot'
         local_ready=$(cat "$RUN/local-boot-ready") || fail 'local init marker unavailable'
         [ -n "$token" ] && [ "$local_ready" = "$token" ] || fail 'local init marker mismatch'
-        [ "$(cat "$RUN/bootstrap-result")" = 0 ] || fail 'stock bootstrap incomplete';;
+        [ "$(cat "$RUN/bootstrap-result")" = 0 ] || fail 'stock bootstrap incomplete'
+        offline_supplies=0
+        for supply in /sys/class/power_supply/*; do
+            [ -r "$supply/online" ] || continue
+            online=$(cat "$supply/online") || fail 'charger state unreadable'
+            [ "$online" = 0 ] || fail 'USB or charger is online; charging unvalidated'
+            offline_supplies=$((offline_supplies+1))
+        done
+        [ "$offline_supplies" -ge 1 ] || fail 'no charger state available';;
 esac
 [ ! -e "$RUN/health-bootstrap" ] || fail 'bootstrap already attempted'
 mkdir "$RUN/health-bootstrap" || fail 'cannot reserve bootstrap state'

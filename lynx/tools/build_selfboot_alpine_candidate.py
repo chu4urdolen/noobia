@@ -1,4 +1,4 @@
-"""Build a private offline V26b Alpine/OpenRC self-boot prototype from V25c.
+"""Build a private offline V26c Alpine/OpenRC self-boot prototype from V25d.
 
 No handset contact or partition write. This image is not eligible for flashing
 under the active thermal safety hold.
@@ -13,8 +13,8 @@ import time
 import build_health_stage_candidate as stage
 
 ROOT, PORT = stage.ROOT, stage.PORT
-BASE = PORT / 'artifacts/selfboot-health-v25c-offline'
-OUT = PORT / 'artifacts/selfboot-alpine-v26b-offline'
+BASE = PORT / 'artifacts/selfboot-health-v25d-offline'
+OUT = PORT / 'artifacts/selfboot-alpine-v26c-offline'
 sys.path.insert(0, str(PORT))
 from image_formats import read_boot_v4, read_newc, require
 from ramdisk_codec import decompress
@@ -33,13 +33,13 @@ stop
 
 def main():
     os.umask(0o077)
-    require(not OUT.exists(), 'Refuse to replace V26b prototype')
+    require(not OUT.exists(), 'Refuse to replace V26c prototype')
     parent = json.loads((BASE / 'build-result.json').read_text())
     source = (BASE / 'nord3-selfboot-health-untested.img').read_bytes()
     require(parent.get('state') == 'offline-selfboot-health-candidate-untested' and
             stage.sha(source) == parent['image_sha256'] ==
-            '587e4e8ec2a195a63a519ce0471003a337faf2d278cba994ee9dd4857b3bcc3a',
-            'V25c source differs')
+            '130d1cab9fdc48fc4ccafba75920d9bfb8a1a1c95f729ccae517ef1a790d7fb5',
+            'V25d source differs')
     boot = read_boot_v4(source)
     primary = read_newc(decompress(boot['ramdisk']))
     old_primary = {name: dict(entry) for name, entry in primary.items()}

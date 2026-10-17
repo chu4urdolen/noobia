@@ -100,6 +100,26 @@ material and remains local mode 0600. It contains **no automatic startup
 hook**, so this is a layout/integrity artifact, not a tested autonomous image
 or an image to flash.
 
+An additional **unflashed V24 prototype** adds an init hook after pinned host
+confirmation, extracts the hash-checked health archive into RAM, runs the
+health stage in a child bounded by 190 seconds, and arms the existing guarded
+OpenRC handoff only after a final health check. Its image is
+`artifacts/autonomous-health-v24-offline/nord3-autonomous-health-untested.img`,
+SHA-256 `0fa897c1757ef0cd309fd8cde46857f9c5329712202c48393af971596330d5d8`.
+The builder replay matched that exact hash and audited every primary and
+supplement member: only init, payload metadata, and the new handoff script
+changed from V23. A three-case host fixture at
+`artifacts/autonomous-health-handoff-check-1792275946413515701/result.json`
+passed archive extraction and gate arming with stubbed workers, and refused a
+bad archive hash or wrong host token. This is **not** a stock-kernel VM or real
+handset boot test. A separate exact-stock-kernel QEMU run at
+`artifacts/openrc-pid1-handoff-vm-1792276025887785750/result.json` then
+exercised the production health handoff script with a fake sensor/start worker:
+archive verification/extraction, child completion, automatic OpenRC gate arming,
+PID 1 replacement, health service adoption, and clean power-off all passed.
+The VM has no Lynx sensor hardware or Wi-Fi and does not boot the actual V24
+image. V24 must not be flashed while `SAFETY-HOLD.json` is active.
+
 After the first one-hour host logger ended, Lynx remained reachable and the
 on-phone health supervisor passed again at
 `logs/live-health-after-logger-1792275511617151253/result.json`: 23.5°C

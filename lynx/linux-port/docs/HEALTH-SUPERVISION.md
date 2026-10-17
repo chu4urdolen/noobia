@@ -83,6 +83,17 @@ module insertion, gauge setup, timing, and failure handling at unattended
 cold boot remain unproven. A supervised trial and recovery review must precede
 any flash.
 
+An offline V23 packaging check now places the exact inert input archive and
+both health-stage scripts into a separate 64 MiB boot image at
+`artifacts/health-stage-v23-offline/nord3-health-stage-inert.img` (SHA-256
+`c2cc903904255d7cdac00a9dd3cd60c7fde75cfe21e2dc331afafb02eb24e402`).
+The builder verifies the V22 parent hash, keeps its stock kernel and init
+control flow byte-for-byte, updates only payload size/hash metadata, and
+round-trip checks the embedded files. The image inherits private V19 Wi-Fi/SSH
+material and remains local mode 0600. It contains **no automatic startup
+hook**, so this is a layout/integrity artifact, not a tested autonomous image
+or an image to flash.
+
 After the first one-hour host logger ended, Lynx remained reachable and the
 on-phone health supervisor passed again at
 `logs/live-health-after-logger-1792275511617151253/result.json`: 23.5°C

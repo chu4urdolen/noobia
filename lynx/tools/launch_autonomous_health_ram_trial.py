@@ -53,15 +53,19 @@ def validate_local():
         if check.returncode:
             raise ValueError('Shell syntax failed: ' + path.name)
         scripts[path.name] = {'sha256': sha(raw_script), 'bytes': len(raw_script)}
-    checks = [
-        PORT / 'artifacts/autonomous-health-preflight-check-1792264353611654369/result.json',
-        PORT / 'artifacts/autonomous-health-start-check-1792275808786171502/result.json',
-    ]
-    for path in checks:
-        if not json.loads(path.read_text()).get('passed'):
+    checks = {
+        'autonomous-health-preflight.sh': PORT / 'artifacts/autonomous-health-preflight-check-1792264353611654369/result.json',
+        'autonomous-health-start.sh': PORT / 'artifacts/autonomous-health-start-check-1792275808786171502/result.json',
+    }
+    for name, path in checks.items():
+        checked = json.loads(path.read_text())
+        if not checked.get('passed') or checked.get('source_sha256') != scripts[name]['sha256']:
             raise ValueError('Offline fixture failed: ' + str(path))
+    image = json.loads((PORT / 'artifacts/health-stage-v23-offline/build-result.json').read_text())
+    if image.get('scripts') != {name: info['sha256'] for name, info in scripts.items()}:
+        raise ValueError('RAM trial scripts differ from hash-checked V23 payload')
     return {'archive_sha256': sha(raw), 'archive_bytes': len(raw),
-            'scripts': scripts, 'offline_checks': [str(p) for p in checks]}
+            'scripts': scripts, 'offline_checks': [str(p) for p in checks.values()]}
 
 
 def main():

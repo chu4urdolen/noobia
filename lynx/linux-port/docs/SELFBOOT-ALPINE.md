@@ -1,5 +1,29 @@
 # Lynx self-booting Alpine work — 2026-10-18
 
+## V25d supervised trial preparation
+
+On 2026-10-18 the V25d image and exact August stock `boot.img` were
+rehashed, and the reviewed Fastboot binary and matching stock OTA signature
+receipts were checked by `tools/flash_v25d_boot_a.py`. The offline readiness
+receipt is `logs/v25d-boot-a-trial-1792278530724850021.json`. The only
+permitted write in that tool is `boot_a`; it intentionally does not reboot
+after flashing, because V25d refuses an online charger and USB must be removed
+before native boot. The narrow, one-trial review is in
+`docs/V25D-TRIAL-EXCEPTION.json`; the general safety hold remains active.
+
+The read-only observer `tools/observe_v25d_selfboot.py` was armed before any
+physical step at `logs/v25d-selfboot-observer-1792278552921944267/result.json`.
+It discriminates the new `/init` hash from the still-running V19 and saves
+raw SSH attempts, timestamps and any successful boot diagnostics. It sends no
+acknowledgement to keep the candidate alive. The latest V19 health sample
+before this attempt was 23.8°C, 59% battery, and normal thermal/cooling
+watchers. A single SSH invocation of the existing `boot-proof-reboot` returned
+exit 1 without changing modes; its raw receipt is
+`logs/v25d-bootloader-transition-1792278564250461283/result.json`.
+Pinned SSH subsequently confirmed V19 was still running. No phone partition
+has been written in this preparation. Await the user-observed physical
+Fastboot screen and USB connection before any fresh Fastboot preflight.
+
 The installed `boot_a` remains the proven V19 BusyBox Wi-Fi/SSH image. No
 partition has been written during this work. The four-hour host logger at
 `logs/battery-session-1792276725293904387/result.json` observes the current

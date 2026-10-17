@@ -110,6 +110,14 @@ four-hour host capture was started at
 `logs/battery-session-1792275518601564562/result.json`; it is observational
 only and may finish while the on-phone protection continues.
 
+Read-only power-supply inventory on the unplugged phone at
+`logs/live-power-supply-inventory-1792275821681625650/result.json` showed the
+stock MT6375 charger supply registered, with `online=0` and `status=Not
+charging`. The independent gauge snapshot still reported 23.5°C, 63% charge,
+and discharge current. This establishes only the unplugged state; safe charging
+and charge termination under native Linux have not been validated. Keep the
+phone unplugged during this development session.
+
 An OpenRC `lynx-health` service is now prepared in
 `linux-port/openrc-lynx-health`. It adopts a verified early health process or
 starts one after the live prerequisites pass; routine service stop leaves that

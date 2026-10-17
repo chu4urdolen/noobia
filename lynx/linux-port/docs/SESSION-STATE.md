@@ -3992,3 +3992,35 @@ RAM-only SoC sensor/watch trial, the existing battery/runtime-power resume,
 and the OpenRC gate armer; it preserves per-stage receipts and performs no
 flash or reboot. Local preflight/self-test passed. It will not be started until
 the candidate is actually booted, which is not the current phone state.
+
+### 2026-10-17 V19 contact and active-listener correction
+
+After Noob reported Orange State with USB connected, no phone USB endpoint was
+visible. A gauge identity trial listener was mistakenly described as read-only
+and started without `--keep-running`. It received a V19 beacon about 80 seconds
+later and proved pinned native SSH. The tool then armed its stop timer, loaded
+the prepared sensor/CPU modules into RAM, queried gauge DeviceType 0xa5ff,
+captured diagnostics, and requested power-off. CPU guard maximum was 37.678C;
+battery temperature was not measured. Noob had reported a black screen before
+the beacon; the later power-off SSH command timed out, so physical power-off
+remains unconfirmed. No flash or partition write occurred. Complete record:
+`docs/CONTACT-20261017.md` and
+`logs/gauge-identity-trial-1792252324319555253/result.json`.
+
+The active gauge launcher now requires `--run-supervised-trial`; the established
+continuous battery-resume caller passes that explicit flag. New
+`tools/lynx_identity_observer.py` listens for a beacon and runs only the pinned
+read-only SSH proof. Python compile, launcher refusal, passive-listener smoke,
+and 13-case offline resume sequence passed. No listener owns port 5514 now.
+V19 remains the last recorded `boot_a` write and the Linux flash hold remains
+active. Do not infer present physical mode from the black screen.
+
+Later passive observer `logs/identity-observer-1792252530301958299/result.json`
+proved a fresh V19 boot with pinned SSH and no phone write/power command. New
+boot ID `54d9635c-1193-4161-8393-58ae455aeee2`, uptime 159.85 seconds in
+`logs/post-trial-readonly-1792252584897085117/`, establishes a boot after the
+diagnostic's power-off request. Cause of restart versus USB startup is unknown.
+At uptime 189 seconds host confirmation was absent; SSH still answered at
+uptime 261 seconds and later timed out. No phone USB/Fastboot endpoint appeared.
+Current physical mode awaits Noob's screen report. Do not claim power-off or
+Fastboot without that evidence.

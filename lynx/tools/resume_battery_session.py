@@ -47,7 +47,7 @@ def main():
   watch=(PORT/'battery-watch.sh').read_bytes();digest=hashlib.sha256(watch).hexdigest()
   tests=[json.loads(p.read_text()) for p in (PORT/'artifacts').glob('battery-watch-check-*/result.json')]
   if not any(r.get('passed') and r.get('source_sha256')==digest for r in tests):raise ValueError('Matching battery watcher tests missing')
-  ready=json.loads(run('listener',tool('start_gauge_listener.py','--identity-query','--keep-running','--seconds','600')))
+  ready=json.loads(run('listener',tool('start_gauge_listener.py','--run-supervised-trial','--identity-query','--keep-running','--seconds','600')))
   if not ready['ready_verified']:raise ValueError('Listener not ready')
   session=Path(ready['trial_receipt']);report.update(state='waiting-native-ssh',listener_ready=True,session=str(session));save();deadline=time.monotonic()+620
   while time.monotonic()<deadline:

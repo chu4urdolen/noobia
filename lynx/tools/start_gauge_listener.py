@@ -1,7 +1,7 @@
-"""Start a bounded, detached gauge-trial listener and verify actual readiness.
+"""Start an ACTIVE gauge/sensor trial that can power Lynx off after contact.
 
-The listener can contact Lynx if she emits the valid saved boot beacon.
-No flashing; supervision and the existing USB-unplugged power cue still apply.
+For read-only discovery use lynx_identity_observer.py instead. This tool can
+load RAM modules and arm an independent power-off timer after a valid beacon.
 """
 import argparse
 import hashlib
@@ -21,7 +21,11 @@ def main():
     parser.add_argument('--seconds', type=int, default=600)
     parser.add_argument('--identity-query', action='store_true')
     parser.add_argument('--keep-running', action='store_true')
+    parser.add_argument('--run-supervised-trial', action='store_true',
+                        help='Required acknowledgement: this loads RAM modules and may power off Lynx')
     args = parser.parse_args()
+    if not args.run_supervised_trial:
+        parser.error('Active trial requires --run-supervised-trial; use lynx_identity_observer.py for read-only contact')
     if not 30 <= args.seconds <= 600:
         raise ValueError('Listener deadline must be 30–600 seconds')
     os.umask(0o077)

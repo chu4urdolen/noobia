@@ -51,7 +51,7 @@ Completed offline checks:
 - Identity, raw-reader and CPU coordinator self-checks pass independently.
 
 `tools/lynx_gauge_identity_trial.py` pins the separate module/source/test receipts
-and reuses the frozen sensor/CPU pack. `start_gauge_listener.py --identity-query`
+and reuses the frozen sensor/CPU pack. `start_gauge_listener.py --run-supervised-trial --identity-query`
 starts its detached, bounded listener. The independent stop request is armed
 before fallback acknowledgement. Sensors/CPU controls and the fresh temperature
 guard precede the query; raw capture, unload and shutdown request follow.

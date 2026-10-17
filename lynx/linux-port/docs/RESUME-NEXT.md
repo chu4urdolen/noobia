@@ -1,4 +1,48 @@
-# Paused for Noob's bedtime, 2026-10-12
+# Current handoff — 2026-10-17
+
+Later update: the phone did boot V19 and answered a pinned Wi-Fi/SSH identity
+check after about 80 seconds. An active gauge diagnostic was started under an
+incorrect read-only description, loaded RAM sensor/CPU modules, queried the
+gauge, and requested power-off. Its power-off SSH call timed out; physical
+power-off is unconfirmed. Noob had reported a black screen earlier, before the
+beacon and diagnostic. No partition was changed.
+Later, the passive observer proved a fresh V19 boot on real hardware without
+changing the phone. SSH subsequently stopped responding, and the host still
+sees no phone USB/Fastboot endpoint. The current screen and temperature are
+awaiting Noob's observation. See the later section of `docs/CONTACT-20261017.md`.
+See `docs/CONTACT-20261017.md` and its raw receipt. The active launcher now
+requires an explicit flag; use `tools/lynx_identity_observer.py` for passive
+contact checks. No phone listener remains active. Do not initiate another
+hardware run merely to clarify the black screen.
+
+The latest recorded installed image is V19 on `boot_a`. It reached a proven
+native BusyBox PID 1 with Wi-Fi, DHCP, pinned SSH, and live battery telemetry.
+This is real handset Linux userspace execution; V19 is not thermally validated
+for unattended use, and no persistent Alpine installation exists yet.
+
+An earlier guarded identity-listener window ended without contacting Lynx:
+`logs/gauge-identity-trial-1792236213431442585/result.json`. Its companion
+resume workflow failed closed with no flash, reboot, or shutdown:
+`logs/battery-resume-1792236213199437795/result.json`. No listener remains
+running. That earlier result does not describe the later verified V19 boot.
+The present physical mode is unknown; do not infer Fastboot or power-off.
+
+The Linux-flash hold remains active in `docs/SAFETY-HOLD.json` because thermal
+validation is incomplete. Do not install V20 or another Linux image while the
+hold is active. V20 is an offline OpenRC handoff candidate, not a handset-tested
+image; its combined fresh-boot sensor/battery/runtime sequence is untested.
+The exact August stock `boot_a` image and tested Fastboot restore command are
+available; offline verification is recorded in
+`docs/OFFLINE-RECOVERY-AUDIT-20261017.md`. Restoration still requires a fresh
+physical Fastboot preflight and an explicit restore action.
+
+Continue with offline development and review. A future supervised hardware
+session must first satisfy the thermal hold's review conditions. If physical
+access is needed, state the exact connection/button action and wait there.
+
+---
+
+# Earlier handoff history (2026-10-12)
 
 Do not start hardware work until Noob resumes. No credentials needed currently.
 All tools and files remain under /noobia/lynx.

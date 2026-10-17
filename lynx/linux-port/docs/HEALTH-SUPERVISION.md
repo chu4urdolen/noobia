@@ -130,14 +130,21 @@ sensor module, or stale RAM state before uploading anything. It then verifies
 the archive and scripts on Lynx, runs the read-only hardware preflight, and
 starts the health stage in RAM with raw receipts for each step. On a failed
 unprotected session it requests power-off. On success it starts a bounded
-four-hour host logger while on-phone watchers remain independent. This sequence has not been armed or
-run on the phone yet; it requires Noob's current unplugged confirmation and a
-coordinated fresh V19 boot. No partition write is part of the trial.
+four-hour host logger while on-phone watchers remain independent. This sequence
+has not been armed or run on the phone yet; it requires Noob's current
+unplugged confirmation and a coordinated fresh V19 boot. No partition write
+is part of the trial.
 The detached worker's offline sequence test passed at
 `artifacts/autonomous-window-check-1792276271144450533/result.json`:
 listener readiness precedes the RAM trial, a successful trial starts the host
 logger, and missing unplugged confirmation is refused. It uses mocks and did
 not arm the real listener.
+When Noob confirms Lynx is still physically unplugged and ready, arm that
+listener first. `tools/request_safe_v19_poweroff.py` then rechecks the pinned
+current boot, on-phone health supervisor, and unplugged charger state before
+requesting power-off over SSH; it records the raw result without claiming
+physical shutdown. Only after that should Noob press Power once to start a
+fresh V19 boot. These steps have not been executed yet.
 
 After the first one-hour host logger ended, Lynx remained reachable and the
 on-phone health supervisor passed again at

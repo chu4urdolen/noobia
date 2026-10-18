@@ -1,7 +1,7 @@
 # V27a minimal BusyBox self-boot diagnostic
 
 Status: **hardware trial inconclusive; proven V19 restored
-to `boot_a`, awaiting unplugged boot verification**. Its image SHA-256 is
+to `boot_a` and verified over authenticated SSH**. Its image SHA-256 is
 `db5381f525153971bc878109e67f47ad3256d6454d69eeab0802e3477e0024f4`.
 The candidate derives from the exact V19 image that repeatedly reached
 authenticated SSH. Only `/init`, its supplemental payload metadata, and one
@@ -53,6 +53,18 @@ covered too little native runtime to judge V27a. Do not count this as a V27a
 boot failure. The guarded
 V19 restoration at `logs/v19-rescue-boot-a-1792353076061538334.json` verified
 the same identity and wrote only `boot_a`; the host again issued no reboot.
-A fresh V19 contact collector is armed at
-`logs/wifi-v19-contact-1792353073291818117/result.json` for the unplugged
-boot verification.
+A fresh V19 contact collector at
+`logs/wifi-v19-contact-1792353073291818117/result.json` verified a valid
+beacon and pinned SSH. The passive USB record at
+`logs/v19-rescue-usb-departure-1792353076061538334.json` places the first
+beacon 117.709 seconds after Fastboot USB departure. The autonomous RAM health
+stage then passed at `logs/autonomous-health-ram-trial-1792353506105490795/result.json`,
+and the Alpine development checkpoint was restored in RAM at
+`logs/alpine-checkpoint-live-restore-1792353532587655041/result.json`.
+
+For any repeat of V27a, start both the network observer and passive USB
+observer while Fastboot is connected. Begin the native boot window at the
+recorded USB departure, not at the time the network observer was armed. Allow
+at least 420 seconds after departure before treating missing SSH as a negative
+result; the verified V19 rescue took 117.709 seconds to beacon. Keep the
+observer active long enough to cover human delay before unplugging.

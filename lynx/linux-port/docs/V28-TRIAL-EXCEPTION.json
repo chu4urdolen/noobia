@@ -1,0 +1,15 @@
+{
+  "state": "offline-ready-not-flashed",
+  "image_sha256": "a22048376cec353af652c187da733eb198f1382efcf19924eebd5ba0b883d775",
+  "partition": "boot_a",
+  "single_supervised_trial": true,
+  "requires_unplugged_boot": true,
+  "proven_v19_contact_receipt": "logs/wifi-v19-contact-1792354302617356863/result.json",
+  "proven_health_receipt": "logs/autonomous-health-ram-trial-1792354806850319336/result.json",
+  "scope": "One V28 boot_a-only trial on exact Lynx slot A. V27a proved local Wi-Fi and pinned SSH without Nexus acknowledgement. V28 preserves its kernel and Wi-Fi path and adds reviewed health scripts/modules that passed on Lynx in RAM. An independent 300-second timer powers off if local Wi-Fi or health startup stalls; automatic health monitors take over only after readiness. Arm image-aware network and passive USB observers before writing. Judge startup from USB departure, with a bounded 600-second native window. V19 and exact stock boot_a remain available for restoration. General hold remains active for other images and partitions.",
+  "abort_conditions": "Unexpected Fastboot identity or slot, image or stock hash mismatch, write error, warming handset, charger attached during native boot, missing authenticated SSH or health proof through bounded window, unexpected recovery or reboot. Preserve raw logs and restore V19 after the diagnostic if health is not proved.",
+  "other_partitions_allowed": false,
+  "automatic_reboot_allowed": false,
+  "native_charging_untested": true,
+  "alpine_handoff_untested": true
+}

@@ -22,6 +22,7 @@ BUILDS = {
     'v25g': ROOT / 'linux-port/artifacts/selfboot-compact-v25g-offline/build-result.json',
     'v25h': ROOT / 'linux-port/artifacts/selfboot-beacon-v25h-offline/build-result.json',
     'v27a': ROOT / 'linux-port/artifacts/minimal-local-ssh-v27a-offline/build-result.json',
+    'v28': ROOT / 'linux-port/artifacts/local-health-v28-offline/build-result.json',
 }
 PHONE_IP = '192.168.100.7'
 PROBE = ("printf 'LYNX_V25F_PROBE\\n'; sha256sum /init /bin/busybox; "
@@ -174,6 +175,7 @@ def main():
         'v25g': 'nord3-selfboot-compact-untested.img',
         'v25h': 'nord3-selfboot-beacon-untested.img',
         'v27a': 'nord3-minimal-local-ssh-untested.img',
+        'v28': 'nord3-local-health-untested.img',
     }[args.candidate]
     if not init_sha or manifest['image_sha256'] != hashlib.sha256(
             (BUILDS[args.candidate].parent / image_name).read_bytes()).hexdigest():

@@ -19,6 +19,10 @@ boot-image size and boundaries, kernel and header identity, and every CPIO
 member after packing. Existing local health handoff and health-start fixtures
 passed at `artifacts/autonomous-health-local-check-1792354399868756797/result.json`
 and `artifacts/autonomous-health-start-check-1792354403985292644/result.json`.
+After V19 restoration, the same health start and preflight scripts packed in
+V28 ran on Lynx in RAM. Their on-phone SHA-256 values matched the V28 package,
+and `/run/lynx/health-bootstrap/ready` was present. The live result is
+`logs/autonomous-health-ram-trial-1792354806850319336/result.json`.
 These tests do not prove V28's combined boot path on Lynx. Charging remains
 untested. The general safety hold remains active; no V28 flash is authorized
 by this build result.

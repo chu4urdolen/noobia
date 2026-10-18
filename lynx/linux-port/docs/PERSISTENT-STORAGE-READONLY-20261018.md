@@ -22,3 +22,11 @@ restore the boot chain, and prepare a clear destructive-storage decision. The
 working V19 and exact stock `boot_a` images remain separate on Nexus. A Linux
 rootfs on `userdata` cannot be assumed ready merely because Fastboot labels it
 F2FS.
+
+A full sysfs partition-name/size inventory is preserved at
+`logs/ufs-layout-readonly-1792350847180380464/result.json`. The only large
+general-purpose candidates are `super` (15,032,385,536 bytes) and `userdata`
+(238,605,533,184 bytes). The other partitions at or above 128 MiB are modem,
+OPLUS reserve and crash-log regions; they are not suitable scratch space.
+Reusing `super` could remove stock vendor components and complicate recovery.
+No partition was modified to reach this conclusion.

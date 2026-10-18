@@ -168,6 +168,12 @@ until that physical boot actually occurs.
 No other partition or slot was written. Preserve both V19 and stock restore
 images, and do not infer a successful Linux boot from the Fastboot write.
 
+The unplugged V25g trial showed the orange screen, but the renewed observer
+recorded no valid beacon or SSH contact in 83 probes. Fastboot subsequently
+reconnected with the expected serial, and the guarded V19 rescue restored only
+`boot_a` at `logs/v19-rescue-boot-a-1792334760095554872.json`. The host did not
+reboot. V19's unplugged boot and pinned SSH contact are pending.
+
 While V19 remained on SSH, a read-only Linux block-device capture of the
 whole `expdb` partition established a usable crash-log extraction path.
 See `docs/EXPDB-LIVE-READ-20261018.md`. The complete record again contains

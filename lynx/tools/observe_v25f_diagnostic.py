@@ -199,8 +199,8 @@ def main():
     if args.worker:
         worker(args.worker.resolve(strict=True))
         return
-    if not 30 <= args.seconds <= 900:
-        parser.error('--seconds must be 30..900')
+    if not 30 <= args.seconds <= 1800:
+        parser.error('--seconds must be 30..1800')
     os.umask(0o077)
     out = ROOT / 'logs' / (args.candidate + '-diagnostic-observer-' + str(time.time_ns()))
     out.mkdir(mode=0o700)

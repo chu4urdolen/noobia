@@ -1,5 +1,6 @@
 {
-  "state": "offline-ready-repeat-not-flashed",
+  "state": "consumed-repeat-flashed",
+  "repeat_trial_receipt": "logs/v27a-boot-a-trial-1792353870113193430.json",
   "prior_trial_receipt": "logs/v27a-boot-a-trial-1792351913669138575.json",
   "proven_v19_contact_receipt": "logs/wifi-v19-contact-1792353073291818117/result.json",
   "image_sha256": "db5381f525153971bc878109e67f47ad3256d6454d69eeab0802e3477e0024f4",

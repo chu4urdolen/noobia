@@ -129,15 +129,17 @@ using Lynx's exact stock kernel passed package/world, Python, Git and Make at
 `linux-port/artifacts/alpine-checkpoint-restore-1792331497398834530/result.json`.
 This is **Alpine userspace under V19 BusyBox PID 1**, not an automatically
 booting Alpine installation or a write to persistent phone storage. The
-general self-boot safety hold remains active; V25g has not been flashed.
+general self-boot safety hold remains active. At the time of this V19 session,
+V25g had not yet been flashed.
 
-The next V25g trial is prepared but still unexecuted. The offline flasher
+Before the hardware write, the V25g trial was prepared offline. The flasher
 `tools/flash_v25g_boot_a.py` validated the exact 64 MiB image, stock undo,
 reviewed Fastboot binary and matching OTA receipts at
 `logs/v25g-boot-a-trial-1792332345922486275.json`. Its narrow review is
-`docs/V25G-TRIAL-EXCEPTION.json`. A future live run requires fresh Fastboot
-identity/slot checks and a fresh beacon-aware V25g observer receipt before a
-single `boot_a` write. This preparation did not contact or restart Lynx.
+`docs/V25G-TRIAL-EXCEPTION.json`. The live run was required to pass fresh
+Fastboot identity/slot checks and arm a beacon-aware V25g observer before a
+single `boot_a` write. This offline preparation did not contact or restart
+Lynx.
 The sequence and V19 rollback are recorded in
 `docs/V25G-TRIAL-RUNBOOK.md`.
 The V25g supplemental payload was also uploaded to a temporary V19 RAM
@@ -146,6 +148,20 @@ directory and checked with Lynx's own BusyBox `gzip` and `cpio` tools at
 and payload hashes matched, the expected Wi-Fi and health scripts were listed,
 and the temporary files were removed. This validates BusyBox parsing on the
 handset, but it does not simulate early boot or prove the full candidate boots.
+
+### V25g `boot_a` write — awaiting unplugged boot
+
+Noob authorized the prepared trial with “ok go.” Fresh USB Fastboot preflight
+matched the exact Lynx serial, product, unlocked slot A, bootloader version and
+partition sizes at `logs/fastboot-preflight-1792333610908609861.json`. The
+beacon-aware observer was armed first at
+`logs/v25g-diagnostic-observer-1792333613469205903/result.json`. The guarded
+single `boot_a` write returned success at
+`logs/v25g-boot-a-trial-1792333616762100475.json`; the host did **not** issue a
+reboot. Fastboot still enumerated on USB afterward. Lynx's V25g boot behavior
+is therefore **unobserved** until Noob disconnects USB and starts the phone.
+No other partition or slot was written. Preserve both V19 and stock restore
+images, and do not infer a successful Linux boot from the Fastboot write.
 
 While V19 remained on SSH, a read-only Linux block-device capture of the
 whole `expdb` partition established a usable crash-log extraction path.

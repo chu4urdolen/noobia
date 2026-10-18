@@ -1,10 +1,11 @@
 # V25g supervised trial runbook
 
-Status: **prepared, unexecuted**. Lynx currently has the verified V19 image
-on `boot_a`, pinned Wi-Fi SSH, RAM-only health monitoring, and an Alpine
-development chroot. The private Alpine checkpoint and exact stock/V19 restore
-images are preserved on Nexus. Do not disrupt this session merely to repeat
-an unexplained boot failure.
+Status: **V25g written to `boot_a`, unplugged boot pending**. The guarded write
+receipt is `logs/v25g-boot-a-trial-1792333616762100475.json`. The host did not
+reboot; Lynx remained in Fastboot on USB at the last check. The private Alpine
+checkpoint and exact stock/V19 restore images are preserved on Nexus. The
+steps below record the preparation and recovery procedure; do not repeat the
+write while it is already installed.
 
 ## Preflight and observation
 

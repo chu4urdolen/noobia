@@ -1,5 +1,5 @@
 {
-  "state": "prepared-not-yet-executed",
+  "state": "boot-a-write-complete-await-unplugged-boot",
   "image_sha256": "84b037a79eb678524a88e8c66ced214502ea5381193df26e2c7cec024083bebe",
   "partition": "boot_a",
   "single_supervised_trial": true,

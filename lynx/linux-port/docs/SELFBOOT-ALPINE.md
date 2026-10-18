@@ -138,6 +138,8 @@ reviewed Fastboot binary and matching OTA receipts at
 `docs/V25G-TRIAL-EXCEPTION.json`. A future live run requires fresh Fastboot
 identity/slot checks and a fresh beacon-aware V25g observer receipt before a
 single `boot_a` write. This preparation did not contact or restart Lynx.
+The sequence and V19 rollback are recorded in
+`docs/V25G-TRIAL-RUNBOOK.md`.
 The V25g supplemental payload was also uploaded to a temporary V19 RAM
 directory and checked with Lynx's own BusyBox `gzip` and `cpio` tools at
 `logs/v25g-live-payload-parser-1792332382589515595/result.json`. Its image

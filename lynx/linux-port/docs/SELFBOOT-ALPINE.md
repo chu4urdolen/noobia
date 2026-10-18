@@ -172,7 +172,19 @@ The unplugged V25g trial showed the orange screen, but the renewed observer
 recorded no valid beacon or SSH contact in 83 probes. Fastboot subsequently
 reconnected with the expected serial, and the guarded V19 rescue restored only
 `boot_a` at `logs/v19-rescue-boot-a-1792334760095554872.json`. The host did not
-reboot. V19's unplugged boot and pinned SSH contact are pending.
+reboot. The ensuing unplugged boot reached authenticated V19 SSH at
+`192.168.100.7`; the pinned collector at
+`logs/wifi-v19-contact-1792334500503425456/result.json` cancelled its fallback
+timer and saved boot, kernel and pstore diagnostics. A read-only expdb prefix
+captured at `logs/expdb-prefix-1792335188180891756/result.json` exactly
+matched the earlier baseline over the documented ramconsole and pstore regions
+(`logs/expdb-compare-1792348053156007594/result.json`). This yields no new
+persistent crash trace from V25g; it does not establish where V25g stopped.
+
+At a later orange-screen boot, a fresh V19 listener was armed at
+`logs/wifi-v19-contact-1792348069641858485/result.json`. No beacon or SSH
+contact appeared in its first five minutes, while the Nexus Noobia network and
+gateway remained reachable. The phone-side state needs fresh observation.
 
 While V19 remained on SSH, a read-only Linux block-device capture of the
 whole `expdb` partition established a usable crash-log extraction path.

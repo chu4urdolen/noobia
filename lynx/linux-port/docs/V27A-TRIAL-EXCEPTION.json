@@ -1,0 +1,13 @@
+{
+  "state": "offline-ready-not-flashed",
+  "image_sha256": "db5381f525153971bc878109e67f47ad3256d6454d69eeab0802e3477e0024f4",
+  "partition": "boot_a",
+  "single_supervised_trial": true,
+  "requires_unplugged_boot": true,
+  "scope": "One future V27a boot_a-only diagnostic on exact Lynx slot A. V27a derives directly from the proven V19 image: only init, its payload metadata, and the packaged Wi-Fi supervisor differ. It advertises the actual DHCP address and accepts local SSH readiness without a Nexus acknowledgement. A 180-second post-bootstrap RAM timer requests power-off even on success because automatic health is not included. Arm the image-aware observer before writing and retain exact V19 and stock restoration paths. General hold remains active for other images and partitions.",
+  "abort_conditions": "Unexpected Fastboot identity or slot, image or stock hash mismatch, write error, warming handset, USB attached during native boot, missing authenticated SSH proof through bounded window, unexpected recovery or reboot. Preserve raw logs and restore V19 after the diagnostic.",
+  "other_partitions_allowed": false,
+  "automatic_reboot_allowed": false,
+  "native_charging_untested": true,
+  "alpine_handoff_untested": true
+}

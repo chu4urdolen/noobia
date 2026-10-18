@@ -1,4 +1,4 @@
-"""Capture V25f's first SSH contact and health transition without phone writes.
+"""Capture candidate SSH contact and health transition without phone writes.
 
 The pinned SSH host key plus image-specific /init hash identify Lynx. Every
 attempt and every successful raw diagnostic is saved before parsing. No V19
@@ -21,6 +21,7 @@ BUILDS = {
     'v25f': ROOT / 'linux-port/artifacts/selfboot-wifi-first-v25f-offline/build-result.json',
     'v25g': ROOT / 'linux-port/artifacts/selfboot-compact-v25g-offline/build-result.json',
     'v25h': ROOT / 'linux-port/artifacts/selfboot-beacon-v25h-offline/build-result.json',
+    'v27a': ROOT / 'linux-port/artifacts/minimal-local-ssh-v27a-offline/build-result.json',
 }
 PHONE_IP = '192.168.100.7'
 PROBE = ("printf 'LYNX_V25F_PROBE\\n'; sha256sum /init /bin/busybox; "
@@ -140,6 +141,11 @@ def worker(out):
                     _, kernel_event = ssh_capture(out, 'first-kernel', KERNEL, phone_ip, timeout=20)
                     report['first_kernel'] = kernel_event
                     first_kernel_saved = True
+                if report['candidate'] == 'v27a':
+                    report.update(state='v27a-early-ssh-verified', native_ssh_verified=True,
+                                  finished_ns=time.time_ns())
+                    save(receipt, report)
+                    return
                 if proof['health_ready']:
                     report.update(state=report['candidate'] + '-health-ready', native_ssh_verified=True,
                                   health_verified_ns=time.time_ns(), finished_ns=time.time_ns())
@@ -167,6 +173,7 @@ def main():
         'v25f': 'nord3-selfboot-health-untested.img',
         'v25g': 'nord3-selfboot-compact-untested.img',
         'v25h': 'nord3-selfboot-beacon-untested.img',
+        'v27a': 'nord3-minimal-local-ssh-untested.img',
     }[args.candidate]
     if not init_sha or manifest['image_sha256'] != hashlib.sha256(
             (BUILDS[args.candidate].parent / image_name).read_bytes()).hexdigest():

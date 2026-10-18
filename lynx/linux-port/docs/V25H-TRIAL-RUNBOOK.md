@@ -1,7 +1,7 @@
 # V25h discovery trial
 
-Status: **V25h written to `boot_a`; unplugged trial produced no network
-contact, V19 restore pending Fastboot**. The guarded write
+Status: **V25h produced no network contact; proven V19 restored to `boot_a`,
+awaiting unplugged boot**. The guarded write
 receipt is `logs/v25h-boot-a-trial-1792348863400477665.json`. The host did not
 reboot Lynx and wrote no other partition or slot.
 
@@ -51,3 +51,9 @@ the local supervisor lacking a beacon call: V25h includes that call and passed
 its fake-network fixture. A fresh V19 recovery listener was armed at
 `logs/wifi-v19-contact-1792349585406385976/result.json` before requesting
 Fastboot and a guarded restore.
+
+Fastboot reconnected with the exact Lynx serial. The guarded V19 rescue at
+`logs/v19-rescue-boot-a-1792350086116109224.json` passed a fresh read-only
+identity/slot preflight and wrote only `boot_a` successfully. The host issued
+no reboot. V19 network and SSH contact after the unplugged boot remain to be
+verified.

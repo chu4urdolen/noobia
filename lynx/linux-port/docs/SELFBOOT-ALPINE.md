@@ -186,6 +186,36 @@ At a later orange-screen boot, a fresh V19 listener was armed at
 contact appeared in its first five minutes, while the Nexus Noobia network and
 gateway remained reachable. The phone-side state needs fresh observation.
 
+### V25h diagnostic and V19/Alpine recovery
+
+V25g's local Wi-Fi supervisor did not send the discovery beacon that its
+observer expected, so a changed DHCP lease could have been missed. V25h added
+that beacon as the only changed supplemental member, retaining V25g's exact
+kernel and init. The source and exact packaged script passed an offline fake
+network fixture. V25h was written only to `boot_a` at
+`logs/v25h-boot-a-trial-1792348863400477665.json`; its unplugged boot showed
+the orange screen but produced no beacon or authenticated SSH through the full
+bounded window. See `docs/V25H-TRIAL-RUNBOOK.md`. This narrows the observer
+blind spot but still does not identify the boot failure.
+
+The guarded V19 rescue restored only `boot_a` at
+`logs/v19-rescue-boot-a-1792350086116109224.json`. The unplugged boot reached
+authenticated SSH at `192.168.100.7` and its automatic health stage passed at
+`logs/autonomous-health-ram-trial-1792350300055886410/result.json`. The full
+Alpine development checkpoint uploaded and extracted into RAM; the first live
+probe found a missing `/dev` directory in the archive. A RAM-only repair added
+`/dev/null` and verified native Python 3.14.8, Git 2.54.0 and Make 4.4.1 at
+`logs/alpine-checkpoint-live-repair-1792350451274224367/result.json`.
+`tools/restore_alpine_checkpoint_live.py` now creates `/dev` in the normal
+restore path, while preserving the exact checkpoint and stock-kernel VM proof.
+This session runs BusyBox PID 1 with Alpine in a chroot and automatic health;
+it does not persist on the phone after power-off.
+
+Read-only storage findings are in `docs/PERSISTENT-STORAGE-READONLY-20261018.md`.
+The V27a minimal local-SSH candidate prepared from V19 is described in
+`docs/V27A-MINIMAL-LOCAL-SSH.md`. It is offline-only and unflashed, preserving
+this live V19/Alpine session for useful work.
+
 While V19 remained on SSH, a read-only Linux block-device capture of the
 whole `expdb` partition established a usable crash-log extraction path.
 See `docs/EXPDB-LIVE-READ-20261018.md`. The complete record again contains

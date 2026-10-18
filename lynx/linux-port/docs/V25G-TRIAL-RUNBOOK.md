@@ -30,6 +30,10 @@ an unexplained boot failure.
 Stop if Fastboot identity or slot differs, the phone warms unexpectedly,
 the candidate behaves differently from its bounded timer, or no authenticated
 SSH/health proof appears. Preserve the observer and expdb/pstore receipts.
+If a failed candidate leaves no live SSH log, use a later read-only V19 boot
+to capture expdb with `tools/capture_expdb_live.py`, then compare its
+documented first 0xF0000 bytes against the baseline with
+`tools/compare_expdb_captures.py` before assigning log age.
 Return physically to Fastboot without slot switching. The known functional
 Linux rollback is to arm a fresh V19 pinned collector, then run
 `python3 tools/restore_v19_boot_a.py --flash --collector-receipt

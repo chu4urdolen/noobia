@@ -30,3 +30,15 @@ newer failure record exists.
 The live capture establishes a usable read-only expdb path for future trials.
 If another candidate boot fails, return to V19 and compare a fresh expdb hash
 and decoded record provenance before attributing any retained log to it.
+`tools/capture_expdb_live.py --capture --contact-receipt <fresh-V19-contact>`
+repeats the guarded first-0xF0000-byte read. It checks pinned native identity,
+the exact `expdb` sysfs identity and partition size before reading, and
+records the current kernel boot ID for provenance. Its live control at
+`logs/expdb-prefix-1792332639175907933/result.json` matched the first
+capture's SHA-256 exactly.
+`tools/compare_expdb_captures.py` performs a bounded 4 KiB block and region
+comparison of a full or first-0xF0000-byte capture without printing log text.
+As a control, the initial prefix and the later full capture had identical
+prefixes, including both LK-identified log regions:
+`logs/expdb-compare-1792332566123900847/result.json`. A synthetic mutation
+at each region boundary passed the comparison check.

@@ -1,6 +1,7 @@
 # V27a minimal BusyBox self-boot diagnostic
 
-Status: **offline-ready, not flashed**. Its image SHA-256 is
+Status: **hardware trial inconclusive; proven V19 restored
+to `boot_a`, awaiting unplugged boot verification**. Its image SHA-256 is
 `db5381f525153971bc878109e67f47ad3256d6454d69eeab0802e3477e0024f4`.
 The candidate derives from the exact V19 image that repeatedly reached
 authenticated SSH. Only `/init`, its supplemental payload metadata, and one
@@ -39,3 +40,19 @@ V19 pinned collector, then run `tools/restore_v19_boot_a.py --flash
 `linux-port/artifacts/stock-cph2493-August-eu-ota/boot.img`. Stop on unexpected
 identity, write response, recovery mode, or warming. Preserve observer and
 pstore/expdb receipts before another trial.
+
+The supervised V27a trial wrote only `boot_a` after exact Fastboot identity
+verification; receipt: `logs/v27a-boot-a-trial-1792351913669138575.json`.
+The host issued no reboot. The 900-second observer
+`logs/v27a-diagnostic-observer-1792351911626040244/result.json` ended at
+`deadline-without-health-proof` with 149 unsuccessful pinned SSH probes and no
+valid beacon. Fastboot was still connected at least a minute after flashing
+and had disappeared by the next check near the observer deadline. No USB or
+screen trace established when physical boot started, so the observer may have
+covered too little native runtime to judge V27a. Do not count this as a V27a
+boot failure. The guarded
+V19 restoration at `logs/v19-rescue-boot-a-1792353076061538334.json` verified
+the same identity and wrote only `boot_a`; the host again issued no reboot.
+A fresh V19 contact collector is armed at
+`logs/wifi-v19-contact-1792353073291818117/result.json` for the unplugged
+boot verification.

@@ -1,7 +1,7 @@
 # V27a minimal BusyBox self-boot diagnostic
 
-Status: **hardware trial inconclusive; proven V19 restored
-to `boot_a` and verified over authenticated SSH**. Its image SHA-256 is
+Status: **timed repeat proved autonomous BusyBox Wi-Fi and authenticated SSH;
+V27a remains a bounded diagnostic with a pending V19 restoration**. Its image SHA-256 is
 `db5381f525153971bc878109e67f47ad3256d6454d69eeab0802e3477e0024f4`.
 The candidate derives from the exact V19 image that repeatedly reached
 authenticated SSH. Only `/init`, its supplemental payload metadata, and one
@@ -68,3 +68,20 @@ recorded USB departure, not at the time the network observer was armed. Allow
 at least 420 seconds after departure before treating missing SSH as a negative
 result; the verified V19 rescue took 117.709 seconds to beacon. Keep the
 observer active long enough to cover human delay before unplugging.
+
+The timed repeat used the exact same V27a image. Its guarded `boot_a` write
+receipt is `logs/v27a-boot-a-trial-1792353870113193430.json`; no other
+partition was touched and the host did not reboot Lynx. Passive USB recording
+at `logs/v27a-repeat-usb-1792353858696.json` captured Fastboot departure at
+wall-clock ns `1792353979029038472`. The image-aware observer at
+`logs/v27a-diagnostic-observer-1792353867572216336/result.json` received a
+valid beacon 119.677 seconds later and verified pinned SSH 119.929 seconds
+after departure. It identified the V27a `/init` hash and captured native
+kernel diagnostics. At phone uptime 93.63 seconds, the live boot log recorded
+`MINIMAL_LOCAL_SSH_READY interface=wlan0 address=192.168.100.7` and
+`MINIMAL_LOCAL_SSH_RETURNED`; the Wi-Fi worker returned 0 and the Nexus
+`host-confirmed` marker was absent. A read-only copy of this proof is
+`logs/v27a-diagnostic-observer-1792353867572216336/local-success-readonly.txt`.
+This establishes local Wi-Fi/SSH readiness without a Nexus acknowledgement.
+It does not establish automatic health, safe charging, Alpine handoff or
+persistent storage. The independent V27a power-off timer remains active.

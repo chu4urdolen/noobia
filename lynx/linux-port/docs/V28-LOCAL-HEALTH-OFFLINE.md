@@ -1,6 +1,7 @@
 # V28 local Wi-Fi, SSH and health candidate
 
-Status: **offline built, not flashed**. Image:
+Status: **one timed hardware trial proved autonomous Wi-Fi/SSH, but health
+readiness was unconfirmed; V19 restoration pending**. Image:
 `artifacts/local-health-v28-offline/nord3-local-health-untested.img`, SHA-256
 `a22048376cec353af652c187da733eb198f1382efcf19924eebd5ba0b883d775`.
 
@@ -31,3 +32,20 @@ The immediate recovery path remains the proven V19 `boot_a` image and matching
 stock boot image. V28 should be trialed only after an exact-image observer,
 passive USB timing, a fresh Fastboot preflight, and a scoped review of its
 health failure paths. Preserve slot B and all recovery-related partitions.
+
+The single guarded V28 write at `logs/v28-boot-a-trial-1792354942644784048.json`
+passed exact Fastboot identity checks and changed only `boot_a`. The host did
+not reboot Lynx. Passive USB timing is at `logs/v28-usb-1792354939283.json`;
+the image-aware network observer is at
+`logs/v28-diagnostic-observer-1792354939399135307/result.json`, with a
+classification at `trial-summary.json` in the same directory. A valid beacon
+arrived 118.234 seconds after Fastboot departure and pinned SSH verified the
+V28 `/init` hash 118.490 seconds after departure. The on-phone log shows local
+Wi-Fi readiness at uptime 95.63 seconds and autonomous health startup at
+95.67 seconds. Battery monitoring read 25.8°C and 58% charge, and thermal
+cooling setup was reached. The last authenticated probe completed before
+the health-ready marker; the next probe failed and no further contact was
+observed through 338 seconds after departure. The final health log was not
+captured, so a clean power-off, reset, kernel fault, or radio loss cannot yet
+be distinguished. Do not treat V28 as a healthy persistent boot or reuse its
+consumed trial scope.

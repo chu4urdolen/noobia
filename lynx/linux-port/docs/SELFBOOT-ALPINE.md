@@ -2,6 +2,56 @@
 
 ## V25d supervised trial preparation
 
+### First handset result
+
+The scoped V25d `boot_a` write succeeded at
+`logs/v25d-boot-a-trial-1792278881690259342.json` after a matching elevated
+Fastboot preflight. Only `boot_a` was written, and the host did not reboot the
+phone. Noob disconnected USB and booted the candidate; Orange State was
+followed by a black screen. The first observer window expired while waiting
+for the physical boot. A second bounded observer at
+`logs/v25d-selfboot-observer-1792328214465392719/result.json` made repeated
+pinned SSH attempts but had no network response during the observed window.
+Noob reported Lynx was unplugged and cool. The screen alone does not prove
+whether Linux entered PID 1. No candidate health marker or boot log was
+retrieved; **V25d self-boot is unproven**.
+
+Noob returned Lynx to Fastboot. Fresh read-only identity, slot and partition
+checks passed at `logs/fastboot-preflight-1792328432997881622.json`. A
+read-only LK export is at `logs/pllk-1792328442489652812.json` with its raw
+and reconstructed text. It reported no clear kernel crash; it does not locate
+the userspace failure. Lynx is currently in stable Fastboot with V25d still on
+`boot_a`. Do not repeat the same blind trial. The next image should expose
+pinned SSH before starting the new health path, so a supervised run can
+capture boot logs even if health startup fails. Leave the general safety hold
+active and preserve V19 and stock rollback files.
+
+### V25f diagnostic follow-up
+
+V25e and V25f are separate offline derivatives of the same V23 image. Both
+retain the exact V25d stock kernel and supplemental payload; only the primary
+`/init` control order changes. V25f brings up the proven V19 Wi-Fi/Dropbear
+worker before the automatic health startup, so pinned SSH can retrieve its
+boot log even if the health stage later refuses. A separate 180-second timer
+requests power-off if healthy startup does not finish. This is a supervised
+diagnostic compromise, not a validated unattended safety policy.
+
+V25f image SHA-256:
+`e885fb8162e7faf40fba68732fadd77aa3b4328a4b235e4ae4e60873d8feec0d`.
+Its builder is `tools/build_selfboot_wifi_first_guarded.py`; the first-contact
+collector is `tools/observe_v25f_diagnostic.py`. The image builder audited
+every unchanged member and the init shell syntax, order, and hash were checked.
+Local Wi-Fi supervisor and health handoff fixtures passed. This does not prove
+hardware execution.
+
+The bounded V25f observer was armed before the physical step at
+`logs/v25f-diagnostic-observer-1792328720571478398/result.json`. Fresh Fastboot
+preflight passed and the single `boot_a` write succeeded at
+`logs/v25f-boot-a-trial-1792328726647445482.json`. The host did not reboot
+Lynx. Await the user-controlled USB-unplugged power cycle and observer result;
+do not yet call V25f working or start Alpine handoff. The general safety hold
+remains in effect.
+
 On 2026-10-18 the V25d image and exact August stock `boot.img` were
 rehashed, and the reviewed Fastboot binary and matching stock OTA signature
 receipts were checked by `tools/flash_v25d_boot_a.py`. The offline readiness

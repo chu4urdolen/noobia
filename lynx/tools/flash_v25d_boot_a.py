@@ -17,6 +17,8 @@ FASTBOOT = ROOT / 'tools/platform-tools/fastboot'
 SERIAL = '89BYAY5L4T9HFUOV'
 IMAGE_SHA = '130d1cab9fdc48fc4ccafba75920d9bfb8a1a1c95f729ccae517ef1a790d7fb5'
 STOCK_SHA = 'a67f03d7b826b834c23653b67eaa6efa971eb70ef8af19eee4d33fb5fc7fe995'
+VARIANT = 'v25d'
+EXCEPTION = ROOT / 'linux-port/docs/V25D-TRIAL-EXCEPTION.json'
 
 
 def digest(path):
@@ -29,13 +31,13 @@ def digest(path):
 
 def offline_check():
     checks = {}
-    for name, path, expected in [('v25d', IMAGE, IMAGE_SHA), ('stock', STOCK, STOCK_SHA)]:
+    for name, path, expected in [(VARIANT, IMAGE, IMAGE_SHA), ('stock', STOCK, STOCK_SHA)]:
         if path.stat().st_size != 67108864 or digest(path) != expected:
             raise ValueError(name + ' image size or hash changed')
         checks[name] = {'file': str(path), 'sha256': expected, 'bytes': 67108864}
     build = json.loads((IMAGE.parent / 'build-result.json').read_text())
     if build['image_sha256'] != IMAGE_SHA or build['image_bytes'] != 67108864:
-        raise ValueError('V25d build receipt mismatch')
+        raise ValueError(VARIANT + ' build receipt mismatch')
     integrity = json.loads((ROOT / 'downloads/august-eu-ota-integrity.json').read_text())
     signature = json.loads((ROOT / 'downloads/august-eu-payload-signature.json').read_text())
     if integrity.get('state') != 'verified' or signature.get('state') != 'verified' or not signature.get('full_payload_signature_valid'):
@@ -66,12 +68,12 @@ def main():
     checks, fastboot_sha = offline_check()
     report = {'state': 'offline-ready', 'created_ns': time.time_ns(),
               'images': checks, 'fastboot_sha256': fastboot_sha,
-              'command': [str(FASTBOOT), '-s', SERIAL, 'flash', 'boot_a', str(IMAGE)],
-              'restore_command': [str(FASTBOOT), '-s', SERIAL, 'flash', 'boot_a', str(STOCK)],
+              'command': ['sudo', '-n', str(FASTBOOT), '-s', SERIAL, 'flash', 'boot_a', str(IMAGE)],
+              'restore_command': ['sudo', '-n', str(FASTBOOT), '-s', SERIAL, 'flash', 'boot_a', str(STOCK)],
               'slot_b_preserved': True, 'other_partitions_preserved': True,
               'host_reboot_allowed': False, 'phone_contacted': False,
               'flash_performed': False, 'general_safety_hold_still_active': True}
-    out = ROOT / 'logs' / ('v25d-boot-a-trial-' + str(time.time_ns()) + '.json')
+    out = ROOT / 'logs' / (VARIANT + '-boot-a-trial-' + str(time.time_ns()) + '.json')
     save(out, report)
     if not args.flash:
         print(json.dumps({'state': 'offline-ready', 'result': str(out),
@@ -89,7 +91,7 @@ def main():
             time.time_ns() - observer.get('heartbeat_ns', 0) > 15_000_000_000):
         raise ValueError('Observer is not fresh and ready for this image')
     hold = json.loads((ROOT / 'linux-port/docs/SAFETY-HOLD.json').read_text())
-    exception = json.loads((ROOT / 'linux-port/docs/V25D-TRIAL-EXCEPTION.json').read_text())
+    exception = json.loads(EXCEPTION.read_text())
     if (not hold.get('active') or hold.get('linux_flash_allowed') is not False or
             exception.get('image_sha256') != IMAGE_SHA or
             exception.get('partition') != 'boot_a' or
@@ -99,7 +101,7 @@ def main():
     report.update(state='read-only-preflight', phone_contacted=True,
                   observer_receipt=str(observer_path), exception_review=exception)
     save(out, report)
-    preflight = subprocess.run(['python3', str(ROOT / 'tools/lynx_fastboot_preflight.py'), '--connect'],
+    preflight = subprocess.run(['sudo', '-n', 'python3', str(ROOT / 'tools/lynx_fastboot_preflight.py'), '--connect'],
                                capture_output=True, text=True, timeout=120)
     report['preflight_stdout'] = preflight.stdout
     report['preflight_stderr'] = preflight.stderr

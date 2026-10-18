@@ -47,9 +47,9 @@ stop
 '''.lstrip()
 
 
-def main():
+def main(out=OUT, new_tail=NEW_TAIL, variant='V25d'):
     os.umask(0o077)
-    require(not OUT.exists(), 'Refuse to replace V25d prototype')
+    require(not out.exists(), 'Refuse to replace ' + variant + ' prototype')
     parent = json.loads((BASE / 'build-result.json').read_text())
     source = (BASE / 'nord3-health-stage-inert.img').read_bytes()
     require(parent.get('state') == 'offline-inert-health-stage-packaged' and
@@ -62,7 +62,7 @@ def main():
     old_init = primary['init']['data']
     require(old_init.endswith(OLD_TAIL) and old_init.count(OLD_TAIL) == 1,
             'V23 init handoff site differs')
-    new_init = old_init[:-len(OLD_TAIL)] + NEW_TAIL
+    new_init = old_init[:-len(OLD_TAIL)] + new_tail
     primary['init'] = {**primary['init'], 'data': new_init}
 
     recipe = json.loads((PORT / 'known-good-v19/recipe.json').read_text())
@@ -140,12 +140,12 @@ def main():
             old_supplement['usr/share/lynx/health-inputs.tar.gz'],
             'V25c changed reviewed module archive')
 
-    OUT.mkdir(mode=0o700)
-    target = OUT / 'nord3-selfboot-health-untested.img'
+    out.mkdir(mode=0o700)
+    target = out / 'nord3-selfboot-health-untested.img'
     target.write_bytes(image)
     target.chmod(0o600)
     result = {
-        'state': 'offline-selfboot-health-candidate-untested',
+        'state': 'offline-selfboot-health-candidate-untested', 'variant': variant,
         'created_ns': time.time_ns(), 'image_sha256': stage.sha(image),
         'image_bytes': len(image), 'parent_v23_sha256': stage.sha(source),
         'stock_kernel_sha256': stage.sha(boot['kernel']),
@@ -156,9 +156,9 @@ def main():
         'phone_contacted': False, 'flash_performed': False,
         'inherits_private_v19_wifi_and_ssh_credentials': True, 'image_mode': '0600',
         'limits': 'Offline image layout only. Self-boot control and failure paths have not run on Lynx. No Alpine PID 1 or persistent rootfs. SAFETY-HOLD remains active; DO NOT FLASH.'}
-    (OUT / 'build-result.json').write_text(json.dumps(result, indent=2) + '\n')
+    (out / 'build-result.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps({'state': result['state'], 'image_sha256': result['image_sha256'],
-                      'result': str(OUT / 'build-result.json')}))
+                      'result': str(out / 'build-result.json')}))
 
 
 if __name__ == '__main__':

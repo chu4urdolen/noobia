@@ -67,9 +67,10 @@ resulting supplemental archive is 12,483,821 bytes, close to V19's, and its
 init, stock kernel and retained supplemental members match V25f byte-for-byte.
 V25g image SHA-256 is
 `84b037a79eb678524a88e8c66ced214502ea5381193df26e2c7cec024083bebe`.
-Its image, init syntax and package round trip passed offline checks. V25g is
-unflashed and unproven. The immediate recovery plan is to return to the proven
-V19 `boot_a`, retrieve any retained logs and run its supervised RAM health
+Its image, init syntax and package round trip passed offline checks. V25g was
+subsequently written to `boot_a`, but its boot remains unproven. The immediate
+recovery plan is to return to the proven V19 `boot_a`, retrieve any retained
+logs and run its supervised RAM health
 stage while USB is unplugged. `tools/restore_v19_boot_a.py` provides that
 single-partition rescue.
 
@@ -158,8 +159,12 @@ beacon-aware observer was armed first at
 `logs/v25g-diagnostic-observer-1792333613469205903/result.json`. The guarded
 single `boot_a` write returned success at
 `logs/v25g-boot-a-trial-1792333616762100475.json`; the host did **not** issue a
-reboot. Fastboot still enumerated on USB afterward. Lynx's V25g boot behavior
-is therefore **unobserved** until Noob disconnects USB and starts the phone.
+reboot. Fastboot still enumerated on USB afterward, including when the display
+was black. The host therefore has protocol evidence of Fastboot even without a
+visible Fastboot menu. A fresh observer was armed at
+`logs/v25g-diagnostic-observer-1792333989111901562/result.json` before the
+unplugged Power-only boot attempt. Lynx's V25g boot behavior is **unobserved**
+until that physical boot actually occurs.
 No other partition or slot was written. Preserve both V19 and stock restore
 images, and do not infer a successful Linux boot from the Fastboot write.
 

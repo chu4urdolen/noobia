@@ -1,6 +1,7 @@
 # V25g supervised trial runbook
 
-Status: **V25g written to `boot_a`, unplugged boot pending**. The guarded write
+Status: **V25g written to `boot_a`; first unplugged trial produced no network
+contact, V19 restore pending Fastboot reconnection**. The guarded write
 receipt is `logs/v25g-boot-a-trial-1792333616762100475.json`. The host did not
 reboot; Lynx remained in Fastboot on USB at the last check. The private Alpine
 checkpoint and exact stock/V19 restore images are preserved on Nexus. The
@@ -43,7 +44,17 @@ matching August stock `boot_a` is also
 available through the flasher receipt's restore command. Neither undo should
 run on an unexpected Fastboot identity or slot.
 
-V25g has not booted on Lynx. The handset-side BusyBox gzip/cpio parser did
+V25g has no verified native boot on Lynx. The handset-side BusyBox gzip/cpio parser did
 accept its exact supplemental payload in a RAM-only test, and the observer's
 beacon path was exercised against live V19. Neither result proves the full
 V25g image or native charging works.
+
+During the first V25g trial, the Fastboot USB protocol remained available even
+when Lynx's display was black. Noob then disconnected USB and started the phone
+with Power only; the orange screen appeared. The renewed read-only observer at
+`logs/v25g-diagnostic-observer-1792333989111901562/result.json` logged 83
+unsuccessful SSH probes and no valid Wi-Fi beacon over more than four minutes
+after the unplugged start. This does not locate the boot failure. The observer
+was stopped after its evidence was saved, and a V19 recovery listener was armed
+at `logs/wifi-v19-contact-1792334500503425456/result.json`. The next step is
+Fastboot reconnection and the guarded V19 `boot_a` restore above.

@@ -1,7 +1,7 @@
 # V27a minimal BusyBox self-boot diagnostic
 
 Status: **timed repeat proved autonomous BusyBox Wi-Fi and authenticated SSH;
-V27a remains a bounded diagnostic with a pending V19 restoration**. Its image SHA-256 is
+V19 restored to `boot_a`, unplugged boot verification pending**. Its image SHA-256 is
 `db5381f525153971bc878109e67f47ad3256d6454d69eeab0802e3477e0024f4`.
 The candidate derives from the exact V19 image that repeatedly reached
 authenticated SSH. Only `/init`, its supplemental payload metadata, and one
@@ -85,3 +85,9 @@ kernel diagnostics. At phone uptime 93.63 seconds, the live boot log recorded
 This establishes local Wi-Fi/SSH readiness without a Nexus acknowledgement.
 It does not establish automatic health, safe charging, Alpine handoff or
 persistent storage. The independent V27a power-off timer remains active.
+After SSH disappeared around the planned timer deadline, Fastboot reconnected.
+The guarded V19 restoration at `logs/v19-rescue-boot-a-1792354306392459143.json`
+passed exact identity checks and wrote only `boot_a`; the host did not reboot.
+The fresh V19 contact collector at
+`logs/wifi-v19-contact-1792354302617356863/result.json` awaits an unplugged
+boot.

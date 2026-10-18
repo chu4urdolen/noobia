@@ -48,9 +48,30 @@ The bounded V25f observer was armed before the physical step at
 `logs/v25f-diagnostic-observer-1792328720571478398/result.json`. Fresh Fastboot
 preflight passed and the single `boot_a` write succeeded at
 `logs/v25f-boot-a-trial-1792328726647445482.json`. The host did not reboot
-Lynx. Await the user-controlled USB-unplugged power cycle and observer result;
-do not yet call V25f working or start Alpine handoff. The general safety hold
-remains in effect.
+Lynx. After the user-controlled USB-unplugged boot, the first observer window
+expired before the physical start. A fresh observer at
+`logs/v25f-diagnostic-observer-1792330133084673993/result.json` made repeated
+pinned SSH probes but saw no early contact by the 180-second timer window.
+No V25f boot log or health marker was retrieved. Do not call V25f working or
+start Alpine handoff. The general safety hold remains in effect.
+
+Offline comparison of V19 and V25f showed the same kernel, boot command line,
+primary member names, and all shared supplemental file contents. The primary
+`init`, its payload metadata, and added supplemental files are the intended
+differences. V25f's supplemental archive grew from V19's 12,245,792 bytes to
+16,932,434 bytes because it inherited an unused Alpine/OpenRC archive from
+V22. This is a plausible early-boot variable, **not a proven failure cause**.
+`tools/build_selfboot_compact_health_candidate.py` therefore prepared V25g by
+removing only the unused Alpine root archive and OpenRC handoff scripts. The
+resulting supplemental archive is 12,483,821 bytes, close to V19's, and its
+init, stock kernel and retained supplemental members match V25f byte-for-byte.
+V25g image SHA-256 is
+`84b037a79eb678524a88e8c66ced214502ea5381193df26e2c7cec024083bebe`.
+Its image, init syntax and package round trip passed offline checks. V25g is
+unflashed and unproven. The immediate recovery plan is to return to the proven
+V19 `boot_a`, retrieve any retained logs and run its supervised RAM health
+stage while USB is unplugged. `tools/restore_v19_boot_a.py` prepares that
+single-partition rescue; no V19 write has yet occurred in this attempt.
 
 On 2026-10-18 the V25d image and exact August stock `boot.img` were
 rehashed, and the reviewed Fastboot binary and matching stock OTA signature

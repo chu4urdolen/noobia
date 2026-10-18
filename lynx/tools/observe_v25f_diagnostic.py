@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILDS = {
     'v25f': ROOT / 'linux-port/artifacts/selfboot-wifi-first-v25f-offline/build-result.json',
     'v25g': ROOT / 'linux-port/artifacts/selfboot-compact-v25g-offline/build-result.json',
+    'v25h': ROOT / 'linux-port/artifacts/selfboot-beacon-v25h-offline/build-result.json',
 }
 PHONE_IP = '192.168.100.7'
 PROBE = ("printf 'LYNX_V25F_PROBE\\n'; sha256sum /init /bin/busybox; "
@@ -162,8 +163,11 @@ def main():
     args = parser.parse_args()
     manifest = json.loads(BUILDS[args.candidate].read_text())
     init_sha = manifest.get('new_init_sha256', manifest.get('init_sha256'))
-    image_name = ('nord3-selfboot-compact-untested.img' if args.candidate == 'v25g'
-                  else 'nord3-selfboot-health-untested.img')
+    image_name = {
+        'v25f': 'nord3-selfboot-health-untested.img',
+        'v25g': 'nord3-selfboot-compact-untested.img',
+        'v25h': 'nord3-selfboot-beacon-untested.img',
+    }[args.candidate]
     if not init_sha or manifest['image_sha256'] != hashlib.sha256(
             (BUILDS[args.candidate].parent / image_name).read_bytes()).hexdigest():
         raise ValueError('Candidate image differs from pinned manifest')

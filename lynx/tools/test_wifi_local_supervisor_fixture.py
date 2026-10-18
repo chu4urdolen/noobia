@@ -16,12 +16,18 @@ def scenario(parent, success):
     base = parent / ('success' if success else 'failure')
     run = base / 'run/lynx'
     net = base / 'sys/class/net'
+    config = base / 'etc/lynx'
     run.mkdir(parents=True)
     (net / 'wlan0').mkdir(parents=True)
+    config.mkdir(parents=True)
+    (config / 'host-ip').write_text('192.168.100.106\n')
+    (config / 'session-token').write_text('fixture-token\n')
     source = SOURCE.read_text()
     for original, replacement in (
         ('/run/lynx', str(run)),
         ('/sys/class/net', str(net)),
+        ('/etc/lynx', str(config)),
+        ('/usr/bin/nc', str(base / 'mock-nc')),
         ('/bin/boot-proof-reboot', str(base / 'mock-reboot')),
     ):
         if original not in source:
@@ -30,6 +36,9 @@ def scenario(parent, success):
     (base / 'supervisor.sh').write_text(source)
     (base / 'mock-reboot').write_text('#!/bin/sh\necho REBOOT_REQUESTED >> ' + str(base / 'events') + '\n')
     (base / 'mock-reboot').chmod(0o700)
+    (base / 'mock-nc').write_text('#!/bin/sh\nprintf "BEACON_TARGET=%s\\n" "$*" >> ' +
+                                  str(base / 'events') + '\ncat >> ' + str(base / 'events') + '\n')
+    (base / 'mock-nc').chmod(0o700)
     worker = (
         'bash -c "exec -a /usr/sbin/dropbear sleep 60" &\n'
         f'echo $! > {run}/ssh.pid\n'
@@ -51,10 +60,14 @@ def scenario(parent, success):
                                    text=True, timeout=8)
         events = (base / 'events').read_text()
         if success:
-            if completed.returncode or 'LOCAL_WIFI_SSH_READY' not in events or 'REBOOT_REQUESTED' in events:
+            if (completed.returncode or 'LOCAL_WIFI_SSH_READY' not in events or
+                    'LYNX_HELLO fixture-token' not in events or
+                    'BEACON_TARGET=-u -w 1 192.168.100.106 5514' not in events or
+                    'REBOOT_REQUESTED' in events):
                 raise AssertionError('Local Wi-Fi success decision failed: ' + events)
         else:
-            if completed.returncode == 0 or 'WORKER_FAILED status=132' not in events or events.count('REBOOT_REQUESTED') != 1:
+            if (completed.returncode == 0 or 'WORKER_FAILED status=132' not in events or
+                    events.count('REBOOT_REQUESTED') != 1 or 'LYNX_HELLO' in events):
                 raise AssertionError('Local Wi-Fi failure did not return once: ' + events)
         return {'case': 'success' if success else 'worker-failure',
                 'exit_code': completed.returncode, 'events': events.splitlines()}

@@ -16,6 +16,16 @@ lynx_wifi_supervise_local() {
     log "LOCAL_WIFI_WORKER_STARTED deadline_boot_seconds=$((local_start+240))"
     while :; do
         lynx_clock || return 1
+        # Discovery is advisory: SSH stays usable when Nexus is absent, but
+        # an observer must learn a changed DHCP address before worker exit.
+        if [ -f /run/lynx/ssh-ready ]; then
+            local_beacon_host=$($BB cat /etc/lynx/host-ip 2>/dev/null) || local_beacon_host=
+            local_beacon_token=$($BB cat /etc/lynx/session-token 2>/dev/null) || local_beacon_token=
+            if [ -n "$local_beacon_host" ] && [ -n "$local_beacon_token" ]; then
+                printf 'LYNX_HELLO %s\n' "$local_beacon_token" |
+                    /usr/bin/nc -u -w 1 "$local_beacon_host" 5514 || true
+            fi
+        fi
         if [ -f /run/lynx/worker-result ]; then
             IFS= read -r local_result < /run/lynx/worker-result || return 1
             case "$local_result" in ''|*[!0-9]*) return 1;; esac

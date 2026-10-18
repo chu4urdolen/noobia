@@ -1,6 +1,7 @@
 # V25h discovery trial
 
-Status: **V25h written to `boot_a`; unplugged boot pending**. The guarded write
+Status: **V25h written to `boot_a`; unplugged trial produced no network
+contact, V19 restore pending Fastboot**. The guarded write
 receipt is `logs/v25h-boot-a-trial-1792348863400477665.json`. The host did not
 reboot Lynx and wrote no other partition or slot.
 
@@ -40,3 +41,13 @@ checks. The matching stock `boot_a` image remains at
 Fastboot restoration command are in the write receipt. Do not retry V25h or
 alter another partition on an unexpected identity, write response, recovery
 screen, or warming handset.
+
+The first unplugged physical trial showed the orange screen. The observer at
+`logs/v25h-diagnostic-observer-1792348859569806838/result.json` recorded 118
+unsuccessful pinned SSH probes and no valid beacon through the full bootstrap
+plus early-health deadline. It was stopped after the evidence was saved.
+This does not locate the failure, but the missing beacon is no longer caused by
+the local supervisor lacking a beacon call: V25h includes that call and passed
+its fake-network fixture. A fresh V19 recovery listener was armed at
+`logs/wifi-v19-contact-1792349585406385976/result.json` before requesting
+Fastboot and a guarded restore.

@@ -20,7 +20,7 @@ Noob returned Lynx to Fastboot. Fresh read-only identity, slot and partition
 checks passed at `logs/fastboot-preflight-1792328432997881622.json`. A
 read-only LK export is at `logs/pllk-1792328442489652812.json` with its raw
 and reconstructed text. It reported no clear kernel crash; it does not locate
-the userspace failure. Lynx is currently in stable Fastboot with V25d still on
+the userspace failure. At that point Lynx was in stable Fastboot with V25d still on
 `boot_a`. Do not repeat the same blind trial. The next image should expose
 pinned SSH before starting the new health path, so a supervised run can
 capture boot logs even if health startup fails. Leave the general safety hold
@@ -70,8 +70,54 @@ V25g image SHA-256 is
 Its image, init syntax and package round trip passed offline checks. V25g is
 unflashed and unproven. The immediate recovery plan is to return to the proven
 V19 `boot_a`, retrieve any retained logs and run its supervised RAM health
-stage while USB is unplugged. `tools/restore_v19_boot_a.py` prepares that
-single-partition rescue; no V19 write has yet occurred in this attempt.
+stage while USB is unplugged. `tools/restore_v19_boot_a.py` provides that
+single-partition rescue.
+
+### V19 rescue and live Alpine development — 2026-10-18
+
+Fresh Fastboot preflight at `logs/fastboot-preflight-1792330860405721467.json`
+confirmed Lynx's exact identity, unlocked slot A and 64 MiB `boot_a`. The
+scoped V19 rescue wrote **only `boot_a`** at
+`logs/v19-rescue-boot-a-1792330864189994054.json`; the host left Lynx in
+Fastboot. After Noob unplugged USB and booted it, the bounded collector
+`logs/wifi-v19-contact-1792330860400042930/result.json` proved the frozen
+V19 kernel, `/init`, BusyBox, session token and pinned SSH key, then cancelled
+V19's fallback timer. Live read-only `boot_a` SHA-256 matched the full frozen
+V19 image: `logs/v19-live-proof-1792331216427841364/result.json`.
+
+The RAM-only autonomous battery, thermal, cooling and health stage passed at
+`logs/autonomous-health-ram-trial-1792331061580820074/result.json`. Its
+launcher needed a local manifest fix: the startup script had gained the
+reviewed `--run-local` mode, while the launcher still pinned an older hash.
+The launcher now requires the matching V25d package hash and current passing
+startup fixture. This was a host orchestration fix; it does not explain the
+failed V25d/f boot. A bounded host battery log is at
+`logs/battery-session-1792331081735259936/`. The first live reading was
+24.6°C, 69%, charger offline, with a healthy cooling check. Automatic
+monitoring continues; manual polling is not needed.
+
+The retained `console-ramoops-0` and `pmsg-ramoops-0` captured under
+`logs/v25f-retained-pstore-1792331093508648039/` contain the older diagnostic
+token `69adf9d14707d848063b861b8f248748`, not a V25d/f local startup
+marker. Their age and provenance therefore prevent attributing them to the
+failed self-boot trials. The V25d/f failure point remains unknown.
+
+While V19 stayed live, the signature-verified Alpine 3.24.2 ARM64 minirootfs
+was uploaded and run in a RAM chroot. Native shell and APK passed at
+`logs/v19-alpine-live-1792331290023858449/result.json`. The Linux wall clock
+had to be set from Nexus once, without writing the RTC, at
+`logs/v19-clock-sync-1792331336853551341/result.json`. The mini-rootfs lacked
+`/etc/resolv.conf` and `/dev/null`; after placing those in the RAM rootfs,
+APK installed Python 3.14.8, Git 2.54.0 and Make 4.4.1. Native execution
+passed at `logs/v19-alpine-development-proof-1792331428828737536/result.json`.
+`alpine-development.sh` now provisions those two RAM prerequisites itself.
+The 50 MB private checkpoint is
+`checkpoints/alpine-runtime-1792331453858559525/`; an isolated QEMU restore
+using Lynx's exact stock kernel passed package/world, Python, Git and Make at
+`linux-port/artifacts/alpine-checkpoint-restore-1792331497398834530/result.json`.
+This is **Alpine userspace under V19 BusyBox PID 1**, not an automatically
+booting Alpine installation or a write to persistent phone storage. The
+general self-boot safety hold remains active; V25g has not been flashed.
 
 On 2026-10-18 the V25d image and exact August stock `boot.img` were
 rehashed, and the reviewed Fastboot binary and matching stock OTA signature

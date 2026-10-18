@@ -55,15 +55,19 @@ def validate_local():
         scripts[path.name] = {'sha256': sha(raw_script), 'bytes': len(raw_script)}
     checks = {
         'autonomous-health-preflight.sh': PORT / 'artifacts/autonomous-health-preflight-check-1792264353611654369/result.json',
-        'autonomous-health-start.sh': PORT / 'artifacts/autonomous-health-start-check-1792275808786171502/result.json',
+        'autonomous-health-start.sh': PORT / 'artifacts/autonomous-health-start-check-1792278260648743380/result.json',
     }
     for name, path in checks.items():
         checked = json.loads(path.read_text())
         if not checked.get('passed') or checked.get('source_sha256') != scripts[name]['sha256']:
             raise ValueError('Offline fixture failed: ' + str(path))
-    image = json.loads((PORT / 'artifacts/health-stage-v23-offline/build-result.json').read_text())
-    if image.get('scripts') != {name: info['sha256'] for name, info in scripts.items()}:
-        raise ValueError('RAM trial scripts differ from hash-checked V23 payload')
+    v23 = json.loads((PORT / 'artifacts/health-stage-v23-offline/build-result.json').read_text())
+    v25d = json.loads((PORT / 'artifacts/selfboot-health-v25d-offline/build-result.json').read_text())
+    if (v23.get('scripts', {}).get('autonomous-health-preflight.sh') !=
+            scripts['autonomous-health-preflight.sh']['sha256'] or
+            v25d.get('script_sha256', {}).get('usr/libexec/lynx/autonomous-health-start.sh') !=
+            scripts['autonomous-health-start.sh']['sha256']):
+        raise ValueError('RAM trial scripts differ from reviewed packaged payloads')
     return {'archive_sha256': sha(raw), 'archive_bytes': len(raw),
             'scripts': scripts, 'offline_checks': [str(p) for p in checks.values()]}
 

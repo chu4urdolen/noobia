@@ -9,6 +9,19 @@ expected_boot=${1:-}
 [ "$(cat "$root/etc/alpine-release")" = 3.24.2 ]
 [ "$($BB readlink /proc/self/ns/mnt)" = "$($BB readlink /proc/1/ns/mnt)" ]
 $BB awk '$2 == "/run" && $3 == "tmpfs" {good=1} END {exit !good}' /proc/mounts
+# The signed mini-rootfs omits host-specific DNS and device nodes. Populate
+# only its RAM tree; these are needed by apk and git before a full init exists.
+[ -s /etc/resolv.conf ]
+if [ ! -s "$root/etc/resolv.conf" ]; then
+    [ ! -e "$root/etc/resolv.conf" ] || exit 1
+    $BB cp /etc/resolv.conf "$root/etc/resolv.conf"
+    $BB chmod 644 "$root/etc/resolv.conf"
+fi
+[ -d "$root/dev" ]
+if [ ! -e "$root/dev/null" ]; then
+    $BB mknod -m 666 "$root/dev/null" c 1 3
+fi
+[ -c "$root/dev/null" ]
 for field in temperature_error voltage_error current_error capacity_error; do
     $BB grep -Fx "$field=0" /run/lynx/battery-last > /dev/null
 done

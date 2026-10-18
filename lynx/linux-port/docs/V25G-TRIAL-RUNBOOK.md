@@ -1,7 +1,7 @@
 # V25g supervised trial runbook
 
-Status: **V25g written to `boot_a`; first unplugged trial produced no network
-contact, V19 restore pending Fastboot reconnection**. The guarded write
+Status: **V25g's first unplugged trial produced no network contact; proven V19
+was restored to `boot_a` and awaits an unplugged boot**. The guarded write
 receipt is `logs/v25g-boot-a-trial-1792333616762100475.json`. The host did not
 reboot; Lynx remained in Fastboot on USB at the last check. The private Alpine
 checkpoint and exact stock/V19 restore images are preserved on Nexus. The
@@ -56,5 +56,7 @@ with Power only; the orange screen appeared. The renewed read-only observer at
 unsuccessful SSH probes and no valid Wi-Fi beacon over more than four minutes
 after the unplugged start. This does not locate the boot failure. The observer
 was stopped after its evidence was saved, and a V19 recovery listener was armed
-at `logs/wifi-v19-contact-1792334500503425456/result.json`. The next step is
-Fastboot reconnection and the guarded V19 `boot_a` restore above.
+at `logs/wifi-v19-contact-1792334500503425456/result.json`. Fastboot then
+reconnected with the exact serial. The guarded V19 rescue wrote only `boot_a`
+successfully at `logs/v19-rescue-boot-a-1792334760095554872.json` and did not
+reboot. An unplugged V19 boot and pinned SSH contact remain to be verified.

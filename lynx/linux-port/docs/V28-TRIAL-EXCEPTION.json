@@ -1,5 +1,6 @@
 {
-  "state": "offline-ready-not-flashed",
+  "state": "consumed-trial-flashed",
+  "trial_receipt": "logs/v28-boot-a-trial-1792354942644784048.json",
   "image_sha256": "a22048376cec353af652c187da733eb198f1382efcf19924eebd5ba0b883d775",
   "partition": "boot_a",
   "single_supervised_trial": true,

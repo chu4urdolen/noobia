@@ -1,0 +1,13 @@
+{
+  "state": "prepared-not-yet-executed",
+  "image_sha256": "84b037a79eb678524a88e8c66ced214502ea5381193df26e2c7cec024083bebe",
+  "partition": "boot_a",
+  "single_supervised_trial": true,
+  "requires_unplugged_boot": true,
+  "scope": "One future supervised V25g boot_a-only diagnostic trial, if Lynx returns to Fastboot. V25g retains V25f's exact init, stock kernel and reviewed health/Wi-Fi members, but removes the unused Alpine/OpenRC archive. Its supplementary payload is close to V19 size. The beacon-aware observer must be armed and verified first. The general safety hold remains active for all other images.",
+  "abort_conditions": "Unexpected Fastboot identity, image hash or write response, warm phone, USB connected during native boot, missing candidate SSH or health proof within bounded observation, unexpected reboot or recovery. Preserve raw logs and stop before further partition action.",
+  "other_partitions_allowed": false,
+  "automatic_reboot_allowed": false,
+  "native_charging_untested": true,
+  "alpine_handoff_untested": true
+}

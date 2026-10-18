@@ -9,14 +9,18 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import socket
 import subprocess
 import sys
 import time
 
-from lynx_wifi_v19_contact import ssh_command
+from lynx_wifi_v19_contact import BUILD as V19_BUILD, beacon_valid, ssh_command
 
 ROOT = Path(__file__).resolve().parent.parent
-BUILD = ROOT / 'linux-port/artifacts/selfboot-wifi-first-v25f-offline/build-result.json'
+BUILDS = {
+    'v25f': ROOT / 'linux-port/artifacts/selfboot-wifi-first-v25f-offline/build-result.json',
+    'v25g': ROOT / 'linux-port/artifacts/selfboot-compact-v25g-offline/build-result.json',
+}
 PHONE_IP = '192.168.100.7'
 PROBE = ("printf 'LYNX_V25F_PROBE\\n'; sha256sum /init /bin/busybox; "
          "uname -r; cat /proc/sys/kernel/random/boot_id; "
@@ -66,16 +70,17 @@ def save(path, report):
     tmp.replace(path)
 
 
-def ssh_capture(out, name, command, timeout=12):
+def ssh_capture(out, name, command, phone_ip, timeout=12):
     started = time.time_ns()
     try:
-        result = subprocess.run(ssh_command(PHONE_IP, command), capture_output=True, timeout=timeout)
+        result = subprocess.run(ssh_command(phone_ip, command), capture_output=True, timeout=timeout)
         stdout, stderr, code = result.stdout, result.stderr, result.returncode
     except subprocess.TimeoutExpired as error:
         stdout, stderr, code = error.stdout or b'', error.stderr or b'', None
     (out / (name + '.stdout')).write_bytes(stdout)
     (out / (name + '.stderr')).write_bytes(stderr)
-    return stdout, {'name': name, 'started_ns': started, 'finished_ns': time.time_ns(),
+    return stdout, {'name': name, 'phone_ip': phone_ip,
+                    'started_ns': started, 'finished_ns': time.time_ns(),
                     'exit_code': code, 'stdout_sha256': hashlib.sha256(stdout).hexdigest(),
                     'stderr_sha256': hashlib.sha256(stderr).hexdigest()}
 
@@ -84,43 +89,64 @@ def worker(out):
     receipt = out / 'result.json'
     report = json.loads(receipt.read_text())
     expected = report['expected_init_sha256']
-    report.update(state='listening', ready_ns=time.time_ns())
-    save(receipt, report)
     deadline = time.monotonic() + report['seconds']
     first_kernel_saved = False
     attempt = 0
-    while time.monotonic() < deadline:
-        report['heartbeat_ns'] = time.time_ns()
+    phone_ip = PHONE_IP
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as beacon_socket:
+        beacon_socket.bind((V19_BUILD['collector_ip'], 5514))
+        beacon_socket.setblocking(False)
+        report.update(state='listening', ready_ns=time.time_ns(),
+                      beacon_bind_ip=V19_BUILD['collector_ip'], beacon_port=5514,
+                      current_probe_ip=phone_ip, valid_beacons=[])
         save(receipt, report)
-        raw, event = ssh_capture(out, f'probe-{attempt:04d}', PROBE)
-        proof = parse_proof(raw, expected) if event['exit_code'] == 0 else None
-        event['v25f_early_identity'] = proof is not None
-        event['health_ready'] = proof['health_ready'] if proof else False
-        with (out / 'attempts.jsonl').open('a') as journal:
-            journal.write(json.dumps(event) + '\n')
-        report.update(attempts=attempt + 1, last_attempt=event)
-        if proof:
-            if not report.get('early_ssh_verified'):
-                report.update(state='early-ssh-verified', early_ssh_verified=True,
-                              first_ssh_ns=time.time_ns(), boot_id=proof['boot_id'])
-            if proof['boot_id'] != report['boot_id']:
-                report.update(state='boot-id-changed', finished_ns=time.time_ns())
-                save(receipt, report)
-                return
-            _, detail_event = ssh_capture(out, f'details-{attempt:04d}', DETAILS, timeout=20)
-            report['last_details'] = detail_event
-            if not first_kernel_saved:
-                _, kernel_event = ssh_capture(out, 'first-kernel', KERNEL, timeout=20)
-                report['first_kernel'] = kernel_event
-                first_kernel_saved = True
-            if proof['health_ready']:
-                report.update(state='v25f-health-ready', native_ssh_verified=True,
-                              health_verified_ns=time.time_ns(), finished_ns=time.time_ns())
-                save(receipt, report)
-                return
-        save(receipt, report)
-        attempt += 1
-        time.sleep(min(3, max(0, deadline - time.monotonic())))
+        while time.monotonic() < deadline:
+            while True:
+                try:
+                    datagram, address = beacon_socket.recvfrom(4096)
+                except BlockingIOError:
+                    break
+                event = {'received_ns': time.time_ns(), 'source_ip': address[0],
+                         'bytes': len(datagram), 'sha256': hashlib.sha256(datagram).hexdigest(),
+                         'valid': beacon_valid(datagram, address[0])}
+                with (out / 'beacons.jsonl').open('a') as journal:
+                    journal.write(json.dumps(event) + '\n')
+                if event['valid']:
+                    phone_ip = address[0]
+                    report['current_probe_ip'] = phone_ip
+                    report['valid_beacons'].append(event)
+                    save(receipt, report)
+            report['heartbeat_ns'] = time.time_ns()
+            save(receipt, report)
+            raw, event = ssh_capture(out, f'probe-{attempt:04d}', PROBE, phone_ip)
+            proof = parse_proof(raw, expected) if event['exit_code'] == 0 else None
+            event['candidate_early_identity'] = proof is not None
+            event['health_ready'] = proof['health_ready'] if proof else False
+            with (out / 'attempts.jsonl').open('a') as journal:
+                journal.write(json.dumps(event) + '\n')
+            report.update(attempts=attempt + 1, last_attempt=event)
+            if proof:
+                if not report.get('early_ssh_verified'):
+                    report.update(state='early-ssh-verified', early_ssh_verified=True,
+                                  first_ssh_ns=time.time_ns(), boot_id=proof['boot_id'])
+                if proof['boot_id'] != report['boot_id']:
+                    report.update(state='boot-id-changed', finished_ns=time.time_ns())
+                    save(receipt, report)
+                    return
+                _, detail_event = ssh_capture(out, f'details-{attempt:04d}', DETAILS, phone_ip, timeout=20)
+                report['last_details'] = detail_event
+                if not first_kernel_saved:
+                    _, kernel_event = ssh_capture(out, 'first-kernel', KERNEL, phone_ip, timeout=20)
+                    report['first_kernel'] = kernel_event
+                    first_kernel_saved = True
+                if proof['health_ready']:
+                    report.update(state=report['candidate'] + '-health-ready', native_ssh_verified=True,
+                                  health_verified_ns=time.time_ns(), finished_ns=time.time_ns())
+                    save(receipt, report)
+                    return
+            save(receipt, report)
+            attempt += 1
+            time.sleep(min(3, max(0, deadline - time.monotonic())))
     report.update(state='deadline-without-health-proof', finished_ns=time.time_ns())
     save(receipt, report)
 
@@ -132,24 +158,32 @@ def main():
     actions.add_argument('--worker', type=Path)
     actions.add_argument('--self-test', action='store_true')
     parser.add_argument('--seconds', type=int, default=900)
+    parser.add_argument('--candidate', choices=sorted(BUILDS), default='v25f')
     args = parser.parse_args()
-    manifest = json.loads(BUILD.read_text())
+    manifest = json.loads(BUILDS[args.candidate].read_text())
+    init_sha = manifest.get('new_init_sha256', manifest.get('init_sha256'))
+    image_name = ('nord3-selfboot-compact-untested.img' if args.candidate == 'v25g'
+                  else 'nord3-selfboot-health-untested.img')
+    if not init_sha or manifest['image_sha256'] != hashlib.sha256(
+            (BUILDS[args.candidate].parent / image_name).read_bytes()).hexdigest():
+        raise ValueError('Candidate image differs from pinned manifest')
     if args.self_test:
-        raw = ('LYNX_V25F_PROBE\n' + manifest['new_init_sha256'] + '  /init\n' +
+        raw = ('LYNX_V25F_PROBE\n' + init_sha + '  /init\n' +
                BUSYBOX_SHA + '  /bin/busybox\n' +
                '5.10.149-android12-9-o-g311738fbb5a8\nboot-id\n' +
                'BOOTSTRAP=0\nSSH=ready\nWORKER=0\nHEALTH=MISSING\nCHARGER\n' +
                '/sys/class/power_supply/charger/online=0\n').encode()
-        assert parse_proof(raw, manifest['new_init_sha256']) == {
+        assert parse_proof(raw, init_sha) == {
             'boot_id': 'boot-id', 'health_ready': False,
             'health_value': 'MISSING', 'offline_supplies': 1}
         assert parse_proof(raw.replace(b'HEALTH=MISSING', b'HEALTH=ready'),
-                           manifest['new_init_sha256'])['health_ready']
+                           init_sha)['health_ready']
         assert parse_proof(raw.replace(b'online=0', b'online=1'),
-                           manifest['new_init_sha256']) is None
-        assert parse_proof(raw.replace(manifest['new_init_sha256'].encode(), b'0'*64),
-                           manifest['new_init_sha256']) is None
-        print('V25f early/final identity parser passed; no phone contacted.')
+                           init_sha) is None
+        assert parse_proof(raw.replace(init_sha.encode(), b'0'*64), init_sha) is None
+        assert beacon_valid(('LYNX_HELLO ' + V19_BUILD['session_token']).encode(), PHONE_IP)
+        assert not beacon_valid(b'LYNX_HELLO wrong', PHONE_IP)
+        print(args.candidate + ' identity and beacon parser passed; no phone contacted.')
         return
     if args.worker:
         worker(args.worker.resolve(strict=True))
@@ -157,18 +191,18 @@ def main():
     if not 30 <= args.seconds <= 900:
         parser.error('--seconds must be 30..900')
     os.umask(0o077)
-    out = ROOT / 'logs' / ('v25f-diagnostic-observer-' + str(time.time_ns()))
+    out = ROOT / 'logs' / (args.candidate + '-diagnostic-observer-' + str(time.time_ns()))
     out.mkdir(mode=0o700)
     report = {'state': 'starting', 'created_ns': time.time_ns(),
-              'seconds': args.seconds, 'phone_ip': PHONE_IP,
-              'expected_init_sha256': manifest['new_init_sha256'],
+              'seconds': args.seconds, 'phone_ip': PHONE_IP, 'candidate': args.candidate,
+              'expected_init_sha256': init_sha,
               'image_sha256': manifest['image_sha256'],
               'phone_writes': False, 'flash_performed': False,
               'tool_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     save(out / 'result.json', report)
     with (out / 'worker.stdout').open('wb') as stdout, (out / 'worker.stderr').open('wb') as stderr:
         child = subprocess.Popen([sys.executable, str(Path(__file__).resolve()),
-                                  '--worker', str(out)],
+                                  '--worker', str(out), '--candidate', args.candidate],
                                  stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr,
                                  start_new_session=True, cwd=ROOT)
     for _ in range(100):

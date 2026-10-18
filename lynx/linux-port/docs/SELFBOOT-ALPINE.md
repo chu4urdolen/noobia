@@ -73,6 +73,18 @@ V19 `boot_a`, retrieve any retained logs and run its supervised RAM health
 stage while USB is unplugged. `tools/restore_v19_boot_a.py` provides that
 single-partition rescue.
 
+The original V25f SSH observer only tried the prior `192.168.100.7` DHCP
+address. It did not listen for the Wi-Fi worker's discovery beacon, so a
+different DHCP lease could have produced a false negative. No V25f beacon was
+recorded, and this does not prove that one was sent. The revised
+`tools/observe_v25f_diagnostic.py` accepts V25f or V25g, binds the pinned
+Noobia collector address before reporting ready, records raw beacon hashes and
+source IPs, and switches its pinned-host-key SSH probe to a valid beacon's
+address. Both image/hash/parser self-checks passed offline. A bounded live
+V19 control at `logs/v25g-diagnostic-observer-1792332021990107978/` received
+a valid beacon directly from Lynx and recorded its actual source address;
+it deliberately did not claim V25g identity from the running V19 image.
+
 ### V19 rescue and live Alpine development — 2026-10-18
 
 Fresh Fastboot preflight at `logs/fastboot-preflight-1792330860405721467.json`
@@ -118,6 +130,26 @@ using Lynx's exact stock kernel passed package/world, Python, Git and Make at
 This is **Alpine userspace under V19 BusyBox PID 1**, not an automatically
 booting Alpine installation or a write to persistent phone storage. The
 general self-boot safety hold remains active; V25g has not been flashed.
+
+The next V25g trial is prepared but still unexecuted. The offline flasher
+`tools/flash_v25g_boot_a.py` validated the exact 64 MiB image, stock undo,
+reviewed Fastboot binary and matching OTA receipts at
+`logs/v25g-boot-a-trial-1792332345922486275.json`. Its narrow review is
+`docs/V25G-TRIAL-EXCEPTION.json`. A future live run requires fresh Fastboot
+identity/slot checks and a fresh beacon-aware V25g observer receipt before a
+single `boot_a` write. This preparation did not contact or restart Lynx.
+The V25g supplemental payload was also uploaded to a temporary V19 RAM
+directory and checked with Lynx's own BusyBox `gzip` and `cpio` tools at
+`logs/v25g-live-payload-parser-1792332382589515595/result.json`. Its image
+and payload hashes matched, the expected Wi-Fi and health scripts were listed,
+and the temporary files were removed. This validates BusyBox parsing on the
+handset, but it does not simulate early boot or prove the full candidate boots.
+
+While V19 remained on SSH, a read-only Linux block-device capture of the
+whole `expdb` partition established a usable crash-log extraction path.
+See `docs/EXPDB-LIVE-READ-20261018.md`. The complete record again contains
+the older diagnostic token and no literal V25d/f local marker; it does not
+prove where those trial boots stopped.
 
 On 2026-10-18 the V25d image and exact August stock `boot.img` were
 rehashed, and the reviewed Fastboot binary and matching stock OTA signature

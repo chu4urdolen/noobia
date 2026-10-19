@@ -26,6 +26,14 @@ Alpine/OpenRC has still not run as PID 1. Do not reflash just to repeat this
 known preflight; use the existing V29 live fixture evidence or prepare an
 updated, reviewed handoff candidate offline.
 
+The frozen V29 handoff guard was separately staged in V19 RAM and sampled
+20 times without arming PID 1. All 20 checks passed; observed CPU/SoC maxima
+were 33.358–35.648°C. Tool and receipt:
+`tools/probe_openrc_guard_live.py`,
+`logs/openrc-guard-live-1792431613054634856/result.json`. This verifies the
+guard on the current healthy boot, but does not identify the earlier one-time
+V29 refusal or explain V30's absence of network contact.
+
 ## Newest status — second V19 boot briefly reachable, no health armed
 
 After the health refusal below, Lynx became unreachable, then appeared again

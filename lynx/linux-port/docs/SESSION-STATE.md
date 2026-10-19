@@ -1,5 +1,31 @@
 # Current Lynx handoff state
 
+## Current status — V19 SSH online and V31 cooling retry verified in RAM
+
+Noob reported Lynx cool and in Fastboot with USB unplugged. After the prompt
+to select Start, a fresh pinned listener verified V19 native SSH on boot ID
+`c0bf91c1-f21b-4774-b059-7f0a0d702507` at `192.168.100.4`:
+`logs/wifi-v19-contact-1792431105220440810/result.json`. The V31 RAM-only
+health launcher ran within the fresh-boot window, completed its safety
+handoff, verified active health, and cancelled its independent outer timer:
+`logs/local-health-v31-ram-trial-1792431399506532376/result.json`. The
+phone-side child log shows one clean cooling-watcher retry, so this fix has
+been exercised on hardware. See `COOLING-STARTUP-V31.md`. No phone partition
+was written; `boot_a` remains exact V19. Battery was 27°C and 80% at the
+health postcheck. Keep USB unplugged for this boot.
+
+A bounded read-only capture of the LK `expdb` prefix succeeded:
+`logs/expdb-prefix-1792431426107805689/result.json`. Its SHA-256 is
+identical to the earlier pre-V30 capture; the bounded comparison recorded zero
+changed 4 KiB blocks at `logs/expdb-compare-1792431562652533086/result.json`.
+It adds no V30 failure evidence.
+An attempted pre-exec handoff fixture refused in preflight because its guard
+script was absent from V19 RAM; it did **not** reach a mount or partition
+write: `logs/persistent-openrc-live-preexec-1792431468513829689/result.json`.
+Alpine/OpenRC has still not run as PID 1. Do not reflash just to repeat this
+known preflight; use the existing V29 live fixture evidence or prepare an
+updated, reviewed handoff candidate offline.
+
 ## Newest status — second V19 boot briefly reachable, no health armed
 
 After the health refusal below, Lynx became unreachable, then appeared again

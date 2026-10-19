@@ -35,5 +35,16 @@ keeps the original reviewed health-input archive and local handoff, uploads
 the V31 start script to the same RAM destination expected by that handoff,
 and verifies its hash before running. A fresh V19 boot, pinned SSH, USB
 disconnection and fresh-boot safety checks are still required for `--run`.
-V31 has **not** been run on Lynx. No phone partition or boot image contains
-this change.
+V31 was then run on Lynx's restored V19 boot after pinned SSH contact, with
+USB unplugged. The RAM-only launcher passed its fresh-boot and unplugged
+checks, uploaded and verified the V31 script, and completed the local health
+handoff. Its child log records one **clean retry** of the cooling watcher,
+followed by `READY_ON_PHONE_MONITORING_ACTIVE`. The postcheck returned
+`LYNX_HEALTH_OK` with a 27.0°C battery, 80% charge, a 35.2°C maximum among
+the health supervisor's thermal samples, and three cooling controls. The
+outer safety timer was cancelled only after this check passed. Receipt:
+`logs/local-health-v31-ram-trial-1792431399506532376/result.json`.
+
+This proves the retry path actually ran on Lynx; it does not prove an
+autonomous cold boot or Alpine PID 1. No phone partition or boot image
+contains V31. The V19 boot image remains on `boot_a`.

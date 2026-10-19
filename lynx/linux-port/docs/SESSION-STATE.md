@@ -1,8 +1,29 @@
 # Current Lynx handoff state
 
-## Newest status — V29 persistent-root handoff prepared, not flashed
+## Newest status — V29 written to boot_a, still in Fastboot
 
-V19 is still the live `boot_a` image and BusyBox is still PID 1. The persistent
+Noob put Lynx in Fastboot on USB. Fresh read-only preflight matched serial
+`89BYAY5L4T9HFUOV`, product `k6983v1_64`, unlocked slot A, bootloader
+`k6983v1_64_45ca337_202308100614`, and expected partition sizes:
+`logs/fastboot-preflight-1792427448588958908.json`. Scoped access was
+granted only to USB node `/dev/bus/usb/001/006` (group `plugdev`). A pinned
+fast-contact listener started at
+`logs/wifi-v19-contact-1792427460653526462/result.json`. The guarded tool
+then wrote **only `boot_a`** with V29; Fastboot returned OKAY for sending and
+writing the exact 64 MiB image. Receipt:
+`logs/v29-boot-a-trial-1792427464188884820/result.json`.
+
+Lynx **has not been rebooted** after this write; last observed mode is
+Fastboot, and no V29 runtime claim is justified yet. Wait for Noob to be at
+the cable before issuing the separate reboot, because USB must be unplugged
+for the native trial. The active listener may expire and should be restarted
+if it is no longer `listening` with a fresh heartbeat. V19 exact rollback is
+ready via `tools/lynx_boot_a_persistent_openrc_trial.py --restore-v19` after a
+fresh Fastboot preflight. No other partition or slot was changed.
+
+## Earlier status — V29 persistent-root handoff prepared
+
+At this point, V19 was still the live `boot_a` image and BusyBox was still PID 1. The persistent
 Alpine root has passed a guarded live pre-exec trial through the read-write
 mount, exact root-file hashes, all four bind mounts, native Python chroot and
 final health check. The fixture replaced only the final `exec` with unmounts;

@@ -45,7 +45,7 @@ def check_local():
         raise ValueError('Scoped V29 exception differs')
 
 
-def check_collector(path):
+def check_collector(path, *, max_elapsed=90):
     if path is None:
         raise ValueError('Fresh pinned network collector receipt required')
     path = path.resolve(strict=True)
@@ -56,7 +56,7 @@ def check_collector(path):
     if (collector.get('state') != 'listening' or
             collector.get('session_token') != build['session_token'] or
             time.time_ns() - collector.get('heartbeat_ns', 0) > 10_000_000_000 or
-            collector.get('elapsed_seconds', 9999) > 90):
+            collector.get('elapsed_seconds', 9999) > max_elapsed):
         raise ValueError('Collector is not fresh and listening')
     return str(path)
 
@@ -92,7 +92,8 @@ def main():
                           'phone_contacted': False, 'flash_performed': False}))
         return
     if args.flash_v29 or args.reboot_after_v29:
-        collector_path = check_collector(args.collector_receipt)
+        collector_path = check_collector(args.collector_receipt,
+                                         max_elapsed=590 if args.reboot_after_v29 else 90)
     else:
         collector_path = None
     if args.reboot_after_v29:

@@ -1,5 +1,46 @@
 # Current Lynx handoff state
 
+## Current status — Alpine SSH owned by OpenRC; Wi-Fi packages installed
+
+On the V33 boot recorded below, signed Alpine Dropbear was installed in the
+persistent root and verified over a separate pinned SSH connection on port
+2222. The custom `lynx-dropbear` OpenRC service adopted the running daemon
+and is enabled in the default runlevel. Rescue SSH on port 22 remained live.
+Signed Alpine WPA and iproute2 packages were installed but not started;
+Alpine `wpa_cli` did not get a response from the existing rescue-stage WPA
+socket, while the rescue-stage client confirmed an associated Noobia WLAN.
+See `ALPINE-PID1-MILESTONE.md` for receipts and exact limits. No new boot
+image was flashed after V33. Native networking and cold boot are unproved.
+
+## Current status — native Alpine/OpenRC is PID 1 on Lynx
+
+The V33 `boot_a` trial succeeded. Fresh Fastboot preflight matched the
+expected serial, unlocked slot A and partition sizes. Guarded V33 write and
+separate reboot receipts:
+`logs/v33-boot-a-trial-1792445914513243332/result.json` and
+`logs/v33-boot-a-trial-1792445920287863995/result.json`. USB was removed;
+pinned V33 SSH reached `192.168.100.4` on boot ID
+`be9f6a18-bfd6-444b-9dc0-cdf98c593e27`:
+`logs/wifi-v19-contact-1792445911633295372/result.json`. The V31 RAM-only
+health startup passed with battery 26.4°C and 98%:
+`logs/local-health-v31-ram-trial-1792446026167719022/result.json`.
+The live guard passed and the one-boot handoff marker was written:
+`logs/v33-openrc-arm-1792446052738563577/result.json`.
+
+PID 1 then executed Alpine `/sbin/openrc-init` from the persistent ext4
+`userdata` root. The first capture is
+`logs/v33-first-handoff-observation-1792446062978025910/`; a full pinned
+same-boot verification passed at
+`logs/v33-alpine-pid1-verification-1792446158439995141/result.json`.
+OpenRC 0.63.2 started its `lynx-health` service; Wi-Fi SSH remained reachable;
+Alpine 3.24.2, Python 3.14.8, Git 2.54.0 and a fresh phone-side health
+sample passed. See `ALPINE-PID1-MILESTONE.md` for repeat steps, receipts,
+rollback and limitations. **Current `boot_a` is V33; Alpine/OpenRC is the
+last verified PID 1.** This is a host-supervised boot: autonomous health,
+networking, SSH and charging still need development. Preserve the working
+image and slot B/recovery foundations while this live session is used for
+incremental Alpine services.
+
 ## Current status — V32 rescue online; PID 1 stdout root cause proved; V33 offline
 
 V32 was written **only to `boot_a`** after a fresh Fastboot identity check:

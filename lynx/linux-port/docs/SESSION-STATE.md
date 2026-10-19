@@ -1,5 +1,46 @@
 # Current Lynx handoff state
 
+## Current status — V29 BusyBox rescue online; V32 prepared offline
+
+Noob put Lynx in Fastboot on USB for another Alpine trial. Initial read-only
+preflight timed out because this new USB node lacked user access; a temporary
+ACL was granted only to `/dev/bus/usb/001/010`, then fresh Fastboot checks
+matched the expected serial, unlocked slot A, bootloader and partition sizes:
+`logs/fastboot-preflight-1792431862062915667.json`.
+
+The previously booted V29 image was written to **boot_a only** and rebooted:
+`logs/v29-boot-a-trial-1792431870358045880/result.json`,
+`logs/v29-boot-a-trial-1792431878041632365/result.json`. Fastboot USB
+disappeared; pinned V29 native SSH appeared at `192.168.100.4`:
+`logs/wifi-v19-contact-1792431866815671862/result.json`. V31 RAM-only
+health started within the fresh window and passed, including a cooling
+temperature wait; battery was 27°C and 80%:
+`logs/local-health-v31-ram-trial-1792431985311055042/result.json`.
+
+The live V29 guard passed and the one-boot RAM handoff marker was written:
+`logs/v29-openrc-arm-1792432013795642673/result.json`. PID 1 then logged
+`PERSISTENT_OPENRC_SAFETY_GUARD_REFUSED` at uptime 122.76 and stayed in
+BusyBox rescue with SSH. At uptime 150 the exact guard passed manually;
+no `userdata` mount was present. Thermal and battery watcher logs remained
+healthy around the refusal. Captures are in
+`logs/v29-second-handoff-diagnostics-1792432085858736986/`. The precise
+guard refusal reason is still unknown because V29 did not save stderr.
+Alpine/OpenRC has **not** become PID 1. Current known `boot_a` is V29 and
+Lynx was last observed online by pinned SSH; no later partition write or
+reboot occurred.
+
+V32 is a private **offline, unflashed** candidate. It derives from V29 and
+keeps V29's stock kernel and exact supplementary payload; only primary
+`/init` changes to save guard stderr and retry at most twice after a clean
+guard refusal. The retry fixtures cover transient, persistent, other-cause,
+and partial-state outcomes. BusyBox syntax, member roundtrip, stock-kernel
+identity and AOSP AVB model checks passed:
+`linux-port/artifacts/persistent-openrc-v32-offline/validation.json`.
+`tools/lynx_boot_a_v32_trial.py --prepare` passed with exact V19 rollback.
+V32 has **not** been flashed or booted. A future bounded trial needs a new
+Fastboot USB connection, fresh preflight, a ready listener, and Noob at the
+cable for prompt USB removal after reboot.
+
 ## Current status — V19 SSH online and V31 cooling retry verified in RAM
 
 Noob reported Lynx cool and in Fastboot with USB unplugged. After the prompt

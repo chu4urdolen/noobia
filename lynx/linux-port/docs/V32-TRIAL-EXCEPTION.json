@@ -1,0 +1,15 @@
+{
+  "state": "prepared-not-executed",
+  "image_sha256": "be92a0c7de4c1755a0cf11732c875e388e80339aca763c9073ae122ecddd11c5",
+  "partition": "boot_a",
+  "single_supervised_trial": true,
+  "scope": "One controlled boot_a-only V32 diagnostic trial under Noob's Linux-trial authorization. V32 derives from the V29 image that reached SSH twice and keeps its stock kernel and exact supplementary payload. Only primary /init changes: capture PID 1 guard stderr and retry at most two times after a clean guard refusal. The general thermal hold stays active for other images.",
+  "required_before_write": "Fresh Fastboot identity, slot, partition size and download limit; exact V32/V19/stock hashes; offline validation and fixture receipts; current cool phone; a ready pinned collector; and verified V19 rollback.",
+  "required_after_reboot": "Unplug USB, prove pinned SSH, start and verify V31 RAM health within the fresh-boot window, then arm Alpine only after live guard passes. Capture the PID 1 stderr log and boot log if the handoff refuses. If health or SSH fails, do not arm OpenRC.",
+  "abort_conditions": "Unexpected identity, slot, write or reboot response; phone warming; charger connected during native boot; stale or failed health; unexplained SSH loss; unexpected recovery behavior; or any partial Alpine mount after a refusal.",
+  "other_partitions_allowed": false,
+  "slot_switch_allowed": false,
+  "native_charging_untested": true,
+  "pid1_handoff_untested": true,
+  "general_thermal_hold_remains_active": true
+}

@@ -1,6 +1,36 @@
 # Current Lynx handoff state
 
-## Current status — V30 did not contact; V19 restored, Fastboot held
+## Current status — V19 reached SSH; health startup refused and phone is unreachable
+
+Noob reported ready at the cable. The exact V19 rollback receipt was checked,
+a fresh pinned listener started, and a new Fastboot preflight passed. A
+separate Fastboot reboot succeeded:
+`logs/v19-rollback-reboot-1792430115303041191/result.json`. The USB device
+disappeared from the host, and V19 reached pinned native SSH on a new boot:
+`logs/wifi-v19-contact-1792430103957361931/result.json`.
+
+The RAM-only health bootstrap was started within its fresh-boot window but
+**refused** because the cooling watcher did not become ready. The retained
+stream shows CPU/SoC readings around 40.0–40.5°C during startup and a
+26.9°C battery sample. The earlier read-only <40°C precheck evidently passed,
+but the watcher startup guard did not remain true; this is a possible timing
+race, not proven to be the sole cause. Receipt and full stream:
+`logs/local-health-ram-trial-1792430224336258363/`. The launcher saw no
+working health supervisor and sent a safe power-off request. That SSH request
+timed out; an independent 300-second phone-side power-off timer had already
+been armed. Subsequent TCP/22 was unreachable and no phone USB device was
+present. **Do not claim confirmed power-off** without a physical observation.
+No expdb or pstore read was attempted after the health refusal.
+
+`boot_a` remains the exact V19 restoration from the preceding status. Stop
+native trials until the phone is confirmed cool and off, then address the
+cooling-watch startup race and repeat a bounded rescue boot before any new
+Alpine candidate. The general thermal hold remains active.
+
+An offline V31 RAM-only cooling startup retry is prepared and fixture-tested;
+see `linux-port/docs/COOLING-STARTUP-V31.md`. It has not been run on Lynx.
+
+## Earlier status — V30 did not contact; V19 restored, Fastboot held
 
 The V30 pinned listener reached its 600-second deadline with **zero**
 beacons and no verified SSH:

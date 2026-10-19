@@ -1,6 +1,40 @@
 # Current Lynx handoff state
 
-## Newest status — V29 written to boot_a, still in Fastboot
+## Newest status — V29 booted, BusyBox rescue online; V30 prepared offline
+
+Noob confirmed USB was unplugged after the guarded Fastboot reboot. V29
+booted its BusyBox stage and reached pinned native SSH at `192.168.100.4`
+(`logs/wifi-v19-contact-1792428703198572812/result.json`). The RAM-only
+health bootstrap passed and remains active
+(`logs/local-health-ram-trial-1792428823716659703/result.json`). The fresh
+V29 identity and live handoff guard passed before the one-boot RAM marker was
+written (`logs/v29-openrc-arm-1792428896405236024/result.json`).
+
+At uptime 171.85 seconds, PID 1's own guard refused the transition and V29
+entered its deliberate BusyBox rescue loop. Pinned SSH, health watchers and
+the same boot ID remained available. A subsequent manual guard check passed;
+25 further read-only checks passed with no refusal. V29 did not capture the
+transient refusal reason, so the exact cause is unknown. Preserve the
+first-run logs at `logs/v29-first-handoff-diagnostics-1792428944458381344/`
+and the guard recheck at `logs/v29-guard-recheck-1792428965407013661/`.
+Alpine/OpenRC has **not** become PID 1. The current boot is useful rescue;
+do not claim a successful Alpine boot.
+
+V30 is an offline V19-derived candidate that records guard refusal output
+and retries only that guard failure up to three times at five-second
+intervals. Its image SHA-256 is
+`0159029d4a20322766544f3785e992c93b456fcbbbe8b386671ecbb73bc491c7`.
+The exact V19 parent, stock kernel, CPIO roundtrip, shell syntax and AOSP
+AVB model passed at
+`linux-port/artifacts/persistent-openrc-v30-offline/validation.json`;
+the real retry function also passed transient and persistent failure fixtures
+(`tools/test_persistent_handoff_retry_v30.py`). **V30 has not been flashed or
+booted.** The general thermal hold remains active; a new bounded trial needs
+a scoped exception, fresh recovery checks, and Noob at the cable for the
+Fastboot reboot. Current V29 BusyBox/SSH should be used for any further
+read-only diagnostics without restarting Lynx.
+
+## Earlier status — V29 written to boot_a, before the first reboot
 
 Noob put Lynx in Fastboot on USB. Fresh read-only preflight matched serial
 `89BYAY5L4T9HFUOV`, product `k6983v1_64`, unlocked slot A, bootloader

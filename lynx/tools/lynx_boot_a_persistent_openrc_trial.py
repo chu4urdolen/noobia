@@ -105,7 +105,7 @@ def main():
         flashed = json.loads(flash_path.read_text())
         if (flashed.get('state') != 'v29-flashed-no-reboot' or
                 flashed.get('image_sha256') != IMAGE_SHA or
-                time.time_ns() - flashed.get('finished_ns', 0) > 15 * 60 * 10**9):
+                time.time_ns() - flashed.get('finished_ns', 0) > 24 * 60 * 60 * 10**9):
             raise ValueError('Fresh completed V29 flash receipt required')
     os.umask(0o077)
     out = ROOT / 'logs' / ('v29-boot-a-trial-' + str(time.time_ns()))

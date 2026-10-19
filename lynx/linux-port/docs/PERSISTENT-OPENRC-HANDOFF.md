@@ -1,16 +1,17 @@
-# Persistent Alpine PID 1 handoff — V29 written, not booted
+# Persistent Alpine PID 1 handoff — V29 booted, guarded rescue active
 
-**Update:** V29 was written to `boot_a` under the scoped single-trial
-exception, but Lynx remains in Fastboot and has **not rebooted**. The exact
-Fastboot receipt is `logs/v29-boot-a-trial-1792427464188884820/result.json`.
-No V29 runtime behavior has been observed. The offline and live-pre-exec
-evidence below predates this write.
+**Update:** V29 booted BusyBox, reached native SSH, and passed RAM health.
+The one-boot Alpine handoff was armed, but PID 1's live safety guard refused
+at uptime 171.85 seconds and left BusyBox rescue running. The reason was not
+captured; 25 subsequent guard checks passed. Alpine/OpenRC has not become
+PID 1. See `linux-port/docs/SESSION-STATE.md` for receipts. V30 is prepared
+offline with refusal logging and bounded guard retries; it is unflashed.
 
 Lynx now has a persistent Alpine 3.24.2 ext4 root in the first 1 GiB of
 `userdata`. Before the Fastboot write, V19 BusyBox provided Wi-Fi, SSH and a
 health supervisor at `192.168.100.4` on boot ID
-`3990a1d8-963d-4d17-972e-b0b8a7b366e6`. V29 is now on `boot_a`; Fastboot
-is still the last observed mode.
+`3990a1d8-963d-4d17-972e-b0b8a7b366e6`. V29 is now on `boot_a`; native
+BusyBox SSH is the last observed mode.
 
 `linux-port/persistent-alpine-probe.sh` and
 `tools/probe_persistent_alpine.py` passed on the phone. The probe verified
@@ -56,7 +57,7 @@ first-GiB hash is
 `35a9763dd9f8e8aaa0f007e23d5c7047793d4b11a69d9e6881c58c2244fea7e0`,
 at `logs/persistent-alpine-post-preexec-hash-1792422922572893069/result.json`.
 
-V29 has **not** been booted. The final PID 1 `exec`, automatic
+V29 has been booted, but its final PID 1 `exec` did not run. Automatic
 OpenRC service start, Wi-Fi/SSH process survival, and recovery from a failed
 hardware boot remain unproven. The repository's general Linux-flash thermal
 hold is still active: V29 depends on host-assisted health startup before its
@@ -77,8 +78,8 @@ the pinned Fastboot binary without phone contact. Receipt:
 Its `--flash-v29`, `--reboot-after-v29` and `--restore-v19` paths each require
 a fresh read-only Fastboot identity/slot/partition preflight; the flash and
 reboot paths also require a current pinned network collector and are separate
-actions. The `--flash-v29` path was subsequently run as recorded above; the
-reboot and rollback paths have not been run. The collector recognizes V29's exact
+actions. The `--flash-v29` and `--reboot-after-v29` paths have now run;
+rollback has not. The collector recognizes V29's exact
 `/init` hash as well as V19's, after independently checking the built image.
 For the timed trial, start `tools/lynx_wifi_v19_contact.py --listen --fast-ack`
 before the Fastboot reboot. This mode saves pinned SSH proof and the

@@ -1,14 +1,32 @@
 # Current Lynx handoff state
 
+## Current status — V34 autonomous Alpine candidate prepared offline
+
+V34 was built from the hardware-booted V33 image. It combines local Wi-Fi
+readiness, the previously live-tested V31 phone-side health startup, and the
+V33 persistent Alpine PID 1 handoff using the guard's local authority.
+The exact stock kernel and unrelated image members are preserved. Offline
+build and independent validation passed; exact V33 and V19 rollback images
+and a guarded Fastboot tool are ready. `tools/lynx_v34_contact.py` is a
+pinned read-only collector that does not require a host arm marker. See
+`LOCAL-ALPINE-V34.md` for architecture, SHA-256, receipts and limits.
+**V34 has not been flashed or booted. Current installed `boot_a` remains
+V33.** A trial needs Noob at the cable for Fastboot connection and prompt
+USB removal after reboot. Charging remains unvalidated.
+
 ## Current status — Alpine SSH owned by OpenRC; Wi-Fi packages installed
 
 On the V33 boot recorded below, signed Alpine Dropbear was installed in the
 persistent root and verified over a separate pinned SSH connection on port
 2222. The custom `lynx-dropbear` OpenRC service adopted the running daemon
 and is enabled in the default runlevel. Rescue SSH on port 22 remained live.
-Signed Alpine WPA and iproute2 packages were installed but not started;
-Alpine `wpa_cli` did not get a response from the existing rescue-stage WPA
-socket, while the rescue-stage client confirmed an associated Noobia WLAN.
+Signed Alpine WPA and iproute2 packages were installed. Alpine `wpa_cli` did
+not get a response from the existing rescue-stage WPA socket, while the
+rescue-stage client confirmed an associated Noobia WLAN. The `lynx-wifi`
+OpenRC service adopted that live connection without restarting WPA or DHCP,
+and is enabled in the default runlevel. Its private configuration was copied
+phone-to-phone into the persistent root with mode 0600; no secret contents
+were logged. Alpine's native association/DHCP startup path is untested.
 See `ALPINE-PID1-MILESTONE.md` for receipts and exact limits. No new boot
 image was flashed after V33. Native networking and cold boot are unproved.
 

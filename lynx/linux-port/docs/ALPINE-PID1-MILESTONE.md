@@ -27,8 +27,17 @@ packages were also installed, but no Alpine Wi-Fi service was started:
 `logs/alpine-wifi-install-1792446612004066034/result.json`. Alpine's
 `wpa_cli` timed out against the current rescue-stage WPA control socket;
 the rescue-stage client still reported `wpa_state=COMPLETED` and
-`192.168.100.4`. Do not disturb the live Wi-Fi process until that
-compatibility issue is understood and an independent reconnect path exists.
+`192.168.100.4`. The `lynx-wifi` OpenRC service subsequently adopted the
+existing associated WLAN without restarting WPA or DHCP. Its private
+configuration was copied phone-to-phone into the Alpine root with mode
+`0600`; the contents and hash were not logged. Both `lynx-wifi` and
+`lynx-dropbear` are now enabled in the default runlevel, with rescue SSH
+still listening on port 22. Receipts:
+`logs/alpine-wifi-openrc-1792446767347104772/result.json` and
+`logs/alpine-wifi-openrc-1792446772729967886/result.json`. Alpine's
+own association and DHCP startup path remains **untested on hardware**;
+do not disturb the live Wi-Fi process until an independent reconnect path
+exists.
 
 The decisive host capture is
 `logs/v33-first-handoff-observation-1792446062978025910/`: `/proc/1/exe`
@@ -92,8 +101,9 @@ Stop if Fastboot identity or recovery behavior differs.
 
 V33 still requires host contact, RAM health startup and a one-boot handoff
 marker. Wi-Fi, DHCP and rescue SSH on port 22 started in the BusyBox stage;
-Alpine now owns the additional SSH daemon on port 2222, but this service
-has not been tested across a cold boot. Alpine Wi-Fi ownership and restart
-remain unproven. Native charging and a self-booting thermal policy remain
+Alpine now owns the additional SSH daemon on port 2222 and has adopted
+the existing Wi-Fi connection, but neither service has been tested across
+a cold boot. Native Wi-Fi startup and restart remain unproven. Native
+charging and a self-booting thermal policy remain
 unvalidated. The current Alpine milestone is real and reproducible, but
 Lynx is not yet independent of the Nexus at cold boot.

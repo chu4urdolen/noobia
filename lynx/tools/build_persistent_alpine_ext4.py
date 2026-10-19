@@ -136,6 +136,15 @@ def main():
             path.mkdir(mode=0o755, exist_ok=True)
             if not path.is_dir() or path.is_symlink():
                 raise ValueError('Invalid mount point: ' + rel)
+            path.chmod(0o755)
+        health_source = ROOT / 'linux-port/openrc-lynx-health'
+        health_service = staging / 'etc/init.d/lynx-health'
+        health_link = staging / 'etc/runlevels/default/lynx-health'
+        if health_service.exists() or health_service.is_symlink() or health_link.exists() or health_link.is_symlink():
+            raise ValueError('Checkpoint already contains a Lynx health service')
+        health_service.write_bytes(health_source.read_bytes())
+        health_service.chmod(0o755)
+        health_link.symlink_to('../../init.d/lynx-health')
         (staging / 'etc/hostname').write_text('lynx\n')
         image = out / 'alpine-openrc-root-1GiB.ext4'
         with image.open('wb') as destination:

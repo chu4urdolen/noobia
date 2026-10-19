@@ -1,5 +1,18 @@
 # Current Lynx handoff state
 
+## Newest status — V29 persistent-root handoff prepared, not flashed
+
+V19 is still the live `boot_a` image and BusyBox is still PID 1. The persistent
+Alpine root has passed a guarded live pre-exec trial through the read-write
+mount, exact root-file hashes, all four bind mounts, native Python chroot and
+final health check. The fixture replaced only the final `exec` with unmounts;
+no PID 1 change or boot image write occurred. A private V19-derived V29
+host-armed boot candidate is built and independently checked offline. Its
+image hash is `2483ba8d5ee43ef2ba692885682b9ebacc59fdb8216700eaad1eff7c531b3048`.
+See `PERSISTENT-OPENRC-HANDOFF.md` for receipts and the remaining hardware
+trial boundary. The next physical trial needs Fastboot over USB, fresh identity
+checks, a ready pinned network collector, and verified stock `boot_a` undo.
+
 ## Newest status — 2026-10-19 persistent Alpine root
 
 The approved first-GiB Alpine 3.24.2 ext4 install on `userdata` succeeded.
@@ -16,6 +29,12 @@ The Alpine root's missing `/dev`, `/proc` and `/sys` mount-point directories
 were then created and verified on Lynx. Python and Git ran from the persistent
 root in a temporary read-only chroot with `/dev` bind-mounted. The post-fix
 first-GiB hash and receipts are in the persistent Alpine trial document.
+The persistent root now also has the reviewed OpenRC health adoption service
+enabled in its default runlevel. A guarded read-only live probe passed with
+all four virtual-filesystem mounts, Alpine Python/Git/procfs, and complete
+mount cleanup. OpenRC has not replaced BusyBox PID 1; trying `rc-service`
+before that handoff was correctly refused by OpenRC. The service install,
+failed diagnostic, and corrected probe receipts are in the same trial document.
 
 ## Newest status — 2026-10-17
 

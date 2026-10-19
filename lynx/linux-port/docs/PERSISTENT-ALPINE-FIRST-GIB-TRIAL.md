@@ -26,11 +26,39 @@ read-only remount confirmed them. Receipt:
 outer `/dev` temporarily bind-mounted into the read-only root, Alpine's
 Python 3.14.8 and Git 2.54.0 both ran on Lynx; evidence is
 `logs/persistent-alpine-chroot-1792420966768790818/result.json`. All mounts
-were removed. The live filesystem now differs from the immutable source image;
-its new full first-GiB SHA-256 is
+were removed. The live filesystem then differed from the immutable source image;
+its post-mount-point first-GiB SHA-256 was
 `b2c328e21b4bbaf50f71835b5ed6bba0f59b85ccec8d28acdff48abba569d001`,
 recorded at `logs/persistent-alpine-post-mountpoints-hash-1792420986027536356/result.json`.
 The image builder now creates these mount points for future builds.
+
+The read-only startup probe `tools/probe_persistent_alpine.py` now checks the
+ext4 UUID and label, current V19 boot identity, partition mapping, active
+health supervisor, Alpine executables, and temporary `/dev`, `/proc`, `/sys`,
+and `/run` mounts. The live success receipt is
+`logs/persistent-alpine-probe-1792422556163098607/result.json`. Python, Git,
+and procfs ran inside the persistent chroot; the same boot and health marker
+remained afterward, and all temporary mounts were removed.
+
+The reviewed OpenRC health adoption service was installed in the persistent
+root and enabled for its default runlevel. The installer verified the service
+SHA-256 and symlink after a read-only remount and left `userdata` unmounted:
+`logs/persistent-openrc-health-install-1792422523913485537/result.json`.
+The image builder now includes the same service for future images. An attempt
+to ask `rc-service` for status before OpenRC became PID 1 was refused by
+OpenRC itself; its failed diagnostic receipt is
+`logs/persistent-alpine-probe-1792422540277649053/result.json`. This is an
+expected boundary, not proof that the service has started. The corrected
+probe checks that the service is installed without invoking it.
+The later full first-GiB readback after service installation is
+`6f23ac33ce679fe330578080e3e0fd892d9e6786a4621795daa1e01d28cfccb9` at
+`logs/persistent-alpine-health-service-hash-1792422596175692929/result.json`.
+The corrected offline builder was run again at
+`linux-port/artifacts/persistent-alpine-ext4-1792422633623392017/result.json`:
+`e2fsck -fn` passed, the health service and runlevel link match the live
+source, and all three new mount points are mode 0755. The first rebuild
+revealed that the builder's private umask had made them 0700; that artifact is
+preserved but superseded. This offline rebuild was **not** installed on Lynx.
 
 Before the write, the original first 1 GiB was saved on Nexus as eight 128 MiB
 gzip chunks at `backups/userdata-chunks-1792414534852012623/`. Each chunk was

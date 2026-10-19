@@ -1,5 +1,44 @@
 # Current Lynx handoff state
 
+## Current status — V32 rescue online; PID 1 stdout root cause proved; V33 offline
+
+V32 was written **only to `boot_a`** after a fresh Fastboot identity check:
+`logs/v32-boot-a-trial-1792435399661704248/result.json`. The work session
+paused before reboot, so the original listener expired without phone contact.
+The next session confirmed Lynx still in Fastboot, started a fresh listener,
+and issued the separate reboot:
+`logs/v32-boot-a-trial-1792445533063206353/result.json`. Pinned V32 SSH
+arrived at `192.168.100.4`:
+`logs/wifi-v19-contact-1792445529418312899/result.json`. V31 RAM-only
+health passed on this fresh boot; battery was 26°C and 97%:
+`logs/local-health-v31-ram-trial-1792445642081177002/result.json`.
+
+The live guard passed and the V32 one-boot marker was armed:
+`logs/v32-openrc-arm-1792445655432146871/result.json`. V32's three PID 1
+attempts all refused before any Alpine mount, then kept BusyBox rescue SSH.
+Its new stderr log captured `sh: write error: Bad file descriptor` three
+times. PID 1 has **no file descriptors 0 or 1**; only descriptor 2 exists,
+pointing to V32's RAM stderr log. The guard's final success `echo` therefore
+fails when invoked from PID 1, making its shell return nonzero despite the
+checks passing. A pinned read-only experiment reproduced guard failure with
+stdout closed and guard success after reopening standard descriptors in
+tmpfs. Tool and durable proof:
+`tools/probe_pid1_stdio.py`,
+`logs/pid1-stdio-diagnostic-1792445807386439038/result.json`.
+
+V33 is built **offline and unflashed** from the V32 image. It changes only
+primary `/init` to reopen stdin from `/dev/null` and log PID 1 stdout/stderr
+in RAM before the guard. The V32 stock kernel, supplementary payload,
+bounded retry and other primary members remain identical. BusyBox shell
+syntax, CPIO roundtrip and AOSP AVB model validation passed:
+`linux-port/artifacts/persistent-openrc-v33-offline/validation.json`.
+`tools/lynx_boot_a_v33_trial.py --prepare` passed with the exact independent
+V19 rollback image. Current known `boot_a` is V32, last observed as BusyBox
+rescue over pinned SSH. Alpine/OpenRC has **not** become PID 1. A V33 hardware
+trial requires a fresh Fastboot USB connection, ready collector, guarded
+`boot_a` write, and prompt USB removal after reboot. Keep slot B and
+recovery-related partitions untouched.
+
 ## Current status — V29 BusyBox rescue online; V32 prepared offline
 
 Noob put Lynx in Fastboot on USB for another Alpine trial. Initial read-only

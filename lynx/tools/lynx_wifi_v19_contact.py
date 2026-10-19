@@ -47,7 +47,7 @@ DIAGNOSTICS += "; printf 'ASYNC_COMPLETION_EVIDENCE\\n'; cat /run/lynx/wifi-asyn
 DIAGNOSTICS += "; printf 'FIRMWARE_EVENT_LOG\\n'; cat /run/lynx/firmware-events-ready /run/lynx/mdev.log; true"
 DIAGNOSTICS += "; printf 'WPA_SNAPSHOT\\n'; cat /run/lynx/wpa-status-result /run/lynx/wpa-status /run/lynx/wpa-status.err /run/lynx/wpa-scan-result /run/lynx/wpa-scan /run/lynx/wpa-scan.err /run/lynx/wpa-rfkill /run/lynx/wpa-failure-code; true"
 def main():
- parser=argparse.ArgumentParser();parser.add_argument('--listen',action='store_true');parser.add_argument('--self-test',action='store_true');parser.add_argument('--seconds',type=int,default=600);args=parser.parse_args()
+ parser=argparse.ArgumentParser();parser.add_argument('--listen',action='store_true');parser.add_argument('--self-test',action='store_true');parser.add_argument('--fast-ack',action='store_true',help='After pinned SSH and fallback cancellation, return immediately so health startup can begin');parser.add_argument('--seconds',type=int,default=600);args=parser.parse_args()
  if args.self_test:
   text='LYNX_NATIVE_SSH_PROOF\n'+KERNEL+'\n/bin/busybox\n'+BUILD['init_sha256']+'  /init\n'+BB_SHA+'  /bin/busybox\n'+BUILD['session_token']+'\nuid=0(root)\n'
   assert proof_valid(text,0) and not proof_valid(text,1) and not proof_valid(text.replace(KERNEL,'wrong-kernel'),0) and not proof_valid(text.replace(BUILD['init_sha256'],'wrong-init'),0)
@@ -86,6 +86,8 @@ def main():
    except subprocess.TimeoutExpired as e:
     (out/'ack.raw').write_bytes((e.stdout or b'')+(e.stderr or b''));report.update(state='identity-proved-ack-timeout',fallback_cancel_ack_timed_out=True);save();return
    if a.returncode!=0:report['state']='identity-proved-ack-failed';save();return
+   if args.fast_ack:
+    report.update(state='native-ssh-available',diagnostics_deferred_for_health_start=True,finished_ns=time.time_ns());save();print('FAST PINNED CONTACT READY:',out,flush=True);return
    try:
     d=subprocess.run(ssh_command(ip,DIAGNOSTICS),capture_output=True,timeout=35);(out/'diagnostics.raw').write_bytes(d.stdout+d.stderr);report['diagnostics_exit_code']=d.returncode
    except subprocess.TimeoutExpired as e:

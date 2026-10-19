@@ -53,10 +53,9 @@ V29 has **not** been flashed or booted. The final PID 1 `exec`, automatic
 OpenRC service start, Wi-Fi/SSH process survival, and recovery from a failed
 hardware boot remain unproven. The repository's general Linux-flash thermal
 hold is still active: V29 depends on host-assisted health startup before its
-handoff, and native charging remains unvalidated. The user has not been asked
-to enter Fastboot for this candidate. Before a separately reviewed trial,
-prepare a fresh pinned network
-collector, verify stock `boot_a` undo and exact Fastboot restoration, then
+handoff, and native charging remains unvalidated. Noob has been asked to put
+Lynx in Fastboot and connect USB for a supervised trial. Before any write,
+prepare a fresh pinned network collector, verify stock `boot_a` undo and exact Fastboot restoration, then
 check Lynx's current Fastboot serial/slot/size. Only `boot_a` may be changed;
 preserve slot B and recovery. A successful V29 boot initially stays in BusyBox
 until the host verifies SSH and explicitly writes its handoff token in RAM.
@@ -74,3 +73,8 @@ a fresh read-only Fastboot identity/slot/partition preflight; the flash and
 reboot paths also require a current pinned network collector and are separate
 actions. No action path has been run. The collector now recognizes V29's exact
 `/init` hash as well as V19's, after independently checking the built image.
+For the timed trial, start `tools/lynx_wifi_v19_contact.py --listen --fast-ack`
+before the Fastboot reboot. This mode saves pinned SSH proof and the
+fallback-cancel acknowledgement, then returns immediately so RAM health
+bootstrap can start inside its fresh-boot window. Full diagnostics are
+deferred until health is ready and must be collected afterward.

@@ -1,5 +1,22 @@
 # Current Lynx handoff state
 
+## Newest status — 2026-10-19 persistent Alpine root
+
+The approved first-GiB Alpine 3.24.2 ext4 install on `userdata` succeeded.
+On-phone full readback SHA-256 matched the source and a read-only handset mount
+confirmed Alpine release and OpenRC init. The install receipt is
+`logs/userdata-ext4-install-1792420775526722662/result.json`; details and
+rollback pointers are in `PERSISTENT-ALPINE-FIRST-GIB-TRIAL.md`. Afterward,
+pinned SSH still proved the same V19 BusyBox boot ID
+`3990a1d8-963d-4d17-972e-b0b8a7b366e6`, ready health supervisor, and
+unmounted `userdata`. BusyBox remains PID 1; no automatic Alpine handoff or
+boot image change was attempted. Continue with a guarded handoff and preserve
+V19, stock recovery images, slot B, and the original first-GiB backup.
+The Alpine root's missing `/dev`, `/proc` and `/sys` mount-point directories
+were then created and verified on Lynx. Python and Git ran from the persistent
+root in a temporary read-only chroot with `/dev` bind-mounted. The post-fix
+first-GiB hash and receipts are in the persistent Alpine trial document.
+
 ## Newest status — 2026-10-17
 
 The human most recently reported Lynx in Fastboot, then confirmed she is not on

@@ -1,63 +1,61 @@
-# Proposed persistent Alpine storage trial — prepared, not applied
+# Persistent Alpine storage on Lynx — installed and verified
 
-The proposed target is **only bytes 0–1,073,741,823 of the `userdata`
-partition** (`/dev/sdc85`, GPT name `userdata`). This is a destructive write:
-the first 1 GiB currently contains unidentified, mostly incompressible data.
-The rest of the 238.6 GB partition would remain byte-for-byte untouched by
-the installer, but it has been sampled rather than fully backed up.
+On 2026-10-19 Noob approved writing **only bytes 0–1,073,741,823 of the
+`userdata` partition** (`/dev/sdc85`). Lynx was on the proven V19 BusyBox
+boot, with pinned SSH at `192.168.100.4`, boot ID
+`3990a1d8-963d-4d17-972e-b0b8a7b366e6`, an unmounted `userdata`, and a
+ready health supervisor. The fresh preflight receipt is
+`logs/userdata-ext4-prepare-1792420768175872179/result.json`.
 
-The entire first 1 GiB is saved on Nexus as eight 128 MiB gzip chunks at
-`backups/userdata-chunks-1792414534852012623/`. Each chunk was decompressed,
-checked for exact length, and compared with a fresh SHA-256 read from Lynx;
-the first 16 MiB also match the earlier edge backup. The manifest state is
-`verified-read-only-first-gib-backup`. The prior single-stream backup timed out
-and is marked failed; it was not treated as complete. Read-only samples show
-nonzero data through the first several hundred MiB and zeros at all sampled
-locations from 1 GiB onward. Sampling does not establish that the unsampled
-remainder is empty.
+The installer streamed a compressed Alpine 3.24.2 ext4 image through pinned
+SSH and wrote exactly 1 GiB at offset zero in 38.8 seconds. It read all 1 GiB
+back; Lynx's SHA-256 matched the source image:
+`c162ff3c14ae2c276514c0c485f5aa6bf9044810fb07135078df9c9cb1794dd0`.
+Lynx then mounted `userdata` as ext4 with `ro,noload`, checked Alpine release
+3.24.2 and executable OpenRC init, and unmounted it. The result is
+`logs/userdata-ext4-install-1792420775526722662/result.json` with captured
+write and mount output. A later pinned SSH check confirmed the same boot ID,
+ready health supervisor, and unmounted `userdata`. No boot image, slot,
+bootloader, recovery partition, or GPT write occurred.
 
-The host-only image at
-`linux-port/artifacts/persistent-alpine-ext4-1792413794183987933/` contains
-Alpine 3.24.2, signed OpenRC packages, Python, Git and Make in a 1 GiB ext4
-filesystem. Its raw SHA-256 is
-`c162ff3c14ae2c276514c0c485f5aa6bf9044810fb07135078df9c9cb1794dd0`;
-the 57,579,838-byte transfer gzip has SHA-256
+A follow-up read-only chroot check found that the checkpoint export omitted
+`/dev`, `/proc` and `/sys` mount-point directories. On the same verified V19
+boot, those three empty directories were created inside the ext4 root, then a
+read-only remount confirmed them. Receipt:
+`logs/persistent-alpine-mountpoints-1792420959866685595/result.json`. With
+outer `/dev` temporarily bind-mounted into the read-only root, Alpine's
+Python 3.14.8 and Git 2.54.0 both ran on Lynx; evidence is
+`logs/persistent-alpine-chroot-1792420966768790818/result.json`. All mounts
+were removed. The live filesystem now differs from the immutable source image;
+its new full first-GiB SHA-256 is
+`b2c328e21b4bbaf50f71835b5ed6bba0f59b85ccec8d28acdff48abba569d001`,
+recorded at `logs/persistent-alpine-post-mountpoints-hash-1792420986027536356/result.json`.
+The image builder now creates these mount points for future builds.
+
+Before the write, the original first 1 GiB was saved on Nexus as eight 128 MiB
+gzip chunks at `backups/userdata-chunks-1792414534852012623/`. Each chunk was
+decompressed, checked for exact length, and compared with a fresh on-phone
+SHA-256. The backup manifest is `verified-read-only-first-gib-backup`.
+`tools/restore_userdata_first_gib.py` can write and verify those chunks if
+rollback becomes necessary; its offline input audit and disposable file tests
+passed. No rollback write was needed or attempted. The rest of `userdata` was
+sampled, not fully backed up. The installer did not write beyond the first GiB.
+
+The source image is under
+`linux-port/artifacts/persistent-alpine-ext4-1792413794183987933/`; its
+57,579,838-byte transfer gzip has SHA-256
 `d2088243f965fa24092256699d6b46fd7bc264edbbba042137ee725d7fa571ce`.
-`e2fsck -fn` passed; the image mounted read-only on Nexus and also mounted
-when presented as the first 1 GiB of a larger simulated block device. This
-does not yet prove a handset mount.
-
-`tools/install_persistent_alpine_userdata.py --prepare` passed on the live
-V19 boot. Its receipt is
-`logs/userdata-ext4-prepare-1792414996199859431/result.json`: pinned SSH,
-unmounted `userdata`, healthy unplugged power state, and exact V19 `boot_a`
-SHA-256 `5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851`.
-The receipt is intentionally short-lived; rerun `--prepare` before an approved
-write if more than 15 minutes pass or Lynx reboots.
-
-If approved, the installer streams the compressed image through pinned SSH,
-writes exactly 1 GiB starting at offset zero, synchronizes the block device,
-reads the same 1 GiB back and checks its full SHA-256, then mounts `userdata`
-read-only with journal replay disabled to check Alpine/OpenRC. It does not
-flash `boot_a`, switch slots, alter GPT, or reboot. BusyBox V19 remains the
-working rescue environment. A failed or interrupted write leaves V19 intact;
-`tools/restore_userdata_first_gib.py` can write the eight verified original
-chunks back and hash each against the phone. The rollback tool passed its
-offline input audit, but no rollback write has been attempted.
-
-The install and rollback stream commands were exercised against a disposable
-16 MiB host file at
+It contains Alpine 3.24.2, signed OpenRC packages, Python, Git, and Make.
+Host `e2fsck -fn`, read-only mount, and simulated larger-block-device mount
+passed before the live write. The install and rollback stream commands also
+passed a disposable 16 MiB fixture at
 `linux-port/artifacts/userdata-stream-fixture-1792415146707277219/result.json`.
-The first attempt exposed a missing `conv=notrunc` flag: a regular-file
-fixture lost its untouched trailing bytes. Both guarded tools now include
-`conv=notrunc,fsync`. The corrected fixture proved the written prefix, the
-unchanged trailing bytes and full rollback. Lynx's BusyBox accepted these
-exact `dd` flags in a four-byte **RAM-only** check. No `userdata` write has
-been attempted.
+Both tools use `conv=notrunc,fsync` so a regular-file fixture preserves its
+unwritten tail. Lynx's BusyBox accepted these exact `dd` flags in a RAM-only
+check before the storage trial.
 
-This storage trial alone will not make Alpine start automatically. After a
-successful on-phone read-only mount, the next work is a guarded BusyBox-to-
-Alpine handoff and autonomous health/Wi-Fi/SSH boot candidate. V28's combined
-boot loss remains unexplained, so do not reuse that image or replace V19 as
-part of this storage trial. Native charging and unattended operation remain
-unvalidated.
+This proves a persistent Alpine filesystem on Lynx. BusyBox V19 is still PID 1;
+Alpine does not auto-start. The next step is a guarded BusyBox-to-Alpine
+handoff with health, Wi-Fi, and SSH maintained. V28's combined boot loss
+remains unexplained; do not reuse that image or replace V19 merely because
+storage is ready. Native charging and unattended operation remain unvalidated.

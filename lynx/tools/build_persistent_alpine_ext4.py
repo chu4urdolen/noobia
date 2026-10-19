@@ -128,6 +128,14 @@ def main():
                     'usr/bin/git', 'usr/bin/make'):
             if not (staging / rel).exists():
                 raise ValueError('Expected rootfs executable missing: ' + rel)
+        # The checkpoint root is a chroot export and omits virtual-filesystem
+        # mount points. A persistent root needs them before /dev, /proc and
+        # /sys can be mounted during the BusyBox-to-Alpine handoff.
+        for rel in ('dev', 'proc', 'sys'):
+            path = staging / rel
+            path.mkdir(mode=0o755, exist_ok=True)
+            if not path.is_dir() or path.is_symlink():
+                raise ValueError('Invalid mount point: ' + rel)
         (staging / 'etc/hostname').write_text('lynx\n')
         image = out / 'alpine-openrc-root-1GiB.ext4'
         with image.open('wb') as destination:

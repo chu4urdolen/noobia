@@ -1,5 +1,13 @@
 # Lynx live milestone — October 19, 2026
 
+Later on this same V19 boot, the approved first 1 GiB of `userdata` was
+installed with an Alpine 3.24.2 ext4 root. The full on-phone readback hash
+matched the source image and a read-only mount checked Alpine/OpenRC. See
+`PERSISTENT-ALPINE-FIRST-GIB-TRIAL.md` and
+`logs/userdata-ext4-install-1792420775526722662/result.json`. This supersedes
+the earlier storage status below. BusyBox remains PID 1; no automatic Alpine
+boot or boot image change occurred.
+
 Lynx remains on the proven V19 `boot_a` image. On the current unplugged boot,
 authenticated SSH at `192.168.100.4` verified boot ID
 `3990a1d8-963d-4d17-972e-b0b8a7b366e6`. The fresh collector is
@@ -30,6 +38,6 @@ saved read-only on Nexus under
 `backups/userdata-edges-1792413021056852842/`, with exact offsets and hashes
 in `result.json`. The trailing 16 MiB are zero; the leading 16 MiB contain
 unidentified data. This is a bounded backup, not a full partition backup.
-No phone storage partition has been formatted or written. The next persistence
-step needs a full backup or an explicit decision to discard the unidentified
-`userdata` contents and a reviewed filesystem/install procedure.
+At that earlier point, no phone storage partition had been formatted or
+written. Noob subsequently approved the bounded first-GiB install recorded
+above, after a verified backup and reviewed procedure.

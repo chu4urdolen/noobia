@@ -1,6 +1,27 @@
 # Current Lynx handoff state
 
-## Current status — V19 reached SSH; health startup refused and phone is unreachable
+## Newest status — second V19 boot briefly reachable, no health armed
+
+After the health refusal below, Lynx became unreachable, then appeared again
+over pinned V19 SSH with **new** boot ID
+`63e473d6-64fd-45dd-b04b-b27928d22e88`. This proves a restart occurred;
+it does not prove whether the preceding safety power-off completed. The new
+boot had no health modules, no health-ready marker, charger `online=0`, and
+`network-timing-start=0`. At uptime 249.20 it logged
+`WIFI_HOST_CONTACT_DEADLINE; REQUESTING_ONE_SUPPORTED_BOOTLOADER_REBOOT`.
+Its fresh-boot window for the RAM health trial had already passed, so no
+health attempt or host acknowledgement was made on this boot.
+
+While pinned SSH was available, read-only captures of `console-ramoops-0`
+and `pmsg-ramoops-0` succeeded:
+`logs/v30-followup-pstore-1792430568294370111/result.json`. They contain
+the older diagnostic token `69adf9d14707d848063b861b8f248748`, not the
+current V19 token. Their startup warning and call traces are therefore
+not evidence of the V30 failure. No partition read or write occurred.
+Lynx's current physical screen/power state is not confirmed; Noob has been
+asked to leave USB unplugged and report whether she is off and cool.
+
+## Earlier status — V19 reached SSH; health startup refused and phone became unreachable
 
 Noob reported ready at the cable. The exact V19 rollback receipt was checked,
 a fresh pinned listener started, and a new Fastboot preflight passed. A

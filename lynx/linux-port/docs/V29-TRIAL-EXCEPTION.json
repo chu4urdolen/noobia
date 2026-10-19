@@ -1,0 +1,15 @@
+{
+  "state": "prepared-not-executed",
+  "image_sha256": "2483ba8d5ee43ef2ba692885682b9ebacc59fdb8216700eaad1eff7c531b3048",
+  "partition": "boot_a",
+  "single_supervised_trial": true,
+  "scope": "One controlled V19-derived V29 boot_a trial under Noob's prior boot_a-only Linux-trial authorization. The general Linux-flash thermal hold stays active for other images. V29 first boots into the known BusyBox Wi-Fi/SSH path; a separate pinned-host token is required before persistent Alpine PID 1 handoff.",
+  "required_before_write": "Fresh Fastboot serial/product/slot/partition-size checks, exact V29/V19/stock image hashes, matching stock OTA proof, current cool/unplugged status, a ready pinned network collector, and one exact V19 rollback command.",
+  "required_after_reboot": "Unplug USB, prove pinned SSH, start and verify the reviewed RAM health supervisor before arming OpenRC, then observe SSH, health and boot logs. If health startup does not complete in the bounded window, do not arm OpenRC.",
+  "abort_conditions": "Unexpected Fastboot identity, write or reboot response; phone warming; charger connected during native boot; failed or stale health readings; unexplained SSH loss; or unexpected recovery behavior. Stop and inspect before any further partition action.",
+  "other_partitions_allowed": false,
+  "slot_switch_allowed": false,
+  "native_charging_untested": true,
+  "pid1_handoff_untested": true,
+  "general_thermal_hold_remains_active": true
+}

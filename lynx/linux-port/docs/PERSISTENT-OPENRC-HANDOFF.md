@@ -51,10 +51,26 @@ at `logs/persistent-alpine-post-preexec-hash-1792422922572893069/result.json`.
 
 V29 has **not** been flashed or booted. The final PID 1 `exec`, automatic
 OpenRC service start, Wi-Fi/SSH process survival, and recovery from a failed
-hardware boot remain unproven. Before a trial, prepare a fresh pinned network
+hardware boot remain unproven. The repository's general Linux-flash thermal
+hold is still active: V29 depends on host-assisted health startup before its
+handoff, and native charging remains unvalidated. The user has not been asked
+to enter Fastboot for this candidate. Before a separately reviewed trial,
+prepare a fresh pinned network
 collector, verify stock `boot_a` undo and exact Fastboot restoration, then
 check Lynx's current Fastboot serial/slot/size. Only `boot_a` may be changed;
 preserve slot B and recovery. A successful V29 boot initially stays in BusyBox
 until the host verifies SSH and explicitly writes its handoff token in RAM.
 That separates boot-image risk from OpenRC PID 1 risk. If boot or recovery
 behaves unexpectedly, stop and use the verified restoration path.
+
+The bounded trial scope is recorded in `V29-TRIAL-EXCEPTION.json`; it does not
+clear the general thermal hold. `tools/prepare_persistent_openrc_trial.py`
+verified exact V29, V19 and stock images, the matching stock OTA proof and
+the pinned Fastboot binary without phone contact. Receipt:
+`logs/persistent-openrc-offline-readiness-1792423153966857655/result.json`.
+`tools/lynx_boot_a_persistent_openrc_trial.py --prepare` also passed offline.
+Its `--flash-v29`, `--reboot-after-v29` and `--restore-v19` paths each require
+a fresh read-only Fastboot identity/slot/partition preflight; the flash and
+reboot paths also require a current pinned network collector and are separate
+actions. No action path has been run. The collector now recognizes V29's exact
+`/init` hash as well as V19's, after independently checking the built image.

@@ -12,6 +12,8 @@ image hash is `2483ba8d5ee43ef2ba692885682b9ebacc59fdb8216700eaad1eff7c531b3048`
 See `PERSISTENT-OPENRC-HANDOFF.md` for receipts and the remaining hardware
 trial boundary. The next physical trial needs Fastboot over USB, fresh identity
 checks, a ready pinned network collector, and verified stock `boot_a` undo.
+The general Linux-flash thermal hold remains active because V29 still depends
+on host-assisted health startup. No Fastboot action has been requested yet.
 
 ## Newest status — 2026-10-19 persistent Alpine root
 

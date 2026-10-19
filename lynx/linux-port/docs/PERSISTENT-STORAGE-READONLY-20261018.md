@@ -47,3 +47,12 @@ the first 16 MiB contain nonzero data but no recognized filesystem signature.
 This bounded backup is **not** a full backup of the 238.6 GB partition and
 does not authorize formatting. The separate sysfs partition inventory remains
 the partition-layout record; only these two `userdata` regions were copied.
+
+A later read-only survey sampled thirteen 1 MiB windows from 1 MiB through
+227,000 MiB. The early samples through 256 MiB were nonzero, while every
+sample at 1,024 MiB and beyond was zero. The complete first 1 GiB was then
+backed up in eight independently verified 128 MiB chunks at
+`backups/userdata-chunks-1792414534852012623/`. This is a rollback copy for
+a proposed first-GiB storage trial; it does not prove or preserve the entire
+`userdata` partition. See `PERSISTENT-ALPINE-FIRST-GIB-TRIAL.md` for the exact
+proposal and limits. No `userdata` write has occurred.

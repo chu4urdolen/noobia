@@ -1,7 +1,7 @@
 # V28 local Wi-Fi, SSH and health candidate
 
 Status: **one timed hardware trial proved autonomous Wi-Fi/SSH, but health
-readiness was unconfirmed; V19 restoration pending**. Image:
+readiness was unconfirmed; V19 restoration verified**. Image:
 `artifacts/local-health-v28-offline/nord3-local-health-untested.img`, SHA-256
 `a22048376cec353af652c187da733eb198f1382efcf19924eebd5ba0b883d775`.
 
@@ -49,3 +49,18 @@ observed through 338 seconds after departure. The final health log was not
 captured, so a clean power-off, reset, kernel fault, or radio loss cannot yet
 be distinguished. Do not treat V28 as a healthy persistent boot or reuse its
 consumed trial scope.
+
+The guarded rescue at `logs/v19-rescue-boot-a-1792406937358360010.json`
+restored V19 to `boot_a`, and a fresh collector at
+`logs/wifi-v19-contact-1792412243676110056/result.json` proved authenticated
+SSH on the unplugged boot. The autonomous RAM health stage passed again at
+`logs/autonomous-health-ram-trial-1792412394808578169/result.json`.
+The recovered `console-ramoops-0` and `pmsg-ramoops-0` content was byte-for-byte
+identical to the pre-V28 V19 collection (SHA-256
+`9f4e8fc27e51c8912ee23dd519285216c2b2939330f0e1e7b0d1010e921e2993`
+for the combined pstore section). It does not identify the V28 contact loss.
+`tools/launch_local_health_ram_trial.py` is prepared to run the exact V28
+local handoff path in RAM on a **fresh** V19 boot, with a separate pinned SSH
+stream recording the child and boot logs. It has not run on Lynx; the current
+V19 boot already has health modules loaded and cannot be reused for that
+fresh-boot experiment.

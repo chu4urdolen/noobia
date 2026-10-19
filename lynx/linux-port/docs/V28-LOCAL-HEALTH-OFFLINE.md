@@ -70,5 +70,17 @@ to the handoff function. Its failure handler requests phone power-off only
 after the probe has armed its independent safety timer. An identity or fresh
 boot precheck refusal therefore leaves an otherwise untouched V19 boot alone.
 The offline provenance, shell syntax, Python syntax, and pinned-contact self
-checks passed on October 19. No result from this RAM probe has yet been
-observed on Lynx.
+checks passed on October 19.
+
+The fresh V19 boot at
+`logs/wifi-v19-contact-1792413125862297291/result.json` subsequently passed
+the exact V28 local health handoff **in RAM**. The archived input hashes and
+local handoff script matched V28; all module loads returned, the battery,
+thermal and cooling monitors passed, the health supervisor was ready, and the
+independent outer timer was cancelled. The pinned SSH child/boot stream and
+full operation record are at
+`logs/local-health-ram-trial-1792413244813495207/result.json`. This proves the
+health function and reviewed inputs can run on Lynx after V19 Wi-Fi startup.
+It does **not** prove the V28 image's PID 1 path; the earlier V28 contact loss
+remains unexplained. Keep V19 installed until a revised boot candidate has a
+specific failure hypothesis and a new scoped review.

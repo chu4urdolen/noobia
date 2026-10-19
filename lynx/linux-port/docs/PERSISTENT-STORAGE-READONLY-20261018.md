@@ -30,3 +30,20 @@ general-purpose candidates are `super` (15,032,385,536 bytes) and `userdata`
 OPLUS reserve and crash-log regions; they are not suitable scratch space.
 Reusing `super` could remove stock vendor components and complicate recovery.
 No partition was modified to reach this conclusion.
+
+On October 19, the same authenticated V19 boot remained alive despite a
+temporary SSH refusal. Its boot ID was
+`32dd2438-fbac-4693-8023-d0dcc7c74771`; Alpine 3.24.2 still ran in RAM,
+and the health supervisor continued to report valid samples. The previous
+network loss must not be described as a confirmed power-off or failed Alpine
+restore.
+
+`tools/backup_userdata_edges.py` then read, without mounting or writing the
+phone partition, the first and last 16 MiB of `userdata` into the restricted
+Nexus directory `backups/userdata-edges-1792413021056852842/`. The manifest
+records the phone boot ID, exact offsets and SHA-256 hashes. Both local files
+were independently hashed after transfer. The final 16 MiB are entirely zero;
+the first 16 MiB contain nonzero data but no recognized filesystem signature.
+This bounded backup is **not** a full backup of the 238.6 GB partition and
+does not authorize formatting. The separate sysfs partition inventory remains
+the partition-layout record; only these two `userdata` regions were copied.

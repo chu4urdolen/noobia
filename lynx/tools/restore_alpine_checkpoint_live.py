@@ -62,10 +62,20 @@ def main():
         parser.error('--restore needs --contact-receipt and --health-receipt')
     contact = json.loads(args.contact_receipt.read_text())
     health = json.loads(args.health_receipt.read_text())
+    valid_health = health.get('state') == 'phone-ram-health-stage-verified'
+    valid_local_health = (
+        health.get('state') == 'local-health-in-ram-verified' and
+        health.get('usb_unplugged_confirmed') is True and
+        health.get('partition_writes') is False and
+        health.get('flash_performed') is False and
+        any(op.get('name') == 'local-health-handoff' and op.get('exit_code') == 0
+            for op in health.get('operations', [])) and
+        any(op.get('name') == 'cancel-outer-timer' and op.get('exit_code') == 0
+            for op in health.get('operations', [])))
     if (contact.get('state') != 'native-ssh-available' or
             not contact.get('native_ssh_verified') or
             contact.get('fallback_cancel_ack_exit_code') != 0 or
-            health.get('state') != 'phone-ram-health-stage-verified' or
+            not (valid_health or valid_local_health) or
             health.get('contact_receipt') != str(args.contact_receipt.resolve()) or
             health.get('phone_ip') != contact.get('phone_ip')):
         raise ValueError('Fresh pinned V19 and same-session health receipts required')

@@ -19,6 +19,11 @@ CHECKPOINT = ROOT / 'checkpoints/alpine-runtime-1792331453858559525'
 VALIDATION = ROOT / 'linux-port/artifacts/alpine-checkpoint-restore-1792331497398834530/result.json'
 DEST = '/run/lynx/alpine-3.24.2'
 ARCHIVE_REMOTE = DEST + '.tar.gz'
+HEALTH_TRACE = ('/bin/busybox tail -n 200 -f '
+                '/run/lynx/health-supervisor/events.log '
+                '/run/lynx/thermal-watch.log '
+                '/run/lynx/battery-watch.log '
+                '/run/lynx/thermal-cooling-watch.log')
 
 
 def sha(path):
@@ -74,6 +79,9 @@ def main():
               'archive_sha256': checkpoint['archive_sha256'],
               'destination': DEST, 'partition_writes': False,
               'flash_performed': False, 'operations': []}
+    trace = None
+    trace_stdout = None
+    trace_stderr = None
 
     def save():
         temporary = out / 'result.tmp'
@@ -138,6 +146,13 @@ echo "$boot"'''
         boot_id = str(uuid.UUID(boot_raw.decode().strip().splitlines()[-1]))
         report['boot_id'] = boot_id
         save()
+        trace_stdout = (out / 'health-runtime-trace.stdout').open('wb')
+        trace_stderr = (out / 'health-runtime-trace.stderr').open('wb')
+        trace = subprocess.Popen(ssh_command(ip, HEALTH_TRACE),
+                                 stdin=subprocess.DEVNULL,
+                                 stdout=trace_stdout, stderr=trace_stderr)
+        report['health_trace_started_ns'] = time.time_ns()
+        save()
         guard = 'set -eu; [ "$(cat /proc/sys/kernel/random/boot_id)" = ' + boot_id + ' ]; '
         remount = guard + '''limit=$(df -Pk /run | awk 'END {print $2}');
 case "$limit" in 131072) /bin/busybox mount -t tmpfs -o remount,size=256m tmpfs /run ;;
@@ -169,9 +184,33 @@ kill -0 "$(cat /run/lynx/health-supervisor/pid)";
 [ -d ''' + DEST + ''' ]; echo HEALTH_AND_ALPINE_READY'''
         if b'HEALTH_AND_ALPINE_READY' not in run('final-health', final):
             raise ValueError('Health and Alpine final proof missing')
+        stable = guard + '''[ "$(cat /run/lynx/health-bootstrap/ready)" = ready ];
+kill -0 "$(cat /run/lynx/health-supervisor/pid)";
+/bin/busybox sh /run/lynx/lynx-health-supervisor.sh --once;
+[ -d ''' + DEST + ''' ]; echo STABLE_HEALTH_AND_ALPINE'''
+        for check in range(3):
+            time.sleep(10)
+            if b'STABLE_HEALTH_AND_ALPINE' not in run(
+                    'stability-' + str(check + 1), stable, timeout=15):
+                raise ValueError('Alpine or health failed 30-second stability check')
         report['state'] = 'alpine-checkpoint-live-in-ram'
     except Exception as error:
         report.update(state='failed', error=str(error))
+    if trace is not None and trace.poll() is None:
+        trace.terminate()
+        try:
+            trace.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            trace.kill()
+            trace.wait()
+    if trace_stdout is not None:
+        trace_stdout.close()
+    if trace_stderr is not None:
+        trace_stderr.close()
+    trace_path = out / 'health-runtime-trace.stdout'
+    if trace_path.exists():
+        report['health_trace_bytes'] = trace_path.stat().st_size
+        report['health_trace_sha256'] = sha(trace_path)
     report['finished_ns'] = time.time_ns()
     save()
     print(json.dumps({'state': report['state'], 'result': str(out / 'result.json')}))

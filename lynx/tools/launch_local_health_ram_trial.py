@@ -95,6 +95,7 @@ def main():
         return raw, event['exit_code']
 
     protected = False
+    timer_armed = False
     stream = None
     stream_stdout = None
     stream_stderr = None
@@ -164,6 +165,7 @@ echo FRESH_UNPLUGGED_LOCAL_HEALTH_READY'''
         _, rc = run('arm-local-marker-and-safety-timer', command)
         if rc:
             raise ValueError('Local marker or independent timer failed')
+        timer_armed = True
         report['state'] = 'local-health-running-on-phone'
         save(receipt, report)
         stream_command = ('while [ ! -e /run/lynx/health-bootstrap-child.log ]; do '
@@ -175,7 +177,9 @@ echo FRESH_UNPLUGGED_LOCAL_HEALTH_READY'''
         stream = subprocess.Popen(ssh_command(ip, stream_command),
                                   stdin=subprocess.DEVNULL,
                                   stdout=stream_stdout, stderr=stream_stderr)
-        command = ('. ' + REMOTE_LIB + '/autonomous-health-local-handoff.sh; '
+        command = ('BB=/bin/busybox; '
+                   'log() { printf "%s\\n" "$*" >> /run/lynx/boot.log; }; '
+                   '. ' + REMOTE_LIB + '/autonomous-health-local-handoff.sh; '
                    'lynx_autonomous_health_local_handoff')
         _, rc = run('local-health-handoff', command, timeout=205)
         if rc:
@@ -195,7 +199,7 @@ echo FRESH_UNPLUGGED_LOCAL_HEALTH_READY'''
         report['state'] = 'local-health-in-ram-verified'
     except Exception as error:
         report.update(state='failed-or-refused', error=str(error))
-        if not protected:
+        if timer_armed and not protected:
             try:
                 state, _ = run('safety-state',
                                'if test -r /run/lynx/health-supervisor/pid && '

@@ -64,3 +64,11 @@ local handoff path in RAM on a **fresh** V19 boot, with a separate pinned SSH
 stream recording the child and boot logs. It has not run on Lynx; the current
 V19 boot already has health modules loaded and cannot be reused for that
 fresh-boot experiment.
+
+The RAM probe now supplies the `BB` and `log` shell bindings that PID 1 supplies
+to the handoff function. Its failure handler requests phone power-off only
+after the probe has armed its independent safety timer. An identity or fresh
+boot precheck refusal therefore leaves an otherwise untouched V19 boot alone.
+The offline provenance, shell syntax, Python syntax, and pinned-contact self
+checks passed on October 19. No result from this RAM probe has yet been
+observed on Lynx.

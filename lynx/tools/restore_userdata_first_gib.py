@@ -97,7 +97,7 @@ cat /proc/sys/kernel/random/boot_id'''
             command = (f'[ "$(cat /proc/sys/kernel/random/boot_id)" = {boot_id} ] && '
                        '/bin/busybox gzip -dc | /bin/busybox dd of=/dev/sdc85 '
                        f'bs={BLOCK} seek={skip} iflag=fullblock count=128 '
-                       'conv=fsync')
+                       'conv=notrunc,fsync')
             with Path(entry['path']).open('rb') as source:
                 sent = subprocess.run(ssh_command(args.ip, command), stdin=source,
                                       capture_output=True, timeout=300)

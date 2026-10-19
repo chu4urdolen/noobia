@@ -45,6 +45,16 @@ working rescue environment. A failed or interrupted write leaves V19 intact;
 chunks back and hash each against the phone. The rollback tool passed its
 offline input audit, but no rollback write has been attempted.
 
+The install and rollback stream commands were exercised against a disposable
+16 MiB host file at
+`linux-port/artifacts/userdata-stream-fixture-1792415146707277219/result.json`.
+The first attempt exposed a missing `conv=notrunc` flag: a regular-file
+fixture lost its untouched trailing bytes. Both guarded tools now include
+`conv=notrunc,fsync`. The corrected fixture proved the written prefix, the
+unchanged trailing bytes and full rollback. Lynx's BusyBox accepted these
+exact `dd` flags in a four-byte **RAM-only** check. No `userdata` write has
+been attempted.
+
 This storage trial alone will not make Alpine start automatically. After a
 successful on-phone read-only mount, the next work is a guarded BusyBox-to-
 Alpine handoff and autonomous health/Wi-Fi/SSH boot candidate. V28's combined

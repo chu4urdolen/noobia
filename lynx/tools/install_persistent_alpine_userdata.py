@@ -175,7 +175,7 @@ def main():
     try:
         command = (f'[ "$(cat /proc/sys/kernel/random/boot_id)" = {boot_id} ] && '
                    '/bin/busybox gzip -dc | /bin/busybox dd of=/dev/sdc85 '
-                   'bs=1048576 iflag=fullblock count=1024 conv=fsync')
+                   'bs=1048576 iflag=fullblock count=1024 conv=notrunc,fsync')
         report['state'] = 'write-in-progress'
         report['phone_writes'] = True
         save()

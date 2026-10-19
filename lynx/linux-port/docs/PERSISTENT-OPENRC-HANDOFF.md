@@ -1,17 +1,21 @@
-# Persistent Alpine PID 1 handoff — V29 booted, guarded rescue active
+# Persistent Alpine PID 1 handoff — V30 no-contact trial, V19 restored
 
-**Update:** V29 booted BusyBox, reached native SSH, and passed RAM health.
+**Update:** V30 was flashed to `boot_a` and rebooted, but its listener
+received zero beacons in ten minutes. Lynx then reappeared in Fastboot;
+fresh preflight passed and the exact V19 BusyBox image was restored to
+`boot_a` without rebooting. See `linux-port/docs/SESSION-STATE.md` for
+receipts. Earlier, V29 booted BusyBox, reached native SSH, and passed RAM health.
 The one-boot Alpine handoff was armed, but PID 1's live safety guard refused
 at uptime 171.85 seconds and left BusyBox rescue running. The reason was not
 captured; 25 subsequent guard checks passed. Alpine/OpenRC has not become
-PID 1. See `linux-port/docs/SESSION-STATE.md` for receipts. V30 is prepared
-offline with refusal logging and bounded guard retries; it is unflashed.
+PID 1. V30 included refusal logging and bounded retries, but there is no
+evidence its BusyBox stage ran, so the retry behavior remains untested on Lynx.
 
 Lynx now has a persistent Alpine 3.24.2 ext4 root in the first 1 GiB of
 `userdata`. Before the Fastboot write, V19 BusyBox provided Wi-Fi, SSH and a
 health supervisor at `192.168.100.4` on boot ID
-`3990a1d8-963d-4d17-972e-b0b8a7b366e6`. V29 is now on `boot_a`; native
-BusyBox SSH is the last observed mode.
+`3990a1d8-963d-4d17-972e-b0b8a7b366e6`. The current `boot_a` image is
+the restored V19, and Fastboot is the last observed mode.
 
 `linux-port/persistent-alpine-probe.sh` and
 `tools/probe_persistent_alpine.py` passed on the phone. The probe verified

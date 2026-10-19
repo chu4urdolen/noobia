@@ -1,6 +1,47 @@
 # Current Lynx handoff state
 
-## Newest status — V29 booted, BusyBox rescue online; V30 prepared offline
+## Current status — V30 did not contact; V19 restored, Fastboot held
+
+The V30 pinned listener reached its 600-second deadline with **zero**
+beacons and no verified SSH:
+`logs/wifi-v19-contact-1792429267778777426/result.json`. V30's BusyBox
+stage and Alpine handoff were not observed; the cause remains unknown.
+Lynx later reappeared on USB as MediaTek Fastboot device `0e8d:201c`.
+Fresh read-only Fastboot preflight again matched serial, unlocked slot A,
+bootloader and partition sizes:
+`logs/fastboot-preflight-1792429891155934733.json`.
+
+The guarded rollback wrote **only `boot_a`** with the exact known V19 image;
+Fastboot reported OKAY for send and write:
+`logs/v30-boot-a-trial-1792429894066810273/result.json`. Lynx remains in
+Fastboot and **has not been rebooted after restoration**. No other partition
+or slot was changed. If Noob wants the V19 BusyBox SSH rescue online again,
+coordinate a separate Fastboot reboot and immediate USB unplug. Do not
+attempt another Linux flash until V30's no-contact failure has been
+investigated. Host kernel USB history shows the V30 Fastboot USB device
+disconnected at 20:01:22 local time and a new Fastboot device appeared at
+20:05:18; this alone does not show whether Lynx booted a kernel in between.
+
+## Earlier trial — V30 flashed and rebooted without network contact
+
+Noob put Lynx in Fastboot on USB. Fresh Fastboot preflight passed and the
+guarded tool wrote **only `boot_a`** with V30 SHA-256
+`0159029d4a20322766544f3785e992c93b456fcbbbe8b386671ecbb73bc491c7`.
+Fastboot reported OKAY for send and write; receipt:
+`logs/v30-boot-a-trial-1792429270975536236/result.json`. A separate guarded
+Fastboot reboot succeeded at
+`logs/v30-boot-a-trial-1792429281904579912/result.json`. USB was removed:
+the phone's USB device disappeared from the host. The pinned listener is
+`logs/wifi-v19-contact-1792429267778777426/result.json`. At approximately
+341 seconds after listener start, it had received **zero** beacons and no SSH
+connection. The Nexus Wi-Fi interface and router were reachable, so host
+network failure was not evident. The phone's screen state was not reported.
+The <240-second window for the RAM health bootstrap passed, so Alpine was
+not armed. The listener was allowed to reach its deadline before the V19
+rollback described above. Do not claim V30 booted or that the V30 retry ran;
+neither has been observed.
+
+## Earlier status — V29 booted, BusyBox rescue online; V30 prepared offline
 
 Noob confirmed USB was unplugged after the guarded Fastboot reboot. V29
 booted its BusyBox stage and reached pinned native SSH at `192.168.100.4`

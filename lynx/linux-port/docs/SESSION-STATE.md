@@ -1,5 +1,34 @@
 # Current Lynx handoff state
 
+## Current status — V34 diagnostic retrial captured two incomplete boots
+
+On 2026-10-21, Noob connected Lynx in Fastboot. Fresh identity and layout
+preflight matched serial `89BYAY5L4T9HFUOV`, unlocked slot A, and the
+recorded bootloader (`logs/fastboot-preflight-1792583578244697246.json`).
+The guarded tool wrote V34 **only to `boot_a`** and rebooted separately:
+`logs/v34-boot-a-trial-1792583597458126374/result.json` and
+`logs/v34-boot-a-trial-1792583604061913647/result.json`. USB disappeared.
+**V34 is the last image written to `boot_a`** until a new guarded Fastboot
+receipt proves otherwise. The exact V33 rollback remains verified locally.
+
+The dynamic pinned-key collector captured 14 raw snapshots at `.6` during a
+420-second window:
+`logs/v34-health-window-1792583593671638978/result.json`. Two distinct
+boot IDs were observed: `9d5a4867-b49f-47e7-85d8-7f63f6ab5109` and
+`5160d5a7-37d8-4df0-a0ad-71cf27c1339a`. Neither reboot was commanded by
+Nexus. Both reached Wi-Fi and rescue SSH, started the local V31 health child,
+identified the gauge, and loaded the battery monitor. The first reached the
+cooling watcher; its last successful snapshot was at 109 seconds uptime with
+28.8°C battery and 37.2°C reported cooling temperature. The second lost SSH
+after 103 seconds uptime, while the health child was waiting for cooling.
+Neither snapshot series showed `health-bootstrap/ready` or Alpine PID 1.
+The precise reason for each loss of contact is **unproved**; do not label it a
+thermal shutdown, kernel crash, or successful handoff without further logs.
+The bounded collector saw no third contact. No recovery partition, slot B,
+or bootloader changes occurred. Next physical step: enter Fastboot on USB,
+verify identity again, restore V33 to `boot_a`, then boot V33 with the pinned
+dynamic contact collector. Do not retry V34 unchanged.
+
 ## Current status — V33 restored; Alpine/OpenRC and both SSH ports live
 
 On 2026-10-21, Lynx reappeared in Fastboot as serial `89BYAY5L4T9HFUOV`.

@@ -1,6 +1,6 @@
-# V34 offline autonomous Alpine candidate
+# V34 autonomous Alpine candidate and first hardware trial
 
-V34 is an **unflashed** `boot_a` candidate derived from the V33 image that
+V34 was built as a `boot_a` candidate derived from the V33 image that
 booted Alpine/OpenRC as PID 1. The stock kernel, command line, boot header
 outside the ramdisk length, and all unrelated ramdisk members are unchanged.
 The primary `/init` tail and verified supplementary payload change. The
@@ -43,5 +43,11 @@ reboot and remove USB promptly. Restore V33 or V19 through Fastboot if
 boot/health/recovery behavior differs. Preserve slot B, bootloader and
 recovery-related partitions.
 
-The current installed `boot_a` remains V33. Do not describe V34 as booted,
-safe for charging, or independent until a fresh hardware receipt proves it.
+On 2026-10-21, V34 was written only to `boot_a` and rebooted after a fresh
+identity check. Pinned SSH briefly verified the exact V34 `/init` and
+BusyBox PID 1 at `192.168.100.6`, then Lynx became unreachable. The health
+and Alpine handoff results are unknown; see `SESSION-STATE.md` and
+`logs/v34-first-pinned-proof-20261021/result.json`. Current installed
+`boot_a` is V34, with V33 and V19 restoration paths prepared. Do not
+describe V34 as autonomously booting Alpine, safe for charging, or
+independent until a fresh hardware receipt proves it.

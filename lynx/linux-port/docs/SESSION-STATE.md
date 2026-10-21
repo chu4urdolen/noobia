@@ -1,5 +1,33 @@
 # Current Lynx handoff state
 
+## Current status — V34 booted BusyBox; Alpine/health unverified
+
+On 2026-10-21, fresh Fastboot preflight matched Lynx's serial, unlocked slot
+A, bootloader and partition sizes at
+`logs/fastboot-preflight-1792578074717725713.json`. The guarded V34 tool
+wrote **only `boot_a`** and later issued a separate reboot:
+`logs/v34-boot-a-trial-1792578082487216310/result.json` and
+`logs/v34-boot-a-trial-1792579249916028829/result.json`. Noob confirmed
+USB removal. **Current installed `boot_a` is V34** until a later receipt
+proves otherwise; V33 and V19 exact rollback images remain local.
+
+The original collector's fixed address `192.168.100.4` answered with a
+different SSH host key. It was rejected; the pinned known_hosts record was
+not changed. A bounded local WLAN discovery found Lynx's exact pinned host
+key at `192.168.100.6`:
+`logs/v34-pinned-key-discovery-1792579355439307533/result.json`. One direct
+SSH proof verified the V34 `/init` SHA, stock kernel, BusyBox hash and PID 1
+as `/bin/busybox` on boot ID `f67d0c37-932b-4195-a194-6eb6ced80e42`:
+`logs/v34-first-pinned-proof-20261021/result.json`. The next SSH attempt
+timed out, and a repeat pinned-key discovery found no Lynx host. This could
+be a safety power-off or network loss; **the cause is not proved**. There is
+no evidence yet that V34 reached health-ready or Alpine PID 1. A broader
+dynamic-IP health collector is running at
+`logs/v34-health-window-1792579502641247181/result.json` for a possible
+new boot. Do not claim V34 autonomous boot succeeded. Await a physical
+screen/power report, then capture boot/health logs or pstore before changing
+the image again.
+
 ## Current status — V34 autonomous Alpine candidate prepared offline
 
 V34 was built from the hardware-booted V33 image. It combines local Wi-Fi
@@ -10,9 +38,8 @@ build and independent validation passed; exact V33 and V19 rollback images
 and a guarded Fastboot tool are ready. `tools/lynx_v34_contact.py` is a
 pinned read-only collector that does not require a host arm marker. See
 `LOCAL-ALPINE-V34.md` for architecture, SHA-256, receipts and limits.
-**V34 has not been flashed or booted. Current installed `boot_a` remains
-V33.** A trial needs Noob at the cable for Fastboot connection and prompt
-USB removal after reboot. Charging remains unvalidated.
+This section records the earlier offline state; see the newer hardware trial
+above. Charging remains unvalidated.
 
 ## Current status — Alpine SSH owned by OpenRC; Wi-Fi packages installed
 

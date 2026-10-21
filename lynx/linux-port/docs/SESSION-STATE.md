@@ -1,5 +1,39 @@
 # Current Lynx handoff state
 
+## Current status — V36 trial booted twice; V33 rollback pending
+
+On 2026-10-21, Noob connected Lynx in Fastboot. Fresh identity/slot/layout
+preflight matched at `logs/fastboot-preflight-1792598261484010058.json`.
+With the pinned collector already listening, exact V36 was flashed **only to
+`boot_a`** (`logs/v36-boot-a-trial-1792598264817606971/result.json`) and
+rebooted separately (`logs/v36-boot-a-trial-1792598272107504358/result.json`).
+Noob was instructed to unplug USB immediately. The collector verified the
+exact V36 `/init` hash at `192.168.100.7` on two autonomous boots:
+`logs/v36-cooldown-window-1792598257537328145/`.
+
+Boot `629b4b71-d9ca-4698-862b-79adb854d35a` reached the 40-second cooldown,
+local V31 health child result 0, and `health-bootstrap/ready`, then lost SSH
+after a final successful sample at uptime 150.72 seconds. Boot
+`7ae95874-58c3-4cc7-9d3e-d5c962603da3` reached the cooldown and cooling
+watcher, with one passing health sample, then lost SSH after uptime 165.07
+seconds before a child-ready marker. The high-frequency collector was stopped
+after two lost contacts; timeline and partial samples are preserved. A read-only
+pstore capture on the second boot still contained the **older** UFS token, not
+a V36-specific crash. See the raw incident summary at
+`logs/v36-cooldown-window-1792598257537328145/incident-summary.json`.
+The 40-second wait did not make local health startup reliable. The precise
+reset/contact-loss mechanism remains unknown; do not call this a thermal
+shutdown or kernel crash without matching evidence.
+
+**V36 remains the last image written to `boot_a`; V33 rollback is pending.**
+Noob has been asked to enter Fastboot and plug USB. A bounded host watcher is
+already listening at
+`logs/v36-fastboot-restore-watch-1792598851382787076/result.json`; it accepts
+only Lynx's exact serial, then invokes the existing guarded V33-only `boot_a`
+restoration with a fresh Fastboot preflight, and does not reboot. Stop if
+Fastboot identity or partition layout differs. Do not start another Linux
+trial until V33 recovery has been verified.
+
 ## Current status — V33 Alpine running; V36 cooldown trial prepared offline
 
 On 2026-10-21, Noob connected Lynx in Fastboot. Fresh read-only preflight

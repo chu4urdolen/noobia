@@ -35,15 +35,42 @@ Alpine captured three pinned samples and correctly reported
 `logs/v40-health-window-1792616863275965510/result.json`. A reason-code
 parser fixture passed at `logs/v40-parser-fixture-1792616877215768486/`.
 
-**V40 has not been flashed or booted.** V33 remains installed, with Alpine
-and direct SSH last verified running. Offline checks cannot prove whether
-the parent check will pass, whether a health watcher will remain active, or
-whether the phone will power off as requested. This is a bounded diagnostic,
-not a daily boot image. If trialled, start
+## Controlled hardware trial
+
+V40 was flashed to `boot_a` after a fresh Fastboot preflight and rebooted with
+the pinned SSH collector already listening. The collector observed no V40
+SSH candidate or sample through more than 260 seconds. Fastboot later became
+available; a read-only PL/LK dump was saved at
+`logs/pllk-1792617274713043558.json`. This is insufficient to locate the
+failure: it could have stopped before Wi-Fi, lost networking, or rebooted.
+The bootloader dump reports watchdog status but does not by itself identify
+the failed kernel stage.
+
+Exact V33 was restored **only to `boot_a`**, with the guarded tool reporting
+`v33-restored-no-reboot` at
+`logs/v34-boot-a-trial-1792617277371546690/result.json`. A separate Fastboot
+reboot was sent, but no pinned V33 SSH contact appeared during the initial
+observation. Fastboot reappeared and a second read-only dump was saved at
+`logs/pllk-1792617542147639603.json`. A second V33 Fastboot reboot then
+reached pinned rescue SSH at `192.168.100.4`. Its V31 RAM health check and
+OpenRC/Alpine PID 1 passed:
+`logs/v33-alpine-pid1-verification-1792617781090767073/result.json`.
+The USB kernel journal confirms actual cable disconnects during both V40
+and V33 boot windows.
+
+The read-only persistent capture
+`logs/v38-persistent-capture-1792617783351689411/result.json` verified the
+old V38 and V39 stage files but found **no V40 file**. Thus V40 never made a
+verified first `START` write. Its modified supplementary payload is a plausible
+early failure site, but this evidence does not distinguish payload loading,
+the stage writer, or an earlier boot failure. The image remains under review.
+
+The image is a bounded diagnostic, not a daily boot image. Do not repeat its
+flash without resolving the missing first stage. The established procedure
+is to start
 `tools/capture_v40_health_window.py` first; then use guarded
 `tools/lynx_boot_a_v40_trial.py` for a fresh Fastboot preflight, `boot_a`-only
-flash, and separate reboot. Promptly unplug USB. Restore exact V33 only to
-`boot_a` after the observation window, then verify V33 Alpine and retrieve
-the boot-ID-scoped stage record with
+flash, and separate reboot. Promptly unplug USB. Verify V33 Alpine and
+retrieve the boot-ID-scoped stage record with
 `tools/capture_v38_persistent_trace.py`. Preserve slot B, bootloader,
 recovery, and all other partitions.

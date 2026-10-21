@@ -1,15 +1,23 @@
 # Current Lynx handoff state
 
-## Offline next candidate — V40 parent health check, unflashed
+## Current status — V40 gave no stage record; V33 Alpine recovered
 
-V40 keeps V39's proven Wi-Fi delay and unchanged V31 health child. It
-instruments only the parent's final read-only check, retries that check at
-most twice, and records a failure class or `HEALTH_READY` in the existing
-checksummed persistent log. It has the same independent charger and power-off
-guards and no Alpine handoff. The exact V39-parent image, scope, AVB model,
-V33/V19 rollback, guarded trial preparation, parser fixture, and live
-read-only collector dry run passed. **V40 has not been flashed or booted.**
-See `docs/V40-HEALTH-PARENT-RETRY.md`.
+V40 was trialled on `boot_a` after offline checks and a fresh Fastboot
+preflight. Its pinned Wi-Fi collector saw no candidate during the unplugged
+boot window. After Fastboot returned, exact V33 was restored only to
+`boot_a`. The first V33 boot did not reach SSH; a second Fastboot reboot did.
+Its pinned rescue SSH and V31 RAM health passed, then OpenRC/Alpine PID 1 was
+verified at `192.168.100.4`:
+`logs/v33-alpine-pid1-verification-1792617781090767073/result.json`.
+**V33 is installed and Alpine is running.**
+
+The read-only persistent-log capture
+`logs/v38-persistent-capture-1792617783351689411/result.json` found only
+the previously verified V38 and V39 files, with no V40 record. V40 may have
+stopped before its first `START` write or that write may have failed; the
+cause remains unproven. The two PL/LK snapshots and USB disconnect/reconnect
+events are preserved. Review V40's modified supplementary payload and early
+stage recording before another flash. See `docs/V40-HEALTH-PARENT-RETRY.md`.
 
 ## Current status — V39 health refusal; V33 Alpine restored
 

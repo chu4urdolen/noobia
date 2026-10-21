@@ -71,10 +71,11 @@ pinned dynamic-IP collector ran its full 420-second window and captured
 **zero** Lynx SSH samples:
 `logs/v34-health-window-1792579759626634111/result.json`. The screen/power
 state after that window is unconfirmed. This does not prove a kernel boot or
-power-off on the second attempt. Next safe step is Fastboot identification,
-then restore the exact V33 `boot_a` image if Lynx is present. On the first
-recovered boot, capture pstore before interpreting the V34 failure. Do not
-retry V34 or change its health guard without evidence.
+power-off on the second attempt. V33 restoration and first-boot pstore capture
+are now recorded above. The pstore snapshot did not establish the V34 failure
+cause. A future V34 trial needs `tools/capture_v34_health_window.py` running
+before reboot so it can sample the live boot log as soon as pinned SSH appears;
+keep the V33 rollback image and Fastboot recovery procedure ready.
 
 ## Current status — V34 autonomous Alpine candidate prepared offline
 

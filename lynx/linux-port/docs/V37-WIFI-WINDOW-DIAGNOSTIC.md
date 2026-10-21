@@ -55,6 +55,13 @@ pstore still holds only the older UFS token; the expdb prefix hash is
 identical to five earlier captures. **The Wi-Fi-only question remains
 unanswered. V33 is installed and Alpine is running.**
 
+The next no-contact trial should capture the existing read-only Fastboot
+preloader/LK log with `sudo -n python3 tools/lynx_pllk_log.py --connect`
+**before** restoring V33, while Lynx is still in Fastboot. This first V37
+attempt did not capture that log. The command's provenance and limitations are
+documented in `tools/lynx_pllk_log.py`; it may describe only the current
+Fastboot entry, so its raw output must be preserved and interpreted cautiously.
+
 For any later trial, start `tools/capture_v37_wifi_window.py` before any write; its receipt
 must be fresh. The guarded trial tool allows only `boot_a`, requires a fresh
 identity/layout preflight and a separate flash receipt before reboot. The

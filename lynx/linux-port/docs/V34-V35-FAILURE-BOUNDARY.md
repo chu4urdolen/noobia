@@ -8,6 +8,8 @@ The installed `boot_a` image is the working V33 (`1d65456979d8a48d31de77c987b8aa
 
 The available samples bracket the loss of contact around cooling-watcher startup, but they do not prove which subsequent command ran or why contact ended. A reset, a deliberate safety power-off, and a Wi-Fi/network failure remain distinct possibilities. The old UFS trace in `pmsg-ramoops-0`, `console-ramoops-0`, and `expdb` carries token `69adf9d14707d848063b861b8f248748`; it cannot be assigned to either V34 boot. The V34 collector's old `readlink` invocation produced only BusyBox usage text, and its captured samples did not include kernel tails. Those gaps prevent a stronger diagnosis.
 
+`tools/analyze_health_window.py` parses the preserved raw snapshots locally and refuses a sample whose recorded hash differs. Its V34 timeline is saved at `logs/v34-health-window-1792583593671638978/timeline.json`; it independently groups eight complete samples for the first boot and four for the second. The two failed SSH samples have no boot ID and are retained separately. The V35 timeline has zero samples. No phone connection is needed to reproduce either result.
+
 The V31 child writes its detailed `LYNX_HEALTH_BOOT` messages to stdout and `/dev/kmsg`, but its `say()` function does not write them directly to `/dev/pmsg0`. The parent `log()` writes to pmsg. This is an instrumentation gap, not an explanation for the contact loss. The retained pstore record's age also means pmsg persistence on these resets is unproved.
 
 ## What V35 adds

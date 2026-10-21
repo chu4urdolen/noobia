@@ -5,7 +5,9 @@ authenticates to a device whose public host key differs from Lynx's pin.
 """
 import argparse
 import asyncio
+import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -18,8 +20,10 @@ ROOT = Path(__file__).resolve().parent.parent
 CAPTURE = '''echo SAMPLE_BEGIN
 date -u +%s
 cat /proc/uptime /proc/sys/kernel/random/boot_id
-printf 'PID1_EXE='; readlink /proc/1/exe
-printf 'PID1_ROOT='; readlink /proc/1/root
+printf 'PID1_EXE='; readlink -f /proc/1/exe
+printf 'PID1_ROOT='; readlink -f /proc/1/root
+echo PID1_STATUS
+cat /proc/1/status
 echo BOOT_LOG
 cat /run/lynx/boot.log
 echo BOOT_STATE
@@ -28,6 +32,8 @@ echo HEALTH_CHILD
 cat /run/lynx/health-bootstrap-child.log 2>/dev/null
 echo HEALTH_WATCHERS
 cat /run/lynx/thermal-watch.log /run/lynx/battery-watch.log /run/lynx/thermal-cooling-watch.log /run/lynx/health-supervisor.log 2>/dev/null
+echo HEALTH_TIMER_AND_EVENTS
+cat /run/lynx/health-bootstrap/timer.log /run/lynx/health-supervisor/events.log /run/lynx/local-boot-outer-timer.log 2>/dev/null
 echo PID1_STDIO
 cat /run/lynx/openrc-pid1-stdout.log /run/lynx/openrc-pid1-stderr.log 2>/dev/null
 echo BATTERY
@@ -36,6 +42,8 @@ echo MOUNTS
 cat /proc/mounts
 echo KERNEL_TAIL
 dmesg | tail -n 120
+echo PROCESS_TABLE
+ps
 echo END_SAMPLE
 true'''
 
@@ -64,16 +72,22 @@ def matching_host(hosts):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--seconds', type=int, default=420)
+    parser.add_argument('--interval', type=float, default=2.0,
+                        help='seconds between completed snapshots (default: 2)')
     args = parser.parse_args()
     if not 1 <= args.seconds <= 900:
         parser.error('--seconds must be 1..900')
+    if not math.isfinite(args.interval) or not 0.5 <= args.interval <= 30:
+        parser.error('--interval must be finite and 0.5..30 seconds')
     os.umask(0o077)
     out = ROOT / 'logs' / ('v34-health-window-' + str(time.time_ns()))
     out.mkdir(mode=0o700)
     receipt = out / 'result.json'
     report = {'state': 'listening', 'created_ns': time.time_ns(),
-              'seconds': args.seconds, 'phone_partition_writes': False,
-              'pinned_ip': None, 'samples': []}
+              'seconds': args.seconds, 'interval_seconds': args.interval,
+              'phone_partition_writes': False,
+              'pinned_ip': None, 'samples': [],
+              'collector_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
 
     def save():
         temporary = receipt.with_suffix('.tmp')
@@ -90,7 +104,7 @@ def main():
             report['pinned_ip'] = matching_host(asyncio.run(open_ssh_hosts()))
             save()
             if report['pinned_ip'] is None:
-                time.sleep(2); continue
+                time.sleep(args.interval); continue
             print('PINNED LYNX:', report['pinned_ip'], flush=True)
         item = {'started_ns': time.time_ns(), 'ip': report['pinned_ip']}
         report['samples'].append(item); save()
@@ -100,15 +114,17 @@ def main():
                                     capture_output=True, timeout=12)
             path.write_bytes(result.stdout + result.stderr)
             item.update(finished_ns=time.time_ns(), exit_code=result.returncode,
-                        bytes=path.stat().st_size)
+                        bytes=path.stat().st_size,
+                        sha256=hashlib.sha256(path.read_bytes()).hexdigest())
             if result.returncode != 0:
                 report['pinned_ip'] = None
         except subprocess.TimeoutExpired as error:
             path.write_bytes((error.stdout or b'') + (error.stderr or b''))
             item.update(finished_ns=time.time_ns(), timed_out=True,
-                        bytes=path.stat().st_size)
+                        bytes=path.stat().st_size,
+                        sha256=hashlib.sha256(path.read_bytes()).hexdigest())
             report['pinned_ip'] = None
-        save(); time.sleep(2)
+        save(); time.sleep(args.interval)
     report.update(state='deadline', finished_ns=time.time_ns()); save()
     print(json.dumps({'state': report['state'], 'result': str(receipt),
                       'samples': len(report['samples'])}), flush=True)

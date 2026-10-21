@@ -3,6 +3,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -19,9 +20,13 @@ IMAGE = ROOT / 'linux-port/artifacts/local-health-only-v35-offline/nord3-local-h
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--seconds', type=int, default=420)
+    parser.add_argument('--interval', type=float, default=2.0,
+                        help='seconds between completed snapshots (default: 2)')
     args = parser.parse_args()
     if not 1 <= args.seconds <= 900:
         parser.error('--seconds must be 1..900')
+    if not math.isfinite(args.interval) or not 0.5 <= args.interval <= 30:
+        parser.error('--interval must be finite and 0.5..30 seconds')
     build = json.loads(BUILD.read_text())
     if (build['state'] != 'offline-health-only-diagnostic-built' or
             hashlib.sha256(IMAGE.read_bytes()).hexdigest() != build['image_sha256']):
@@ -33,7 +38,8 @@ def main():
     report = {'state': 'listening', 'created_ns': time.time_ns(),
               'image_sha256': build['image_sha256'],
               'expected_init_sha256': build['init_sha256'],
-              'seconds': args.seconds, 'phone_partition_writes': False,
+              'seconds': args.seconds, 'interval_seconds': args.interval,
+              'phone_partition_writes': False,
               'pinned_ip': None, 'candidate_seen': False, 'samples': [],
               'collector_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
 
@@ -54,7 +60,7 @@ def main():
             report['pinned_ip'] = matching_host(asyncio.run(open_ssh_hosts()))
             save()
             if report['pinned_ip'] is None:
-                time.sleep(2)
+                time.sleep(args.interval)
                 continue
             print('PINNED LYNX:', report['pinned_ip'], flush=True)
         item = {'started_ns': time.time_ns(), 'ip': report['pinned_ip']}
@@ -80,7 +86,7 @@ def main():
             item.update(finished_ns=time.time_ns(), timed_out=True, bytes=len(raw))
             report['pinned_ip'] = None
         save()
-        time.sleep(2)
+        time.sleep(args.interval)
     report.update(state='deadline', finished_ns=time.time_ns())
     save()
     print(json.dumps({'state': report['state'], 'result': str(receipt),

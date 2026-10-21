@@ -1,5 +1,18 @@
 # Current Lynx handoff state
 
+## Offline follow-up while Noob is away — 2026-10-21
+
+The V34/V35 failure boundary has been rechecked against raw captures in
+`docs/V34-V35-FAILURE-BOUNDARY.md`. V34 reached local health startup twice but
+lost pinned SSH near cooling-watcher startup without a captured health-ready
+or Alpine result. V35 captured no pinned SSH at all. The retained pstore is
+older and gives no cause for these trials. The read-only V34/V35 collector now
+captures PID 1 identity/status, process and kernel tails, health timer/events,
+and hashes raw samples. A live **read-only** smoke capture on the restored V33
+Alpine boot passed at
+`logs/collector-v33-readonly-smoke-1792586062632995585/result.json`.
+V33 remains installed; no flash or reboot was done in this follow-up.
+
 ## Current status — V35 no-contact trial ended; V33 Alpine restored
 
 On 2026-10-21, fresh Fastboot preflight matched Lynx's recorded serial and

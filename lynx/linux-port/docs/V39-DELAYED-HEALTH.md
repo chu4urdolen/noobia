@@ -34,8 +34,8 @@ Alpine boot correctly reported `candidate_seen=false` at
 `logs/v39-health-window-1792615693644410052/result.json`. The V39 record
 parser fixture passed at `logs/v39-parser-fixture-1792615703552728891/`.
 
-**V39 has not been flashed or booted.** V33 is installed and Alpine/OpenRC is
-last verified running. Offline validation cannot establish whether autonomous
+The following paragraph records the preparation state before the hardware
+trial. Offline validation cannot establish whether autonomous
 health startup will complete, whether a module can reset the phone, whether
 the persistent write survives such a reset, or whether the power-off path
 will behave as expected. The existing V33 and V19 rollback images remain
@@ -53,3 +53,27 @@ the same boot-ID-scoped directory. A record ending at `HEALTH_BEGIN` would
 bracket failure inside or immediately after autonomous health startup; a
 `HEALTH_READY` record would prove that startup returned successfully. Neither
 alone identifies a kernel or hardware root cause.
+
+## First hardware attempt — health child ready; contact lost
+
+The exact image was flashed only to `boot_a` after a fresh identity/layout
+preflight, then rebooted separately with the collector already listening:
+`logs/v39-boot-a-trial-1792615809503827990/result.json` and
+`logs/v39-boot-a-trial-1792615817975780981/result.json`. Noob unplugged USB.
+Pinned SSH matched V39's exact `/init` hash on boot ID
+`30131789-21c8-4367-8c45-4fadc37ef7dc`. Seventy-nine complete samples
+span uptime 93.49–195.48 seconds. `HEALTH_BEGIN` appears at 190.84. By the
+last successful sample the V31 health child had loaded battery and thermal
+modules, reported `READY_ON_PHONE_MONITORING_ACTIVE`, left a zero child
+result and a `ready` file, with battery temperature 24.4°C and a passing
+supervisor sample. The parent had **not** logged `HEALTH_READY`. The next SSH
+attempt failed. No subsequent pinned contact appeared through the independent
+V39 safety deadline. The raw snapshots and preliminary incident summary are
+at `logs/v39-health-window-1792615806259628878/`.
+
+This brackets the loss to just after health child readiness; it does not
+identify a reset, power-off, Wi-Fi fault, ext4 operation, or kernel cause.
+**V39 remains the last image written to `boot_a`; V33 restoration and
+persistent-record retrieval are pending.** The exact V33 rollback and
+restoration tool are prepared. Do not start another diagnostic before V33
+recovery is verified.

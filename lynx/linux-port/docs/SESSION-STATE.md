@@ -1,6 +1,28 @@
 # Current Lynx handoff state
 
-## Offline next candidate — V39 delayed health, unflashed
+## Urgent current status — V39 contact lost; V33 restoration pending
+
+V39 was flashed **only to `boot_a`** after a fresh Fastboot preflight and
+rebooted with the pinned collector already running. No other partition was
+written. Exact V39 `/init` and SSH were verified on boot ID
+`30131789-21c8-4367-8c45-4fadc37ef7dc` from uptime 93.49 to 195.48.
+`HEALTH_BEGIN` was logged at 190.84. The packaged V31 health child loaded
+its modules, reported `READY_ON_PHONE_MONITORING_ACTIVE`, and wrote a zero
+child result by 195.48, but the parent `HEALTH_READY` marker was not yet
+captured. The next SSH sample failed, and there has been no pinned contact
+since. The independent V39 safety deadline has elapsed. **V39 is still the
+last image written to `boot_a`; do not claim Alpine is running now.**
+Raw evidence and incident summary are in
+`logs/v39-health-window-1792615806259628878/`. Exact V33 rollback has
+already been verified offline. Noob has been instructed to enter Fastboot and
+connect USB. Once Fastboot is confirmed, first attempt the read-only
+preloader/LK log, then use the guarded V33-only `boot_a` restoration. Stop on
+any unexpected identity or partition layout. After restoring V33, separately
+reboot unplugged, verify pinned rescue SSH, run V31 RAM health and V33 handoff,
+verify Alpine/OpenRC PID 1, and retrieve V39's persistent stage log. The
+cause of contact loss remains unknown.
+
+## Prior offline candidate — V39 delayed health
 
 V39 retains V38's verified Wi-Fi/SSH and persistent stage recording, waits
 until uptime 190 seconds, then invokes the already packaged V31 health path
@@ -8,7 +30,8 @@ once while keeping BusyBox as PID 1. It omits Alpine handoff and has bounded
 power-off and charger guards. Its exact V38-parent image, unchanged stock
 kernel/supplement, health script bytes, and V33/V19 rollback images passed
 offline validation. The guarded trial tool and collector dry run passed.
-**V39 has not been flashed or booted.** See `docs/V39-DELAYED-HEALTH.md`.
+This was its offline preparation state before the trial above. See
+`docs/V39-DELAYED-HEALTH.md`.
 
 ## Current status — V38 completed; V33 Alpine restored
 

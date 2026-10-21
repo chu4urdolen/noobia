@@ -1,5 +1,18 @@
 # Current Lynx handoff state
 
+## Current status — V38 trace prepared offline; V33 Alpine running
+
+V38 is an **unflashed, unbooted** short diagnostic designed to record which
+boot stages execute when pinned SSH never appears. It would make a few
+checksummed writes to the existing verified Alpine ext4 root, then unmount
+after each record. Its image and exact V33/V19 rollback inputs passed offline
+validation, and the collector/parser/retrieval tools passed local checks.
+The remaining ext4 mount/write and hardware behavior risks are explicit in
+`docs/V38-PERSISTENT-TRACE.md`. No flash, reboot, or explicit phone storage
+write was performed in preparing V38.
+V33 remains installed on `boot_a`; Alpine/OpenRC and direct Wi-Fi SSH were
+last verified on boot ID `dd9abd57-33f0-46e0-8376-e714d46eef26`.
+
 ## Current status — V37 no-contact attempt ended; V33 Alpine restored
 
 The guarded V37 Wi-Fi-only diagnostic wrote only `boot_a` and separately
@@ -27,8 +40,9 @@ offline. It changes only the primary init tail from V36, observes pinned SSH
 until uptime 190 seconds without starting health, and then requests power-off.
 It is not a daily boot image. The exact image hash, collector dry run, guarded
 trial and V33 restoration procedure are in `docs/V37-WIFI-WINDOW-DIAGNOSTIC.md`.
-**V37 has not been flashed.** V33 is still installed and Alpine/OpenRC is the
-last verified running PID 1. A 30-second dense read-only collector on the
+**This paragraph records V37's preparation state before its later trial.**
+V33 is again installed and Alpine/OpenRC is the last verified running PID 1.
+A 30-second dense read-only collector on the
 healthy V33 boot completed 31/31 SSH samples without timeout:
 `logs/v34-health-window-1792600459590278195/result.json`.
 

@@ -61,6 +61,10 @@ preloader/LK log with `sudo -n python3 tools/lynx_pllk_log.py --connect`
 attempt did not capture that log. The command's provenance and limitations are
 documented in `tools/lynx_pllk_log.py`; it may describe only the current
 Fastboot entry, so its raw output must be preserved and interpreted cautiously.
+The V37 collector now records `state=interrupted` and `finished_ns` when
+stopped with SIGINT; a read-only dry run against the restored V33 boot saved
+two samples, correctly reported `candidate_seen=false`, and ended cleanly at
+`logs/v37-wifi-window-1792601667978022445/result.json`.
 
 For any later trial, start `tools/capture_v37_wifi_window.py` before any write; its receipt
 must be fresh. The guarded trial tool allows only `boot_a`, requires a fresh

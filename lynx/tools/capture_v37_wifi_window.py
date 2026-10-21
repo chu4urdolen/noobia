@@ -6,6 +6,7 @@ import json
 import math
 import os
 from pathlib import Path
+import signal
 import subprocess
 import time
 
@@ -42,6 +43,13 @@ def main():
               'phone_partition_writes': False,
               'pinned_ip': None, 'candidate_seen': False, 'samples': [],
               'collector_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    stop_requested = False
+
+    def request_stop(signum, frame):
+        nonlocal stop_requested
+        stop_requested = True
+
+    signal.signal(signal.SIGINT, request_stop)
 
     def save():
         temp = receipt.with_suffix('.tmp')
@@ -52,7 +60,7 @@ def main():
     print('V37 WIFI COLLECTOR READY:', receipt, flush=True)
     start = time.monotonic()
     capture = "printf 'INIT_SHA\\n'; sha256sum /init; " + CAPTURE
-    while time.monotonic() - start < args.seconds:
+    while not stop_requested and time.monotonic() - start < args.seconds:
         report.update(heartbeat_ns=time.time_ns(),
                       elapsed_seconds=time.monotonic() - start)
         save()
@@ -87,7 +95,8 @@ def main():
             report['pinned_ip'] = None
         save()
         time.sleep(args.interval)
-    report.update(state='deadline', finished_ns=time.time_ns())
+    report.update(state='interrupted' if stop_requested else 'deadline',
+                  finished_ns=time.time_ns())
     save()
     print(json.dumps({'state': report['state'], 'result': str(receipt),
                       'candidate_seen': report['candidate_seen'],

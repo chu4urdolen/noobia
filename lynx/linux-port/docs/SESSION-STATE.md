@@ -1,5 +1,15 @@
 # Current Lynx handoff state
 
+## Offline next candidate — V39 delayed health, unflashed
+
+V39 retains V38's verified Wi-Fi/SSH and persistent stage recording, waits
+until uptime 190 seconds, then invokes the already packaged V31 health path
+once while keeping BusyBox as PID 1. It omits Alpine handoff and has bounded
+power-off and charger guards. Its exact V38-parent image, unchanged stock
+kernel/supplement, health script bytes, and V33/V19 rollback images passed
+offline validation. The guarded trial tool and collector dry run passed.
+**V39 has not been flashed or booted.** See `docs/V39-DELAYED-HEALTH.md`.
+
 ## Current status — V38 completed; V33 Alpine restored
 
 V38 booted BusyBox with the exact expected `/init` hash and remained

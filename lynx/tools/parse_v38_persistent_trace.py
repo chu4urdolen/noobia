@@ -8,7 +8,8 @@ import re
 BOOT_ID = re.compile(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}')
 LINE = re.compile(r'(LXBD1) (' + BOOT_ID.pattern +
                   r') ([0-9]+) (START|WIFI_READY|WIFI_FAILED|UPTIME_120|'
-                  r'UPTIME_150|UPTIME_180|CHARGER_ON|END) ([0-9a-f]{64})')
+                  r'UPTIME_150|UPTIME_180|HEALTH_BEGIN|HEALTH_FAILED|'
+                  r'HEALTH_READY|CHARGER_ON|END) ([0-9a-f]{64})')
 
 
 def parse(path):
@@ -41,7 +42,7 @@ def parse(path):
             'bytes': len(raw), 'events': events,
             'last_stage': events[-1]['stage'],
             'terminal_marker_seen': events[-1]['stage'] in
-            ('END', 'CHARGER_ON', 'WIFI_FAILED')}
+            ('END', 'CHARGER_ON', 'WIFI_FAILED', 'HEALTH_FAILED')}
 
 
 def main():

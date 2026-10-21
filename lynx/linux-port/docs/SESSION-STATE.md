@@ -1,5 +1,46 @@
 # Current Lynx handoff state
 
+## Current status — V33 restored; Alpine/OpenRC and both SSH ports live
+
+On 2026-10-21, Lynx reappeared in Fastboot as serial `89BYAY5L4T9HFUOV`.
+Fresh read-only preflight matched unlocked slot A, the recorded bootloader,
+and partition sizes (`logs/fastboot-preflight-1792580315999550166.json`).
+The exact previously successful V33 image was restored to **`boot_a` only**;
+the guarded write receipt is
+`logs/v34-boot-a-trial-1792580319529388222/result.json`. A separate Fastboot
+reboot succeeded, after which USB disappeared. **V33 is the last image written
+to `boot_a`.** Slot B, recovery foundations, and bootloader were untouched.
+
+Because `.4` now has another host key, the new pinned-key collector
+`tools/lynx_dynamic_pinned_contact.py` found Lynx at `192.168.100.6`, proved
+V33 BusyBox identity, cancelled its fallback timer, and saved pstore and boot
+log before health startup:
+`logs/dynamic-pinned-contact-1792580356789565421/result.json`. The saved
+pstore contains an older UFS-probe trace; it does **not** identify the V34
+loss-of-contact cause. Do not infer that V34 crashed in UFS from it.
+
+The same boot passed V31 phone-side health startup
+(`logs/local-health-v31-ram-trial-1792580485087229192/result.json`) and the
+guarded V33 handoff was armed
+(`logs/v33-openrc-arm-1792580507021565090/result.json`). Independent verifier
+`tools/verify_alpine_pid1.py` passed on boot ID
+`c365645f-0351-4b6d-b612-4d62866a8d05`:
+`logs/v33-alpine-pid1-verification-1792580602503990622/result.json`.
+Alpine 3.24.2/OpenRC is PID 1 from persistent ext4 `userdata`; OpenRC started
+`lynx-health`, `lynx-wifi`, and `lynx-dropbear`. The pinned rescue SSH on 22
+and Alpine SSH on 2222 both answered at `.6`. The live health sample was
+27.6°C battery, 100% capacity, and 36.3°C maximum thermal sensor, with three
+cooling controls. This still requires a host-confirmed V33 boot and a RAM
+health arm before Alpine handoff; autonomous cold boot remains unproved.
+
+For a future V33 boot, start `tools/lynx_dynamic_pinned_contact.py --seconds
+420` **before** Fastboot reboot, unplug USB promptly, then use its fresh
+`result.json` as `--contact-receipt` for
+`tools/launch_local_health_ram_trial_v31.py --run --usb-unplugged-confirmed`.
+Use that health receipt with `tools/arm_v33_openrc.py --arm`, then
+`tools/verify_alpine_pid1.py`. Keep the phone unplugged because charging under
+native Linux is not yet validated.
+
 ## Current status — V34 booted BusyBox; Alpine/health unverified
 
 On 2026-10-21, fresh Fastboot preflight matched Lynx's serial, unlocked slot
@@ -8,8 +49,8 @@ A, bootloader and partition sizes at
 wrote **only `boot_a`** and later issued a separate reboot:
 `logs/v34-boot-a-trial-1792578082487216310/result.json` and
 `logs/v34-boot-a-trial-1792579249916028829/result.json`. Noob confirmed
-USB removal. **Current installed `boot_a` is V34** until a later receipt
-proves otherwise; V33 and V19 exact rollback images remain local.
+USB removal. V33 was subsequently restored, as documented above; V33 and
+V19 exact rollback images remain local.
 
 The original collector's fixed address `192.168.100.4` answered with a
 different SSH host key. It was rejected; the pinned known_hosts record was

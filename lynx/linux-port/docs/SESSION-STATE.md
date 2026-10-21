@@ -1,5 +1,15 @@
 # Current Lynx handoff state
 
+## Offline next candidate — V41 parent-only retry, unflashed
+
+V41 isolates V40's supplementary-payload change by keeping exact V39 payload
+bytes and changing only the primary `/init`. It retries the already-running
+health supervisor at most twice only when V39's child has reported ready but
+the parent handoff refused. Its independent charger and power-off guards remain.
+The builder and independent validator passed offline; V41 has **not** been
+flashed or booted. V33 Alpine remains the last verified live system. See
+`docs/V41-PRIMARY-RETRY.md`.
+
 ## Current status — V40 gave no stage record; V33 Alpine recovered
 
 V40 was trialled on `boot_a` after offline checks and a fresh Fastboot

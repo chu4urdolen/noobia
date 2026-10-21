@@ -40,9 +40,48 @@ positive and corruption fixtures are at
 run on V33 reported no V38 log directory, as expected:
 `logs/v38-persistent-capture-1792601966108698756/result.json`.
 
-**V38 has not been flashed or booted.** V33 remains the installed `boot_a`
-image, and Alpine/OpenRC plus direct pinned SSH are last verified running.
-There is no user action needed for offline preparation.
+## Hardware result — complete bounded run; V33 restored
+
+On 2026-10-21, a fresh Fastboot identity/layout preflight passed. The guarded
+tool flashed V38 **only to `boot_a`** and rebooted separately with the pinned
+collector already running:
+`logs/v38-boot-a-trial-1792602285351090717/result.json` and
+`logs/v38-boot-a-trial-1792602291789496814/result.json`. No other partition
+was flashed. The collector matched V38's exact `/init` hash on boot ID
+`5124107b-05e1-49f4-b727-c03d9ec50ec5` and saved 74 complete matching
+SSH snapshots from uptime 93.05 through 189.51 seconds. A snapshot begun at
+190.89 seconds timed out when the planned shutdown began. The result is at
+`logs/v38-persistent-window-1792602238668763311/incident-summary.json`.
+
+After restoring V33, the persistent log was read and its per-line checksums,
+boot ID, monotonic uptime, file length, and whole-file hash verified:
+`logs/v38-persistent-capture-1792615448786856168/result.json`. It contains
+`START` at 8 seconds, `WIFI_READY` at 90, `UPTIME_120`, `UPTIME_150`,
+`UPTIME_180`, and `END` at 190. There is no `CHARGER_ON` or `WIFI_FAILED`
+marker. The log proves the diagnostic reached userspace and persisted each
+stage. It does not by itself prove the electrical power state after the
+power-off request; disappearance at that precise boundary is consistent with
+the requested shutdown. It also does not prove automatic health or Alpine
+handoff, which V38 intentionally omitted.
+
+The first host retrieval attempt failed before reading any file because its
+shell filename guard rejected the `.log` suffix. The guard was corrected;
+the second retrieval verified the record. This was a host-tool bug, not a
+failed phone write.
+
+Lynx later entered Fastboot on USB. A fresh identity/layout check passed,
+and exact V33 was restored **only to `boot_a`**, without an implicit reboot:
+`logs/v34-boot-a-trial-1792615245603834462/result.json`. A separately
+started pinned collector verified V33 rescue SSH, then the RAM health trial,
+V33 arm, and independent Alpine PID 1 verifier all passed on boot ID
+`948712a7-ea62-4c7e-9f91-e46b33547a2d`:
+`logs/v33-alpine-pid1-verification-1792615414672211297/result.json`.
+**V33 is installed; Alpine/OpenRC is running.** The boot still requires the
+host-assisted health/handoff sequence.
+
+The sustained Wi-Fi-only run through 190 seconds makes automatic health
+startup or handoff a better next investigation target than elapsed uptime
+alone. It does not establish a root cause for V34–V36 failures.
 
 If a V38 hardware trial is chosen later, first establish Fastboot on USB,
 start `tools/capture_v38_persistent_window.py`, and use the guarded

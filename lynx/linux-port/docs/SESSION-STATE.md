@@ -1,6 +1,24 @@
 # Current Lynx handoff state
 
-## Current status — V38 trace prepared offline; V33 Alpine running
+## Current status — V38 completed; V33 Alpine restored
+
+V38 booted BusyBox with the exact expected `/init` hash and remained
+reachable over pinned Wi-Fi SSH from uptime 93.05 through 189.51 seconds.
+Its checksummed persistent log has verified markers at start, Wi-Fi ready,
+120/150/180 seconds, and the deliberate 190-second end. The collector's
+snapshot at uptime 190.89 timed out at the planned shutdown boundary.
+Details and receipts: `docs/V38-PERSISTENT-TRACE.md` and
+`logs/v38-persistent-capture-1792615448786856168/result.json`.
+
+After a fresh Fastboot preflight, exact V33 was restored **only to `boot_a`**
+(`logs/v34-boot-a-trial-1792615245603834462/result.json`). A separate reboot,
+pinned SSH, V31 RAM health, guarded V33 handoff, and Alpine/OpenRC PID 1
+verification passed on boot ID `948712a7-ea62-4c7e-9f91-e46b33547a2d`
+(`logs/v33-alpine-pid1-verification-1792615414672211297/result.json`).
+Lynx is unplugged, with Alpine last verified running. Autonomous cold boot
+remains unproved; V38 intentionally excluded health and Alpine handoff.
+
+## Prior status — V38 trace prepared offline; V33 Alpine running
 
 V38 is an **unflashed, unbooted** short diagnostic designed to record which
 boot stages execute when pinned SSH never appears. It would make a few

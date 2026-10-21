@@ -25,7 +25,10 @@ count=0
 for file in "$dir"/*.log; do
     test -f "$file" || continue
     name=${file##*/}
-    case "$name" in *[!0-9a-f.-]*|'') exit 1;; esac
+    case "$name" in *.log) ;; *) exit 1;; esac
+    stem=${name%.log}
+    case "$stem" in *[!0-9a-f-]*|'') exit 1;; esac
+    test "${#stem}" -eq 36
     bytes=$(/bin/busybox wc -c < "$file")
     case "$bytes" in ''|*[!0-9]*) exit 1;; esac
     test "$bytes" -le 4096

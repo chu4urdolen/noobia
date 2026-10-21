@@ -39,8 +39,13 @@ The private image and build receipts are under
 validation passed: exact stock kernel, unchanged supplementary payload,
 primary init-only change, BusyBox syntax, local health fixture, AOSP AVB
 model, and exact V33/V19 rollback hashes. **V35 has not been flashed or
-tested on Lynx.** The next trial requires a fresh Fastboot identity check,
-a ready pinned collector, and an explicit return to V33 afterward.
+tested on Lynx.** `tools/capture_v35_health_window.py --seconds 900` has a
+pinned, dynamic-address read-only collector; its one-second dry run against
+the current V33 boot correctly reported `candidate_seen=false`.
+`tools/lynx_boot_a_v35_trial.py --prepare` passed and its flash/reboot modes
+require a fresh collector and Fastboot identity check. The next trial needs
+Noob to put Lynx in Fastboot on USB, then prompt USB removal after the reboot.
+Restore V33 explicitly afterward; V35 has no automatic rollback write.
 
 ## Current status — V34 diagnostic retrial captured two incomplete boots
 

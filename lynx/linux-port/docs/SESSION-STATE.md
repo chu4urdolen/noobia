@@ -1,5 +1,17 @@
 # Current Lynx handoff state
 
+## Offline follow-up — V37 diagnostic prepared; no phone flash
+
+The V37 Wi-Fi-only, bounded diagnostic is built and independently validated
+offline. It changes only the primary init tail from V36, observes pinned SSH
+until uptime 190 seconds without starting health, and then requests power-off.
+It is not a daily boot image. The exact image hash, collector dry run, guarded
+trial and V33 restoration procedure are in `docs/V37-WIFI-WINDOW-DIAGNOSTIC.md`.
+**V37 has not been flashed.** V33 is still installed and Alpine/OpenRC is the
+last verified running PID 1. A 30-second dense read-only collector on the
+healthy V33 boot completed 31/31 SSH samples without timeout:
+`logs/v34-health-window-1792600459590278195/result.json`.
+
 ## Current status — V33 restored; Alpine/OpenRC and SSH verified
 
 On 2026-10-21 the bounded Fastboot watcher matched Lynx's exact serial and

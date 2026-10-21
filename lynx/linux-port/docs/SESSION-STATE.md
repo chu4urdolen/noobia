@@ -21,12 +21,19 @@ as `/bin/busybox` on boot ID `f67d0c37-932b-4195-a194-6eb6ced80e42`:
 `logs/v34-first-pinned-proof-20261021/result.json`. The next SSH attempt
 timed out, and a repeat pinned-key discovery found no Lynx host. This could
 be a safety power-off or network loss; **the cause is not proved**. There is
-no evidence yet that V34 reached health-ready or Alpine PID 1. A broader
-dynamic-IP health collector is running at
-`logs/v34-health-window-1792579502641247181/result.json` for a possible
-new boot. Do not claim V34 autonomous boot succeeded. Await a physical
-screen/power report, then capture boot/health logs or pstore before changing
-the image again.
+no evidence yet that V34 reached health-ready or Alpine PID 1. The first
+dynamic-IP health collector saw no later Lynx contact:
+`logs/v34-health-window-1792579502641247181/result.json`.
+
+Noob reported a black screen and attempted one unplugged power-on. A fresh
+pinned dynamic-IP collector ran its full 420-second window and captured
+**zero** Lynx SSH samples:
+`logs/v34-health-window-1792579759626634111/result.json`. The screen/power
+state after that window is unconfirmed. This does not prove a kernel boot or
+power-off on the second attempt. Next safe step is Fastboot identification,
+then restore the exact V33 `boot_a` image if Lynx is present. On the first
+recovered boot, capture pstore before interpreting the V34 failure. Do not
+retry V34 or change its health guard without evidence.
 
 ## Current status — V34 autonomous Alpine candidate prepared offline
 

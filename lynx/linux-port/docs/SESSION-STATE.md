@@ -1,5 +1,29 @@
 # Current Lynx handoff state
 
+## Current status — V33 Alpine running; V36 cooldown trial prepared offline
+
+On 2026-10-21, Noob connected Lynx in Fastboot. Fresh read-only preflight
+matched serial, unlocked slot A, bootloader and partition layout at
+`logs/fastboot-preflight-1792597128509436454.json`. The already installed V33
+was rebooted **without flashing**. A prestarted pinned dynamic collector found
+Lynx at `192.168.100.7`, cancelled the V33 fallback and saved raw pstore/boot
+logs: `logs/dynamic-pinned-contact-1792597143051616612/result.json`.
+The phone reported its charger offline. V31 RAM health startup passed at
+`logs/local-health-v31-ram-trial-1792597302279562296/result.json`; the V33
+handoff was armed at `logs/v33-openrc-arm-1792597321334700437/result.json`;
+independent Alpine/OpenRC PID 1 verification passed at
+`logs/v33-alpine-pid1-verification-1792597329528303612/result.json`.
+**V33 remains installed, with Alpine last verified running.** No partition
+write occurred in this return-to-Linux sequence.
+
+V36 is an **offline-only** timing diagnostic prepared from exact V35. It adds a
+40-second cooldown after local Wi-Fi/SSH readiness before the same V31 health
+startup, then keeps monitored BusyBox for a bounded observation window. Image
+SHA-256 is `75bbd8b44d728a1264f55ce3aff521400d25ea6b3e900c8bacca757cdfe49a50`.
+Builder, independent validation, collector dry run, guarded trial tool and
+rollback details are recorded in `docs/V36-COOLDOWN-TRIAL.md`. V36 has **not**
+been flashed or booted on Lynx. Its timing hypothesis is unproved.
+
 ## Offline follow-up while Noob is away — 2026-10-21
 
 The V34/V35 failure boundary has been rechecked against raw captures in

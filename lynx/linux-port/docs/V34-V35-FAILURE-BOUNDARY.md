@@ -1,6 +1,32 @@
 # V34/V35 failure boundary and next evidence capture
 
-The installed `boot_a` image is the working V33 (`1d65456979d8a48d31de77c987b8aaf9b5ac11af62c51d00fdaff68ad47e747f`), restored after the V35 trial. The last verified running PID 1 was Alpine/OpenRC on boot ID `51126311-72bc-41d8-8ac0-7b4f5d1457cd`. The V33 boot remains host-assisted. Do not describe V34 or V35 as installed or as successful autonomous Linux boots.
+## 2026-10-21 V36 update
+
+V36 added a 40-second pause after Wi-Fi readiness and omitted the Alpine
+handoff. It booted twice and reached pinned BusyBox SSH. The first boot reached
+`health-bootstrap/ready` around uptime 150.7 seconds, then contact ended before
+the parent's completion marker. The second reached the cooling watcher and a
+passing health sample around uptime 165.1 seconds, then contact ended before
+the child-ready marker. Raw samples, hashes, timeline, and incident summary
+are under `logs/v36-cooldown-window-1792598257537328145/`. The last captured
+battery temperatures were 27.0–27.1°C; neither final sample contains a
+power-off request, kernel panic, or thermal shutdown. The later pstore read
+still showed an older UFS token and does not explain either loss. A 40-second
+cooldown therefore did not solve the contact loss, but these captures do not
+prove that health startup itself caused it.
+
+The exact V33 image was restored to `boot_a`, then a fresh unplugged boot
+reached pinned SSH, passed the V31 RAM health trial, and ran Alpine/OpenRC as
+PID 1 on boot ID `0e5eaa29-d233-4e12-a7b7-508926575156`. The same boot's
+read-only baseline is at
+`logs/v33-healthy-readonly-compare-1792600131784454288/`. It remained
+reachable after uptime 211 seconds with ext4 root mounted, SSH listening, and
+the charger offline. This narrows the problem to an autonomous-path difference
+or an intermittent hardware/network condition; it does not identify which.
+The next trial should capture a final local marker across a reset or distinguish
+Wi-Fi-only loss from power-off before changing the health or Alpine code.
+
+After the V35 trial, working V33 (`1d65456979d8a48d31de77c987b8aaf9b5ac11af62c51d00fdaff68ad47e747f`) was restored to `boot_a` and Alpine/OpenRC PID 1 was verified on boot ID `51126311-72bc-41d8-8ac0-7b4f5d1457cd`. A newer V33 verification appears above. The V33 boot remains host-assisted. Do not describe V34 or V35 as successful autonomous Linux boots.
 
 ## What the V34 capture proves
 

@@ -1,6 +1,35 @@
 # Current Lynx handoff state
 
-## Current status — V36 trial booted twice; V33 rollback pending
+## Current status — V33 restored; Alpine/OpenRC and SSH verified
+
+On 2026-10-21 the bounded Fastboot watcher matched Lynx's exact serial and
+completed a fresh identity/layout preflight. It restored the exact working V33
+image (SHA-256 `1d65456979d8a48d31de77c987b8aaf9b5ac11af62c51d00fdaff68ad47e747f`)
+**only to `boot_a`**, without an implicit reboot. Receipts:
+`logs/v36-fastboot-restore-watch-1792598851382787076/result.json` and
+`logs/v34-boot-a-trial-1792599609524961827/result.json`.
+
+A separate Fastboot reboot followed with the pinned collector already running;
+Noob unplugged USB. V33 rescue SSH was verified at `192.168.100.7` and its
+fallback cancelled (`logs/dynamic-pinned-contact-1792599872928843421/result.json`).
+The unplugged V31 RAM health startup passed
+(`logs/local-health-v31-ram-trial-1792599991891862635/result.json`), the
+same-boot V33 handoff was armed
+(`logs/v33-openrc-arm-1792600013304397949/result.json`), and independent
+verification proved **Alpine 3.24.2/OpenRC PID 1, Wi-Fi/SSH, persistent ext4
+root, and health service** on boot ID
+`0e5eaa29-d233-4e12-a7b7-508926575156`:
+`logs/v33-alpine-pid1-verification-1792600019836843440/result.json`.
+Alpine's own `lynx-wifi` and `lynx-dropbear` OpenRC services were reported
+started, and a separate pinned-key login directly into Alpine on port 2222
+proved the same boot ID and `/sbin/openrc-init`:
+`logs/alpine-direct-ssh-2222-1792600242750752502/result.json`.
+No partition was written in the reboot, health, or Alpine handoff sequence.
+V33 is installed; Alpine was last verified running. Its startup still needs a
+host-assisted health/handoff step on every fresh boot. Do not claim autonomous
+cold boot from the failed V34–V36 trials.
+
+## Prior status — V36 trial booted twice; V33 rollback was pending
 
 On 2026-10-21, Noob connected Lynx in Fastboot. Fresh identity/slot/layout
 preflight matched at `logs/fastboot-preflight-1792598261484010058.json`.

@@ -45,9 +45,15 @@ fresh identity/layout preflight:
 `logs/v34-boot-a-trial-1792601253452132247/result.json`. No reboot followed.
 The raw collector receipt and incident summary are at
 `logs/v37-wifi-window-1792600960480583281/`. Whether USB was unplugged
-promptly during the trial is awaiting physical confirmation. **The Wi-Fi-only
-question remains unanswered. V33 is installed, with Lynx last seen in
-Fastboot on USB.**
+promptly during the trial is awaiting physical confirmation. A separate
+V33 reboot then reached pinned SSH at `192.168.100.7`, passed RAM health,
+and ran Alpine/OpenRC as PID 1 on boot ID
+`dd9abd57-33f0-46e0-8376-e714d46eef26`:
+`logs/v33-alpine-pid1-verification-1792601501041777035/result.json`.
+Direct Alpine SSH on port 2222 and charger offline were confirmed. Read-only
+pstore still holds only the older UFS token; the expdb prefix hash is
+identical to five earlier captures. **The Wi-Fi-only question remains
+unanswered. V33 is installed and Alpine is running.**
 
 For any later trial, start `tools/capture_v37_wifi_window.py` before any write; its receipt
 must be fresh. The guarded trial tool allows only `boot_a`, requires a fresh

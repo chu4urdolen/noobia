@@ -1,16 +1,22 @@
 # Current Lynx handoff state
 
-## Current status — V37 no-contact attempt ended; V33 restored in Fastboot
+## Current status — V37 no-contact attempt ended; V33 Alpine restored
 
 The guarded V37 Wi-Fi-only diagnostic wrote only `boot_a` and separately
 rebooted after a fresh Fastboot preflight. The prestarted pinned collector
 saw zero SSH samples over about 287 seconds. Lynx then reappeared in Fastboot
 on USB; the collector was stopped. A fresh identity/layout preflight passed
-and exact V33 was restored only to `boot_a`, with no reboot:
-`logs/v34-boot-a-trial-1792601253452132247/result.json`. Lynx is last
-verified in Fastboot; V33 Alpine has **not yet been rebooted and reverified**
-after this restoration. The V37 run does not prove whether the diagnostic
-executed Linux userspace or reached Wi-Fi. See
+and exact V33 was restored only to `boot_a`, with no implicit reboot:
+`logs/v34-boot-a-trial-1792601253452132247/result.json`. A separate reboot
+with a prestarted pinned collector, physical USB removal, V31 RAM health
+startup, and guarded V33 handoff followed. **Alpine 3.24.2/OpenRC PID 1,
+direct port-2222 SSH, and charger offline are verified** on fresh boot ID
+`dd9abd57-33f0-46e0-8376-e714d46eef26`:
+`logs/v33-alpine-pid1-verification-1792601501041777035/result.json`.
+Read-only post-trial pstore still contains only the older UFS token, and the
+first 0xf0000 bytes of expdb have the exact same SHA-256 as five earlier
+captures. Neither gives a V37 reset cause. The V37 run does not prove whether
+the diagnostic executed Linux userspace or reached Wi-Fi. See
 `docs/V37-WIFI-WINDOW-DIAGNOSTIC.md` and
 `logs/v37-wifi-window-1792600960480583281/incident-summary.json`.
 

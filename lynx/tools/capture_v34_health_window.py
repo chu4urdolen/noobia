@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parent.parent
 CAPTURE = '''echo SAMPLE_BEGIN
 date -u +%s
 cat /proc/uptime /proc/sys/kernel/random/boot_id
-readlink /proc/1/exe /proc/1/root
+printf 'PID1_EXE='; readlink /proc/1/exe
+printf 'PID1_ROOT='; readlink /proc/1/root
 echo BOOT_LOG
 cat /run/lynx/boot.log
 echo BOOT_STATE
@@ -33,6 +34,8 @@ echo BATTERY
 cat /sys/bus/i2c/devices/7-0055/battery_snapshot 2>/dev/null
 echo MOUNTS
 cat /proc/mounts
+echo KERNEL_TAIL
+dmesg | tail -n 120
 echo END_SAMPLE
 true'''
 

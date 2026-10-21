@@ -1,5 +1,47 @@
 # Current Lynx handoff state
 
+## Current status — V33 restored again after the V34 diagnostic retrial
+
+Noob returned Lynx to Fastboot. Fresh preflight matched the same serial,
+unlocked slot A, bootloader, and partition layout:
+`logs/fastboot-preflight-1792584299193355594.json`. Exact V33 was written
+**only to `boot_a`**, with no implicit reboot:
+`logs/v34-boot-a-trial-1792584306023674565/result.json`. A separate Fastboot
+reboot succeeded and USB disappeared. Pinned SSH at `.6` proved V33 BusyBox
+and saved pstore before health startup:
+`logs/dynamic-pinned-contact-1792584314050097198/result.json`. Pstore still
+showed the older UFS trace, not a new V34-specific crash record.
+
+The same boot passed phone-side V31 RAM health startup
+(`logs/local-health-v31-ram-trial-1792584438241004578/result.json`), the
+guarded handoff was armed
+(`logs/v33-openrc-arm-1792584467168567897/result.json`), and independent
+Alpine/OpenRC PID 1 verification passed:
+`logs/v33-alpine-pid1-verification-1792584471170676275/result.json`.
+**V33 is the current installed `boot_a`; Alpine is the last verified PID 1.**
+The V34 diagnostic findings below remain useful but V34 must not be treated
+as currently installed. Preserve V33 and the exact V19 rollback.
+
+## Next diagnostic candidate — V35 health-only split prepared offline
+
+V35 was built from exact V34 with **only the primary `/init` tail changed**.
+It runs the same local Wi-Fi and V31 health startup, then keeps monitored
+BusyBox PID 1 and rescue SSH for a maximum 600-second observation window;
+it does not attempt the Alpine handoff. This separates a health-startup
+failure from a handoff failure on a later controlled trial. The existing
+startup failure paths still request power-off; a separate bounded timer
+requests power-off after the successful observation window.
+
+Image SHA-256:
+`6deda6ecc63ce8b11fc882cbe7ebcc19ff8c4eae13e04c609fa15ac81e35036d`.
+The private image and build receipts are under
+`linux-port/artifacts/local-health-only-v35-offline/`. Independent offline
+validation passed: exact stock kernel, unchanged supplementary payload,
+primary init-only change, BusyBox syntax, local health fixture, AOSP AVB
+model, and exact V33/V19 rollback hashes. **V35 has not been flashed or
+tested on Lynx.** The next trial requires a fresh Fastboot identity check,
+a ready pinned collector, and an explicit return to V33 afterward.
+
 ## Current status — V34 diagnostic retrial captured two incomplete boots
 
 On 2026-10-21, Noob connected Lynx in Fastboot. Fresh identity and layout
@@ -8,8 +50,8 @@ recorded bootloader (`logs/fastboot-preflight-1792583578244697246.json`).
 The guarded tool wrote V34 **only to `boot_a`** and rebooted separately:
 `logs/v34-boot-a-trial-1792583597458126374/result.json` and
 `logs/v34-boot-a-trial-1792583604061913647/result.json`. USB disappeared.
-**V34 is the last image written to `boot_a`** until a new guarded Fastboot
-receipt proves otherwise. The exact V33 rollback remains verified locally.
+V33 was subsequently restored, as documented above. The exact V33 rollback
+remains verified locally.
 
 The dynamic pinned-key collector captured 14 raw snapshots at `.6` during a
 420-second window:

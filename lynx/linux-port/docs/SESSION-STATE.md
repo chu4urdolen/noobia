@@ -1,5 +1,47 @@
 # Current Lynx handoff state
 
+## Current status — V35 no-contact trial ended; V33 Alpine restored
+
+On 2026-10-21, fresh Fastboot preflight matched Lynx's recorded serial and
+layout (`logs/fastboot-preflight-1792585206698886761.json`). The guarded V35
+trial wrote **only `boot_a`**, then issued a separate reboot:
+`logs/v35-boot-a-trial-1792585214468026235/result.json` and
+`logs/v35-boot-a-trial-1792585220570512516/result.json`. USB disappeared.
+The pinned dynamic collector ran before reboot and saw **zero SSH samples**;
+Noob then reported Lynx in Fastboot. The collector was stopped at about 280
+seconds because the phone had returned to Fastboot. Preserve the raw receipt
+and human-observation summary at
+`logs/v35-health-window-1792585210711416723/`. This trial did not prove
+that V35 executed Linux userspace or reach the intended health-only split;
+its return-to-Fastboot cause is unknown. Do not interpret it as a health or
+Alpine handoff verdict.
+
+Noob connected Fastboot on USB. A fresh preflight matched identity, slot and
+layout (`logs/fastboot-preflight-1792585497614933929.json`). Exact V33 was
+restored **only to `boot_a`**:
+`logs/v34-boot-a-trial-1792585500575066240/result.json`. A separate reboot,
+USB removal, dynamic pinned SSH, and pstore capture followed:
+`logs/dynamic-pinned-contact-1792585509213161234/result.json`. Pstore still
+contained the older UFS trace, not a new V35-specific crash. The same boot
+passed V31 RAM health
+(`logs/local-health-v31-ram-trial-1792585631681747370/result.json`), guarded
+V33 arm (`logs/v33-openrc-arm-1792585654274516251/result.json`) and the
+independent Alpine PID 1 verifier
+(`logs/v33-alpine-pid1-verification-1792585658074948913/result.json`).
+**V33 is the current installed `boot_a`, and Alpine/OpenRC is the last
+verified PID 1.** V35 remains an unproved offline diagnostic artifact.
+
+The V34 local-authority OpenRC guard was also probed read-only on this healthy
+V33 boot. The first probe had an incorrect precondition: it expected the RAM
+`local-boot-ready` marker to be absent, but V33's host-assisted health launcher
+had already set it. It refused before invoking the guard; that receipt is
+`logs/local-openrc-guard-probe-1792585735073047773/result.json`. The corrected
+probe used the existing matching token and passed the local-authority guard
+at 29.6°C battery and 38.2°C maximum thermal sensor:
+`logs/local-openrc-guard-probe-1792585760395182111/result.json`. This proves
+the local guard can pass in a healthy V33 state; it does not prove V34 reached
+the guard or explain the V35 no-contact boot.
+
 ## Current status — V33 restored again after the V34 diagnostic retrial
 
 Noob returned Lynx to Fastboot. Fresh preflight matched the same serial,

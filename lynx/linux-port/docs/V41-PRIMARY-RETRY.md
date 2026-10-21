@@ -34,8 +34,29 @@ the exact V33 restore command held ready. The preboot
 live V33, capturing one pinned SSH sample and correctly reporting no V41
 candidate: `logs/v41-health-window-1792618047207811799/result.json`.
 
-**V41 has not been flashed or booted.** V33 remains installed and Alpine was
-last verified running via pinned SSH. If tested, flash only `boot_a`
+## Controlled hardware trial — recovery pending
+
+After a fresh Fastboot identity/layout preflight, V41 was flashed **only to
+`boot_a`** and rebooted with the collector already running. USB was physically
+disconnected at the cue. The collector verified V41's exact `/init` hash and
+pinned SSH at `192.168.100.4` in 83 successful samples, through phone uptime
+207.94. Wi-Fi was ready at uptime 91.71. The parent began health at 191.85;
+the child loaded battery and thermal modules, reported zero, created its ready
+marker, and showed valid readings around 27.9°C battery and 35–42°C CPU.
+The next SSH sample failed, and no later contact appeared. Raw samples and
+the checksummed collector receipt are at
+`logs/v41-health-window-1792618547838074325/`.
+
+The parent result is **not yet known**. V41's persistent stage file must be
+recovered after restoring V33; loss of SSH alone cannot distinguish a deliberate
+health-failure power-off from another reset or network loss. Fastboot had not
+yet appeared on USB when this note was written. V41 is still the last image
+written to `boot_a`; exact V33 rollback is ready. First capture read-only
+PL/LK logs if Fastboot becomes available, then restore V33 only to `boot_a`,
+reboot unplugged, verify Alpine PID 1, and retrieve the persistent stage file.
+Do not start another diagnostic flash before recovery.
+
+The trial procedure is to flash only `boot_a`
 after a fresh Fastboot identity/layout check, capture the entire unplugged
 boot window, and restore exact V33 to `boot_a` before resuming Alpine. No slot
 B, bootloader, recovery, `vendor_boot`, `dtbo`, or `vbmeta` writes.

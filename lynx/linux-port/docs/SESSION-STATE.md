@@ -1,5 +1,16 @@
 # Current Lynx handoff state
 
+## Offline next candidate — V40 parent health check, unflashed
+
+V40 keeps V39's proven Wi-Fi delay and unchanged V31 health child. It
+instruments only the parent's final read-only check, retries that check at
+most twice, and records a failure class or `HEALTH_READY` in the existing
+checksummed persistent log. It has the same independent charger and power-off
+guards and no Alpine handoff. The exact V39-parent image, scope, AVB model,
+V33/V19 rollback, guarded trial preparation, parser fixture, and live
+read-only collector dry run passed. **V40 has not been flashed or booted.**
+See `docs/V40-HEALTH-PARENT-RETRY.md`.
+
 ## Current status — V39 health refusal; V33 Alpine restored
 
 V39's persistent log was recovered and verified after returning to V33. It

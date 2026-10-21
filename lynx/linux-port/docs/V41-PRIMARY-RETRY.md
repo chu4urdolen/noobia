@@ -28,9 +28,14 @@ the pinned AVB model for unlocked and locked cases. The builder is
 `tools/build_health_primary_v41.py`; the validator is
 `tools/validate_health_primary_v41.py`.
 
+The guarded `tools/lynx_boot_a_v41_trial.py --prepare` check passed with
+the exact V33 restore command held ready. The preboot
+`tools/capture_v41_health_window.py` completed a one-second dry run against
+live V33, capturing one pinned SSH sample and correctly reporting no V41
+candidate: `logs/v41-health-window-1792618047207811799/result.json`.
+
 **V41 has not been flashed or booted.** V33 remains installed and Alpine was
-last verified running via pinned SSH. A guarded trial tool and preboot collector
-must be reviewed before any hardware trial. If tested, flash only `boot_a`
+last verified running via pinned SSH. If tested, flash only `boot_a`
 after a fresh Fastboot identity/layout check, capture the entire unplugged
 boot window, and restore exact V33 to `boot_a` before resuming Alpine. No slot
 B, bootloader, recovery, `vendor_boot`, `dtbo`, or `vbmeta` writes.

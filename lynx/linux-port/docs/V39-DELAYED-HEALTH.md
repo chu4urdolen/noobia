@@ -71,9 +71,24 @@ attempt failed. No subsequent pinned contact appeared through the independent
 V39 safety deadline. The raw snapshots and preliminary incident summary are
 at `logs/v39-health-window-1792615806259628878/`.
 
-This brackets the loss to just after health child readiness; it does not
-identify a reset, power-off, Wi-Fi fault, ext4 operation, or kernel cause.
-**V39 remains the last image written to `boot_a`; V33 restoration and
-persistent-record retrieval are pending.** The exact V33 rollback and
-restoration tool are prepared. Do not start another diagnostic before V33
-recovery is verified.
+The recovered persistent stage file resolves the immediate exit path:
+`logs/v38-persistent-capture-1792616489493406914/result.json` verifies
+`HEALTH_BEGIN` at uptime 190 and `HEALTH_FAILED` at 195, with no
+`HEALTH_READY`. The parent health call returned failure and V39 entered its
+deliberate power-off path. The V31 child had already written zero and `ready`,
+so the remaining failure is between that child result and the parent's
+success return. The exact failed check is not yet recorded. It may be the
+parent's final `lynx-health-supervisor.sh --once`; that is an inference, not
+an established cause. Do not attribute this to a kernel reset, heat, or UFS
+without matching evidence.
+
+While Lynx was in Fastboot, the read-only preloader/LK log was captured at
+`logs/pllk-1792616343259834392.json`. It includes UFS and reset entries, but
+they may describe Fastboot entry rather than the V39 exit. Fresh Fastboot
+preflight passed, exact V33 was restored **only to `boot_a`** without an
+implicit reboot (`logs/v34-boot-a-trial-1792616345589715157/result.json`),
+and a separate unplugged boot passed pinned SSH, V31 RAM health, V33 handoff,
+and independent Alpine/OpenRC PID 1 verification:
+`logs/v33-alpine-pid1-verification-1792616485891521272/result.json`.
+**V33 is installed and Alpine is last verified running.** Investigate the
+parent's failed check before another hardware trial.

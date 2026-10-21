@@ -1,6 +1,27 @@
 # Current Lynx handoff state
 
-## Urgent current status — V39 contact lost; V33 restoration pending
+## Current status — V39 health refusal; V33 Alpine restored
+
+V39's persistent log was recovered and verified after returning to V33. It
+records `HEALTH_BEGIN` at uptime 190 and **`HEALTH_FAILED` at 195**, with no
+`HEALTH_READY`. The V31 child had already reported ready and left a zero
+result, so the failure occurred after child startup but before the parent's
+success return; its exact failed check is not yet known. The loss of SSH at
+that time matches V39's deliberate power-off on health failure. Full record
+and checksums: `logs/v38-persistent-capture-1792616489493406914/result.json`.
+
+Before restoration, the read-only preloader/LK log was captured at
+`logs/pllk-1792616343259834392.json`. Its UFS and reset entries have not
+been tied to this V39 failure. Fresh Fastboot identity/layout preflight passed,
+and exact V33 was restored **only to `boot_a`** without implicit reboot:
+`logs/v34-boot-a-trial-1792616345589715157/result.json`. A separate reboot,
+pinned rescue SSH, V31 RAM health, V33 handoff, and independent Alpine/OpenRC
+PID 1 verification passed:
+`logs/v33-alpine-pid1-verification-1792616485891521272/result.json`.
+**V33 is installed; Alpine is last verified running unplugged.** Investigate
+the parent health check before another flash.
+
+## Prior status — V39 contact lost; V33 restoration pending
 
 V39 was flashed **only to `boot_a`** after a fresh Fastboot preflight and
 rebooted with the pinned collector already running. No other partition was
@@ -10,8 +31,8 @@ written. Exact V39 `/init` and SSH were verified on boot ID
 its modules, reported `READY_ON_PHONE_MONITORING_ACTIVE`, and wrote a zero
 child result by 195.48, but the parent `HEALTH_READY` marker was not yet
 captured. The next SSH sample failed, and there has been no pinned contact
-since. The independent V39 safety deadline has elapsed. **V39 is still the
-last image written to `boot_a`; do not claim Alpine is running now.**
+since. The independent V39 safety deadline elapsed. **At that point V39 was
+still the last image written to `boot_a`; Alpine was not yet recovered.**
 Raw evidence and incident summary are in
 `logs/v39-health-window-1792615806259628878/`. Exact V33 rollback has
 already been verified offline. Noob has been instructed to enter Fastboot and

@@ -140,6 +140,61 @@ This proves a second autonomous **warm reboot**, not a full power-off cold
 start. The first hardware trial's unexplained no-contact outcome still limits
 claims about every-start reliability.
 
+## Direct Alpine development and charging inventory
+
+After the warm reboot, Alpine-owned pinned SSH on port 2222 remained available.
+`tools/inventory_v46_charging_readonly.py` used the verified boot ID and read
+only fixed sysfs fields and `/proc/modules`; its private receipt is
+`logs/v46-charging-readonly-1792698742451714918/result.json`. The sole
+power-supply entry was `11e01000.i2c:mt6375@34:chg`, reporting `online=0`,
+`Not charging`, and type `Unknown`. `mt6375_charger`, `mt6375_adc`, `mt6375`,
+`charger_class`, and `tcpc_class` were loaded; `mt6375_battery`,
+`tcpc_mt6375`, and `oplus_chg` were absent from this filtered inventory.
+The custom read-only gauge monitor is loaded separately. This is evidence
+for the present unplugged state and incomplete charging integration, not a
+charging-safety test. Direct Alpine development can proceed without another
+flash while power remains available; USB charging still needs a reviewed
+driver and thermal plan before the charger guard can change.
+
+A second same-boot inventory captured all loaded module names without changing
+module state: `logs/v46-charging-readonly-1792698815900657609/result.json`.
+`tools/audit_v46_charging_dependencies.py` compared those names with the
+matching August stock module metadata and saved
+`logs/v46-charging-dependencies-1792698831731328505.json`. `tcpc_mt6375`
+alone is absent from its dependency closure; the OPLUS charging closure has
+eight absent modules, and `mt6375_battery` adds a ninth. Their matching
+`5.10.149-android12-9-o-g311738fbb5a8` vermagic and resolved file
+dependencies establish a viable *source for review*, not safe loading.
+The stock `modules.load` places controller, charger and battery modules in a
+specific sequence, and probe can change hardware state. The next step is to
+review probe paths, device tree bindings and shutdown behavior offline before
+any supervised module load or change to the charger guard.
+
+The matching [OnePlus Nord 3 Android 13.1 module source](https://github.com/OnePlusOSS/android_kernel_modules_oneplus_mt6983/tree/oneplus/mt6983_t_13.1_oneplus_nord_3_5g)
+is cached with a sparse checkout at
+`linux-port/sources/oneplus-mt6983-modules-13.1` (commit
+`b7485501b2c4e0abae154e44c3861bd0fc6d605a`). The exact stock
+`oplus_chg.ko` exports `mtk_charger_probe`; its matching source at
+`vendor/oplus/kernel/charger/charger_ic/oplus_battery_mtk6983S.c` shows
+`mtk_charger_init` registering the OEM gauge and other chip drivers, and
+`mtk_charger_probe` requiring `type_c_port0` and an OEM gauge before calling
+`oplus_chg_init`. Loading this module is not a telemetry-only step: it can
+register hardware drivers, parse charging policy from device tree, and
+initialize the charging stack. Leave it unloaded while reviewing its
+gauge/Type-C requirements and safe shutdown behavior. The custom read-only
+gauge does not satisfy the source's OEM gauge check by itself. This public
+branch corresponds to the model and Android generation, but has not been
+shown to reproduce the August stock module byte for byte.
+
+The corresponding [OnePlus Nord 3 kernel source](https://github.com/OnePlusOSS/android_kernel_5.10_oneplus_mt6983/tree/oneplus/mt6983_t_13.1_oneplus_nord_3_5g)
+is also cached sparsely at `linux-port/sources/oneplus-mt6983-kernel-13.1`.
+Its `tcpc_mt6375.c` probe registers the Type-C port, initializes detection,
+performs a software reset, changes a protection bit when configured, and
+sets up IRQ handling. A trial load of `tcpc_mt6375` would therefore be an
+active hardware experiment even without a cable. It must not be described
+as a read-only inventory step. No Type-C or charging module was loaded in
+the V46 inventory work.
+
 ## Repeatable guarded procedure
 
 The private image and logs stay under `/noobia/lynx`; never use a similarly

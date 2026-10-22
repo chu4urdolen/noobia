@@ -35,12 +35,33 @@ A three-second read-only collector dry run on live V33 Alpine correctly saw
 Alpine PID 1 but rejected V33 as V44:
 `logs/v44-health-window-1792674657320489839/result.json`.
 
-**V44 has not been flashed or booted.** V33 is installed and Alpine/OpenRC
-last verified running. A controlled trial needs a fresh pinned collector
-started before a fresh Fastboot preflight, a guarded flash of **only `boot_a`**,
-a separate reboot, and immediate USB unplug. Observe the exact V44 `/init`
-before the handoff, then the same boot ID with OpenRC PID 1, persistent ext4
-root, Wi-Fi SSH, and passing health. The bounded shutdown or failure should
-be followed by exact V33 `boot_a` restoration, Alpine verification, and
-checksummed persistent-stage retrieval. Preserve slot B, bootloader,
-recovery, and all other partitions.
+## First hardware trial, 2026-10-22
+
+V44 was flashed **only to `boot_a`** after fresh Fastboot preflight, then
+rebooted separately. The guarded flash and reboot receipts are
+`logs/v44-boot-a-trial-1792676567481849323/result.json` and
+`logs/v44-boot-a-trial-1792676577664867780/result.json`. The prestarted
+pinned collector saw no SSH candidate over 456 seconds:
+`logs/v44-health-window-1792676563381362480/result.json`. The host kernel
+recorded USB disconnect at the Fastboot reboot and no reappearance until
+Lynx returned to Fastboot about six minutes later.
+
+Read-only PL/LK was saved at `logs/pllk-1792677043594151938.json`, then exact
+V33 was restored **only to `boot_a`** with no implicit reboot:
+`logs/v34-boot-a-trial-1792677046147348297/result.json`. Its subsequent
+unplugged boot reached pinned Wi-Fi SSH, passed V31 RAM health, and ran
+Alpine/OpenRC as PID 1:
+`logs/v33-alpine-pid1-verification-1792677239930378372/result.json`.
+
+The V33 Alpine boot read and checksum-verified V44's persistent stage record
+at `logs/v38-persistent-capture-1792677243171127255/result.json`. V44 boot ID
+`30262823-2e51-441b-a9f3-1ceec5ff7a0a` recorded `START` at uptime 8 and
+`WIFI_FAILED` at uptime 98. There is no `WIFI_READY`, health, or handoff
+stage. This localizes the first trial to the Wi-Fi worker path; it provides
+**no hardware evidence about the new OpenRC handoff branch**. The precise
+Wi-Fi failure condition is unknown because the current persistent format
+stores stage names but not the worker's RAM log. A repeat of the exact image
+could distinguish a transient Wi-Fi failure, but a repeated failure would
+need richer persistent Wi-Fi diagnostics. V33 Alpine is installed and
+running. Slot B, bootloader, recovery, and all other partitions were
+preserved.

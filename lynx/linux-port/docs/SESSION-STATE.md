@@ -1,5 +1,18 @@
 # Current Lynx handoff state
 
+## Current status — V44 Wi-Fi failed before handoff; V33 Alpine restored
+
+The first guarded V44 trial wrote **only `boot_a`** and rebooted separately.
+Its pinned SSH collector saw no contact. After Fastboot returned, exact V33
+was restored only to `boot_a`; pinned SSH, V31 health, and Alpine/OpenRC PID 1
+passed: `logs/v33-alpine-pid1-verification-1792677239930378372/result.json`.
+The recovered checksummed V44 boot record has `START` at uptime 8 and
+`WIFI_FAILED` at 98, with no health or OpenRC stage:
+`logs/v38-persistent-capture-1792677243171127255/result.json`. V44's new
+handoff branch has therefore **not** been hardware-tested. A single Wi-Fi
+failure could be transient; its exact worker reason was held only in RAM.
+See `docs/V44-LOCAL-OPENRC-PROBE.md`.
+
 ## Offline next candidate — V44 bounded local OpenRC probe
 
 V44 is built and independently validated offline. It derives from proven
@@ -8,8 +21,8 @@ primary `/init`: after three passing health checks, call the already
 packaged local authority OpenRC helper. It retains the 420-second outer
 power-off timer, so even a successful handoff remains a bounded trial.
 The guarded `boot_a` trial `--prepare` and a pinned collector dry run passed.
-**V44 has not been flashed or booted.** V33 Alpine remains installed and
-verified. See `docs/V44-LOCAL-OPENRC-PROBE.md`.
+This paragraph records the preparation state before the first hardware
+trial above. See `docs/V44-LOCAL-OPENRC-PROBE.md`.
 
 ## Current status — V43 bounded health passed; V33 Alpine restored
 

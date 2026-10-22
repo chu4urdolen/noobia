@@ -12,7 +12,8 @@ LINE = re.compile(r'(LXBD1) (' + BOOT_ID.pattern +
                   r'HEALTH_FAIL_PRECHECK|HEALTH_FAIL_CHILD|HEALTH_FAIL_WATCHER|'
                   r'HEALTH_FAIL_BATTERY|HEALTH_FAIL_THERMAL|'
                   r'HEALTH_FAIL_POSTCHECK|HEALTH_FAIL_LOG|'
-                  r'HEALTH_READY|CHARGER_ON|END) ([0-9a-f]{64})')
+                  r'HEALTH_READY|HANDOFF_BEGIN|HANDOFF_REFUSED|'
+                  r'CHARGER_ON|END) ([0-9a-f]{64})')
 
 
 def parse(path):
@@ -45,7 +46,7 @@ def parse(path):
             'bytes': len(raw), 'events': events,
             'last_stage': events[-1]['stage'],
             'terminal_marker_seen': events[-1]['stage'] in
-            ('END', 'CHARGER_ON', 'WIFI_FAILED', 'HEALTH_FAILED',
+            ('END', 'HANDOFF_REFUSED', 'CHARGER_ON', 'WIFI_FAILED', 'HEALTH_FAILED',
              'HEALTH_FAIL_PRECHECK', 'HEALTH_FAIL_CHILD',
              'HEALTH_FAIL_WATCHER', 'HEALTH_FAIL_BATTERY',
              'HEALTH_FAIL_THERMAL', 'HEALTH_FAIL_POSTCHECK',

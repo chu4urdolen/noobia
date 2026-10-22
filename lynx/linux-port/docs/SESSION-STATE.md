@@ -1,5 +1,16 @@
 # Current Lynx handoff state
 
+## Offline next candidate — V44 bounded local OpenRC probe
+
+V44 is built and independently validated offline. It derives from proven
+V43, keeps its complete supplement and stock kernel, and changes only
+primary `/init`: after three passing health checks, call the already
+packaged local authority OpenRC helper. It retains the 420-second outer
+power-off timer, so even a successful handoff remains a bounded trial.
+The guarded `boot_a` trial `--prepare` and a pinned collector dry run passed.
+**V44 has not been flashed or booted.** V33 Alpine remains installed and
+verified. See `docs/V44-LOCAL-OPENRC-PROBE.md`.
+
 ## Current status — V43 bounded health passed; V33 Alpine restored
 
 V43 was flashed only to `boot_a` after offline validation and fresh Fastboot

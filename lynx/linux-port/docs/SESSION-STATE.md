@@ -1,5 +1,15 @@
 # Current Lynx handoff state
 
+## Offline next candidate — V46 persistent Alpine startup
+
+V46 derives from the autonomous V45 handoff and cancels the outer startup
+timer only after three passing health checks, a checksummed handoff marker,
+and successful local helper load. It keeps the independent health watchers,
+charger guard, and parent power-off fallback. The builder, independent
+validator, guarded `boot_a` trial preparation, and parser fixture passed.
+**V46 has not been flashed or booted.** V45's exact V33 restoration remains
+pending Fastboot on USB. See `docs/V46-PERSISTENT-ALPINE.md`.
+
 ## Current status — V45 autonomous Alpine handoff passed; rollback pending
 
 V45 was flashed only to `boot_a` after offline validation and fresh Fastboot

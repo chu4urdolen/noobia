@@ -33,12 +33,12 @@ Alpine/OpenRC PID 1 passed:
 `logs/v33-alpine-pid1-verification-1792682811956277416/result.json`.
 The recovered checksum-verified persistent trace contains no new V46 boot
 record: `logs/v38-persistent-capture-1792682815070129601/result.json`.
-But the pinned V33 contact's pstore snapshot retained V46's previous-boot
-capsules. Validated stages end at UFS probe begin; the console's last visible
-tracepoint is `ufs_mtk_setup_ref_clk+0xa0`, before probe return:
-`logs/pstore-previous-boot-1792683031840922664.json`. This early stock
-storage path precedes V46's changed timer code; the exact stop instruction
-is not proven.
+The pinned V33 contact's pstore snapshot holds an **older** UFS trace with
+token `69adf9d14707d848063b861b8f248748`, which differs from exact V46's
+`c4086e17473b3a2b59f233cfb0d98438`:
+`logs/pstore-retained-token-1792697932761260892.json`. The earlier
+`logs/pstore-previous-boot-1792683031840922664.json` misattributed it to
+V46 and is superseded. The first V46 stop point remains unknown.
 **V33 is installed and Alpine is running.** See `docs/V46-PERSISTENT-ALPINE.md`.
 
 ## Current status — V45 recovered; V33 Alpine running

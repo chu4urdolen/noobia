@@ -59,22 +59,18 @@ The checksum-verified persistent log capture
 same twelve boot IDs as the previous capture, with **no new V46 record**.
 The pinned V33 contact also saved read-only pstore immediately after recovery:
 `logs/dynamic-pinned-contact-1792682635409608967/pstore-and-boot.raw`.
-Its **previous-boot** token `69adf9d14707d848063b861b8f248748`
-differs from the current V33 token. Checksum-valid pmsg stages show PID 1's
-early guard at uptime 0, UFS probe preparation at uptime 3, then UFS probe
-begin. The corresponding console ends at tracepoint 4 of
-`ufs_mtk_setup_ref_clk` (`+0xa0`) and has no probe-return marker:
-`logs/pstore-previous-boot-1792683031840922664.json`. That is the last
-visible point, **not** an instruction-level proof of the hang location. It
-establishes that V46 reached the stock kernel and storage initialization but
-did not reach its later Wi-Fi or timer-cancellation path. The same early UFS
-reference-clock problem was observed in older bounded trials; the V46 primary
-`/init` change is downstream of it. The PL/LK snapshot covers the later
-Fastboot entry and does not refine this point.
+Its retained token `69adf9d14707d848063b861b8f248748` belongs to an
+**older experiment**, documented before this trial. Exact V46's ramdisk token
+is `c4086e17473b3a2b59f233cfb0d98438`. A corrected local provenance
+check explicitly excludes the old pstore trace from V46:
+`logs/pstore-retained-token-1792697932761260892.json`. The earlier
+`logs/pstore-previous-boot-1792683031840922664.json` misattributed that old
+trace and is superseded. The PL/LK snapshot covers the later Fastboot entry.
+The first V46 attempt's stop point remains **unknown**; absence of SSH and a
+persistent stage record does not locate it.
 
-Do not describe this trial as a successful autonomous or persistent boot.
-Preserve V33 as the working image until a further controlled trial or a
-specific early UFS remedy is ready.
+The second trial below established successful autonomous Alpine. The first
+trial is evidence of startup variability, not of a particular UFS failure.
 
 ## Second hardware trial, 2026-10-22
 
@@ -137,6 +133,7 @@ V33 with `sudo -n python3 tools/lynx_boot_a_v34_trial.py --restore-v33`.
 That command does **not** reboot. Start a fresh pinned V33 contact collector,
 run fresh Fastboot preflight, reboot, and unplug immediately. Once Wi-Fi SSH
 appears, run the V31 RAM health trial, guarded V33 OpenRC arm, and Alpine PID 1
-verifier before treating recovery as complete. The first V46 failure's
-previous-boot pstore was saved automatically by the V33 contact collector;
-`analyze_previous_boot_pstore.py` decoded it without contacting the phone.
+verifier before treating recovery as complete. The V33 contact collector saves
+read-only pstore. `analyze_retained_pstore.py` checks its retained token against
+the exact candidate image before any boot attribution; a different or reused
+static token cannot prove which recent boot produced the trace.

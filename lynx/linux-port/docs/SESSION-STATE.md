@@ -1,6 +1,29 @@
 # Current Lynx handoff state
 
-## Current status — V46 trial inconclusive; V33 Alpine recovered
+## Current status — V46 autonomous Alpine running beyond startup deadline
+
+The second guarded V46 trial wrote **only `boot_a`**, then rebooted with USB
+unplugged. Pinned Wi-Fi SSH verified exact V46 `/init` on boot ID
+`917238d2-f2c3-479b-9ded-6f677c474763`. Its checksum-verified persistent
+record has `HEALTH_READY` at uptime 211 and `HANDOFF_BEGIN` plus
+`TIMER_CANCELLED` at 221:
+`logs/v46-same-boot-stage-1792697419990383186/result.json`. Independent
+verification passed for autonomous Alpine 3.24.2/OpenRC PID 1, persistent
+ext4 root, health service, Wi-Fi SSH, Python, and Git:
+`logs/v46-autonomous-alpine-verification-1792697396638346147/result.json`.
+Alpine-owned pinned SSH on port 2222 passed independently:
+`logs/v46-alpine-native-ssh-1792697679963651084/result.json` (BusyBox rescue
+SSH stays on port 22).
+The bounded observer finished with 233 complete same-boot SSH snapshots,
+one timeout followed by recovery, and Alpine PID 1 through uptime 672.51,
+beyond V45's uptime-428 startup-timer boundary:
+`logs/v46-health-window-1792697094431894340/result.json`.
+**V46 is installed and Alpine is running.**
+Cold boot reliability, the intermittent early UFS probe, and sustained
+charging remain unproved. Exact V33/V19 `boot_a` rollback images are intact.
+See `docs/V46-PERSISTENT-ALPINE.md`.
+
+## Earlier status — first V46 trial stopped early; V33 recovered
 
 The first guarded V46 trial wrote **only `boot_a`** and rebooted unplugged.
 Its pinned observer saw no V46 SSH contact during the first five minutes.

@@ -75,3 +75,68 @@ Fastboot entry and does not refine this point.
 Do not describe this trial as a successful autonomous or persistent boot.
 Preserve V33 as the working image until a further controlled trial or a
 specific early UFS remedy is ready.
+
+## Second hardware trial, 2026-10-22
+
+After exact V33 recovery, a second fresh Fastboot preflight passed and the
+same V46 image was written **only to `boot_a`**. A separate Fastboot reboot
+and immediate USB unplug started boot ID
+`917238d2-f2c3-479b-9ded-6f677c474763`:
+`logs/v46-boot-a-trial-1792697098131135652/result.json` and
+`logs/v46-boot-a-trial-1792697105660523171/result.json`.
+The pinned Wi-Fi collector verified exact V46 `/init`. The checksum-verified
+persistent stage record has `WIFI_READY` at uptime 99, `HEALTH_READY` at 211,
+`HANDOFF_BEGIN` and `TIMER_CANCELLED` at 221:
+`logs/v46-same-boot-stage-1792697419990383186/result.json`.
+An independent pinned SSH check verified Alpine 3.24.2/OpenRC as PID 1,
+persistent ext4 root, running health service, Wi-Fi SSH, Python, and Git,
+with no host arming:
+`logs/v46-autonomous-alpine-verification-1792697396638346147/result.json`.
+Alpine's own OpenRC Dropbear service was independently reached over pinned
+Wi-Fi SSH on port 2222, with the same boot ID and Alpine root:
+`logs/v46-alpine-native-ssh-1792697679963651084/result.json`. Rescue SSH
+remains on port 22.
+The bounded observer completed 234 samples: 233 complete SSH snapshots with
+the same boot ID, one timeout followed by recovery, and Alpine PID 1 from
+uptime 222.83 through the final uptime 672.51. This is beyond V45's
+uptime-428 contact loss at the startup timer boundary:
+`logs/v46-health-window-1792697094431894340/result.json`. A second
+independent health/Alpine verifier passed after uptime 500:
+`logs/v46-autonomous-alpine-verification-1792697630182923996/result.json`.
+An offline verifier rechecked every complete sample hash, same boot ID,
+monotonic uptime, and Alpine at uptime 672.51:
+`logs/v46-window-verification-1792697834605535104.json`.
+
+**V46 is installed on `boot_a` and Alpine is running autonomously.** This
+proves the startup timer was canceled and no immediate fallback stopped the
+session. It does not yet prove a cold boot after full power-off, reliable UFS
+startup on every attempt, sustained charging, or operation without the
+independent battery and thermal guards. Exact V33 and V19 rollback images
+remain available; slot B, bootloader, recovery, and other partitions were
+preserved.
+
+## Repeatable guarded procedure
+
+The private image and logs stay under `/noobia/lynx`; never use a similarly
+named image for another model. From `/noobia/lynx`, with Lynx in Fastboot on
+USB, run the offline validator and `--prepare`, then start the pinned V46
+collector. Pass its printed receipt to `--flash-v46`; after a successful
+`v46-flashed-no-reboot` receipt, pass that receipt to
+`--reboot-after-v46`. **Unplug USB immediately after the reboot command**;
+the existing charger guard can shut down an attached trial. The guarded trial
+performs fresh identity, slot, and partition-size preflight at both steps.
+Verify exact `/init`, same-boot Alpine/OpenRC, and the checksummed
+`TIMER_CANCELLED` record with `verify_persistent_alpine_v46.py` and
+`capture_v46_same_boot_trace.py`. Keep the collector running beyond uptime
+428. These commands write only `boot_a` at the flash step; the observer and
+verifiers are read-only.
+
+If V46 does not reach pinned SSH, return Lynx physically to Fastboot on USB,
+capture `sudo -n python3 tools/lynx_pllk_log.py --connect`, and restore exact
+V33 with `sudo -n python3 tools/lynx_boot_a_v34_trial.py --restore-v33`.
+That command does **not** reboot. Start a fresh pinned V33 contact collector,
+run fresh Fastboot preflight, reboot, and unplug immediately. Once Wi-Fi SSH
+appears, run the V31 RAM health trial, guarded V33 OpenRC arm, and Alpine PID 1
+verifier before treating recovery as complete. The first V46 failure's
+previous-boot pstore was saved automatically by the V33 contact collector;
+`analyze_previous_boot_pstore.py` decoded it without contacting the phone.

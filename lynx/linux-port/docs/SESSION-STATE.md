@@ -1,5 +1,14 @@
 # Current Lynx handoff state
 
+## Offline next candidate — V45 Wi-Fi failure code and local OpenRC probe
+
+V45 is built and independently validated offline. It keeps V44's bounded
+local OpenRC handoff but, if Wi-Fi fails first, records the Wi-Fi worker's
+numeric result or the absence of a result in the checksummed persistent
+stage log. The guarded trial `--prepare`, parser fixture, and read-only
+pinned collector dry run passed. **V45 has not been flashed or booted.**
+V33 Alpine is installed and verified. See `docs/V45-WIFI-FAILURE-CODE.md`.
+
 ## Current status — V44 Wi-Fi failed before handoff; V33 Alpine restored
 
 The first guarded V44 trial wrote **only `boot_a`** and rebooted separately.

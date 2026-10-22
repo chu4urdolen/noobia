@@ -1,17 +1,22 @@
 # Current Lynx handoff state
 
-## Current status — V41 health contact lost; V33 recovery pending
+## Current status — V41 health ready, contact lost later; V33 recovered
 
 V41's parent-only retry image was flashed **only to `boot_a`** after offline
 validation and fresh Fastboot preflight. Pinned Wi-Fi SSH verified exact V41
-`/init` through uptime 207.94. The health child reported zero and ready, but
-the next sample lost contact before the parent outcome was captured. The
-collector is `logs/v41-health-window-1792618547838074325/result.json`.
-**V41 is still the last image written to `boot_a`.** Do not assume V33 is
-installed. Await Fastboot on USB; first capture read-only PL/LK logs, restore
-exact V33 only to `boot_a`, reboot unplugged, verify Alpine/OpenRC PID 1, then
-retrieve the V41 checksummed stage record. Do not flash another diagnostic
-before recovery. See `docs/V41-PRIMARY-RETRY.md`.
+`/init` through uptime 207.94; the next sample lost contact. After Fastboot
+returned, a read-only PL/LK log was saved and exact V33 was restored only to
+`boot_a`. Pinned rescue SSH, V31 RAM health, and Alpine/OpenRC PID 1 all
+passed: `logs/v33-alpine-pid1-verification-1792659494972296336/result.json`.
+**V33 is installed and Alpine is running.**
+
+The checksummed persistent capture
+`logs/v38-persistent-capture-1792659498990866325/result.json` found four V41
+boot IDs. All reached `HEALTH_READY` at uptime 196–208; none recorded the
+planned `END` at 300. This proves parent health startup succeeded, while the
+post-readiness loss remains unclassified. The current V41 loop can request
+power-off on a single failed supervisor sample without saving a stage reason.
+Instrument that path before another flash. See `docs/V41-PRIMARY-RETRY.md`.
 
 ## Current status — V40 gave no stage record; V33 Alpine recovered
 

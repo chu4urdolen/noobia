@@ -34,7 +34,7 @@ the exact V33 restore command held ready. The preboot
 live V33, capturing one pinned SSH sample and correctly reporting no V41
 candidate: `logs/v41-health-window-1792618047207811799/result.json`.
 
-## Controlled hardware trial — recovery pending
+## Controlled hardware trial — V33 recovered
 
 After a fresh Fastboot identity/layout preflight, V41 was flashed **only to
 `boot_a`** and rebooted with the collector already running. USB was physically
@@ -47,14 +47,27 @@ The next SSH sample failed, and no later contact appeared. Raw samples and
 the checksummed collector receipt are at
 `logs/v41-health-window-1792618547838074325/`.
 
-The parent result is **not yet known**. V41's persistent stage file must be
-recovered after restoring V33; loss of SSH alone cannot distinguish a deliberate
-health-failure power-off from another reset or network loss. Fastboot had not
-yet appeared on USB when this note was written. V41 is still the last image
-written to `boot_a`; exact V33 rollback is ready. First capture read-only
-PL/LK logs if Fastboot becomes available, then restore V33 only to `boot_a`,
-reboot unplugged, verify Alpine PID 1, and retrieve the persistent stage file.
-Do not start another diagnostic flash before recovery.
+After Fastboot returned, the read-only PL/LK log was saved at
+`logs/pllk-1792659321026068338.json`. Exact V33 was restored **only to
+`boot_a`** at `logs/v34-boot-a-trial-1792659331772439906/result.json`, then
+rebooted unplugged. Pinned SSH, V31 RAM health, and Alpine/OpenRC PID 1 passed:
+`logs/v33-alpine-pid1-verification-1792659494972296336/result.json`.
+
+The recovered, checksum-verified persistent capture is
+`logs/v38-persistent-capture-1792659498990866325/result.json`. It found four
+V41 boot IDs, each reaching `HEALTH_READY` at uptime 196–208. The observed
+boot ID `0ee541c6-8c18-4a7b-84cd-a6713d7a4e04` recorded `HEALTH_READY`
+at uptime 208, immediately after the last successful SSH sample at 207.94.
+None of the four V41 records contains `END` at uptime 300. This proves the
+parent health startup reached success in these boots, but does not prove that
+the retry branch was needed. It narrows the lost-contact problem to the
+post-readiness observation window or its final stage writer; the exact stop
+is still unknown. V41's post-readiness loop requests power-off immediately if
+one supervisor `--once` sample fails, without a persistent failure marker.
+That path is a plausible explanation, not yet a verified cause.
+
+V33 is installed and Alpine was last verified running. Do not repeat V41;
+instrument the post-readiness path before another diagnostic flash.
 
 The trial procedure is to flash only `boot_a`
 after a fresh Fastboot identity/layout check, capture the entire unplugged

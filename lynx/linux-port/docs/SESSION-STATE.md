@@ -1,5 +1,15 @@
 # Current Lynx handoff state
 
+## Offline next candidate — V42 post-readiness trace, unflashed
+
+V42 is an exact V41-derived image with one `/init` line changed: a failed
+post-readiness supervisor sample now appends checksummed
+`HEALTH_FAIL_POSTCHECK` before power-off. The stock kernel, V41 health startup,
+and entire V39 supplement are unchanged. The builder, independent validator,
+guarded trial preparation, and live V33 pinned collector dry run passed.
+**V42 has not been flashed or booted.** V33 Alpine remains installed and
+verified. See `docs/V42-POST-READY-TRACE.md`.
+
 ## Current status — V41 health ready, contact lost later; V33 recovered
 
 V41's parent-only retry image was flashed **only to `boot_a`** after offline

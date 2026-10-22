@@ -1,5 +1,17 @@
 # Current Lynx handoff state
 
+## Current status — V45 recovered; V33 Alpine running
+
+After the successful bounded V45 autonomous handoff, read-only PL/LK was
+captured and exact V33 restored **only to `boot_a`**:
+`logs/pllk-1792680361644628571.json` and
+`logs/v34-boot-a-trial-1792680364357344162/result.json`. Unplugged boot,
+pinned Wi-Fi SSH, V31 RAM health, guarded handoff, and Alpine/OpenRC PID 1
+passed: `logs/v33-alpine-pid1-verification-1792680518669188817/result.json`.
+The recovered checksummed V45 record confirms stages through `HANDOFF_BEGIN`:
+`logs/v38-persistent-capture-1792680522879753845/result.json`.
+**V33 is installed and Alpine is running.** V46 remains offline and unflashed.
+
 ## Offline next candidate — V46 persistent Alpine startup
 
 V46 derives from the autonomous V45 handoff and cancels the outer startup
@@ -7,10 +19,12 @@ timer only after three passing health checks, a checksummed handoff marker,
 and successful local helper load. It keeps the independent health watchers,
 charger guard, and parent power-off fallback. The builder, independent
 validator, guarded `boot_a` trial preparation, and parser fixture passed.
-**V46 has not been flashed or booted.** V45's exact V33 restoration remains
-pending Fastboot on USB. See `docs/V46-PERSISTENT-ALPINE.md`.
+**V46 has not been flashed or booted.** Exact V33 has been restored and Alpine
+verified. The V46 pinned observer correctly rejected live V33 as V46 while
+seeing Alpine PID 1: `logs/v46-health-window-1792680522964230929/result.json`.
+See `docs/V46-PERSISTENT-ALPINE.md`.
 
-## Current status — V45 autonomous Alpine handoff passed; rollback pending
+## V45 autonomous Alpine handoff passed and recovered
 
 V45 was flashed only to `boot_a` after offline validation and fresh Fastboot
 preflight. Pinned SSH verified exact V45 `/init` and the same boot ID reached
@@ -19,9 +33,8 @@ Independent proof verified Alpine 3.24.2/OpenRC as PID 1, health service,
 persistent root, Wi-Fi SSH, and no host arming marker:
 `logs/v45-autonomous-alpine-verification-1792678596444971030/result.json`.
 The collector retained Alpine SSH through uptime 428.30, then lost contact
-at the expected bounded timer boundary. **V45 remains the last image written
-to `boot_a`; exact V33 restoration is pending Fastboot on USB.** See
-`docs/V45-WIFI-FAILURE-CODE.md`.
+at the expected bounded timer boundary. Exact V33 restoration and Alpine
+verification are recorded above. See `docs/V45-WIFI-FAILURE-CODE.md`.
 
 ## Offline next candidate — V45 Wi-Fi failure code and local OpenRC probe
 

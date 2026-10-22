@@ -45,11 +45,16 @@ through uptime 428.30, followed by SSH loss at the expected 420-second
 outer timer boundary (started near uptime 8):
 `logs/v45-health-window-1792678292672890646/result.json`.
 
-**Recovery is pending.** V45 is the last image written to `boot_a`.
-After Lynx returns to Fastboot on USB, capture read-only PL/LK, restore exact
-V33 **only to `boot_a`**, boot unplugged, and verify Alpine. The timer
-boundary is consistent with planned shutdown, but its exact final command
-was not captured before SSH loss. V45 proves autonomous local handoff in a
-bounded trial; a persistent daily boot still needs to cancel the outer timer
-only after this health and handoff proof. Preserve slot B, bootloader,
-recovery, and all other partitions.
+The read-only PL/LK capture is
+`logs/pllk-1792680361644628571.json`. Exact V33 was restored **only to
+`boot_a`** in `logs/v34-boot-a-trial-1792680364357344162/result.json`.
+After an unplugged reboot, pinned Wi-Fi SSH, V31 RAM health, guarded handoff,
+and Alpine/OpenRC PID 1 passed:
+`logs/v33-alpine-pid1-verification-1792680518669188817/result.json`.
+The recovered, checksum-verified V45 record agrees with the live trace through
+`HANDOFF_BEGIN`: `logs/v38-persistent-capture-1792680522879753845/result.json`.
+The timer boundary is consistent with planned shutdown, but its exact final
+command was not captured before SSH loss. V45 proves autonomous local handoff
+in a bounded trial; a persistent daily boot still needs to cancel the outer
+timer only after this health and handoff proof. Slot B, bootloader, recovery,
+and all other partitions were preserved.

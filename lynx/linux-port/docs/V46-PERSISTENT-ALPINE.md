@@ -31,9 +31,13 @@ behavior in unlocked and locked cases. The guarded `boot_a` trial
 `--prepare` passed. A local parser fixture accepted checksummed
 `TIMER_CANCELLED` as a nonterminal stage.
 
-**V46 has not been flashed or booted.** V45 was the last image written to
-`boot_a` at the time of preparation and its exact V33 restoration was
-pending physical Fastboot. Restore and verify V33 first. A later controlled
+**V46 has not been flashed or booted.** After preparation, read-only PL/LK
+was captured and exact V33 restored **only to `boot_a`**; pinned Wi-Fi SSH,
+V31 RAM health, guarded handoff, and Alpine/OpenRC PID 1 passed:
+`logs/v33-alpine-pid1-verification-1792680518669188817/result.json`.
+The V46 observer dry run correctly rejected live V33 as V46 while detecting
+Alpine PID 1: `logs/v46-health-window-1792680522964230929/result.json`.
+A controlled
 V46 trial needs fresh Fastboot preflight and pinned collector before flashing
 **only `boot_a`**, a separate reboot, prompt USB unplug, exact `/init` and
 same-boot Alpine verification, `TIMER_CANCELLED` record, and observation

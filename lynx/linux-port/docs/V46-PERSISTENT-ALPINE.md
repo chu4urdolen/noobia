@@ -111,6 +111,35 @@ independent battery and thermal guards. Exact V33 and V19 rollback images
 remain available; slot B, bootloader, recovery, and other partitions were
 preserved.
 
+## Supervised OpenRC reboot
+
+With V46 still healthy and USB unplugged, Alpine's actual
+`/sbin/openrc-shutdown --dry-run --reboot now` passed. A guarded request then
+sent `/sbin/openrc-shutdown --reboot now` through Alpine-owned pinned SSH on
+port 2222, from old boot ID `917238d2-f2c3-479b-9ded-6f677c474763`:
+`logs/v46-openrc-reboot-1792698093555567903/result.json`. This is a normal
+OS reboot, so OpenRC may sync the mounted ext4 root; no direct partition or
+Fastboot operation was issued.
+
+The next pinned collector observed a **new** boot ID,
+`135b8a44-fc09-427c-9b5f-53ac4add7527`, exact V46 `/init`, Wi-Fi SSH,
+and automatic Alpine/OpenRC PID 1 by uptime 230. The same-boot health and
+Alpine verifier passed:
+`logs/v46-autonomous-alpine-verification-1792698342972918504/result.json`.
+Its checksummed record again contains `HEALTH_READY`, `HANDOFF_BEGIN`, and
+`TIMER_CANCELLED`:
+`logs/v46-same-boot-stage-1792698347517032429/result.json`.
+Alpine-owned SSH on port 2222 also passed:
+`logs/v46-alpine-native-ssh-1792698347516583825/result.json`.
+The bounded reboot collector was stopped after 155 complete same-boot SSH
+samples, with Alpine PID 1 through uptime 453.95, beyond the old timer
+boundary: `logs/v46-health-window-1792698097614118989/result.json`.
+An offline verifier checked all sample hashes, old/new boot IDs, stage and
+native SSH receipts: `logs/v46-reboot-verification-1792698593054541557.json`.
+This proves a second autonomous **warm reboot**, not a full power-off cold
+start. The first hardware trial's unexplained no-contact outcome still limits
+claims about every-start reliability.
+
 ## Repeatable guarded procedure
 
 The private image and logs stay under `/noobia/lynx`; never use a similarly

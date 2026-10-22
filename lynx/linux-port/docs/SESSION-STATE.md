@@ -1,5 +1,24 @@
 # Current Lynx handoff state
 
+## Current status — V46 survived supervised OpenRC reboot
+
+From verified V46 Alpine/OpenRC on port 2222, a guarded OpenRC reboot was
+requested with USB unplugged:
+`logs/v46-openrc-reboot-1792698093555567903/result.json`. Pinned Wi-Fi SSH
+returned on **new** boot ID `135b8a44-fc09-427c-9b5f-53ac4add7527`.
+Exact V46 `/init`, automatic Alpine 3.24.2/OpenRC PID 1, health service,
+checksummed `TIMER_CANCELLED` record, and Alpine-owned SSH on port 2222 all
+passed:
+`logs/v46-autonomous-alpine-verification-1792698342972918504/result.json`,
+`logs/v46-same-boot-stage-1792698347517032429/result.json`, and
+`logs/v46-alpine-native-ssh-1792698347516583825/result.json`.
+**V46 remains installed and Alpine is running on the second boot.** The
+bounded observer recorded 155 complete same-boot SSH samples through Alpine
+uptime 453.95, past the old timer. Cross-receipt and sample-hash verification:
+`logs/v46-reboot-verification-1792698593054541557.json`.
+This proves a supervised warm reboot; a full power-off cold start and
+every-start reliability remain unproved.
+
 ## Current status — V46 autonomous Alpine running beyond startup deadline
 
 The second guarded V46 trial wrote **only `boot_a`**, then rebooted with USB

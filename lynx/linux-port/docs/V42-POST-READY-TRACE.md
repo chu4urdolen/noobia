@@ -25,8 +25,24 @@ pinned collector dry run against live V33 captured one sample and correctly
 reported `candidate_seen=false` at
 `logs/v42-health-window-1792659683224771990/result.json`.
 
-**V42 has not been flashed or booted.** V33 is installed, and Alpine/OpenRC
-PID 1 was last verified running unplugged. A hardware trial would use
+## Controlled hardware trial — recovery pending
+
+After fresh Fastboot preflight, V42 was flashed **only to `boot_a`** and
+rebooted with the pinned collector already listening. The Nexus USB journal
+confirmed disconnection at the cue. The collector verified exact V42 `/init`
+and pinned Wi-Fi SSH at `192.168.100.6` in 90 successful samples, through
+phone uptime 210.33. The health child had reported zero and created its ready
+marker. The next SSH sample failed; no contact returned by collector elapsed
+299 seconds. Raw samples and receipt:
+`logs/v42-health-window-1792660627066082992/`.
+
+**V42 is still the last image written to `boot_a`.** Its parent outcome and
+new failure marker are not yet known. Wait for Fastboot on USB. First save a
+read-only PL/LK log, then restore exact V33 only to `boot_a`, reboot unplugged,
+verify Alpine/OpenRC PID 1, and retrieve the checksummed stage file. Do not
+start another diagnostic flash before recovery.
+
+The established hardware procedure uses
 `tools/capture_v42_health_window.py` before the guarded
 `tools/lynx_boot_a_v42_trial.py` flash of `boot_a` only, followed by a
 separate reboot and prompt USB unplug. Capture read-only PL/LK if contact

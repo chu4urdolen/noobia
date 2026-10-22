@@ -1,14 +1,18 @@
 # Current Lynx handoff state
 
-## Offline next candidate — V42 post-readiness trace, unflashed
+## Current status — V42 contact lost; V33 recovery pending
 
 V42 is an exact V41-derived image with one `/init` line changed: a failed
-post-readiness supervisor sample now appends checksummed
-`HEALTH_FAIL_POSTCHECK` before power-off. The stock kernel, V41 health startup,
-and entire V39 supplement are unchanged. The builder, independent validator,
-guarded trial preparation, and live V33 pinned collector dry run passed.
-**V42 has not been flashed or booted.** V33 Alpine remains installed and
-verified. See `docs/V42-POST-READY-TRACE.md`.
+post-readiness supervisor sample appends checksummed
+`HEALTH_FAIL_POSTCHECK` before power-off. It was flashed **only to `boot_a`**
+after offline validation and fresh Fastboot preflight. Pinned Wi-Fi SSH
+verified exact V42 `/init` through uptime 210.33; the health child reported
+zero and ready, but the next sample lost contact. Collector:
+`logs/v42-health-window-1792660627066082992/result.json`. **V42 is still
+the last image written to `boot_a`.** Await Fastboot on USB; save read-only
+PL/LK, restore exact V33 only to `boot_a`, verify Alpine/OpenRC PID 1, then
+retrieve the V42 persistent stage file. Do not flash another diagnostic
+before recovery. See `docs/V42-POST-READY-TRACE.md`.
 
 ## Current status — V41 health ready, contact lost later; V33 recovered
 

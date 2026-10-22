@@ -1,5 +1,17 @@
 # Current Lynx handoff state
 
+## Offline next candidate — V43 three-sample health tolerance, unflashed
+
+V43 changes only primary `/init` from exact V42. In the post-readiness
+observation window it counts consecutive supervisor `--once` failures and
+requests power-off only on the third, matching the independent supervisor's
+existing safety threshold. Success resets the count. All watchers, charger
+guard, 420-second outer timer, final power-off at uptime 300, stock kernel,
+and supplement remain unchanged. The builder, independent validator, guarded
+trial preparation, and pinned collector dry run passed. **V43 has not been
+flashed or booted.** V33 Alpine remains installed and verified. See
+`docs/V43-HEALTH-TOLERANCE.md`.
+
 ## Current status — V42 post-readiness refusal proven; V33 recovered
 
 V42 was flashed **only to `boot_a`** after offline validation and fresh

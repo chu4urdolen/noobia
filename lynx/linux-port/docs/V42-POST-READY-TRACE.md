@@ -25,7 +25,7 @@ pinned collector dry run against live V33 captured one sample and correctly
 reported `candidate_seen=false` at
 `logs/v42-health-window-1792659683224771990/result.json`.
 
-## Controlled hardware trial — recovery pending
+## Controlled hardware trial — cause isolated; V33 recovered
 
 After fresh Fastboot preflight, V42 was flashed **only to `boot_a`** and
 rebooted with the pinned collector already listening. The Nexus USB journal
@@ -36,11 +36,26 @@ marker. The next SSH sample failed; no contact returned by collector elapsed
 299 seconds. Raw samples and receipt:
 `logs/v42-health-window-1792660627066082992/`.
 
-**V42 is still the last image written to `boot_a`.** Its parent outcome and
-new failure marker are not yet known. Wait for Fastboot on USB. First save a
-read-only PL/LK log, then restore exact V33 only to `boot_a`, reboot unplugged,
-verify Alpine/OpenRC PID 1, and retrieve the checksummed stage file. Do not
-start another diagnostic flash before recovery.
+After Fastboot returned, a read-only PL/LK log was saved at
+`logs/pllk-1792667178003560818.json`. Exact V33 was restored **only to
+`boot_a`** at `logs/v34-boot-a-trial-1792667181150978382/result.json`.
+Its first reboot did not reach SSH; Fastboot returned and another read-only
+log was saved at `logs/pllk-1792667478825311987.json`. A second V33 reboot
+reached pinned SSH. V31 RAM health and Alpine/OpenRC PID 1 passed:
+`logs/v33-alpine-pid1-verification-1792667635515102275/result.json`.
+
+The checksum-verified persistent capture
+`logs/v38-persistent-capture-1792667638510281486/result.json` contains three
+V42 boot IDs. All reached `HEALTH_READY` at uptime 209–211 and then recorded
+`HEALTH_FAIL_POSTCHECK` at uptime 210–211. The observed boot ID
+`1bf54de5-08d4-44b7-9878-fde4acef277b` recorded both at uptime 211.
+This **confirms the immediate post-readiness supervisor `--once` check** is
+what requests power-off. It does not identify which inner supervisor condition
+failed. That check is stricter than the independent supervisor's existing
+three-consecutive-failures policy; the parent should use comparable tolerance
+or rely on the independently running supervisor, with its death detected.
+
+V33 is installed and Alpine was last verified running. Do not repeat V42.
 
 The established hardware procedure uses
 `tools/capture_v42_health_window.py` before the guarded

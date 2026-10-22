@@ -1,18 +1,23 @@
 # Current Lynx handoff state
 
-## Current status — V42 contact lost; V33 recovery pending
+## Current status — V42 post-readiness refusal proven; V33 recovered
 
-V42 is an exact V41-derived image with one `/init` line changed: a failed
-post-readiness supervisor sample appends checksummed
-`HEALTH_FAIL_POSTCHECK` before power-off. It was flashed **only to `boot_a`**
-after offline validation and fresh Fastboot preflight. Pinned Wi-Fi SSH
-verified exact V42 `/init` through uptime 210.33; the health child reported
-zero and ready, but the next sample lost contact. Collector:
-`logs/v42-health-window-1792660627066082992/result.json`. **V42 is still
-the last image written to `boot_a`.** Await Fastboot on USB; save read-only
-PL/LK, restore exact V33 only to `boot_a`, verify Alpine/OpenRC PID 1, then
-retrieve the V42 persistent stage file. Do not flash another diagnostic
-before recovery. See `docs/V42-POST-READY-TRACE.md`.
+V42 was flashed **only to `boot_a`** after offline validation and fresh
+Fastboot preflight. Pinned Wi-Fi SSH verified exact V42 `/init` through uptime
+210.33; the next sample lost contact. After Fastboot returned, exact V33 was
+restored only to `boot_a`. Its first reboot lacked SSH, but the second reached
+pinned SSH; V31 RAM health and Alpine/OpenRC PID 1 passed:
+`logs/v33-alpine-pid1-verification-1792667635515102275/result.json`.
+**V33 is installed and Alpine is running.**
+
+The checksum-verified persistent capture
+`logs/v38-persistent-capture-1792667638510281486/result.json` contains three
+V42 boot IDs. All reached `HEALTH_READY` at uptime 209–211 then recorded
+`HEALTH_FAIL_POSTCHECK` within one second. The immediate post-readiness
+supervisor `--once` check requests power-off. Its inner failed condition is
+unknown. Investigate or tolerate isolated samples while retaining the
+independent supervisor's three-consecutive-failure safety policy. See
+`docs/V42-POST-READY-TRACE.md`.
 
 ## Current status — V41 health ready, contact lost later; V33 recovered
 

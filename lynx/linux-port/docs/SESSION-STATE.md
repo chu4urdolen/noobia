@@ -1,19 +1,20 @@
 # Current Lynx handoff state
 
-## Current status — V43 reached health and bounded end; V33 restoration pending
+## Current status — V43 bounded health passed; V33 Alpine restored
 
 V43 was flashed only to `boot_a` after offline validation and fresh Fastboot
 preflight. Pinned Wi-Fi SSH verified exact V43 `/init` and the health child
 reached `HEALTH_READY` at uptime 208.10. Lynx remained reachable through
-uptime 303.11 with passing parent postchecks, then the next sample timed out
-at the planned bounded shutdown. The checksummed persistent `END` stage is
-not yet retrieved. Collector:
-`logs/v43-health-window-1792673512487557123/result.json`.
-**V43 is the last image written to `boot_a`; restore V33 once Lynx is in
-Fastboot on USB.** Then verify Alpine and retrieve the V43 stage record.
-See `docs/V43-HEALTH-TOLERANCE.md`.
+uptime 303.11 with passing parent postchecks, then the next sample timed out.
+The checksum-verified persistent record confirms `END` at uptime 304:
+`logs/v38-persistent-capture-1792674289456124190/result.json`.
+Exact V33 was restored **only to `boot_a`** after read-only PL/LK capture.
+Pinned SSH, V31 RAM health, guarded handoff, and Alpine/OpenRC PID 1 passed:
+`logs/v33-alpine-pid1-verification-1792674286205723296/result.json`.
+**V33 is installed and Alpine is running.** Autonomous handoff is the next
+unproved step. See `docs/V43-HEALTH-TOLERANCE.md`.
 
-## Offline next candidate — V43 three-sample health tolerance, unflashed
+## Earlier preparation — V43 three-sample health tolerance
 
 V43 changes only primary `/init` from exact V42. In the post-readiness
 observation window it counts consecutive supervisor `--once` failures and
@@ -21,8 +22,8 @@ requests power-off only on the third, matching the independent supervisor's
 existing safety threshold. Success resets the count. All watchers, charger
 guard, 420-second outer timer, final power-off at uptime 300, stock kernel,
 and supplement remain unchanged. The builder, independent validator, guarded
-trial preparation, and pinned collector dry run passed. **V43 has not been
-flashed or booted.** V33 Alpine remains installed and verified. See
+trial preparation, and pinned collector dry run passed. This paragraph
+records the preparation state before the successful hardware trial above. See
 `docs/V43-HEALTH-TOLERANCE.md`.
 
 ## Current status — V42 post-readiness refusal proven; V33 recovered

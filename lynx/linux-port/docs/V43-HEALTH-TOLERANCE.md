@@ -39,14 +39,21 @@ Pinned Wi-Fi SSH verified the exact V43 `/init` hash on boot ID
 `HEALTH_READY` at uptime 208.10 seconds. The last complete SSH sample was
 at uptime 303.11 seconds, beyond V42's immediate shutdown at 210–211 and
 V43's planned observation limit of 300. The next SSH sample timed out;
-this is consistent with the planned bounded shutdown, but the persistent
-`END` stage has not yet been retrieved. The last postcheck was
+the recovered checksummed persistent record confirms `END` at uptime 304.
+The last postcheck was
 `LYNX_HEALTH_OK` with 28.5 °C battery and 36.5 °C hottest sampled thermal
 sensor. There were 159 complete SSH samples, plus one timeout, in
 `logs/v43-health-window-1792673512487557123/`.
 
-**Recovery remains pending.** V43 is the last image written to `boot_a`.
-When Lynx is back in Fastboot on USB, capture the read-only PL/LK log,
-restore exact V33 **only to `boot_a`**, reboot unplugged, verify Alpine PID 1,
-then retrieve the checksummed V43 persistent stage record. Preserve slot B,
-bootloader, recovery, and all other partitions.
+The read-only PL/LK log was saved at `logs/pllk-1792674120413073823.json`.
+Exact V33 was restored **only to `boot_a`**, without an implicit reboot:
+`logs/v34-boot-a-trial-1792674123467242532/result.json`. A separate
+Fastboot reboot, pinned Wi-Fi SSH, V31 RAM health, guarded handoff, and
+Alpine/OpenRC PID 1 all passed:
+`logs/v33-alpine-pid1-verification-1792674286205723296/result.json`.
+The V43 boot-ID record, including the `END` stage, was independently read
+and checksum verified at
+`logs/v38-persistent-capture-1792674289456124190/result.json`.
+**V33 is installed and Alpine is running.** V43's bounded health observation
+passed; autonomous Alpine handoff remains the next unproved step. Slot B,
+bootloader, recovery, and all other partitions were preserved.

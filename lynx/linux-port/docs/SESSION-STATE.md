@@ -1,13 +1,26 @@
 # Current Lynx handoff state
 
+## Current status — V45 autonomous Alpine handoff passed; rollback pending
+
+V45 was flashed only to `boot_a` after offline validation and fresh Fastboot
+preflight. Pinned SSH verified exact V45 `/init` and the same boot ID reached
+Wi-Fi ready at uptime 96, health ready at 208, and local handoff start at 218.
+Independent proof verified Alpine 3.24.2/OpenRC as PID 1, health service,
+persistent root, Wi-Fi SSH, and no host arming marker:
+`logs/v45-autonomous-alpine-verification-1792678596444971030/result.json`.
+The collector retained Alpine SSH through uptime 428.30, then lost contact
+at the expected bounded timer boundary. **V45 remains the last image written
+to `boot_a`; exact V33 restoration is pending Fastboot on USB.** See
+`docs/V45-WIFI-FAILURE-CODE.md`.
+
 ## Offline next candidate — V45 Wi-Fi failure code and local OpenRC probe
 
 V45 is built and independently validated offline. It keeps V44's bounded
 local OpenRC handoff but, if Wi-Fi fails first, records the Wi-Fi worker's
 numeric result or the absence of a result in the checksummed persistent
 stage log. The guarded trial `--prepare`, parser fixture, and read-only
-pinned collector dry run passed. **V45 has not been flashed or booted.**
-V33 Alpine is installed and verified. See `docs/V45-WIFI-FAILURE-CODE.md`.
+pinned collector dry run passed. This paragraph records the preparation
+state before the hardware trial above. See `docs/V45-WIFI-FAILURE-CODE.md`.
 
 ## Current status — V44 Wi-Fi failed before handoff; V33 Alpine restored
 

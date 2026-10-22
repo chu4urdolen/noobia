@@ -24,11 +24,32 @@ but correctly rejected V33 as V45:
 `logs/v45-health-window-1792677524606293397/result.json`. A local parser
 fixture accepted a checksummed `WIFI_ERR_143` record.
 
-**V45 has not been flashed or booted.** V33 Alpine is installed and verified.
-For a controlled trial, start the pinned V45 collector first, then fresh
-Fastboot preflight, flash **only `boot_a`**, reboot separately and promptly
-unplug USB. If Wi-Fi works, verify exact V45 `/init` and Alpine/OpenRC on the
-same boot ID. If it fails, restore V33 and retrieve the checksummed worker
-code before changing Wi-Fi. Preserve slot B, bootloader, recovery, and all
-other partitions. The candidate remains a bounded diagnostic, not a daily
-boot image.
+## Hardware trial, 2026-10-22
+
+V45 was flashed **only to `boot_a`** after a fresh Fastboot preflight, then
+rebooted separately with the pinned collector already running. Receipts:
+`logs/v45-boot-a-trial-1792678296156203144/result.json` and
+`logs/v45-boot-a-trial-1792678305143540522/result.json`.
+
+Pinned SSH verified the exact V45 `/init` on boot ID
+`d91fa1cc-aa20-49a8-a777-f03a72b14fc9`. The checksummed persistent log
+records `WIFI_READY` at uptime 96, `HEALTH_BEGIN` at 191,
+`HEALTH_READY` at 208, and `HANDOFF_BEGIN` at 218:
+`logs/v45-live-stage-1792678624278192962/result.json`.
+The local authority guard passed, and independent SSH verification proved
+Alpine 3.24.2/OpenRC as PID 1, persistent ext4 root, running health service,
+working Wi-Fi SSH, Python, and Git, with no host arming marker:
+`logs/v45-autonomous-alpine-verification-1792678596444971030/result.json`.
+The pinned collector retained 244 complete samples and observed Alpine
+through uptime 428.30, followed by SSH loss at the expected 420-second
+outer timer boundary (started near uptime 8):
+`logs/v45-health-window-1792678292672890646/result.json`.
+
+**Recovery is pending.** V45 is the last image written to `boot_a`.
+After Lynx returns to Fastboot on USB, capture read-only PL/LK, restore exact
+V33 **only to `boot_a`**, boot unplugged, and verify Alpine. The timer
+boundary is consistent with planned shutdown, but its exact final command
+was not captured before SSH loss. V45 proves autonomous local handoff in a
+bounded trial; a persistent daily boot still needs to cancel the outer timer
+only after this health and handoff proof. Preserve slot B, bootloader,
+recovery, and all other partitions.

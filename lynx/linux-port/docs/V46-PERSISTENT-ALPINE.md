@@ -57,9 +57,21 @@ The V46 observer was stopped after it saw V33 Alpine; it never matched V46:
 The checksum-verified persistent log capture
 `logs/v38-persistent-capture-1792682815070129601/result.json` contained the
 same twelve boot IDs as the previous capture, with **no new V46 record**.
-That only bounds the failure: V46 did not leave a persistent `START` event,
-which may mean it stopped before persistent storage became writable. It does
-not prove a particular kernel, bootloader, or Wi-Fi failure. The PL/LK snapshot
-covers the later Fastboot entry and does not identify V46's stop point.
+The pinned V33 contact also saved read-only pstore immediately after recovery:
+`logs/dynamic-pinned-contact-1792682635409608967/pstore-and-boot.raw`.
+Its **previous-boot** token `69adf9d14707d848063b861b8f248748`
+differs from the current V33 token. Checksum-valid pmsg stages show PID 1's
+early guard at uptime 0, UFS probe preparation at uptime 3, then UFS probe
+begin. The corresponding console ends at tracepoint 4 of
+`ufs_mtk_setup_ref_clk` (`+0xa0`) and has no probe-return marker:
+`logs/pstore-previous-boot-1792683031840922664.json`. That is the last
+visible point, **not** an instruction-level proof of the hang location. It
+establishes that V46 reached the stock kernel and storage initialization but
+did not reach its later Wi-Fi or timer-cancellation path. The same early UFS
+reference-clock problem was observed in older bounded trials; the V46 primary
+`/init` change is downstream of it. The PL/LK snapshot covers the later
+Fastboot entry and does not refine this point.
+
 Do not describe this trial as a successful autonomous or persistent boot.
-Preserve V33 as the working image while the early failure is investigated.
+Preserve V33 as the working image until a further controlled trial or a
+specific early UFS remedy is ready.

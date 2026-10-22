@@ -1,5 +1,18 @@
 # Current Lynx handoff state
 
+## Current status — V46 trial inconclusive; V33 Alpine recovered
+
+The first guarded V46 trial wrote **only `boot_a`** and rebooted unplugged.
+Its pinned observer saw no V46 SSH contact during the first five minutes.
+After Fastboot returned, read-only PL/LK was captured and exact V33 restored
+**only to `boot_a`**. Pinned Wi-Fi SSH, V31 RAM health, guarded handoff, and
+Alpine/OpenRC PID 1 passed:
+`logs/v33-alpine-pid1-verification-1792682811956277416/result.json`.
+The recovered checksum-verified persistent trace contains no new V46 boot
+record, so the stop point is unknown:
+`logs/v38-persistent-capture-1792682815070129601/result.json`.
+**V33 is installed and Alpine is running.** See `docs/V46-PERSISTENT-ALPINE.md`.
+
 ## Current status — V45 recovered; V33 Alpine running
 
 After the successful bounded V45 autonomous handoff, read-only PL/LK was
@@ -19,7 +32,8 @@ timer only after three passing health checks, a checksummed handoff marker,
 and successful local helper load. It keeps the independent health watchers,
 charger guard, and parent power-off fallback. The builder, independent
 validator, guarded `boot_a` trial preparation, and parser fixture passed.
-**V46 has not been flashed or booted.** Exact V33 has been restored and Alpine
+This paragraph records V46 preparation before its first hardware trial.
+Exact V33 had been restored and Alpine
 verified. The V46 pinned observer correctly rejected live V33 as V46 while
 seeing Alpine PID 1: `logs/v46-health-window-1792680522964230929/result.json`.
 See `docs/V46-PERSISTENT-ALPINE.md`.

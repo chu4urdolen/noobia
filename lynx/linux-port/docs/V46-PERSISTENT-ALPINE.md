@@ -31,15 +31,35 @@ behavior in unlocked and locked cases. The guarded `boot_a` trial
 `--prepare` passed. A local parser fixture accepted checksummed
 `TIMER_CANCELLED` as a nonterminal stage.
 
-**V46 has not been flashed or booted.** After preparation, read-only PL/LK
+After preparation, read-only PL/LK
 was captured and exact V33 restored **only to `boot_a`**; pinned Wi-Fi SSH,
 V31 RAM health, guarded handoff, and Alpine/OpenRC PID 1 passed:
 `logs/v33-alpine-pid1-verification-1792680518669188817/result.json`.
 The V46 observer dry run correctly rejected live V33 as V46 while detecting
 Alpine PID 1: `logs/v46-health-window-1792680522964230929/result.json`.
-A controlled
-V46 trial needs fresh Fastboot preflight and pinned collector before flashing
-**only `boot_a`**, a separate reboot, prompt USB unplug, exact `/init` and
-same-boot Alpine verification, `TIMER_CANCELLED` record, and observation
-beyond V45's 428-second shutdown boundary. Preserve slot B, bootloader,
-recovery, and all other partitions. Keep the exact V33 restoration ready.
+
+## First hardware trial, 2026-10-22
+
+Fresh Fastboot preflight passed; the guarded trial wrote V46 **only to
+`boot_a`** and rebooted separately:
+`logs/v46-boot-a-trial-1792682295917618952/result.json` and
+`logs/v46-boot-a-trial-1792682302328970253/result.json`. USB was unplugged
+for boot. The pinned observer saw no V46 SSH contact in the first five
+minutes. After Lynx was returned to Fastboot, read-only PL/LK was saved as
+`logs/pllk-1792682626286180183.json`. Exact V33 was restored **only to
+`boot_a`**: `logs/v34-boot-a-trial-1792682628744993536/result.json`.
+The unplugged V33 reboot reached pinned SSH, passed V31 RAM health and guarded
+handoff, and independently verified Alpine/OpenRC PID 1:
+`logs/v33-alpine-pid1-verification-1792682811956277416/result.json`.
+The V46 observer was stopped after it saw V33 Alpine; it never matched V46:
+`logs/v46-health-window-1792682292434727726/result.json`.
+
+The checksum-verified persistent log capture
+`logs/v38-persistent-capture-1792682815070129601/result.json` contained the
+same twelve boot IDs as the previous capture, with **no new V46 record**.
+That only bounds the failure: V46 did not leave a persistent `START` event,
+which may mean it stopped before persistent storage became writable. It does
+not prove a particular kernel, bootloader, or Wi-Fi failure. The PL/LK snapshot
+covers the later Fastboot entry and does not identify V46's stop point.
+Do not describe this trial as a successful autonomous or persistent boot.
+Preserve V33 as the working image while the early failure is investigated.

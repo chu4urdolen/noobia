@@ -26,10 +26,27 @@ locked cases. The guarded trial `--prepare` passed. A one-second pinned
 collector dry run against live V33 captured one sample and correctly rejected
 it as V43: `logs/v43-health-window-1792667833465627951/result.json`.
 
-**V43 has not been flashed or booted.** V33 Alpine was last verified running
-unplugged. For a trial, start `tools/capture_v43_health_window.py` before the
-guarded `tools/lynx_boot_a_v43_trial.py` flash of **only `boot_a`**, then
-separately reboot and promptly unplug USB. The collector also captures the
-last parent `--once` output when reachable. Restore exact V33 only to
-`boot_a` afterward, verify Alpine, and read the checksummed stage record.
-Preserve slot B, bootloader, recovery, and all other partitions.
+## Hardware trial, 2026-10-22
+
+V43 was flashed **only to `boot_a`** after offline validation and a fresh
+Fastboot preflight. The guarded flash and separate reboot receipts are
+`logs/v43-boot-a-trial-1792673516525528533/result.json` and
+`logs/v43-boot-a-trial-1792673522465379649/result.json`. The collector was
+already running and the USB cable was removed after the reboot request.
+
+Pinned Wi-Fi SSH verified the exact V43 `/init` hash on boot ID
+`bb9766d9-717b-47a6-a519-b16fb956118e`. The child reached
+`HEALTH_READY` at uptime 208.10 seconds. The last complete SSH sample was
+at uptime 303.11 seconds, beyond V42's immediate shutdown at 210–211 and
+V43's planned observation limit of 300. The next SSH sample timed out;
+this is consistent with the planned bounded shutdown, but the persistent
+`END` stage has not yet been retrieved. The last postcheck was
+`LYNX_HEALTH_OK` with 28.5 °C battery and 36.5 °C hottest sampled thermal
+sensor. There were 159 complete SSH samples, plus one timeout, in
+`logs/v43-health-window-1792673512487557123/`.
+
+**Recovery remains pending.** V43 is the last image written to `boot_a`.
+When Lynx is back in Fastboot on USB, capture the read-only PL/LK log,
+restore exact V33 **only to `boot_a`**, reboot unplugged, verify Alpine PID 1,
+then retrieve the checksummed V43 persistent stage record. Preserve slot B,
+bootloader, recovery, and all other partitions.

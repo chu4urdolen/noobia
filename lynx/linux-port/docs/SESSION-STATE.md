@@ -1,5 +1,18 @@
 # Current Lynx handoff state
 
+## Current status — V43 reached health and bounded end; V33 restoration pending
+
+V43 was flashed only to `boot_a` after offline validation and fresh Fastboot
+preflight. Pinned Wi-Fi SSH verified exact V43 `/init` and the health child
+reached `HEALTH_READY` at uptime 208.10. Lynx remained reachable through
+uptime 303.11 with passing parent postchecks, then the next sample timed out
+at the planned bounded shutdown. The checksummed persistent `END` stage is
+not yet retrieved. Collector:
+`logs/v43-health-window-1792673512487557123/result.json`.
+**V43 is the last image written to `boot_a`; restore V33 once Lynx is in
+Fastboot on USB.** Then verify Alpine and retrieve the V43 stage record.
+See `docs/V43-HEALTH-TOLERANCE.md`.
+
 ## Offline next candidate — V43 three-sample health tolerance, unflashed
 
 V43 changes only primary `/init` from exact V42. In the post-readiness

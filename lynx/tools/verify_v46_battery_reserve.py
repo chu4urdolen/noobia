@@ -19,6 +19,8 @@ SERVICE = ROOT / 'linux-port/openrc-lynx-battery-reserve'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--verification', required=True, type=Path)
+    parser.add_argument('--charging-trial', action='store_true',
+                        help='Require positive net gauge current at or below reserve threshold')
     args = parser.parse_args()
     proof_path = args.verification.resolve(strict=True)
     if not proof_path.is_relative_to(ROOT / 'logs'):
@@ -59,7 +61,8 @@ def main():
     out.mkdir(mode=0o700)
     receipt = {'state': 'starting', 'boot_id': boot_id, 'phone_ip': ip,
                'verification': str(proof_path), 'script_sha256': script_sha,
-               'service_sha256': service_sha, 'read_only': True}
+               'service_sha256': service_sha, 'read_only': True,
+               'charging_trial': args.charging_trial}
     try:
         run = subprocess.run(argv, capture_output=True, timeout=20)
         (out / 'stdout').write_bytes(run.stdout)
@@ -68,10 +71,20 @@ def main():
         if run.returncode or 'LYNX_V46_RESERVE_VERIFIED' not in data:
             raise ValueError('Reserve service proof failed')
         capacity = re.search(r'capacity_percent=(\d+)', data)
-        if not capacity or not 21 <= int(capacity.group(1)) <= 100:
+        current = re.search(r'current_ma=(-?\d+)', data)
+        temperature = re.search(r'temperature_millidegrees=(\d+)', data)
+        if not capacity or not current or not temperature:
+            raise ValueError('Battery reserve telemetry missing')
+        value, amps, degrees = (int(capacity.group(1)), int(current.group(1)),
+                                int(temperature.group(1)))
+        if args.charging_trial:
+            if not 11 <= value <= 20 or amps < 50 or degrees >= 40000:
+                raise ValueError('Charging hold not proven at reserve threshold')
+        elif not 21 <= value <= 100:
             raise ValueError('Battery reserve already low or invalid')
         receipt.update(state='v46-battery-reserve-verified',
-                       capacity_percent=int(capacity.group(1)))
+                       capacity_percent=value, current_ma=amps,
+                       temperature_millidegrees=degrees)
     except Exception as error:
         receipt.update(state='failed-or-incomplete', error=str(error))
     receipt['finished_ns'] = time.time_ns()

@@ -16,7 +16,8 @@ pins stayed intact. See `V47-ISOLATED-NATIVE-TOOLCHAIN.md`.
 The persistent Alpine root now has a read-only `lynx-status` command for
 a compact local health and access JSON snapshot. Its first `--assert-ready`
 run passed with eight services, Wi-Fi, battery, cooling states, storage,
-boot identity, and power-log presence. See `V47-LOCAL-STATUS.md`.
+boot identity, and power-log presence. Schema 2 additionally reports zero
+recorded ext4 errors on `/dev/sdc85`. See `V47-LOCAL-STATUS.md`.
 
 Lynx is now on boot ID `9054078d-aafa-4abf-9600-5c70f8234360`, with V47
 on `boot_a` and Alpine 3.24.2/OpenRC running on persistent ext4. The V47

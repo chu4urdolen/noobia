@@ -104,6 +104,25 @@ def snapshot():
     if carrier != '1' or ip_address is None:
         issues.append('wifi_unavailable')
 
+    root_source = None
+    root_type = None
+    mounts = read('/proc/mounts')
+    if mounts:
+        for line in mounts.splitlines():
+            fields = line.split()
+            if len(fields) >= 3 and fields[1] == '/':
+                root_source, root_type = fields[0], fields[2]
+                break
+    if root_type != 'ext4' or not root_source:
+        issues.append('root_filesystem_unexpected')
+    ext4_errors = None
+    if root_type == 'ext4' and root_source:
+        ext4_errors = integer(read('/sys/fs/ext4/' + Path(root_source).name +
+                                   '/errors_count'))
+        if ext4_errors is None:
+            issues.append('ext4_error_counter_unavailable')
+        elif ext4_errors != 0:
+            issues.append('ext4_errors_recorded')
     filesystem = os.statvfs('/')
     free_mib = filesystem.f_bavail * filesystem.f_frsize // (1024 * 1024)
     if free_mib < 350:
@@ -120,7 +139,7 @@ def snapshot():
     except (AttributeError, ValueError, IndexError):
         uptime_seconds = None
     return {
-        'schema': 1,
+        'schema': 2,
         'boot_id': read('/proc/sys/kernel/random/boot_id'),
         'uptime_seconds': uptime_seconds,
         'alpine_release': read('/etc/alpine-release'),
@@ -130,6 +149,8 @@ def snapshot():
         'services_running': services,
         'wifi': {'carrier': carrier == '1', 'ipv4': ip_address},
         'root_free_mib': free_mib,
+        'root_filesystem': {'source': root_source, 'type': root_type,
+                            'ext4_errors_count': ext4_errors},
         'power_log_bytes': power_log_bytes,
         'issues': issues,
     }

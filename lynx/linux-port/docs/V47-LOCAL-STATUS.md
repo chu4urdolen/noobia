@@ -7,6 +7,14 @@ and uptime. It emits one compact JSON object and makes no control changes.
 `--assert-ready` exits nonzero when it finds an issue while still emitting
 the JSON, so a caller can save the evidence before investigating.
 
+Schema 2 also reads the root mount source and the kernel's ext4 error
+counter. The live `/dev/sdc85` counter was zero. This checks for recorded
+filesystem errors; it does not explain the older zero-filled power-log gap.
+The prior status script is saved on Lynx at
+`/root/lynx-rescue/lynx-status-before-ext4-v47.py`. The guarded update and
+passing schema-2 snapshot are in
+`logs/v47-lynx-status-ext4-1792787652705346849/result.json`.
+
 The guarded installer pinned rescue `/init` and the current V47 boot ID,
 checked battery and running services, staged the source in `/run/lynx`,
 ran it before installation, then verified the installed file and live
@@ -23,6 +31,6 @@ charging behavior or future boot reliability.
 
 Use `lynx-status` on Lynx for the JSON record, or
 `lynx-status --assert-ready` before a maintenance action. The source is
-`linux-port/lynx-status.py`; the guarded one-time installer is
-`tools/install_v47_lynx_status.py`. The V46 boot image and its Fastboot
+`linux-port/lynx-status.py`; the guarded one-time installer and ext4 updater
+are under `tools/`. The V46 boot image and its Fastboot
 restoration procedure remain the rollback path for boot changes.

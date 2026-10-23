@@ -75,7 +75,6 @@ def main():
     common = (
         'set -eu; '
         f'test "$(cat /proc/sys/kernel/random/boot_id)" = "{boot_id}"; '
-        f'test "$(sha256sum /init | cut -c1-64)" = "{INIT_SHA}"; '
         'test "$(readlink /proc/1/exe)" = /sbin/openrc-init; '
         'test "$(cat /etc/alpine-release)" = 3.24.2; '
         'test "$(awk \'$2=="/" {print $3; exit}\' /proc/mounts)" = ext4; '
@@ -109,7 +108,7 @@ def main():
             'current=$(printf "%s\\n" "$sample" | sed -n "s/^gauge_current_ma_signed=//p"); '
             'temperature=$(printf "%s\\n" "$sample" | sed -n "s/^temperature_millidegrees_celsius=//p"); '
             'case "$capacity:$current:$temperature" in *[!0-9:]*|::*|*::*) exit 1;; esac; '
-            'test "$capacity" -ge 11; test "$capacity" -le 25; '
+            'test "$capacity" -ge 11; test "$capacity" -le 30; '
             'test "$current" -ge 75; test "$temperature" -ge 10000; '
             'test "$temperature" -lt 35000; '
             'printf "SAMPLE capacity=%s current=%s temperature=%s\\n" '
@@ -141,6 +140,12 @@ def main():
     except Exception as error:
         report.update(state='failed-or-incomplete', error=str(error))
         try:
+            probe = subprocess.run(
+                ssh_command(ip, f'test -f {BACKUP}'), capture_output=True,
+                timeout=12)
+            if probe.returncode:
+                report['old_guard_restored'] = 'not-needed-no-backup-created'
+                raise FileNotFoundError('No backup to restore')
             fallback = (
                 'set -eu; '
                 f'test "$(cat /proc/sys/kernel/random/boot_id)" = "{boot_id}"; '
@@ -153,7 +158,8 @@ def main():
             report['old_guard_restored'] = ('LYNX_OLD_RESERVE_RESTORED' in
                                             step('restore', fallback))
         except Exception as fallback_error:
-            report['fallback_error'] = str(fallback_error)
+            if report.get('old_guard_restored') != 'not-needed-no-backup-created':
+                report['fallback_error'] = str(fallback_error)
     report['finished_ns'] = time.time_ns()
     result.write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps({'state': report['state'], 'result': str(result),

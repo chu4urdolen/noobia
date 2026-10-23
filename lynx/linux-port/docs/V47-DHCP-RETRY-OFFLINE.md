@@ -37,3 +37,18 @@ controlled hardware trial would need a fresh Fastboot recovery preflight,
 the exact V46 image ready for restoration, a pinned SSH observer, and a
 safe cable/power procedure. Keep the current V46/Alpine SSH session for
 live userland work until that trial is worth interrupting it.
+
+`tools/lynx_boot_a_v47_trial.py --prepare` now checks the exact V47, working
+V46, V33 and V19 images, offline validation, retry fixtures, and pinned
+Fastboot binary without contacting the phone. It prints the exact `boot_a`
+flash and V46 restoration commands. Its separate flash and reboot modes
+require a fresh observer receipt and a fresh Fastboot identity/partition
+preflight; no mode switches slot or touches another partition. The
+`--restore-v46` mode is available if a future trial fails and Lynx returns
+to Fastboot, but restoration is never automatic after an unexpected result.
+
+`tools/capture_v47_health_window.py` was run for eight seconds against the
+currently working V46 session as a read-only negative control. Three pinned
+SSH samples verified V46 `/init` and Alpine PID 1 while correctly rejecting
+V47's changed Wi-Fi script hash:
+`logs/v47-health-window-1792785160997090342/result.json`.

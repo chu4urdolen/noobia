@@ -9,7 +9,7 @@ MAX_RETRIES=3
 
 event() {
     printf 'LYNX_MAINTENANCE %s\n' "$*"
-    $BB logger -t lynx-maintenance "$*" 2>/dev/null || true
+    $BB logger -p daemon.err -t lynx-maintenance "$*" 2>/dev/null || true
 }
 
 safety_ok() {
@@ -71,6 +71,7 @@ check_once() {
 
 case "${1:-}" in
     --once) check_once ;;
+    --event-proof) event 'LYNX_MAINTENANCE_EVENT_PROOF' ;;
     --watch)
         safety_fail=0
         log_fail=0

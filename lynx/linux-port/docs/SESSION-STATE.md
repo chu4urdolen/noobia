@@ -11,6 +11,11 @@ The new DHCP retry took its first attempt on this boot, so its actual
 retry path remains untested. V46 remains the exact local Fastboot
 restoration image. See `V47-DHCP-RETRY-OFFLINE.md` for receipts.
 
+On the same live boot, maintenance events were raised to persistent syslog
+severity with the previous script saved under `/root/lynx-rescue/`.
+The harmless event proof passed while health, reserve, and maintenance
+services stayed active. See `V47-MAINTENANCE-EVENT-LOGS.md`.
+
 ## Previous status — 2026-10-23 V46
 
 Lynx is currently on boot ID `f6230cac-8d41-48da-bf28-2700e9ff56f1`,

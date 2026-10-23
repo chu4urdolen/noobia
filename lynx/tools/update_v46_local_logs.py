@@ -63,6 +63,7 @@ def main():
         return run.stdout.decode(errors='replace')
 
     backup = '/run/lynx/lynx-local-logs.service.old'
+    persistent_backup = '/root/lynx-rescue/lynx-local-logs-notice-v46.sh'
     target = '/etc/init.d/lynx-local-logs'
     try:
         preflight = (
@@ -84,6 +85,7 @@ def main():
             'test "$(cat "$d/online")" = 0; count=$((count+1)); done; '
             'test "$count" -ge 1; '
             f'test ! -e {backup}; '
+            f'test ! -e {persistent_backup}; '
             'printf LYNX_LOG_UPDATE_READY'
         )
         if 'LYNX_LOG_UPDATE_READY' not in step('preflight', preflight):
@@ -95,6 +97,9 @@ def main():
             f'test "$(sha256sum /run/lynx/lynx-local-logs.service.new | cut -c1-64)" = "{new_sha}"; '
             f'cp -p {target} {backup}; '
             f'test "$(sha256sum {backup} | cut -c1-64)" = "{old_sha}"; '
+            'install -d -m 0700 /root/lynx-rescue; '
+            f'cp -p {target} {persistent_backup}; '
+            f'test "$(sha256sum {persistent_backup} | cut -c1-64)" = "{old_sha}"; '
             f'install -m 0755 /run/lynx/lynx-local-logs.service.new {target}.new; '
             f'mv {target}.new {target}; '
             '/sbin/rc-service lynx-local-logs restart; '

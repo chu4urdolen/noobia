@@ -68,6 +68,37 @@ explain the loop; do not assert one without its saved stage record.
 
 V46 writes checksummed `LXBD1` stage records on persistent ext4, including a
 `CHARGER_ON` marker before its early charger shutdown. The new read-only
-`tools/capture_v46_bootdiag.py` can retrieve and verify these records after
-a future unplugged Alpine boot. That is the next diagnostic step. The boot
-image has not been flashed or changed in this work.
+`tools/capture_v46_bootdiag.py` retrieved these records on the next successful
+Alpine boot. The boot image has not been flashed or changed in this work.
+
+The next successful V46 Alpine boot, ID
+`f6230cac-8d41-48da-bf28-2700e9ff56f1`, allowed the bootdiag capture:
+`logs/v46-bootdiag-capture-1792771377801976465/result.json`. All 30
+checksummed files verified; **none contained `CHARGER_ON`**. Ext4 inode
+ordering places two failed boots after the staged boot and before this
+successful one. One recorded `WIFI_FAILED` and `WIFI_ERR_144` at uptime
+105 seconds (the Wi-Fi worker's DHCP stage); the other recorded `WIFI_READY`
+at 89 seconds and no later stage. This corrects the early-guard hypothesis:
+the loop cannot currently be attributed to a charger-guard shutdown.
+There may also be boots too early to write `START`, which these records cannot
+describe.
+
+The same successful boot independently verified exact V46/Alpine PID 1 and
+the **revised reserve service running** at 28% and 27.8°C:
+`logs/v46-autonomous-alpine-verification-1792771372955320616/result.json`,
+`logs/v46-battery-reserve-verify-1792771420687390508/result.json`.
+The read-only rescue rollback preflight passed on this new boot:
+`logs/v46-reserve-rollback-1792771431840578793/result.json`.
+Later, while cable state was unclear, the guarded rollback **was applied to
+the persistent file**:
+`logs/v46-reserve-rollback-1792783666132957475/result.json`.
+The current boot still runs the revised guard process that started before
+that file rollback; on the next boot the original 20% guard will run. An
+independent rescue SSH hash audit confirmed the V46 init, current logger,
+logger backup, original reserve file and reserve backup:
+`logs/v46-live-recovery-audit-1792783818778351879/result.json`.
+The user then clarified that the phone was connected to Nexus, explaining
+the observed +327 mA. The earlier suspicion that a positive current reading
+occurred while unplugged was based on an incorrect cable-state assumption.
+We still lack a controlled charging trial across a reboot; do not treat the
+revised guard as established policy yet.

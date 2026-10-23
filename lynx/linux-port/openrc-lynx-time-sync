@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+
+description="Lynx time synchronization after Wi-Fi"
+command=/usr/sbin/chronyd
+command_args="-f /etc/chrony/chrony.conf -F 1 -n"
+command_background=true
+pidfile=/run/chronyd.pid
+
+depend() {
+    need lynx-wifi
+    after lynx-local-logs
+}
+
+start_pre() {
+    # V46's manual /dev nodes start at 0660; Chrony needs random as its user.
+    chmod 0666 /dev/null /dev/random /dev/urandom
+}

@@ -12,9 +12,12 @@ The V46 image still starts the original battery temperature watcher (45°C
 power-off), CPU/SoC watcher (60°C power-off), three CPU cooling controls and
 health supervisor. The health supervisor checks fresh gauge data, sensor and
 watcher presence every five seconds; three consecutive failures request
-power-off. The existing charger guard still requests power-off if a supply
-reports online. Charging under native Linux has **not** been enabled or
-validated. Lynx should remain unplugged in this trial.
+power-off. The existing charger guard requests power-off if a supply reports
+online. During the current Nexus USB connection, that supply flag read zero
+while the identified battery gauge reported positive current and increasing
+capacity. This is evidence of charging, but the phone's charging protections
+and behavior across reboot remain unverified; see
+`V46-CHARGING-RESERVE-STAGE.md` for the controlled trial and rollback state.
 
 The new persistent `lynx-battery-reserve` OpenRC service reads the same
 identified ZY0603-family gauge every 30 seconds and requests orderly power-off
@@ -60,6 +63,58 @@ kernel markers:
 `logs/v46-local-logs-update-1792700314118046562/result.json`,
 `logs/v46-local-logs-verify-1792700318466743032/result.json`.
 Persistence of these new markers still needs a second reboot.
+
+On boot `f6230cac-8d41-48da-bf28-2700e9ff56f1`, the UFS driver produced
+enough warning-level kernel messages to fill the log rotation rapidly. The
+logger service was updated to keep errors and higher (`syslogd -l 4`) while
+retaining the bounded boot-ID kernel snapshot and a persistent copy of its
+previous notice-level service under `/root/lynx-rescue/`. The live update,
+error-kept/warning-filtered test, maintenance check, and rescue SSH hash
+audit passed:
+
+- `logs/v46-local-logs-update-1792783739468265457/result.json`
+- `logs/v46-local-logs-verify-1792783769273400266/result.json`
+- `logs/v46-maintenance-verify-1792783792264268924/result.json`
+- `logs/v46-live-recovery-audit-1792783818778351879/result.json`
+
+The updated logger has not yet been tested across a reboot. Its severity
+filter applies to the main syslog, while boot diagnostics and kernel
+snapshots remain available separately.
+
+## Clock and debug tools
+
+The battery-backed real-time clock is not exposed in this V46 userspace.
+The phone's wall clock read January 1970 during this boot, which caused
+Alpine's HTTPS package fetch to reject server certificates. Nexus's clock
+was confirmed NTP synchronized, then used once to seed Lynx's UTC clock:
+`logs/v46-clock-seed-1792784029661535867/result.json`. The initial package
+attempt failed without installing packages, and a retry installed and
+verified `strace`, `lsof`, and `iw` from Alpine's signed repositories:
+`logs/v46-debug-basics-1792783997441172433/result.json`,
+`logs/v46-debug-basics-1792784030142214661/result.json`.
+
+Chrony and its OpenRC package were installed. Alpine's packaged `chronyd`
+service needs the generic `net` service, whose `networking` startup fails
+on Lynx. Its runlevel link was removed and its configuration restored after
+this failed start:
+`logs/v46-chrony-dependency-revert-1792784113374217842/result.json`.
+The local `lynx-time-sync` service instead depends on the working
+`lynx-wifi` service and runs Chrony in the background without delaying
+OpenRC for NTP convergence. V46 creates `/dev/null`, `/dev/random`, and
+`/dev/urandom` with mode 0660, so the local service restores their normal
+0666 permissions before starting. A saved `strace` showed that the initial
+mode blocked `chronyc` from opening `/dev/urandom`:
+`logs/v46-chronyc-strace-1792784155327833374.txt`.
+The local service is now active, and Chrony reported `Leap status: Normal`
+with reachable NTP sources. Its exact service hash, runlevel link, device
+permissions, SSH, safety services, and synchronized status passed a read-only
+verification:
+`logs/v46-time-sync-verify-1792784236723022921/result.json`.
+
+The clock still starts unset until Wi-Fi and this service run. This service
+has not yet been tested across a reboot. To disable it through Alpine SSH,
+run `rc-update del lynx-time-sync default` and
+`rc-service lynx-time-sync stop`; the original V46 boot image is unaffected.
 
 ## Automatic service recovery
 

@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+
+description="Lynx bounded persistent battery history"
+supervisor=supervise-daemon
+command=/usr/libexec/lynx-power-history.sh
+command_args="--watch"
+pidfile=/run/lynx/power-history.pid
+respawn_delay=10
+respawn_max=3
+respawn_period=300
+output_log=/run/lynx/power-history.log
+error_log=/run/lynx/power-history.err
+
+depend() {
+    need lynx-health
+    after lynx-local-logs lynx-time-sync
+}

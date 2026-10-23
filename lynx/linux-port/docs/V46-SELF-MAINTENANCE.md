@@ -116,6 +116,27 @@ has not yet been tested across a reboot. To disable it through Alpine SSH,
 run `rc-update del lynx-time-sync default` and
 `rc-service lynx-time-sync stop`; the original V46 boot image is unaffected.
 
+## Bounded power history
+
+The separate `lynx-power-history` OpenRC service samples the identified
+ZY0603 gauge once per minute. It writes boot ID, monotonic uptime, UTC epoch,
+capacity, signed pack current, battery temperature, and pack voltage to
+`/var/log/lynx/power.csv`. It rejects invalid gauge identity, error flags,
+and out-of-range values. The private CSV uses mode 0600 and rotates at
+256 KiB with three retained files. It reads sensors and writes logs only;
+the health and reserve services retain all shutdown authority.
+
+The exact scripts were installed on the current V46 boot after pinned SSH,
+OpenRC, healthy gauge, service and storage checks. The first sample, OpenRC
+start, file permissions, and safety-service status passed:
+`logs/v46-power-history-install-1792784859755324402/result.json`.
+After the next minute, a read-only check verified a distinct later sample
+and both safety services still running:
+`logs/v46-power-history-verify-1792784927871853849/result.json`.
+Restart persistence still needs observation.
+To disable future starts, run `rc-update del lynx-power-history default`
+through Alpine SSH; the service files and CSV remain for inspection.
+
 ## Automatic service recovery
 
 `lynx-maintenance` is itself run by OpenRC
@@ -204,17 +225,18 @@ The retained messages include
 reserve shutdown, not a kernel crash. The revised rotating syslog did not
 retain the earlier test marker after roughly 17 hours of kernel chatter;
 important event retention needs improvement. The boot-ID-named early boot
-logs for previous boots did survive. Charging under native Linux remains
-unverified, so further sustained phone trials require a supervised charging
-procedure first.
+logs for previous boots did survive. At this historical point charging had
+not yet been observed to raise capacity. A later Nexus-connected V46 session
+recorded positive gauge current and rising capacity, as described above.
 
-Offline source now limits persistent syslog to error-or-higher severity.
+The subsequent offline source change limited persistent syslog to
+error-or-higher severity.
 The retained archive showed almost all rotation space consumed by repeated
 `kern.warn` UFS clock messages (the most recent rotation had 2,508 warnings
 and 134 errors). The logger proof was adjusted to inject an error-level
-service and kernel marker. This new policy is **staged only**; the phone still
-has the previous notice-level logger, and it must not be described as tested
-or installed until charging and a new guarded session permit verification.
+service and kernel marker. This policy was initially staged only; it was
+later installed and verified on the live boot, with the previous service
+copied to persistent rescue storage. The receipts are listed above.
 `tools/update_v46_local_logs.py` now accepts the prior successful update
 receipt and a new same-boot V46 verification. Its preflight refuses an
 update below 40% battery or with any power supply reporting online. The

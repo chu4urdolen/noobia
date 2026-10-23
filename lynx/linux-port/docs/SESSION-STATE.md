@@ -1,5 +1,29 @@
 # Current Lynx handoff state
 
+## Current status — 2026-10-23
+
+Lynx is currently on boot ID `f6230cac-8d41-48da-bf28-2700e9ff56f1`,
+with the exact V46 `boot_a` image, Alpine 3.24.2/OpenRC PID 1, persistent
+ext4 root, Wi-Fi, rescue SSH on port 22, and Alpine SSH on port 2222.
+The phone was connected to Nexus for charging; the gauge showed rising
+capacity, positive current, and a cool pack. The early charger supply flag
+still reads zero, so charging protection behavior is not fully established.
+
+This boot now has a tested severity-filtered local logger, verified service
+maintenance, signed Alpine diagnostics (`strace`, `lsof`, `iw`), and a local
+Chrony service synchronized over Wi-Fi. No boot partition was changed while
+these userland additions were made. The persistent reserve script was
+rolled back to the original 20% policy for the next boot; the current
+process still runs the revised charging-aware guard that started before the
+file rollback. See `V46-SELF-MAINTENANCE.md` and
+`V46-CHARGING-RESERVE-STAGE.md` for exact receipts and limitations.
+
+An offline V47 candidate retries the specific DHCP failure seen in two
+checksummed boot records. Its image and V33 recovery hashes, changed member
+scope, AVB model, and retry fixtures passed; **V47 has not been flashed**.
+See `V47-DHCP-RETRY-OFFLINE.md`. The current V46 session should be retained
+for live work until a controlled hardware trial is worthwhile.
+
 ## Current status — V46 survived supervised OpenRC reboot
 
 From verified V46 Alpine/OpenRC on port 2222, a guarded OpenRC reboot was

@@ -2,6 +2,12 @@
 
 ## Current status — 2026-10-23 V47 controlled boot
 
+V47 now also has signed Alpine `curl`, `jq`, `tmux`, and `rsync` installed
+on the persistent root after a guarded live health check. The compiler
+remains held because the current repository's `musl-dev-r3` conflicts with
+Lynx's pinned `musl-r2`; no libc upgrade was attempted. See
+`V47-ALPINE-UTILITIES.md` for the exact receipt and tools.
+
 Lynx is now on boot ID `9054078d-aafa-4abf-9600-5c70f8234360`, with V47
 on `boot_a` and Alpine 3.24.2/OpenRC running on persistent ext4. The V47
 boot script hash, checksummed `TIMER_CANCELLED` stage, all eight local

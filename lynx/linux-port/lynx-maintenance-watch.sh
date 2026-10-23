@@ -26,6 +26,23 @@ wifi_address() {
     printf '%s\n' "$address"
 }
 
+wifi_snapshot() {
+    carrier=$(cat /sys/class/net/wlan0/carrier 2>/dev/null) || carrier=unknown
+    case "$carrier" in 0|1) ;; *) carrier=unknown;; esac
+    ipv4=$(/sbin/ip -4 addr show dev wlan0 2>/dev/null |
+        $BB sed -n 's/^[[:space:]]*inet \(192\.168\.100\.[0-9]*\)\/.*/\1/p' |
+        $BB head -n 1) || ipv4=''
+    [ -n "$ipv4" ] || ipv4=none
+    link=$($BB timeout 3 /usr/sbin/iw dev wlan0 link 2>/dev/null |
+        $BB head -n 1) || link=''
+    case "$link" in
+        'Connected to '*) link=connected ;;
+        'Not connected.'*) link=disconnected ;;
+        *) link=unknown ;;
+    esac
+    printf 'carrier=%s ipv4=%s nl80211_link=%s' "$carrier" "$ipv4" "$link"
+}
+
 recover_ssh() {
     address=$(wifi_address) || return 1
     [ -n "$address" ] || return 1
@@ -72,6 +89,7 @@ check_once() {
 case "${1:-}" in
     --once) check_once ;;
     --event-proof) event 'LYNX_MAINTENANCE_EVENT_PROOF' ;;
+    --wifi-snapshot) wifi_snapshot; printf '\n' ;;
     --watch)
         safety_fail=0
         log_fail=0
@@ -101,7 +119,8 @@ case "${1:-}" in
             fi
             if ! /sbin/rc-service lynx-wifi status >/dev/null 2>&1; then
                 if [ "$wifi_fail" = 0 ]; then
-                    event 'WIFI_DEGRADED; RESCUE_AND_SAFETY_SERVICES_RETAINED'
+                    detail=$(wifi_snapshot) || detail=snapshot_failed
+                    event "WIFI_DEGRADED $detail; RESCUE_AND_SAFETY_SERVICES_RETAINED"
                 fi
                 wifi_fail=1
             elif [ "$wifi_fail" = 1 ]; then

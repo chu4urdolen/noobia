@@ -22,6 +22,11 @@ reports that anomaly explicitly. New samples are flushed to storage after
 append, with the old sampler saved for rollback. See
 `V47-POWER-HISTORY-GAP.md`.
 
+The maintenance watcher now saves a bounded, read-only carrier/IPv4/nl80211
+snapshot when Wi-Fi first degrades. The live healthy snapshot passed, and
+the old script is saved for rollback. No outage or radio reset was induced;
+see `V47-WIFI-OUTAGE-SNAPSHOT.md`.
+
 ## Previous status — 2026-10-23 V46
 
 Lynx is currently on boot ID `f6230cac-8d41-48da-bf28-2700e9ff56f1`,

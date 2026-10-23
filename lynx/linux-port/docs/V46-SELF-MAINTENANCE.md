@@ -185,3 +185,20 @@ SSH did not answer; these observations cannot establish whether 5 V power is
 reaching the battery. No phone-side gauge measurement was possible. Use the
 original OnePlus wall charger and cable for the next short observed check,
 then verify a rising battery gauge before resuming Linux development.
+
+Later in the same Nexus-cable trial, pinned SSH found a **new** V46 BusyBox
+boot, ID `d004a4e8-34d5-4839-83e8-15756d2498b9`, at `192.168.100.8`.
+Thus the dark display was not proof of power-off. The early charger supply
+reported `online=0`, `Not charging`, but once the custom read-only ZY0603
+gauge initialized it measured +145 mA; three subsequent samples 10 seconds
+apart measured +132, +127, +134 mA at 20% and 24.6–24.7°C, with pack voltage
+7494, 7494, 7495 mV. The matching gauge documentation defines negative
+current as discharge, so these positive readings support modest charging
+**while Linux was running** despite the incomplete charger-supply driver.
+SSH disconnected at 20% around the reserve guard's expected shutdown time;
+this run has not yet yielded a persistent log proving the exact disconnect
+cause, and capacity had not risen.
+Neither continued charging while off nor safe long-term charging is verified.
+The private read-only receipts are
+`logs/v46-charging-ssh-watch-1792766705031320971/result.json` and
+`logs/v46-battery-trend-1792766917990572793/result.json`.

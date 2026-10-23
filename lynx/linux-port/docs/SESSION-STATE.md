@@ -13,6 +13,11 @@ the compiler need without changing the active libc. GCC compiled and ran
 a small aarch64 C program there, while the active services and exact libc
 pins stayed intact. See `V47-ISOLATED-NATIVE-TOOLCHAIN.md`.
 
+The persistent Alpine root now has a read-only `lynx-status` command for
+a compact local health and access JSON snapshot. Its first `--assert-ready`
+run passed with eight services, Wi-Fi, battery, cooling states, storage,
+boot identity, and power-log presence. See `V47-LOCAL-STATUS.md`.
+
 Lynx is now on boot ID `9054078d-aafa-4abf-9600-5c70f8234360`, with V47
 on `boot_a` and Alpine 3.24.2/OpenRC running on persistent ext4. The V47
 boot script hash, checksummed `TIMER_CANCELLED` stage, all eight local

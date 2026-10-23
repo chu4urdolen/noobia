@@ -54,6 +54,11 @@ def main():
         'printf "TYPEC_BEGIN\\n"; '
         'for d in /sys/class/typec/*; do [ -e "$d" ] && printf "%s\\n" "${d##*/}"; done; '
         'printf "TYPEC_END\\n"'
+        '; printf "BATTERY_BEGIN\\n"; '
+        'cat /sys/bus/i2c/devices/7-0055/battery_snapshot; '
+        'printf "BATTERY_END\\n"; '
+        'printf "ROOTFS %s\\n" "$(awk \'$2=="/" {print $3; exit}\' /proc/mounts)"; '
+        'printf "RESERVE_SERVICE %s\\n" "$(test -e /etc/init.d/lynx-battery-reserve && echo present || echo absent)"'
     )
     argv = ssh_command(ip, remote)
     argv[-2:-2] = ['-p', '2222']
@@ -70,7 +75,8 @@ def main():
             raise ValueError(f'SSH failed or output exceeded bound: {run.returncode}')
         lines = run.stdout.decode(errors='replace').splitlines()
         if (f'BOOT_ID {boot_id}' not in lines or 'MODULES_END' not in lines or
-                'ALL_MODULES_END' not in lines or 'TYPEC_END' not in lines):
+                'ALL_MODULES_END' not in lines or 'TYPEC_END' not in lines or
+                'BATTERY_END' not in lines):
             raise ValueError('Missing same-boot marker or inventory footer')
         supplies = {}
         for line in lines:
@@ -85,7 +91,13 @@ def main():
                            lines.index('MODULES_BEGIN') + 1:lines.index('MODULES_END')]],
                        loaded_modules=lines[lines.index('ALL_MODULES_BEGIN') + 1:
                                             lines.index('ALL_MODULES_END')],
-                       typec_entries=lines[lines.index('TYPEC_BEGIN') + 1:lines.index('TYPEC_END')])
+                       typec_entries=lines[lines.index('TYPEC_BEGIN') + 1:lines.index('TYPEC_END')],
+                       battery_snapshot=dict(line.split('=', 1) for line in lines[
+                           lines.index('BATTERY_BEGIN') + 1:lines.index('BATTERY_END')]
+                           if '=' in line),
+                       rootfs=next((line[7:] for line in lines if line.startswith('ROOTFS ')), None),
+                       reserve_service=next((line[16:] for line in lines
+                                             if line.startswith('RESERVE_SERVICE ')), None))
     except Exception as error:
         receipt.update(state='failed-or-incomplete', error=str(error))
     receipt['finished_ns'] = time.time_ns()

@@ -17,7 +17,8 @@ online. During the current Nexus USB connection, that supply flag read zero
 while the identified battery gauge reported positive current and increasing
 capacity. This is evidence of charging, but the phone's charging protections
 and behavior across reboot remain unverified; see
-`V46-CHARGING-RESERVE-STAGE.md` for the controlled trial and rollback state.
+`V46-CHARGING-RESERVE-STAGE.md` for the controlled trial and rollback state,
+and `V46-CHARGER-READONLY-AUDIT.md` for the live charger device-tree evidence.
 
 The new persistent `lynx-battery-reserve` OpenRC service reads the same
 identified ZY0603-family gauge every 30 seconds and requests orderly power-off

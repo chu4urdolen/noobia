@@ -3,10 +3,15 @@
 ## Current status — 2026-10-23 V47 controlled boot
 
 V47 now also has signed Alpine `curl`, `jq`, `tmux`, and `rsync` installed
-on the persistent root after a guarded live health check. The compiler
-remains held because the current repository's `musl-dev-r3` conflicts with
+on the persistent root after a guarded live health check. A compiler in the
+active root remains held because the current repository's `musl-dev-r3` conflicts with
 Lynx's pinned `musl-r2`; no libc upgrade was attempted. See
 `V47-ALPINE-UTILITIES.md` for the exact receipt and tools.
+
+An isolated native build root under `/var/lib/lynx-devroot` now resolves
+the compiler need without changing the active libc. GCC compiled and ran
+a small aarch64 C program there, while the active services and exact libc
+pins stayed intact. See `V47-ISOLATED-NATIVE-TOOLCHAIN.md`.
 
 Lynx is now on boot ID `9054078d-aafa-4abf-9600-5c70f8234360`, with V47
 on `boot_a` and Alpine 3.24.2/OpenRC running on persistent ext4. The V47

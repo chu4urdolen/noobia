@@ -22,13 +22,17 @@ Afterward, the root filesystem had 797 MiB free and the exact libc pins
 remained. The receipt and captured streams are in
 `logs/v47-alpine-utils-1792787089608233197/`.
 
-The native compiler is held until matching C headers are available or a
+Native compiler installation in the active root is held until matching C headers are available or a
 separate, rehearsed libc update has a restoration path. The current
 [Alpine v3.24 aarch64 package index](https://dl-cdn.alpinelinux.org/alpine/v3.24/main/aarch64/)
 lists `musl-dev=1.2.6-r3`; its public index no longer lists r2. Upgrading
 the running libc solely to add a compiler would add risk to the live SSH
 and recovery environment. The devkit script now uses a fresh-index dry run
 so it will stop before an incompatible install.
+
+The subsequent isolated native toolchain provides a working compiler in a
+separate data root without changing these host libc pins. See
+`V47-ISOLATED-NATIVE-TOOLCHAIN.md`.
 
 Reproduce the completed utility verification with
 `python3 /noobia/lynx/tools/install_v47_alpine_utils.py`. It checks the exact

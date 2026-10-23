@@ -141,6 +141,9 @@ and both safety services still running:
 The later V47 reboot retained rows from the previous V46 boot and wrote
 new-boot rows while the service was running:
 `logs/v47-live-verify-1792785655574139377/result.json`.
+One zero-filled gap was later found at the boot transition; it is preserved
+and documented in `V47-POWER-HISTORY-GAP.md`. Future samples now flush the
+CSV after each append.
 To disable future starts, run `rc-update del lynx-power-history default`
 through Alpine SSH; the service files and CSV remain for inspection.
 

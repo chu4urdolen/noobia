@@ -16,6 +16,12 @@ severity with the previous script saved under `/root/lynx-rescue/`.
 The harmless event proof passed while health, reserve, and maintenance
 services stayed active. See `V47-MAINTENANCE-EVENT-LOGS.md`.
 
+The power CSV has one 72-byte zero gap at the V46→V47 transition, while
+ext4 reports no current errors. Raw bytes were preserved and a reader now
+reports that anomaly explicitly. New samples are flushed to storage after
+append, with the old sampler saved for rollback. See
+`V47-POWER-HISTORY-GAP.md`.
+
 ## Previous status — 2026-10-23 V46
 
 Lynx is currently on boot ID `f6230cac-8d41-48da-bf28-2700e9ff56f1`,

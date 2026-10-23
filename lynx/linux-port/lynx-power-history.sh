@@ -64,6 +64,7 @@ record() {
     [ -e "$LOG" ] || printf 'boot_id,uptime_s,epoch_s,capacity_percent,current_ma,battery_temp_mC,pack_voltage_mV\n' > "$LOG" || return 1
     printf '%s\n' "$line" >> "$LOG" || return 1
     chmod 0600 "$LOG" || return 1
+    /bin/busybox sync "$LOG" || return 1
     printf '%s\n' "$line"
 }
 

@@ -31,12 +31,10 @@ all three. Receipts:
 - `artifacts/wifi-dhcp-retry-v47-offline/validation.json`
 - `artifacts/wifi-dhcp-retry-v47-offline/dhcp-fixtures.json`
 
-**V47 has not been flashed or tested on hardware.** V46 remains the working
-`boot_a` image. The retry addresses only one observed failure class. A
-controlled hardware trial would need a fresh Fastboot recovery preflight,
-the exact V46 image ready for restoration, a pinned SSH observer, and a
-safe cable/power procedure. Keep the current V46/Alpine SSH session for
-live userland work until that trial is worth interrupting it.
+Before the hardware trial described below, V47 had not been flashed or
+tested on Lynx. The retry addresses only one observed failure class. A
+controlled trial required a fresh Fastboot recovery preflight, the exact
+V46 image ready for restoration, and a pinned SSH observer.
 
 `tools/lynx_boot_a_v47_trial.py --prepare` now checks the exact V47, working
 V46, V33 and V19 images, offline validation, retry fixtures, and pinned
@@ -52,3 +50,46 @@ currently working V46 session as a read-only negative control. Three pinned
 SSH samples verified V46 `/init` and Alpine PID 1 while correctly rejecting
 V47's changed Wi-Fi script hash:
 `logs/v47-health-window-1792785160997090342/result.json`.
+
+## Controlled hardware trial, 2026-10-23
+
+After Noob authorized the trial and Lynx appeared in Fastboot on USB, the
+fixed read-only Fastboot preflight matched the expected serial, product,
+unlocked state, slot A, bootloader, partition sizes and download limit:
+`logs/fastboot-preflight-1792785302313036393.json`. The USB device needed
+a scoped current-device ACL so the pinned Fastboot executable could open it.
+The V47 observer was started before the write. Guarded commands then wrote
+**only `boot_a`** and separately requested reboot:
+
+- `logs/v47-boot-a-trial-1792785312151881578/result.json`
+- `logs/v47-boot-a-trial-1792785319356119019/result.json`
+
+The pinned observer found new boot ID
+`9054078d-aafa-4abf-9600-5c70f8234360`, exact V46-derived `/init`, and
+the exact V47 Wi-Fi script on the phone. Its early boot log shows DHCP
+success on **attempt one**; this trial therefore does not exercise retry
+after a failed DHCP attempt. The checksummed stage record includes
+`WIFI_READY`, `HEALTH_READY`, `HANDOFF_BEGIN`, and `TIMER_CANCELLED`.
+Alpine 3.24.2/OpenRC became PID 1, and pinned Alpine SSH on port 2222
+verified ext4 root; health, reserve, local logs, Wi-Fi, SSH, maintenance,
+time sync and power-history services; NTP synchronization; and the current
+boot's private power-history entry. The prior V46 boot's power entries,
+service log marker, and early boot log survived:
+`logs/v47-live-verify-1792785655574139377/result.json`.
+
+The observer collected 163 same-boot samples and was stopped after Alpine
+remained healthy through uptime 465 seconds, beyond the old 420-second
+outer-timer boundary. The independently checked window receipt is
+`logs/v47-window-verification-1792785806022669372.json`.
+Pinned Alpine SSH and the full service/bootdiag proof still passed after
+that boundary:
+`logs/v47-live-verify-1792785810920985149/result.json`.
+At the last sample the gauge reported 84%, +144 mA, and 26.2°C.
+
+This establishes one autonomous V47 boot and sustained Alpine operation,
+including restart persistence of the local logger, time-sync service, and
+power history. It does **not** prove that a second or third DHCP attempt
+works on this hardware, or that every boot succeeds. V46 is retained locally
+as the exact `boot_a` restoration image. Slot B, bootloader, vendor boot,
+recovery-related partitions and Alpine ext4 root were not flashed or changed
+by this trial.

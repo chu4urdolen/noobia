@@ -78,7 +78,9 @@ audit passed:
 - `logs/v46-maintenance-verify-1792783792264268924/result.json`
 - `logs/v46-live-recovery-audit-1792783818778351879/result.json`
 
-The updated logger has not yet been tested across a reboot. Its severity
+The updated logger survived the later controlled V47 reboot: a previous
+error marker and previous boot log remained accessible on the new Alpine
+boot (`logs/v47-live-verify-1792785655574139377/result.json`). Its severity
 filter applies to the main syslog, while boot diagnostics and kernel
 snapshots remain available separately.
 
@@ -112,8 +114,10 @@ permissions, SSH, safety services, and synchronized status passed a read-only
 verification:
 `logs/v46-time-sync-verify-1792784236723022921/result.json`.
 
-The clock still starts unset until Wi-Fi and this service run. This service
-has not yet been tested across a reboot. To disable it through Alpine SSH,
+The clock still starts unset until Wi-Fi and this service run. The later
+controlled V47 reboot verified Chrony `Leap status: Normal` on the new
+Alpine boot (`logs/v47-live-verify-1792785655574139377/result.json`). To
+disable it through Alpine SSH,
 run `rc-update del lynx-time-sync default` and
 `rc-service lynx-time-sync stop`; the original V46 boot image is unaffected.
 
@@ -134,7 +138,9 @@ start, file permissions, and safety-service status passed:
 After the next minute, a read-only check verified a distinct later sample
 and both safety services still running:
 `logs/v46-power-history-verify-1792784927871853849/result.json`.
-Restart persistence still needs observation.
+The later V47 reboot retained rows from the previous V46 boot and wrote
+new-boot rows while the service was running:
+`logs/v47-live-verify-1792785655574139377/result.json`.
 To disable future starts, run `rc-update del lynx-power-history default`
 through Alpine SSH; the service files and CSV remain for inspection.
 

@@ -1,6 +1,17 @@
 # Current Lynx handoff state
 
-## Current status — 2026-10-23
+## Current status — 2026-10-23 V47 controlled boot
+
+Lynx is now on boot ID `9054078d-aafa-4abf-9600-5c70f8234360`, with V47
+on `boot_a` and Alpine 3.24.2/OpenRC running on persistent ext4. The V47
+boot script hash, checksummed `TIMER_CANCELLED` stage, all eight local
+services, NTP sync, prior-boot logs, and Alpine SSH on port 2222 were
+verified. A pinned observer showed Alpine through uptime 465 seconds.
+The new DHCP retry took its first attempt on this boot, so its actual
+retry path remains untested. V46 remains the exact local Fastboot
+restoration image. See `V47-DHCP-RETRY-OFFLINE.md` for receipts.
+
+## Previous status — 2026-10-23 V46
 
 Lynx is currently on boot ID `f6230cac-8d41-48da-bf28-2700e9ff56f1`,
 with the exact V46 `boot_a` image, Alpine 3.24.2/OpenRC PID 1, persistent
@@ -9,7 +20,7 @@ The phone was connected to Nexus for charging; the gauge showed rising
 capacity, positive current, and a cool pack. The early charger supply flag
 still reads zero, so charging protection behavior is not fully established.
 
-This boot now has a tested severity-filtered local logger, verified service
+That boot had a tested severity-filtered local logger, verified service
 maintenance, signed Alpine diagnostics (`strace`, `lsof`, `iw`), and a local
 Chrony service synchronized over Wi-Fi. No boot partition was changed while
 these userland additions were made. The persistent reserve script was
@@ -18,11 +29,10 @@ process still runs the revised charging-aware guard that started before the
 file rollback. See `V46-SELF-MAINTENANCE.md` and
 `V46-CHARGING-RESERVE-STAGE.md` for exact receipts and limitations.
 
-An offline V47 candidate retries the specific DHCP failure seen in two
-checksummed boot records. Its image and V33 recovery hashes, changed member
-scope, AVB model, and retry fixtures passed; **V47 has not been flashed**.
-See `V47-DHCP-RETRY-OFFLINE.md`. The current V46 session should be retained
-for live work until a controlled hardware trial is worthwhile.
+At that point V47 was an offline candidate for the specific DHCP failure
+seen in two checksummed boot records. Its image and V33 recovery hashes,
+changed member scope, AVB model, and retry fixtures had passed before the
+controlled hardware trial described above.
 
 ## Current status — V46 survived supervised OpenRC reboot
 

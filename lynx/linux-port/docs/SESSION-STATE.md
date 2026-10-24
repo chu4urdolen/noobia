@@ -7,10 +7,11 @@ all eight services healthy, and zero ext4 errors. The MT6375 charger
 reported `online=0`, `Not charging`; the gauge-current sign alone is not a
 charging proof. An identity-checked OpenRC poweroff request was sent and SSH
 disappeared (`logs/lynx-poweroff-1792853724641835014/`). Noob reported that
-the cable woke Lynx again and removed it. A bounded watcher is waiting to
-power her off if this restart reaches Alpine. Physical power state remains
-unconfirmed until the watcher or Noob checks it. Display/touch development
-is paused on hardware while offline CMDQ and charger guards are corrected.
+the cable woke Lynx again and removed it. A seven-minute bounded watcher saw
+no Alpine return, and a final SSH check found no route to ports 22 or 2222.
+Receipts: `logs/auto-poweroff-1792853784524531996.json` and its final check.
+This supports Lynx staying off; physical power state still needs a screen
+check. Live display/touch work waits for a verified charging state.
 
 ## Latest — 2026-10-24 live V47 Alpine, display and touch trials
 

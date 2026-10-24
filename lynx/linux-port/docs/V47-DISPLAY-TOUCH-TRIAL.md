@@ -225,4 +225,5 @@ report `online=1` and `Charging` or `Full`, plus their battery and thermal
 limits. An identity-checked orderly poweroff was requested; receipt
 `logs/lynx-poweroff-1792853724641835014/`. No additional display trial was
 run. Noob reported a cable-triggered restart and removed the cable; the
-follow-up poweroff watcher is in progress.
+follow-up seven-minute watcher saw no Alpine or SSH return. Network absence
+supports shutdown but is not physical proof.

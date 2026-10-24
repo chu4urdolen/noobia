@@ -1,5 +1,16 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-24 powered on, no Wi-Fi or USB contact
+
+Noob put Lynx back on a cable and powered her on with the buttons. She showed
+a black screen and felt mildly warm. A seven-minute pinned SSH watcher found
+neither rescue port 22 nor Alpine port 2222; a six-minute UDP beacon listener
+received no datagram. Nexus saw no Lynx USB device or Fastboot endpoint.
+Receipts: `logs/v47-reconnect-1792854380193440511/result.json` and
+`logs/wifi-v19-contact-1792854612031922583/result.json`. No phone write,
+reboot, or display trial was issued. Next read-only step needs Lynx in
+Fastboot on Nexus USB so boot state can be inspected.
+
 ## Latest — 2026-10-24 shutdown requested after battery fell to 38%
 
 The last healthy V47 Alpine check had 38% battery, a cool 24.6°C pack,

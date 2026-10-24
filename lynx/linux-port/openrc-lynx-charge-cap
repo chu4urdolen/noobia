@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+# Install only after a monitored one-shot MT6375 control trial succeeds.
+description="Lynx optional 98 percent charging cap"
+command="/bin/busybox"
+command_args="sh /usr/libexec/lynx-charge-cap.sh --watch --armed"
+command_background="yes"
+pidfile="/run/lynx/charge-cap-service.pid"
+output_log="/run/lynx/charge-cap.log"
+error_log="/run/lynx/charge-cap.err"
+depend() {
+    need lynx-health
+    after lynx-battery-reserve
+}

@@ -1,5 +1,21 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-24 V48 charger boot fix prepared offline
+
+Noob reported that Lynx is away from Nexus and charging; current battery
+capacity is unknown. Nexus cannot reach her pinned SSH ports at
+`192.168.100.8`. No phone write or reboot occurred in this preparation.
+The exact V47 `/init` has two charger-triggered poweroff blocks. Its health
+startup supplement has a third charger-online refusal that would otherwise
+fail the boot. V48 removes these three refusals while retaining the battery
+and thermal health startup. Independent offline validation passed for the
+64 MiB boot image. The V47 rollback image and guarded boot_a-only Fastboot
+procedure are ready. V48 has not been booted or flashed; charging behavior
+and thermal response still require live verification. An optional 98% charge
+controller and disabled OpenRC service have been prepared offline, pending a
+live MT6375 control test; neither is installed on Lynx. See
+`V48-CHARGER-BOOT-FIX.md`.
+
 ## Latest — 2026-10-24 powered on, no Wi-Fi or USB contact
 
 Noob put Lynx back on a cable and powered her on with the buttons. She showed
@@ -11,10 +27,12 @@ Receipts: `logs/v47-reconnect-1792854380193440511/result.json` and
 reboot, or display trial was issued. Next read-only step needs Lynx in
 Fastboot on Nexus USB so boot state can be inspected.
 
-Source review of the exact V47 `/init` then found a charger guard at the
-pre-Wi-Fi stage: when any power-supply `online` value differs from zero,
+Source review of the exact V47 `/init` then found a charger guard after
+the Wi-Fi stage: when any power-supply `online` value differs from zero,
 it requests poweroff, and a five-second watcher repeats that policy. This
-plausibly explains a cable-powered black-screen cycle before any beacon.
+can explain a cable-powered shutdown after Wi-Fi setup. V47's local Wi-Fi
+path does not send the old UDP beacon, so absence of that beacon was not
+evidence of Wi-Fi failure.
 Noob was asked to unplug the cable and start Lynx with the buttons while a
 new pinned listener was active. A fresh SSH result is pending. The offline
 display/touch trial guards now require charger `online=0` and at least 50%

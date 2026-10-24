@@ -141,3 +141,58 @@ An identity-checked OpenRC poweroff was then requested using
 `logs/lynx-poweroff-1792834943387190230/result.json`.
 **Panel binding and card registration are proven only for this RAM-loaded
 session; automatic display startup is not configured. Touch remains untested.**
+
+## 2026-10-24 DMA-BUF draw and touch registration
+
+On boot `c72ff027-0ff6-46ef-9191-df3bd26ce8ec`, the guarded RAM-only
+display bootstrap bound the matching panel and registered `/dev/dri/card0`.
+The native `tools/lynx_drm_dmabuf_pattern.c` allocated 13,750,272 bytes from
+`/dev/dma_heap/system`, imported the DMA-BUF through DRM PRIME, and created
+framebuffer 112. This bypassed the driver's failing dumb-buffer allocation.
+Its first `--show 8` caused a kernel NULL dereference at address `0x8` in
+`mml_topology_create+0x178/0x220`; pstore is in
+`logs/v47-display-reboot-capture-1792841381513253192/`. Lynx rebooted
+automatically, then rescue and Alpine SSH and all eight services recovered.
+
+The exact August stock `mtk-mml-mt6983.ko` was absent in that trial. Its
+`tp_ops_mt6983` and `mml_topology_register_ip` symbols explain the NULL
+topology pointer. Its SHA-256 is
+`473c429e8b71aded1fe2f6f9128210e7fdd62df32f1d9cae234a92ac818578a5`.
+`tools/lynx_v47_display_bootstrap.py` now verifies and loads it before
+binding the DSI device. The new boot
+`897cad51-2ae4-479a-98bc-9ab8a052b9a9` passed that bootstrap and a
+single three-second DMA-BUF `drmModeSetCrtc` trial returned exit 0. Receipt:
+`logs/v47-dmabuf-trial-1792841692650566029/`. **This does not prove pixels
+appeared.** Kernel dmesg recorded a display CMDQ timeout, no valid trigger
+loop, and a later `mm_infra` power-off timeout. The phone remained on the
+same boot, with SSH, all eight services, charging, and ext4 health intact.
+Do not repeat the modeset until the CMDQ timeout is explained. A physical
+screen observation was requested but has not yet been received.
+
+Touch was investigated separately on the same boot. The enabled SPI6 node is
+`synaptics,tcm-spi-hbp`; the legacy `synaptics-s3910` node is disabled. Exact
+stock `spi-mt65xx`, `olc`, `oplus_bsp_fw_update`, `oplus_bsp_tp_custom`, and
+`synaptics_tcm2` modules were loaded into RAM, each followed by Alpine health
+checks. The first Synaptics init declined registration with
+`tp_judge_ic_match fail` because `oplus_bsp_tp_custom.dsi_display0` was empty.
+The matching panel string was already in `/proc/cmdline` but was not passed
+to the late-loaded module by `insmod`. Setting that parameter and retrying
+Synaptics once registered `touchpanel` as `/dev/input/event0`. The driver
+detected application firmware build 4079330 (`S3910PA0B0-15.2`) and
+registered an interrupt handler. No firmware update command was issued.
+Receipts: `logs/v47-touch-bootstrap-1792841832300370742/` and
+`logs/v47-touch-match-1792841912592214403/`. Input event coordinates and
+physical response are still unverified. The reproducible touch bootstrap now
+passes the exact existing panel match string when loading the helper.
+
+These display and touch modules are **RAM-only**. A fresh V47 boot returns to
+the original Alpine system, and V47/V46 boot images and stock restoration
+remain unchanged. The reusable tools are `tools/lynx_v47_display_bootstrap.py`,
+`tools/trial_v47_dmabuf.py`, `tools/lynx_v47_touch_bootstrap.py`, and the
+same-boot correction `tools/lynx_v47_touch_match.py`.
+`tools/lynx_touch_events.c` is a bounded read-only event decoder. It compiled
+natively in Lynx's isolated development root and can report coordinates from
+`/dev/input/event0` when someone taps the glass. The driver reports
+`ABS_MT_POSITION_X` 0–12399 and `ABS_MT_POSITION_Y` 0–27719, ten times the
+panel's pixel dimensions. A 20-second capture without a confirmed physical
+tap saw zero events; that does not test touch response.

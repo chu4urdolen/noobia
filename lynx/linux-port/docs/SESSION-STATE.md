@@ -1,5 +1,22 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-24 live V47 Alpine, display and touch trials
+
+Lynx is on boot ID `897cad51-2ae4-479a-98bc-9ab8a052b9a9` with V47 Alpine,
+Wi-Fi/SSH, all eight services healthy, and zero ext4 errors. At the last
+check the battery was 49% and charging, pack 27.9°C, hottest sensor 35.1°C.
+Stock display and touch modules were loaded into RAM only; no boot image or
+persistent startup changed. `/dev/dri/card0` and `/dev/input/event0` exist.
+
+The DMA-BUF framebuffer and a three-second CRTC call succeeded in userspace,
+but the kernel reported a display CMDQ timeout. Visible pixels are not yet
+verified; do not repeat the modeset until that fault is understood. Synaptics
+S3910 application firmware was detected, and an input device and IRQ were
+registered; real touch coordinates have not yet been captured. The earlier
+DMA-BUF modeset without `mtk-mml-mt6983.ko` crashed in MML topology setup,
+then V47 recovered automatically. Full evidence and safe repeat tools are in
+`V47-DISPLAY-TOUCH-TRIAL.md`.
+
 ## Current status — 2026-10-24 powered off after V47 display research
 
 Lynx ran V47 Alpine on boot ID `00841cdb-6658-44d6-9f47-4770b047cad5`

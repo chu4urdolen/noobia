@@ -1,5 +1,6 @@
 """Bounded, read-only capture after a V47 display probe interrupts SSH."""
 
+import argparse
 import json
 import os
 from pathlib import Path
@@ -11,7 +12,6 @@ from lynx_wifi_v19_contact import ssh_command
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "logs" / f"v47-display-reboot-capture-{time.time_ns()}"
-OLD_BOOT_ID = "00841cdb-6658-44d6-9f47-4770b047cad5"
 
 
 def ssh(command, port=22, timeout=8):
@@ -24,9 +24,13 @@ def ssh(command, port=22, timeout=8):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--old-boot-id", required=True,
+                        help="boot ID observed immediately before the trial")
+    args = parser.parse_args()
     os.umask(0o077)
     OUT.mkdir(mode=0o700)
-    result = {"old_boot_id": OLD_BOOT_ID, "samples": []}
+    result = {"old_boot_id": args.old_boot_id, "samples": []}
     deadline = time.monotonic() + 300
     while time.monotonic() < deadline:
         probe = ssh("cat /proc/sys/kernel/random/boot_id; uptime")
@@ -34,8 +38,12 @@ def main():
         if probe and probe.returncode == 0:
             sample["stdout"] = probe.stdout.decode(errors="replace")
             result["samples"].append(sample)
-            result["new_boot_id"] = sample["stdout"].splitlines()[0]
-            break
+            observed_id = sample["stdout"].splitlines()[0]
+            if observed_id != args.old_boot_id:
+                result["new_boot_id"] = observed_id
+                break
+            time.sleep(10)
+            continue
         result["samples"].append(sample)
         time.sleep(10)
     if "new_boot_id" in result:

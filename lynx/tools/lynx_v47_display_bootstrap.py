@@ -36,6 +36,8 @@ MODULES = (
      "test -L /sys/bus/platform/devices/mt6373-auxadc/driver"),
     ("mtk_iommu", "f2f2d31ec2dcb769311dfab3621622a7deff7ba83d14c2f5137d94f38c44b332",
      "test \"$(ls /sys/class/iommu | wc -l)\" -ge 1"),
+    ("mtk-mml-mt6983", "473c429e8b71aded1fe2f6f9128210e7fdd62df32f1d9cae234a92ac818578a5",
+     "grep -q '^mtk_mml_mt6983 ' /proc/modules"),
     ("oplus22823_tm_nt37705_fhd_dsi_cmd", "498be900a01f21eba3116820d4fae965ee3796a953d30f66fb4aa72436334e98",
      "grep -q '^oplus22823_tm_nt37705_fhd_dsi_cmd ' /proc/modules"),
 )
@@ -97,6 +99,8 @@ def main():
         health = json.loads(status)
         report["battery_percent"] = health["battery"]["capacity_percent"]
         report["battery_temperature_mC"] = health["battery"]["temperature_mC"]
+        report["battery_current_mA_signed"] = health["battery"]["current_mA_signed"]
+        report["thermal_max_mC"] = health["thermal"]["max_mC"]
         state = step("display_state", "set -eu; "
                      'printf "CARD="; test -e /sys/class/drm/card0 && echo yes || echo no; '
                      'printf "PANEL="; test -e /sys/module/oplus22823_tm_nt37705_fhd_dsi_cmd && echo yes || echo no; '
@@ -110,8 +114,12 @@ def main():
             print(f"V47 target checked: boot {boot_id}, battery "
                   f"{report['battery_percent']}%, {state.replace(chr(10), ' ')}")
         else:
-            if report["battery_percent"] < 50 or report["battery_temperature_mC"] >= 35000:
-                raise RuntimeError("battery must be at least 50% and below 35°C")
+            if (report["battery_percent"] < 45 or
+                report["battery_current_mA_signed"] < 50 or
+                report["battery_temperature_mC"] >= 30000 or
+                report["thermal_max_mC"] >= 45000):
+                raise RuntimeError("battery must be at least 45%, charging above 50 mA, "
+                                   "battery below 30°C, and sensors below 45°C")
             if "CARD=yes" in state or "PANEL=yes" in state or "DSI=yes" in state:
                 raise RuntimeError("display was already probed on this boot; refusing a repeat")
             for name, digest, check, data in modules:

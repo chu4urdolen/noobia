@@ -28,8 +28,9 @@ mapping. A new allocation path needs a controlled test.
 `tools/lynx_v47_display_bootstrap.py` is a reusable host-side sequencer.
 Default mode checks the pinned V47 identity, matching stock module hashes,
 kernel ABI, battery, and active panel device-tree compatible without changing
-the phone. `--apply` requires at least 50% battery and a fresh boot with no
-panel probe, loads the exact successful module order in RAM, checks health
+the phone. `--apply` requires at least 45% battery while charging above
+50 mA, a battery below 30°C, all reported sensors below 45°C, and a fresh
+boot with no panel probe. It loads the exact successful module order in RAM, checks health
 after every step, and binds DSI once. It has passed Python syntax and CLI
 checks, but **has not been run** on a new hardware boot.
 
@@ -58,6 +59,14 @@ is a hypothesis to test, not a working framebuffer claim. References:
 and [DRM PRIME import UAPI](https://www.kernel.org/doc/html/v6.6/gpu/drm-uapi.html).
 
 ## Touchscreen preparation
+
+Update 2026-10-24: The trial below was completed. The exact stock stack
+registered `/dev/input/event0` after passing the existing command-line panel
+match string to `oplus_bsp_tp_custom`. See `V47-DISPLAY-TOUCH-TRIAL.md` for
+receipts. Touch coordinates remain unverified. The display DMA-BUF path can
+allocate and set a CRTC, but dmesg reports a CMDQ timeout, so visible output
+is not yet established. Do not repeat the modeset without diagnosing that
+timeout.
 
 The active device-tree node is SPI6 Synaptics S3910. The matching stock
 candidate is `synaptics_tcm2.ko`; it was never loaded. SPI controller

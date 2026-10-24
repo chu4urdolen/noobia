@@ -56,6 +56,18 @@ def expected_init_hashes():
       re.fullmatch('[0-9a-f]{64}',result.get('init_sha256',''))):
    hashes.add(result['init_sha256'])
  except (OSError,ValueError,KeyError): pass
+ candidate=ROOT/'linux-port/artifacts/wifi-dhcp-retry-v47-offline'
+ try:
+  result=json.loads((candidate/'build-result.json').read_text())
+  validation=json.loads((candidate/'validation.json').read_text())
+  image=(candidate/'nord3-wifi-dhcp-retry-v47-untested.img').read_bytes()
+  if (result.get('state')=='offline-v47-dhcp-retry-candidate-built' and
+      validation.get('state')=='offline-v47-validation-passed' and
+      validation.get('image_sha256')==result.get('image_sha256') and
+      hashlib.sha256(image).hexdigest()==result.get('image_sha256') and
+      re.fullmatch('[0-9a-f]{64}',result.get('init_sha256',''))):
+   hashes.add(result['init_sha256'])
+ except (OSError,ValueError,KeyError): pass
  return hashes
 def ssh_command(ip,command):
  return ['ssh','-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=yes','-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlias=lynx','-o','UserKnownHostsFile='+str(ROOT/'secrets/lynx_known_hosts'),'-o','ConnectTimeout=5','-i',str(ROOT/'secrets/nexus_lynx_ed25519'),'root@'+ip,command]

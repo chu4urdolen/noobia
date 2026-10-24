@@ -1,10 +1,23 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-24 shutdown requested after battery fell to 38%
+
+The last healthy V47 Alpine check had 38% battery, a cool 24.6°C pack,
+all eight services healthy, and zero ext4 errors. The MT6375 charger
+reported `online=0`, `Not charging`; the gauge-current sign alone is not a
+charging proof. An identity-checked OpenRC poweroff request was sent and SSH
+disappeared (`logs/lynx-poweroff-1792853724641835014/`). Noob reported that
+the cable woke Lynx again and removed it. A bounded watcher is waiting to
+power her off if this restart reaches Alpine. Physical power state remains
+unconfirmed until the watcher or Noob checks it. Display/touch development
+is paused on hardware while offline CMDQ and charger guards are corrected.
+
 ## Latest — 2026-10-24 live V47 Alpine, display and touch trials
 
 Lynx is on boot ID `897cad51-2ae4-479a-98bc-9ab8a052b9a9` with V47 Alpine,
 Wi-Fi/SSH, all eight services healthy, and zero ext4 errors. At the last
-check the battery was 49% and charging, pack 27.9°C, hottest sensor 35.1°C.
+check the battery was 49%, pack 27.9°C, hottest sensor 35.1°C; charging
+was inferred from the signed gauge value but not verified by the charger.
 Stock display and touch modules were loaded into RAM only; no boot image or
 persistent startup changed. `/dev/dri/card0` and `/dev/input/event0` exist.
 

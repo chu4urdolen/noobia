@@ -72,12 +72,18 @@ def main():
             raise RuntimeError("display topology, card, or Alpine health preflight failed")
         health = json.loads((out / "preflight.stdout").read_text())
         trial_start_uptime = health["uptime_seconds"]
+        charger = step("charger", "set -eu; "
+                       "supply=/sys/class/power_supply/11e01000.i2c:mt6375@34:chg; "
+                       "cat \"$supply/online\"; cat \"$supply/status\"")
+        charger_lines = (out / "charger.stdout").read_text().splitlines()
         report["battery_percent"] = health["battery"]["capacity_percent"]
         report["thermal_max_mC"] = health["thermal"]["max_mC"]
         if health["battery"]["capacity_percent"] < 45 or \
+           charger["exit"] != 0 or len(charger_lines) != 2 or \
+           charger_lines[0] != "1" or charger_lines[1] not in ("Charging", "Full") or \
            health["battery"]["temperature_mC"] >= 30000 or \
            health["thermal"]["max_mC"] >= 45000:
-            raise RuntimeError("battery or temperature outside display trial guard")
+            raise RuntimeError("battery, charger, or temperature outside display trial guard")
         # One CRTC modeset only. Capture both streams even if SSH drops.
         display = step("show", "/bin/busybox timeout 12 " + PROGRAM +
                        f" --show {args.show_seconds}", timeout=20)

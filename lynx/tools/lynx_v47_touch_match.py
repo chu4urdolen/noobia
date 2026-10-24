@@ -50,8 +50,12 @@ def main():
             "test ! -e /dev/input/event0; "
             "/usr/local/bin/lynx-status --assert-ready")
         health = json.loads(pre)
+        charger = step("charger_state", "set -eu; "
+                       "supply=/sys/class/power_supply/11e01000.i2c:mt6375@34:chg; "
+                       "cat \"$supply/online\"; cat \"$supply/status\"").splitlines()
         if health["battery"]["capacity_percent"] < 45 or \
-           health["battery"]["current_mA_signed"] < 50 or \
+           len(charger) != 2 or charger[0] != "1" or \
+           charger[1] not in ("Charging", "Full") or \
            health["battery"]["temperature_mC"] >= 30000 or \
            health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("battery or temperature outside touch guard")

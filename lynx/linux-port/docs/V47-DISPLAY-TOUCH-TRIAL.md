@@ -165,7 +165,8 @@ single three-second DMA-BUF `drmModeSetCrtc` trial returned exit 0. Receipt:
 `logs/v47-dmabuf-trial-1792841692650566029/`. **This does not prove pixels
 appeared.** Kernel dmesg recorded a display CMDQ timeout, no valid trigger
 loop, and a later `mm_infra` power-off timeout. The phone remained on the
-same boot, with SSH, all eight services, charging, and ext4 health intact.
+same boot, with SSH, all eight services, and ext4 health intact. The charger
+state was not checked during this trial; later it reported `online=0`.
 Do not repeat the modeset until the CMDQ timeout is explained. A physical
 screen observation was requested but has not yet been received.
 
@@ -196,3 +197,32 @@ natively in Lynx's isolated development root and can report coordinates from
 `ABS_MT_POSITION_X` 0–12399 and `ABS_MT_POSITION_Y` 0–27719, ten times the
 panel's pixel dimensions. A 20-second capture without a confirmed physical
 tap saw zero events; that does not test touch response.
+
+## CMDQ timeout diagnosis and corrected battery guard
+
+The retained CMDQ dump shows the trigger-loop thread stopped on its first
+`EVENT_STREAM_BLOCK` wait. The event-loop thread was also stopped at its
+first instruction, a nonblocking event clear. Multiple configuration
+threads timed out. The DRM driver's `No valid trigger loop` message appeared
+later, after the panel had begun unpreparing, so that phrase is a consequence
+of shutdown, not proof that the loop never existed.
+
+The matching stock `modules.load` also includes `tinysys-scmi.ko` followed
+by `mtk-mminfra-debug.ko`; neither was loaded during the draw trial. The
+OnePlus kernel source for `mtk-mminfra-debug` registers the multimedia
+power-domain notifier. With this phone's `mminfra-bkrs=1` and `init-clk-on`
+device-tree settings, that notifier enables the multimedia clocks and
+initializes the GCE RFIFO. This is a plausible cause of the nonadvancing
+CMDQ threads, not yet a verified fix. The guarded display bootstrap now
+includes both exact stock modules before the panel binds. Do not rerun it
+on the already-probed boot.
+
+At a later read-only check the battery had fallen to 38% and the MT6375
+charger reported `online=0`, `Not charging`, despite a positive signed
+gauge-current sample. The positive sample alone therefore did **not** prove
+charging. The new display and touch tools require the charger interface to
+report `online=1` and `Charging` or `Full`, plus their battery and thermal
+limits. An identity-checked orderly poweroff was requested; receipt
+`logs/lynx-poweroff-1792853724641835014/`. No additional display trial was
+run. Noob reported a cable-triggered restart and removed the cable; the
+follow-up poweroff watcher is in progress.

@@ -28,8 +28,9 @@ mapping. A new allocation path needs a controlled test.
 `tools/lynx_v47_display_bootstrap.py` is a reusable host-side sequencer.
 Default mode checks the pinned V47 identity, matching stock module hashes,
 kernel ABI, battery, and active panel device-tree compatible without changing
-the phone. `--apply` requires at least 45% battery while charging above
-50 mA, a battery below 30°C, all reported sensors below 45°C, and a fresh
+the phone. `--apply` requires at least 45% battery, the MT6375 charger
+reporting `online=1` and `Charging` or `Full`, a battery below 30°C,
+all reported sensors below 45°C, and a fresh
 boot with no panel probe. It loads the exact successful module order in RAM, checks health
 after every step, and binds DSI once. It has passed Python syntax and CLI
 checks, but **has not been run** on a new hardware boot.

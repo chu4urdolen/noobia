@@ -82,6 +82,11 @@ def main():
         report["battery_percent"] = status["battery"]["capacity_percent"]
         report["battery_temperature_mC"] = status["battery"]["temperature_mC"]
         report["thermal_max_mC"] = status["thermal"]["max_mC"]
+        charger = step("charger_state", "set -eu; "
+                       "supply=/sys/class/power_supply/11e01000.i2c:mt6375@34:chg; "
+                       "cat \"$supply/online\"; cat \"$supply/status\"").splitlines()
+        report["charger_online"] = charger[0] if charger else "unknown"
+        report["charger_status"] = charger[1] if len(charger) > 1 else "unknown"
         state = step("touch_state", "set -eu; "
                      f'grep -q "oplus_bsp_tp_custom.dsi_display0={PANEL_MATCH}" /proc/cmdline; '
                      "printf 'SPI='; tr '\\000' ' ' "
@@ -97,7 +102,8 @@ def main():
             report["state"] = "checked-no-changes"
         else:
             if (status["battery"]["capacity_percent"] < 45 or
-                status["battery"]["current_mA_signed"] < 50 or
+                report["charger_online"] != "1" or
+                report["charger_status"] not in ("Charging", "Full") or
                 status["battery"]["temperature_mC"] >= 30000 or
                 status["thermal"]["max_mC"] >= 45000):
                 raise RuntimeError("battery or temperature outside touch trial guard")

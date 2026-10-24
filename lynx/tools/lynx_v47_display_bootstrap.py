@@ -26,6 +26,10 @@ IP = "192.168.100.8"
 MODULES = (
     ("cmdq-platform-mt6983", "3eabc1e9731637286264e7eb5a6d18485e668beb87b305797fcc43f10ef454ec",
      "grep -q '^cmdq_platform_mt6983 ' /proc/modules"),
+    ("tinysys-scmi", "6fa7f4469c3eaee17cb4d039dc30fe31e38bdd8c914925036ebe36861a8c04cf",
+     "grep -q '^tinysys_scmi ' /proc/modules"),
+    ("mtk-mminfra-debug", "7c40aa8abb29927e0bfef68484946f225b2dd5a8d983f411be166827a524eaff",
+     "test -L /sys/bus/platform/devices/1e827000.mminfra-debug/driver"),
     ("mtk-dvfsrc", "f64bc73bbaa9acc5a9c6b8b5e83ee53ab21798acfdaa77819043e0c430a47913",
      "test -L /sys/bus/platform/devices/1c00f000.dvfsrc/driver"),
     ("mtk-dvfsrc-regulator", "a49acf1bc974d7deae015befc2bb38df751e0050ae968d5e54ec0d52e44b1d6b",
@@ -101,6 +105,11 @@ def main():
         report["battery_temperature_mC"] = health["battery"]["temperature_mC"]
         report["battery_current_mA_signed"] = health["battery"]["current_mA_signed"]
         report["thermal_max_mC"] = health["thermal"]["max_mC"]
+        charger = step("charger_state", "set -eu; "
+                       "supply=/sys/class/power_supply/11e01000.i2c:mt6375@34:chg; "
+                       "cat \"$supply/online\"; cat \"$supply/status\"").splitlines()
+        report["charger_online"] = charger[0] if charger else "unknown"
+        report["charger_status"] = charger[1] if len(charger) > 1 else "unknown"
         state = step("display_state", "set -eu; "
                      'printf "CARD="; test -e /sys/class/drm/card0 && echo yes || echo no; '
                      'printf "PANEL="; test -e /sys/module/oplus22823_tm_nt37705_fhd_dsi_cmd && echo yes || echo no; '
@@ -109,16 +118,24 @@ def main():
                      '</proc/device-tree/dsi@14017000/panel5@0/compatible | head -n 1')
         if "DT=oplus22823,tm,nt37705,cmd" not in state:
             raise RuntimeError("active device-tree panel is not the expected Tianma NT37705")
+        mminfra = step("mminfra_dt", "set -eu; "
+                        "node=/sys/firmware/devicetree/base/mminfra-debug@0x1e827000; "
+                        "test -f \"$node/init-clk-on\"; "
+                        "test \"$(od -An -tu4 -N4 \"$node/mminfra-bkrs\" | tr -d ' ')\" != 0; "
+                        "tr '\\000' ' ' < \"$node/compatible\"")
+        if "mediatek,mminfra-debug" not in mminfra:
+            raise RuntimeError("active multimedia power-domain DT node is unexpected")
         if not args.apply:
             report["state"] = "checked-no-changes"
             print(f"V47 target checked: boot {boot_id}, battery "
                   f"{report['battery_percent']}%, {state.replace(chr(10), ' ')}")
         else:
             if (report["battery_percent"] < 45 or
-                report["battery_current_mA_signed"] < 50 or
+                report["charger_online"] != "1" or
+                report["charger_status"] not in ("Charging", "Full") or
                 report["battery_temperature_mC"] >= 30000 or
                 report["thermal_max_mC"] >= 45000):
-                raise RuntimeError("battery must be at least 45%, charging above 50 mA, "
+                raise RuntimeError("battery must be at least 45%, charger online and charging, "
                                    "battery below 30°C, and sensors below 45°C")
             if "CARD=yes" in state or "PANEL=yes" in state or "DSI=yes" in state:
                 raise RuntimeError("display was already probed on this boot; refusing a repeat")

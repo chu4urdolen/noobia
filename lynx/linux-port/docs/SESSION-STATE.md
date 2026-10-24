@@ -1,5 +1,23 @@
 # Current Lynx handoff state
 
+## Current status — 2026-10-24 powered off after V47 display research
+
+Lynx ran V47 Alpine on boot ID `00841cdb-6658-44d6-9f47-4770b047cad5`
+for over 12 hours. At the last healthy check she had 26% battery, a 26.1°C
+pack, all eight services running, both SSH paths, and zero ext4 errors.
+An identity-checked `openrc-shutdown -p now` was requested through
+`tools/lynx_poweroff.py`; SSH disappeared and ping failed. The receipt is
+`logs/lynx-poweroff-1792834943387190230/result.json`. Network loss supports
+shutdown but cannot independently prove hardware power state; check the
+phone itself. Reuse `python3 /noobia/lynx/tools/lynx_poweroff.py --check`
+before an orderly poweroff next time.
+
+The display investigation got the matching stock panel bound and created
+`/dev/dri/card0` with a connected 1240×2772 DSI connector. This required
+six additional stock modules loaded in RAM. A simple DRM pattern still
+failed at dumb-buffer allocation, and touchscreen is untested. None of the
+display module loads were made persistent. See `V47-DISPLAY-TOUCH-TRIAL.md`.
+
 ## Current status — 2026-10-23 V47 controlled boot
 
 V47 now also has signed Alpine `curl`, `jq`, `tmux`, and `rsync` installed

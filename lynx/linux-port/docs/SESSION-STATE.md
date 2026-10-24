@@ -17,6 +17,8 @@ The display investigation got the matching stock panel bound and created
 six additional stock modules loaded in RAM. A simple DRM pattern still
 failed at dumb-buffer allocation, and touchscreen is untested. None of the
 display module loads were made persistent. See `V47-DISPLAY-TOUCH-TRIAL.md`.
+The charged-boot sequencer and DMA-BUF alternative are prepared offline in
+`V47-DISPLAY-OFFLINE-NEXT.md`; neither has been tried on Lynx.
 
 ## Current status — 2026-10-23 V47 controlled boot
 

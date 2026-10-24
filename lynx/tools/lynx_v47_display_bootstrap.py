@@ -130,12 +130,11 @@ def main():
             print(f"V47 target checked: boot {boot_id}, battery "
                   f"{report['battery_percent']}%, {state.replace(chr(10), ' ')}")
         else:
-            if (report["battery_percent"] < 45 or
-                report["charger_online"] != "1" or
-                report["charger_status"] not in ("Charging", "Full") or
+            if (report["battery_percent"] < 50 or
+                report["charger_online"] != "0" or
                 report["battery_temperature_mC"] >= 30000 or
                 report["thermal_max_mC"] >= 45000):
-                raise RuntimeError("battery must be at least 45%, charger online and charging, "
+                raise RuntimeError("battery must be at least 50%, charger offline, "
                                    "battery below 30°C, and sensors below 45°C")
             if "CARD=yes" in state or "PANEL=yes" in state or "DSI=yes" in state:
                 raise RuntimeError("display was already probed on this boot; refusing a repeat")

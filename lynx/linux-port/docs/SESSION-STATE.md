@@ -11,6 +11,15 @@ Receipts: `logs/v47-reconnect-1792854380193440511/result.json` and
 reboot, or display trial was issued. Next read-only step needs Lynx in
 Fastboot on Nexus USB so boot state can be inspected.
 
+Source review of the exact V47 `/init` then found a charger guard at the
+pre-Wi-Fi stage: when any power-supply `online` value differs from zero,
+it requests poweroff, and a five-second watcher repeats that policy. This
+plausibly explains a cable-powered black-screen cycle before any beacon.
+Noob was asked to unplug the cable and start Lynx with the buttons while a
+new pinned listener was active. A fresh SSH result is pending. The offline
+display/touch trial guards now require charger `online=0` and at least 50%
+battery; they will not run at the last measured 38%.
+
 ## Latest — 2026-10-24 shutdown requested after battery fell to 38%
 
 The last healthy V47 Alpine check had 38% battery, a cool 24.6°C pack,

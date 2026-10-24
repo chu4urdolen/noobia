@@ -220,9 +220,11 @@ on the already-probed boot.
 At a later read-only check the battery had fallen to 38% and the MT6375
 charger reported `online=0`, `Not charging`, despite a positive signed
 gauge-current sample. The positive sample alone therefore did **not** prove
-charging. The new display and touch tools require the charger interface to
-report `online=1` and `Charging` or `Full`, plus their battery and thermal
-limits. An identity-checked orderly poweroff was requested; receipt
+charging. The first guard correction required `online=1`, but source review
+then showed that V47 itself powers off whenever a charger reports online.
+The display and touch trial tools now require `online=0`, at least 50%
+battery, and their temperature limits. An identity-checked orderly poweroff
+was requested; receipt
 `logs/lynx-poweroff-1792853724641835014/`. No additional display trial was
 run. Noob reported a cable-triggered restart and removed the cable; the
 follow-up seven-minute watcher saw no Alpine or SSH return. Network absence

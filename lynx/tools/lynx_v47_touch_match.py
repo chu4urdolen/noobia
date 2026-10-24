@@ -53,9 +53,8 @@ def main():
         charger = step("charger_state", "set -eu; "
                        "supply=/sys/class/power_supply/11e01000.i2c:mt6375@34:chg; "
                        "cat \"$supply/online\"; cat \"$supply/status\"").splitlines()
-        if health["battery"]["capacity_percent"] < 45 or \
-           len(charger) != 2 or charger[0] != "1" or \
-           charger[1] not in ("Charging", "Full") or \
+        if health["battery"]["capacity_percent"] < 50 or \
+           len(charger) != 2 or charger[0] != "0" or \
            health["battery"]["temperature_mC"] >= 30000 or \
            health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("battery or temperature outside touch guard")

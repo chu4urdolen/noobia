@@ -101,9 +101,8 @@ def main():
         if not args.apply:
             report["state"] = "checked-no-changes"
         else:
-            if (status["battery"]["capacity_percent"] < 45 or
-                report["charger_online"] != "1" or
-                report["charger_status"] not in ("Charging", "Full") or
+            if (status["battery"]["capacity_percent"] < 50 or
+                report["charger_online"] != "0" or
                 status["battery"]["temperature_mC"] >= 30000 or
                 status["thermal"]["max_mC"] >= 45000):
                 raise RuntimeError("battery or temperature outside touch trial guard")

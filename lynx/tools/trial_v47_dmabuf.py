@@ -78,9 +78,9 @@ def main():
         charger_lines = (out / "charger.stdout").read_text().splitlines()
         report["battery_percent"] = health["battery"]["capacity_percent"]
         report["thermal_max_mC"] = health["thermal"]["max_mC"]
-        if health["battery"]["capacity_percent"] < 45 or \
+        if health["battery"]["capacity_percent"] < 50 or \
            charger["exit"] != 0 or len(charger_lines) != 2 or \
-           charger_lines[0] != "1" or charger_lines[1] not in ("Charging", "Full") or \
+           charger_lines[0] != "0" or \
            health["battery"]["temperature_mC"] >= 30000 or \
            health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("battery, charger, or temperature outside display trial guard")

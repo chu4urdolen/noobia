@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import time
 
@@ -70,6 +71,7 @@ def main():
         if preflight["exit"] != 0:
             raise RuntimeError("display topology, card, or Alpine health preflight failed")
         health = json.loads((out / "preflight.stdout").read_text())
+        trial_start_uptime = health["uptime_seconds"]
         report["battery_percent"] = health["battery"]["capacity_percent"]
         report["thermal_max_mC"] = health["thermal"]["max_mC"]
         if health["battery"]["capacity_percent"] < 45 or \
@@ -84,7 +86,20 @@ def main():
         after = step("after", "cat /proc/sys/kernel/random/boot_id; "
                      "/usr/local/bin/lynx-status --assert-ready", timeout=10)
         if after["exit"] == 0:
-            report["state"] = "same-boot-after-trial"
+            ring = step("dmesg_after", "dmesg", timeout=25)
+            if ring["exit"] == 0:
+                errors = []
+                for line in (out / "dmesg_after.stdout").read_text(errors="replace").splitlines():
+                    stamp = re.match(r"\[\s*([0-9]+(?:\.[0-9]+)?)\]", line)
+                    if stamp and float(stamp.group(1)) >= trial_start_uptime and \
+                       ("cmdq timeout" in line.lower() or
+                        "Unable to handle kernel" in line or
+                        "Failed to power off domain mm_infra" in line):
+                        errors.append(line[:250])
+                report["kernel_display_errors"] = errors[:30]
+            report["state"] = ("same-boot-with-display-errors" if
+                               report.get("kernel_display_errors") else
+                               "same-boot-no-detected-display-errors")
         else:
             report["state"] = "connection-lost-waiting-for-reboot"
             deadline = time.monotonic() + 300

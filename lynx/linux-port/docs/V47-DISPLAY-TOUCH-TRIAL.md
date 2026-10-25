@@ -229,3 +229,34 @@ was requested; receipt
 run. Noob reported a cable-triggered restart and removed the cable; the
 follow-up seven-minute watcher saw no Alpine or SSH return. Network absence
 supports shutdown but is not physical proof.
+
+## 2026-10-25 V48 follow-up: MMInfra HRE restore BUG
+
+The V48 guarded RAM-only bootstrap loaded `tinysys-scmi.ko` and
+`mtk-mminfra-debug.ko` before panel binding. DRM registered the connected
+1240×2772 DSI connector, and the DMA-BUF program imported a framebuffer.
+The first three-second modeset rebooted Lynx. Host receipts and pstore:
+`logs/v48-display-bootstrap-1792959952071736454/` and
+`logs/v48-dmabuf-trial-1792960004528604050/`.
+
+The new pstore call trace reaches `mtk_mminfra_pd_callback+0x204/0x260`
+through `cmdq_mbox_enable`, during `mtk_dsi_encoder_disable`. The matching
+OnePlus source at `drivers/misc/mediatek/mminfra/mtk-mminfra-debug.c:215`
+contains an unconditional `BUG_ON(1)` when the HRE restore register at
+`0x1e800280` differs from `0xfff`. The source calls
+`scmi_tinysys_common_set` for MMInfra restore immediately before this
+check, but the captured pstore does not show the SCMI return or register
+value. We cannot yet distinguish an unavailable SCMI provider, a failed
+restore, or another missing initialization step. The stock `modules.load`
+puts these suppliers late (lines 186–187), after several display modules;
+loading both in our bootstrap was therefore necessary to test, but did not
+make modeset safe.
+
+Lynx recovered through BusyBox and automatic Alpine handoff on boot
+`89ee3cfd-fb7c-4c66-94ec-7ae1a12d6f73`, with eight services healthy and
+no ext4 errors. No boot partition was written. Hold further modesets until
+SCMI provider binding and HRE restore diagnostics can be checked without a
+display commit. The trial tool now starts a pinned SSH `/dev/kmsg` stream to
+a host-side file before modeset, so the next permitted experiment can retain
+messages that pstore may omit. This capture path passed Python syntax and
+device-node preflight; it has not been used for another display modeset.

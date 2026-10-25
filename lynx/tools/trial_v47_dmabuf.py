@@ -49,6 +49,9 @@ def main():
     report = {"state": "starting", "target": args.target,
               "boot_partition_writes": False,
               "show_seconds": args.show_seconds, "steps": []}
+    stream = None
+    stream_out = None
+    stream_err = None
 
     def step(name, command, port=2222, timeout=20):
         result = ssh(ip, command, port=port, timeout=timeout)
@@ -90,6 +93,16 @@ def main():
            health["battery"]["temperature_mC"] >= 30000 or \
            health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("battery, charger, or temperature outside display trial guard")
+        # Keep a host-side kernel trace across a possible phone reboot. Pstore
+        # can omit messages immediately before a BUG, including MMInfra errors.
+        stream_out = (out / "kmsg-live.stdout").open("wb")
+        stream_err = (out / "kmsg-live.stderr").open("wb")
+        stream_argv = ssh_command(ip, "cat /dev/kmsg")
+        stream_argv[-2:-2] = ["-p", "22"]
+        stream = subprocess.Popen(stream_argv, stdout=stream_out, stderr=stream_err)
+        time.sleep(1)
+        if stream.poll() is not None:
+            raise RuntimeError("kernel message stream ended before modeset")
         # One CRTC modeset only. Capture both streams even if SSH drops.
         display = step("show", "/bin/busybox timeout 12 " + PROGRAM +
                        f" --show {args.show_seconds}", timeout=20)
@@ -130,6 +143,18 @@ def main():
     except Exception as exc:
         report.update(state="stopped", error=str(exc))
     finally:
+        if stream is not None and stream.poll() is None:
+            stream.terminate()
+            try:
+                stream.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                stream.kill()
+                stream.wait(timeout=3)
+        if stream_out is not None:
+            stream_out.close()
+        if stream_err is not None:
+            stream_err.close()
+        report["live_kernel_trace_bytes"] = (out / "kmsg-live.stdout").stat().st_size if stream_out else 0
         report["finished_ns"] = time.time_ns()
         path = out / "result.json"
         path.write_text(json.dumps(report, indent=2) + "\n")

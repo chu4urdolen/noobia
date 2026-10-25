@@ -66,3 +66,26 @@ The stock Synaptics touchscreen stack was loaded into RAM on the same V49
 boot. `/dev/input/event0` registered, and Noob's taps produced 12 press and
 12 release events with valid X/Y coordinates in a 30-second read-only
 capture: `logs/v49-touch-events-1792964117579390120/`. Touch input works.
+
+## First visible display output
+
+The old DRM test used `drmModeSetCrtc` and timed out at CMDQ event 644. A new
+atomic path in `tools/lynx_drm_dmabuf_pattern.c` sets the connector, CRTC,
+mode, and XRGB8888 primary plane (id 36) together. Its test-only commit
+passed before any live commit. The bounded trial wrapper temporarily sets
+`/sys/kernel/oplus_display/oplus_brightness` to 400 after the atomic commit,
+then restores it to zero. The stock panel driver logged its DSI backlight
+command. Both changes are RAM-only; the V49 boot image is unchanged.
+
+**Noob saw Lynx's screen work** during the announced 12-second trial. The
+phone remained on boot `38795684-219b-4b82-9b36-2b3001fc02a6` and Alpine
+health passed afterward. Receipt:
+`logs/v49-dmabuf-trial-1792964620246017995/result.json`; `show.stdout`
+records the atomic test, actual commit, and brightness restoration. The
+visual observation is the decisive pixel proof; the earlier unobserved
+trials were not visual proof.
+
+The driver still logs idle-manager, DSI ESD-read, and shutdown/doze warnings
+during this transient test, but no CMDQ timeout or reboot. Those need review
+before making the display persistent. The temporary pattern exits and powers
+the panel down after 12 seconds; a display service and GUI do not yet exist.

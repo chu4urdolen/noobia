@@ -24,6 +24,8 @@ TARGETS = {
     "v49": ("192.168.100.7", "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f"),
 }
 PROGRAM = "/var/lib/lynx-devroot/tmp/lynx_drm_dmabuf_pattern"
+ATOMIC_PROGRAM = "/var/lib/lynx-devroot/tmp/lynx_drm_atomic_candidate"
+ATOMIC_SHA = "0406aa15f90547d571271efdba5cd7566277dfb5e4e56f209c5c1f7e9d9271e5"
 
 
 def ssh(ip, command, port=2222, timeout=20):
@@ -42,14 +44,23 @@ def main():
     parser.add_argument("--target", choices=TARGETS, default="v47")
     parser.add_argument("--no-live-trace", action="store_true",
                         help="use pstore and post-trial dmesg when /dev/kmsg streaming is unavailable")
+    parser.add_argument("--atomic", action="store_true",
+                        help="V49 only: use the validated atomic primary-plane candidate")
+    parser.add_argument("--brightness", type=int, choices=range(1, 1001),
+                        metavar="1..1000", help="V49 atomic only: set temporary panel brightness")
     parser.add_argument("--show-seconds", type=int, choices=range(1, 16), metavar="1..15",
                         required=True)
     args = parser.parse_args()
+    if args.atomic and args.target != "v49":
+        parser.error("--atomic currently requires --target v49")
+    if args.brightness is not None and not args.atomic:
+        parser.error("--brightness requires --atomic")
     ip, init_sha = TARGETS[args.target]
     os.umask(0o077)
     out = ROOT / "logs" / f"{args.target}-dmabuf-trial-{time.time_ns()}"
     out.mkdir(mode=0o700)
-    report = {"state": "starting", "target": args.target,
+    report = {"state": "starting", "target": args.target, "atomic": args.atomic,
+              "temporary_brightness": args.brightness,
               "boot_partition_writes": False,
               "show_seconds": args.show_seconds, "steps": []}
     stream = None
@@ -102,6 +113,19 @@ def main():
            health["battery"]["temperature_mC"] >= 30000 or \
            health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("battery, charger, or temperature outside display trial guard")
+        if args.atomic:
+            atomic_preflight = step("atomic_binary", "set -eu; "
+                                    f'test "$(sha256sum {ATOMIC_PROGRAM} | cut -c1-64)" = "{ATOMIC_SHA}"; '
+                                    f"/bin/busybox timeout 12 {ATOMIC_PROGRAM} --atomic-test")
+            if atomic_preflight["exit"] != 0:
+                raise RuntimeError("atomic candidate hash or test-only commit failed")
+        if args.brightness is not None:
+            brightness_preflight = step("brightness_preflight", "set -eu; "
+                                        "node=/sys/kernel/oplus_display/oplus_brightness; "
+                                        'test "$(cat "$node")" = 0; '
+                                        f'test "$(cat /sys/kernel/oplus_display/oplus_max_brightness)" -ge {args.brightness}')
+            if brightness_preflight["exit"] != 0:
+                raise RuntimeError("panel brightness control not at safe baseline")
         # Keep a host-side kernel trace across a possible phone reboot. Pstore
         # can omit messages immediately before a BUG, including MMInfra errors.
         if not args.no_live_trace:
@@ -114,8 +138,34 @@ def main():
             if stream.poll() is not None:
                 raise RuntimeError("kernel message stream ended before modeset")
         # One CRTC modeset only. Capture both streams even if SSH drops.
-        display = step("show", f"/bin/busybox timeout {args.show_seconds + 10} " + PROGRAM +
-                       f" --show {args.show_seconds}", timeout=args.show_seconds + 18)
+        program = ATOMIC_PROGRAM if args.atomic else PROGRAM
+        mode = "--show-atomic" if args.atomic else "--show"
+        if args.brightness is None:
+            show_command = (f"/bin/busybox timeout {args.show_seconds + 10} " +
+                            program + f" {mode} {args.show_seconds}")
+        else:
+            node = "/sys/kernel/oplus_display/oplus_brightness"
+            work = f"/run/lynx/atomic-brightness-{time.time_ns()}"
+            script = (
+                "set -eu; "
+                f"node={node}; test \"$(cat \"$node\")\" = 0; "
+                f"work={work}; mkdir -p \"$work\"; : > \"$work/show.log\"; "
+                f"({program} --show-atomic {args.show_seconds} > \"$work/show.log\" 2>&1) & pid=$!; "
+                "ready=0; n=0; while [ $n -lt 40 ]; do "
+                "if grep -q \"displaying color bars\" \"$work/show.log\"; then ready=1; break; fi; "
+                "kill -0 $pid 2>/dev/null || break; "
+                "/bin/busybox sleep 0.1; n=$((n+1)); done; "
+                "if [ \"$ready\" != 1 ]; then cat \"$work/show.log\"; wait $pid; exit 1; fi; "
+                "trap \"printf %s 0 > $node\" EXIT; "
+                f"printf %s {args.brightness} > \"$node\"; "
+                "printf brightness_active=; cat \"$node\"; "
+                "/bin/busybox sleep 5; printf %s 0 > \"$node\"; "
+                "printf brightness_restored=; cat \"$node\"; "
+                "wait $pid; cat \"$work/show.log\""
+            )
+            show_command = (f"/bin/busybox timeout {args.show_seconds + 12} "
+                            f"/bin/sh -c '{script}'")
+        display = step("show", show_command, timeout=args.show_seconds + 18)
         report["show_exit"] = display["exit"]
         report["show_timeout"] = display.get("timeout", False)
         after = step("after", "cat /proc/sys/kernel/random/boot_id; "

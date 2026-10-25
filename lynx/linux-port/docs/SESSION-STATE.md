@@ -1,6 +1,17 @@
 # Current Lynx handoff state
 
-## Latest — 2026-10-25 V49 boots, touch coordinates verified, display still times out
+## Latest — 2026-10-25 first visible Lynx display output
+
+Noob watched the announced 12-second V49 atomic DRM + brightness 400 trial
+and reported that Lynx's screen worked. The trial used the connected
+1240×2772 DSI mode, imported DMA-BUF XRGB8888 primary plane, and restored
+brightness zero afterward. Alpine stayed on the same boot and health passed.
+Evidence: `logs/v49-dmabuf-trial-1792964620246017995/`. The driver still
+emitted idle-manager, ESD-read, and doze/shutdown warnings; no CMDQ timeout
+or reboot was observed. The pattern was transient, and no display service or
+GUI is installed. See `V49-IOMMU-BEFORE-CMDQ.md` for the exact sequence.
+
+## Earlier — 2026-10-25 V49 boots, touch coordinates verified, legacy display times out
 
 V49 was flashed to boot_a only after Fastboot identity and partition checks;
 V48 rollback remains ready. V49 rescue and Alpine SSH returned on boot

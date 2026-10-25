@@ -129,14 +129,150 @@ static int pick_dsi(int fd, drmModeRes *resources, uint32_t *connector_id,
 	return -1;
 }
 
+static uint32_t property_id(int fd, uint32_t object_id, uint32_t object_type,
+			    const char *name, uint64_t *value)
+{
+	drmModeObjectProperties *properties =
+		drmModeObjectGetProperties(fd, object_id, object_type);
+	uint32_t found = 0;
+	if (!properties)
+		return 0;
+	for (uint32_t i = 0; i < properties->count_props; i++) {
+		drmModePropertyRes *property =
+			drmModeGetProperty(fd, properties->props[i]);
+		if (property) {
+			if (!strcmp(property->name, name)) {
+				found = property->prop_id;
+				if (value)
+					*value = properties->prop_values[i];
+			}
+			drmModeFreeProperty(property);
+		}
+		if (found)
+			break;
+	}
+	drmModeFreeObjectProperties(properties);
+	return found;
+}
+
+static uint32_t choose_primary_plane(int fd, drmModeRes *resources,
+				     uint32_t crtc_id)
+{
+	int crtc_index = -1;
+	for (int i = 0; i < resources->count_crtcs; i++)
+		if (resources->crtcs[i] == crtc_id)
+			crtc_index = i;
+	if (crtc_index < 0 || crtc_index >= 32)
+		return 0;
+	drmModePlaneRes *planes = drmModeGetPlaneResources(fd);
+	if (!planes)
+		return 0;
+	uint32_t chosen = 0;
+	for (uint32_t i = 0; i < planes->count_planes; i++) {
+		drmModePlane *plane = drmModeGetPlane(fd, planes->planes[i]);
+		if (!plane)
+			continue;
+		uint64_t type = UINT64_MAX;
+		bool format = false;
+		for (uint32_t j = 0; j < plane->count_formats; j++)
+			if (plane->formats[j] == DRM_FORMAT_XRGB8888)
+				format = true;
+		if ((plane->possible_crtcs & (1U << crtc_index)) && format &&
+		    property_id(fd, plane->plane_id, DRM_MODE_OBJECT_PLANE,
+				"type", &type) && type == DRM_PLANE_TYPE_PRIMARY)
+			chosen = plane->plane_id;
+		drmModeFreePlane(plane);
+		if (chosen)
+			break;
+	}
+	drmModeFreePlaneResources(planes);
+	return chosen;
+}
+
+static int add_property(int fd, drmModeAtomicReq *request, uint32_t object_id,
+			uint32_t object_type, const char *name, uint64_t value)
+{
+	uint32_t id = property_id(fd, object_id, object_type, name, NULL);
+	if (!id) {
+		fprintf(stderr, "missing atomic property %s on object %u\n",
+			name, object_id);
+		errno = ENOENT;
+		return -1;
+	}
+	return drmModeAtomicAddProperty(request, object_id, id, value) < 0 ? -1 : 0;
+}
+
+static int atomic_mode(int fd, uint32_t connector, uint32_t crtc,
+		       uint32_t plane, uint32_t fb, drmModeModeInfo *mode,
+		       bool test_only)
+{
+	uint32_t blob = 0;
+	drmModeAtomicReq *request = NULL;
+	int rc = -1;
+	if (drmModeCreatePropertyBlob(fd, mode, sizeof(*mode), &blob) < 0)
+		return -1;
+	request = drmModeAtomicAlloc();
+	if (!request)
+		goto done;
+#define ADD(obj, kind, name, val) \
+	do { if (add_property(fd, request, obj, kind, name, val) < 0) goto done; } while (0)
+	ADD(connector, DRM_MODE_OBJECT_CONNECTOR, "CRTC_ID", crtc);
+	ADD(crtc, DRM_MODE_OBJECT_CRTC, "MODE_ID", blob);
+	ADD(crtc, DRM_MODE_OBJECT_CRTC, "ACTIVE", 1);
+	ADD(plane, DRM_MODE_OBJECT_PLANE, "FB_ID", fb);
+	ADD(plane, DRM_MODE_OBJECT_PLANE, "CRTC_ID", crtc);
+	ADD(plane, DRM_MODE_OBJECT_PLANE, "SRC_X", 0);
+	ADD(plane, DRM_MODE_OBJECT_PLANE, "SRC_Y", 0);
+	ADD(plane, DRM_MODE_OBJECT_PLANE, "SRC_W", WIDTH << 16);
+	ADD(plane, DRM_MODE_OBJECT_PLANE, "SRC_H", HEIGHT << 16);
+	ADD(plane, DRM_MODE_OBJECT_PLANE, "CRTC_X", 0);
+	ADD(plane, DRM_MODE_OBJECT_PLANE, "CRTC_Y", 0);
+	ADD(plane, DRM_MODE_OBJECT_PLANE, "CRTC_W", WIDTH);
+	ADD(plane, DRM_MODE_OBJECT_PLANE, "CRTC_H", HEIGHT);
+#undef ADD
+	rc = drmModeAtomicCommit(fd, request, DRM_MODE_ATOMIC_ALLOW_MODESET |
+		(test_only ? DRM_MODE_ATOMIC_TEST_ONLY : 0), NULL);
+done:
+	if (request)
+		drmModeAtomicFree(request);
+	drmModeDestroyPropertyBlob(fd, blob);
+	return rc;
+}
+
+static int atomic_disable(int fd, uint32_t connector, uint32_t crtc,
+			  uint32_t plane)
+{
+	drmModeAtomicReq *request = drmModeAtomicAlloc();
+	int rc = -1;
+	if (!request)
+		return -1;
+	if (add_property(fd, request, plane, DRM_MODE_OBJECT_PLANE,
+			 "FB_ID", 0) < 0 ||
+	    add_property(fd, request, plane, DRM_MODE_OBJECT_PLANE,
+			 "CRTC_ID", 0) < 0 ||
+	    add_property(fd, request, connector, DRM_MODE_OBJECT_CONNECTOR,
+			 "CRTC_ID", 0) < 0 ||
+	    add_property(fd, request, crtc, DRM_MODE_OBJECT_CRTC,
+			 "ACTIVE", 0) < 0 ||
+	    add_property(fd, request, crtc, DRM_MODE_OBJECT_CRTC,
+			 "MODE_ID", 0) < 0)
+		goto done;
+	rc = drmModeAtomicCommit(fd, request, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL);
+done:
+	drmModeAtomicFree(request);
+	return rc;
+}
+
 static int run(const char *action, unsigned int seconds)
 {
 	int drm_fd = -1, heap_fd = -1, buffer_fd = -1, rc = 1;
 	void *pixels = MAP_FAILED;
-	uint32_t handle = 0, fb_id = 0, connector_id = 0, crtc_id = 0;
+	uint32_t handle = 0, fb_id = 0, connector_id = 0, crtc_id = 0, plane_id = 0;
 	drmModeRes *resources = NULL;
 	drmModeModeInfo mode = { 0 };
 	bool active = false;
+	bool atomic = !strcmp(action, "--atomic-test") ||
+		!strcmp(action, "--show-atomic");
 	uint64_t prime_caps = 0;
 	const size_t length = ((size_t)STRIDE * HEIGHT + 4095U) & ~(size_t)4095U;
 
@@ -152,6 +288,10 @@ static int run(const char *action, unsigned int seconds)
 	printf("prime_caps=0x%" PRIx64 "\n", prime_caps);
 	if (!(prime_caps & DRM_PRIME_CAP_IMPORT)) {
 		fprintf(stderr, "DRM device has no PRIME import capability\n");
+		goto cleanup;
+	}
+	if (atomic && drmSetClientCap(drm_fd, DRM_CLIENT_CAP_ATOMIC, 1) < 0) {
+		fail("enable DRM atomic capability");
 		goto cleanup;
 	}
 	resources = drmModeGetResources(drm_fd);
@@ -217,11 +357,37 @@ static int run(const char *action, unsigned int seconds)
 		rc = 0;
 		goto cleanup;
 	}
+	if (atomic) {
+		plane_id = choose_primary_plane(drm_fd, resources, crtc_id);
+		if (!plane_id) {
+			errno = ENODEV;
+			fail("find XRGB8888 primary plane");
+			goto cleanup;
+		}
+		printf("primary_plane=%u\n", plane_id);
+		if (atomic_mode(drm_fd, connector_id, crtc_id, plane_id,
+				fb_id, &mode, true) < 0) {
+			fail("atomic test-only commit");
+			goto cleanup;
+		}
+		printf("atomic test-only commit accepted\n");
+		if (!strcmp(action, "--atomic-test")) {
+			rc = 0;
+			goto cleanup;
+		}
+		if (atomic_mode(drm_fd, connector_id, crtc_id, plane_id,
+				fb_id, &mode, false) < 0) {
+			fail("atomic display commit");
+			goto cleanup;
+		}
+		goto displayed;
+	}
 	if (drmModeSetCrtc(drm_fd, crtc_id, fb_id, 0, 0,
 			   &connector_id, 1, &mode) < 0) {
 		fail("set DSI CRTC");
 		goto cleanup;
 	}
+	displayed:
 	active = true;
 	printf("displaying color bars for %u seconds\n", seconds);
 	fflush(stdout);
@@ -231,8 +397,10 @@ static int run(const char *action, unsigned int seconds)
 	rc = 0;
 
 cleanup:
-	if (active && drmModeSetCrtc(drm_fd, crtc_id, 0, 0, 0,
-				    NULL, 0, NULL) < 0) {
+	if (active && (atomic ? atomic_disable(drm_fd, connector_id, crtc_id,
+						     plane_id) :
+			     drmModeSetCrtc(drm_fd, crtc_id, 0, 0, 0,
+					    NULL, 0, NULL)) < 0) {
 		fail("disable test CRTC");
 		rc = 1;
 	}
@@ -268,9 +436,11 @@ int main(int argc, char **argv)
 	sigaction(SIGINT, &stop_action, NULL);
 	sigaction(SIGTERM, &stop_action, NULL);
 	if (argc == 2 && (!strcmp(argv[1], "--probe") ||
-			  !strcmp(argv[1], "--allocate")))
+			  !strcmp(argv[1], "--allocate") ||
+			  !strcmp(argv[1], "--atomic-test")))
 		return run(argv[1], 0);
-	if (argc == 3 && !strcmp(argv[1], "--show")) {
+	if (argc == 3 && (!strcmp(argv[1], "--show") ||
+			  !strcmp(argv[1], "--show-atomic"))) {
 		char *end;
 		unsigned long value = strtoul(argv[2], &end, 10);
 		if (*argv[2] && !*end && value >= 1 && value <= 15) {
@@ -278,7 +448,7 @@ int main(int argc, char **argv)
 			return run(argv[1], seconds);
 		}
 	}
-	fprintf(stderr, "usage: %s --probe | --allocate | --show SECONDS(1..15)\n",
+	fprintf(stderr, "usage: %s --probe | --allocate | --atomic-test | --show SECONDS(1..15) | --show-atomic SECONDS(1..15)\n",
 		argv[0]);
 	return 2;
 }

@@ -1,5 +1,21 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-25 one-hour read-only charge trend started
+
+V19 rescue SSH continues online. With Lynx plugged in, MT6375 ADC channel
+`in_voltage1` read about 4.92 V at the input. Four closely spaced reads of
+`in_current5_raw` (the presumed IBUS channel) were zero; `in_current6_raw`
+was zero or one. The power-supply entry still reported `online=0` and
+`Not charging`. These readings do not measure actual Nexus USB-port draw and
+do not prove net battery charging. The V19 image has no battery-gauge snapshot
+driver loaded. Read-only source data was saved in
+`logs/rescue-continuity/charger-adc-samples-1792946487803002563.json`.
+
+`tools/observe_lynx_charge_hour.py` is now sampling the same ADC over pinned
+SSH every five minutes for one hour. Its status and final trend will be in
+`logs/rescue-charge-hour/`; it performs no phone writes. The independent
+20-second SSH continuity monitor remains active.
+
 ## Latest — 2026-10-25 rescue SSH continuity monitor running
 
 At Noob's request, `tools/monitor_lynx_rescue.py` now checks pinned V19 SSH

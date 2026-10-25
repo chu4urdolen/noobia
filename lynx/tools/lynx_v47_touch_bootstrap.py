@@ -22,6 +22,7 @@ KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
 TARGETS = {
     "v47": ("192.168.100.8", "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae"),
     "v48": ("192.168.100.7", "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f"),
+    "v49": ("192.168.100.7", "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f"),
 }
 PANEL_MATCH = "oplus22823_tm_nt37705_fhd_dsi_cmd-synaptics-s3910"
 MODULES = (
@@ -81,6 +82,10 @@ def main():
             raise RuntimeError("target is not the pinned rescue and kernel")
         boot_id = lines[0]
         report["boot_id"] = boot_id
+        if args.target == "v49":
+            step("v49_iommu_boot", "set -eu; "
+                 "grep -q 'CHECKPOINT_MODULE_OK mtk_iommu.ko' /run/lynx/boot.log; "
+                 "test -L /sys/bus/platform/devices/1e980000.gce/iommu_group", port=22)
         status = json.loads(step("alpine_health", "/usr/local/bin/lynx-status --assert-ready"))
         if status["boot_id"] != boot_id:
             raise RuntimeError("Alpine and rescue boot IDs disagree")

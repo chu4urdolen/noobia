@@ -1,5 +1,18 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-25 V49 boots, touch coordinates verified, display still times out
+
+V49 was flashed to boot_a only after Fastboot identity and partition checks;
+V48 rollback remains ready. V49 rescue and Alpine SSH returned on boot
+`38795684-219b-4b82-9b36-2b3001fc02a6`. GCE now has an IOMMU group, and
+the boot log confirms stock `mtk_iommu.ko` loaded before CMDQ. Alpine health
+passed three observer samples. A bounded ten-second DRM draw still hit a
+real CMDQ timeout at event 644 (`EVENT_STREAM_BLOCK`), so display output
+remains unverified and no repeat draw should be made without a new fix.
+The touchscreen driver registered `/dev/input/event0`, and Noob's taps
+produced 12 press/release pairs with X/Y coordinates. Details and receipts:
+`V49-IOMMU-BEFORE-CMDQ.md`.
+
 ## Latest — 2026-10-25 V49 IOMMU boot candidate prepared offline
 
 Noob confirmed Lynx stayed black during the 15-second V48 color-bar test.
@@ -14,8 +27,7 @@ before CMDQ. Its builder, independent validator, and boot_a-only trial tool
 passed offline checks. SHA-256 is
 `896aa4937b168090cd3c75d41995917dad05aedfbc7bf83790fe31342b061e0f`.
 The known-working V48 image is verified and ready for Fastboot restoration.
-**V49 has not been flashed.** The IOMMU hypothesis still needs a controlled
-hardware boot test when Lynx is in Fastboot and battery is adequate.
+This was the offline state before the controlled boot trial documented above.
 
 ## Latest — 2026-10-25 V48 display command completes with SCMI chain
 

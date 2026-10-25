@@ -1,5 +1,30 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-25 V48 display command completes with SCMI chain
+
+The earlier MMInfra BUG exposed a missing module in our display bootstrap:
+the matching stock `modules.load` puts `mtk-mbox-mailbox.ko` immediately
+before `tinysys-scmi.ko`. Read-only sysfs showed the mailbox and ARM SCMI
+platform devices unbound. On recovered V48 boot
+`89ee3cfd-fb7c-4c66-94ec-7ae1a12d6f73`, guarded RAM-only supplier
+probes loaded mailbox, tinysys SCMI, then MMInfra debug separately. The
+mailbox bound, SCMI firmware reported protocol v1.0, tinysys device
+`scmi_dev.1` bound, and MMInfra logged successful feature ID 13. Receipts:
+`logs/v48-mbox-probe-1792960568682816118/`,
+`logs/v48-tinysys-probe-1792960608384969305/`, and
+`logs/v48-mminfra-probe-1792960634473172367/`.
+
+The corrected display bootstrap reused those verified suppliers, loaded the
+remaining modules into RAM, and registered connected 1240×2772 DRM:
+`logs/v48-display-bootstrap-1792960667157909902/`. A single three-second
+DMA-BUF color-bar modeset returned **exit 0** on the same boot, with Alpine,
+SSH, eight services, and ext4 healthy. No CMDQ timeout or MMInfra BUG was
+detected during this draw. Its live kernel log is preserved at
+`logs/v48-dmabuf-trial-1792960703241053029/`. The CRTC is disabled at the
+end of the test; **visible pixels have not been confirmed by an observer**.
+No boot partition changed. On the next boot these modules will need the
+corrected bootstrap order; they are not persistent.
+
 ## Latest — 2026-10-25 V48 display trial and recovery
 
 On V48 boot `82485906-271a-4949-88f6-3a00acd236cb`, the guarded RAM-only

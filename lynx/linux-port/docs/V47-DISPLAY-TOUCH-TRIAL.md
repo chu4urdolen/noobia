@@ -260,3 +260,34 @@ display commit. The trial tool now starts a pinned SSH `/dev/kmsg` stream to
 a host-side file before modeset, so the next permitted experiment can retain
 messages that pstore may omit. This capture path passed Python syntax and
 device-node preflight; it has not been used for another display modeset.
+
+## 2026-10-25 V48 supplier correction and bounded successful modeset
+
+The stock `modules.load` places `mtk-mbox-mailbox.ko` immediately before
+`tinysys-scmi.ko`. This mailbox module was missing from our earlier display
+bootstrap. On V48 boot `89ee3cfd-fb7c-4c66-94ec-7ae1a12d6f73`, the
+unbound `1c351000.tinysys_mbox` device and unbound `firmware:scmi` device
+explained why SCMI had no child device during the crash trial. Separate
+guarded RAM-only probes loaded the exact stock mailbox, tinysys SCMI, and
+MMInfra debug modules in that order. The ARM SCMI driver reported firmware
+protocol v1.0, `scmi_dev.1` bound to `scmi-tinysys`, and MMInfra logged
+`get scmi_smi succeed id=13`. The receipts are
+`logs/v48-mbox-probe-1792960568682816118/`,
+`logs/v48-tinysys-probe-1792960608384969305/`, and
+`logs/v48-mminfra-probe-1792960634473172367/`.
+
+The corrected bootstrap then registered DRM on this same boot. A single
+three-second DMA-BUF color-bar attempt returned exit 0, and Alpine SSH and
+all eight services stayed healthy. The trial found no CMDQ timeout or
+MMInfra restore BUG. It captured 2.7 MB of live `/dev/kmsg` on Nexus;
+receipt: `logs/v48-dmabuf-trial-1792960703241053029/`. Some CMDQ debug
+lines contain the literal `timeout:false`, which is not evidence of a
+timeout. The DRM test disables its CRTC at the end. **No one has confirmed
+visible pixels**, so display hardware bring-up is not yet finished.
+
+All suppliers and display modules remain RAM-only. The corrected
+`tools/lynx_v47_display_bootstrap.py --target v48 --apply` is prepared for
+a fresh boot. The one-off `--resume-suppliers` option is pinned to this
+recovery boot and must not be used later. The next useful test is a timed
+physical screen observation while a pattern is shown, followed by
+touchscreen coordinate verification once pixels are visible.

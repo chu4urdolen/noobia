@@ -29,8 +29,11 @@ IPS = {"v47": "192.168.100.8", "v48": "192.168.100.7"}
 MODULES = (
     ("cmdq-platform-mt6983", "3eabc1e9731637286264e7eb5a6d18485e668beb87b305797fcc43f10ef454ec",
      "grep -q '^cmdq_platform_mt6983 ' /proc/modules"),
+    ("mtk-mbox-mailbox", "77003c737e417b6f51e365faca06f9d3823222746af2561cd014b26cd5b91b46",
+     "test -L /sys/bus/platform/devices/1c351000.tinysys_mbox/driver; "
+     "test -L /sys/bus/platform/devices/firmware:scmi/driver"),
     ("tinysys-scmi", "6fa7f4469c3eaee17cb4d039dc30fe31e38bdd8c914925036ebe36861a8c04cf",
-     "grep -q '^tinysys_scmi ' /proc/modules"),
+     "test -L /sys/bus/scmi_protocol/devices/scmi_dev.1/driver"),
     ("mtk-mminfra-debug", "7c40aa8abb29927e0bfef68484946f225b2dd5a8d983f411be166827a524eaff",
      "test -L /sys/bus/platform/devices/1e827000.mminfra-debug/driver"),
     ("mtk-dvfsrc", "f64bc73bbaa9acc5a9c6b8b5e83ee53ab21798acfdaa77819043e0c430a47913",
@@ -72,7 +75,11 @@ def main():
                         help="pinned rescue image and network address")
     parser.add_argument("--apply", action="store_true",
                         help="load verified modules and bind the panel once")
+    parser.add_argument("--resume-suppliers", action="store_true",
+                        help="on the pinned V48 recovery boot, reuse three separately verified suppliers")
     args = parser.parse_args()
+    if args.resume_suppliers and (args.target != "v48" or not args.apply):
+        parser.error("--resume-suppliers requires --target v48 --apply")
     ip = IPS[args.target]
     modules = module_bytes()
     os.umask(0o077)
@@ -104,6 +111,8 @@ def main():
             raise RuntimeError("target is not the pinned kernel and rescue image")
         boot_id = identity[0]
         report["boot_id"] = boot_id
+        if args.resume_suppliers and boot_id != "89ee3cfd-fb7c-4c66-94ec-7ae1a12d6f73":
+            raise RuntimeError("supplier reuse is pinned to one verified V48 boot")
         status = step("alpine_health", "set -eu; "
                       f'test "$(cat /proc/sys/kernel/random/boot_id)" = "{boot_id}"; '
                       "/usr/local/bin/lynx-status --assert-ready")
@@ -146,6 +155,12 @@ def main():
             if "CARD=yes" in state or "PANEL=yes" in state or "DSI=yes" in state:
                 raise RuntimeError("display was already probed on this boot; refusing a repeat")
             for name, digest, check, data in modules:
+                if args.resume_suppliers and name in ("mtk-mbox-mailbox", "tinysys-scmi",
+                                                      "mtk-mminfra-debug"):
+                    step(f"{name}_reused", "set -eu; "
+                         f'test "$(cat /proc/sys/kernel/random/boot_id)" = "{boot_id}"; '
+                         f"{check}; /usr/local/bin/lynx-status --assert-ready >/dev/null")
+                    continue
                 target = "/run/lynx/display-test/" + name + ".ko"
                 modname = name.replace("-", "_")
                 step(f"{name}_preflight", "set -eu; "

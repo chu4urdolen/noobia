@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Recreate Lynx's proven V47 DRM card registration in RAM.
+"""Recreate Lynx's proven DRM card registration in RAM on V47 or V48.
 
 Default mode checks the target and stock modules without changing Lynx.
-Pass --apply only on a freshly booted V47 with sufficient battery. The tool
+Pass --apply only on a freshly booted target with sufficient battery. The tool
 stops at the first failure, never retries panel binding, and writes no boot
 partition or persistent startup file.
 """
@@ -20,9 +20,12 @@ from lynx_wifi_v19_contact import ssh_command
 
 ROOT = Path(__file__).resolve().parent.parent
 MODULE_DIR = ROOT / "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules"
-INIT_SHA = "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae"
+INIT_SHAS = {
+    "v47": "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae",
+    "v48": "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f",
+}
 KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
-IP = "192.168.100.8"
+IPS = {"v47": "192.168.100.8", "v48": "192.168.100.7"}
 MODULES = (
     ("cmdq-platform-mt6983", "3eabc1e9731637286264e7eb5a6d18485e668beb87b305797fcc43f10ef454ec",
      "grep -q '^cmdq_platform_mt6983 ' /proc/modules"),
@@ -65,18 +68,22 @@ def module_bytes():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", choices=INIT_SHAS, default="v47",
+                        help="pinned rescue image and network address")
     parser.add_argument("--apply", action="store_true",
                         help="load verified modules and bind the panel once")
     args = parser.parse_args()
+    ip = IPS[args.target]
     modules = module_bytes()
     os.umask(0o077)
-    out = ROOT / "logs" / f"v47-display-bootstrap-{time.time_ns()}"
+    out = ROOT / "logs" / f"{args.target}-display-bootstrap-{time.time_ns()}"
     out.mkdir(mode=0o700)
-    report = {"state": "starting", "apply": args.apply,
+    report = {"state": "starting", "target": args.target, "ip": ip,
+              "apply": args.apply,
               "boot_partition_writes": False, "steps": []}
 
     def step(label, command, payload=None, port=2222, timeout=25):
-        argv = ssh_command(IP, command)
+        argv = ssh_command(ip, command)
         argv[-2:-2] = ["-p", str(port)]
         run = subprocess.run(argv, input=payload, capture_output=True,
                              timeout=timeout)
@@ -93,8 +100,8 @@ def main():
         identity = step("rescue_identity", "set -eu; "
                         "cat /proc/sys/kernel/random/boot_id; uname -r; "
                         "sha256sum /init | cut -c1-64", port=22).splitlines()
-        if len(identity) != 3 or identity[1] != KERNEL or identity[2] != INIT_SHA:
-            raise RuntimeError("target is not the pinned V47 kernel and rescue image")
+        if len(identity) != 3 or identity[1] != KERNEL or identity[2] != INIT_SHAS[args.target]:
+            raise RuntimeError("target is not the pinned kernel and rescue image")
         boot_id = identity[0]
         report["boot_id"] = boot_id
         status = step("alpine_health", "set -eu; "
@@ -127,7 +134,7 @@ def main():
             raise RuntimeError("active multimedia power-domain DT node is unexpected")
         if not args.apply:
             report["state"] = "checked-no-changes"
-            print(f"V47 target checked: boot {boot_id}, battery "
+            print(f"{args.target.upper()} target checked: boot {boot_id}, battery "
                   f"{report['battery_percent']}%, {state.replace(chr(10), ' ')}")
         else:
             if (report["battery_percent"] < 50 or

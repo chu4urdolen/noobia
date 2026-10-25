@@ -1,5 +1,26 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-25 V48 display trial and recovery
+
+On V48 boot `82485906-271a-4949-88f6-3a00acd236cb`, the guarded RAM-only
+display bootstrap loaded the matching stock CMDQ platform, tinysys SCMI,
+MMInfra debug, and remaining display dependencies. It bound DSI once and
+registered connected 1240×2772 `/dev/dri/card0`. The DMA-BUF test allocated
+and imported a framebuffer. Receipts are
+`logs/v48-display-bootstrap-1792959952071736454/result.json` and
+`logs/v48-dmabuf-trial-1792960004528604050/result.json`.
+
+One three-second color-bar attempt caused a kernel BUG at
+`mtk-mminfra-debug.c:215` inside `mtk_mminfra_pd_callback`, reached from
+`cmdq_mbox_enable` during display modeset disable. The source line is an
+explicit `BUG_ON(1)` when the HRE restore register at `0x1e800280` does not
+equal `0xfff`. Pstore was captured in the trial receipt. The device rebooted
+itself; BusyBox rescue returned first, then Alpine 3.24.2 on boot
+`89ee3cfd-fb7c-4c66-94ec-7ae1a12d6f73`. All eight services and ext4
+health passed; battery was 52% and 26.7°C. **Do not repeat display modeset**
+until the HRE restore failure and its required initialization are understood.
+No boot partition changed. Visible pixels remain unproven.
+
 ## Latest — 2026-10-25 V48 Alpine boots on 192.168.100.7
 
 Noob requested the newest Alpine candidate. Rescue V19 had stayed online for

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One bounded V47 DMA-BUF display trial with durable host-side evidence.
+"""One bounded V47/V48 DMA-BUF display trial with durable host-side evidence.
 
 The DRM program and stock display modules must already be staged. This tool
 never writes boot partitions, never retries a modeset, and captures a reboot's
@@ -18,12 +18,15 @@ from lynx_wifi_v19_contact import ssh_command
 
 
 ROOT = Path(__file__).resolve().parent.parent
-IP = "192.168.100.8"
+TARGETS = {
+    "v47": ("192.168.100.8", "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae"),
+    "v48": ("192.168.100.7", "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f"),
+}
 PROGRAM = "/var/lib/lynx-devroot/tmp/lynx_drm_dmabuf_pattern"
 
 
-def ssh(command, port=2222, timeout=20):
-    argv = ssh_command(IP, command)
+def ssh(ip, command, port=2222, timeout=20):
+    argv = ssh_command(ip, command)
     argv[-2:-2] = ["-p", str(port)]
     try:
         run = subprocess.run(argv, capture_output=True, timeout=timeout)
@@ -35,17 +38,20 @@ def ssh(command, port=2222, timeout=20):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", choices=TARGETS, default="v47")
     parser.add_argument("--show-seconds", type=int, choices=range(1, 16), metavar="1..15",
                         required=True)
     args = parser.parse_args()
+    ip, init_sha = TARGETS[args.target]
     os.umask(0o077)
-    out = ROOT / "logs" / f"v47-dmabuf-trial-{time.time_ns()}"
+    out = ROOT / "logs" / f"{args.target}-dmabuf-trial-{time.time_ns()}"
     out.mkdir(mode=0o700)
-    report = {"state": "starting", "boot_partition_writes": False,
+    report = {"state": "starting", "target": args.target,
+              "boot_partition_writes": False,
               "show_seconds": args.show_seconds, "steps": []}
 
     def step(name, command, port=2222, timeout=20):
-        result = ssh(command, port=port, timeout=timeout)
+        result = ssh(ip, command, port=port, timeout=timeout)
         (out / f"{name}.stdout").write_bytes(result.pop("stdout"))
         (out / f"{name}.stderr").write_bytes(result.pop("stderr"))
         result["name"] = name
@@ -58,8 +64,8 @@ def main():
         lines = (out / "identity.stdout").read_text().splitlines()
         if identity["exit"] != 0 or len(lines) != 3 or \
            lines[1] != "5.10.149-android12-9-o-g311738fbb5a8" or \
-           not lines[2].startswith("ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae"):
-            raise RuntimeError("target is not the pinned V47 rescue and kernel")
+           not lines[2].startswith(init_sha):
+            raise RuntimeError("target is not the pinned rescue and kernel")
         boot_id = lines[0]
         report["boot_id"] = boot_id
         preflight = step("preflight", "set -eu; "

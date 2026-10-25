@@ -1,5 +1,42 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-25 V48 Alpine boots on 192.168.100.7
+
+Noob requested the newest Alpine candidate. Rescue V19 had stayed online for
+94 of 95 twenty-second checks before Noob restarted it into Fastboot. A
+read-only thirty-minute MT6375 trend showed nearly flat battery voltage and
+zero input-current ADC readings; it did not prove charging. The rescue-only
+monitors were stopped. Fastboot identity/layout and the V48 image/rollback
+hashes passed again. V48 was flashed to **boot_a only**, leaving the battery
+level recorded as unknown at flash time. The flash and separate reboot
+receipts are `logs/v48-boot-a-trial-1792948228582606428/result.json` and
+`logs/v48-boot-a-trial-1792948264862165835/result.json`.
+
+The new observer covered **both** historical Lynx IPs, `192.168.100.7` and
+`192.168.100.8`. On `.7`, pinned port-22 SSH verified the exact V48 init
+SHA-256 and stock kernel. Pinned port-2222 SSH then verified Alpine 3.24.2
+three times on boot ID `82485906-271a-4949-88f6-3a00acd236cb`; receipt:
+`logs/v48-first-boot-1792948259460925317/events.jsonl`. The prior V48
+watch only checked `.8`, so its lack of SSH did not establish boot failure.
+
+Current Alpine has OpenRC PID 1 on ext4. All eight default services (health,
+battery reserve, local logs, Wi-Fi, Dropbear, maintenance, power history, and
+time sync) report status 0. Rootfs has about 534 MiB available; a read-only
+kernel-log scan found no ext4 or I/O errors. Early gauge
+samples showed 29% capacity, 29.8°C battery, approximately +130 mA signed
+gauge current, and CPU temperature falling from 37.8°C to 36.1°C. The
+charger supply still reported `online=0`, `Not charging`; actual charging
+remains unverified. A read-only ten-sample stability watch completed with
+**10/10 healthy samples** on the same boot ID at
+`logs/v48-stability-1792948664611119402/`. Capacity rose from 29% to 30%
+and battery temperature fell to 28.0°C. The identity-checked V48 poweroff
+tool passed a dry run without shutting Lynx down; receipt:
+`logs/lynx-poweroff-1792948942961633755/result.json`.
+
+Persistent boot diagnostics were read and checksum-verified in
+`logs/v48-bootdiag-capture-1792948601473840898/` (44 records). The current
+boot records `HEALTH_READY`, `HANDOFF_BEGIN`, and `TIMER_CANCELLED`.
+
 ## Latest — 2026-10-25 one-hour read-only charge trend started
 
 V19 rescue SSH continues online. With Lynx plugged in, MT6375 ADC channel

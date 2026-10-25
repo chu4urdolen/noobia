@@ -17,9 +17,12 @@ from lynx_wifi_v19_contact import ssh_command
 
 
 ROOT = Path(__file__).resolve().parent.parent
-IP = "192.168.100.8"
+IP = "192.168.100.7"
 EXPECTED_KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
-EXPECTED_INIT_SHA = "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae"
+EXPECTED_INIT_SHAS = {
+    "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae",  # V47
+    "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f",  # V48
+}
 
 
 def ssh(command, port=22, timeout=12):
@@ -41,10 +44,14 @@ def checked_stdout(proc, label):
 
 
 def main():
+    global IP
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true",
                         help="verify identity and readiness without shutting down")
+    parser.add_argument("--ip", choices=("192.168.100.7", "192.168.100.8"),
+                        default=IP, help="Lynx address on the Noobia Wi-Fi")
     args = parser.parse_args()
+    IP = args.ip
     os.umask(0o077)
     out = ROOT / "logs" / f"lynx-poweroff-{time.time_ns()}"
     out.mkdir(mode=0o700)
@@ -54,8 +61,8 @@ def main():
         rescue = checked_stdout(ssh(
             "set -eu; cat /proc/sys/kernel/random/boot_id; uname -r; "
             "sha256sum /init | cut -c1-64"), "rescue identity").splitlines()
-        if len(rescue) != 3 or rescue[1] != EXPECTED_KERNEL or rescue[2] != EXPECTED_INIT_SHA:
-            raise RuntimeError("Lynx V47 kernel or rescue image did not match")
+        if len(rescue) != 3 or rescue[1] != EXPECTED_KERNEL or rescue[2] not in EXPECTED_INIT_SHAS:
+            raise RuntimeError("Lynx V47/V48 kernel or rescue image did not match")
         result["boot_id"] = rescue[0]
         alpine = checked_stdout(ssh(
             "set -eu; cat /proc/sys/kernel/random/boot_id; "

@@ -1,4 +1,15 @@
-# V48 charger boot fix — offline candidate, not yet flashed
+# V48 charger boot fix — Alpine boot verified on Lynx
+
+On 2026-10-25, V48 was flashed to `boot_a` and booted on the OnePlus Nord 3.
+Pinned SSH verified the exact V48 BusyBox init at `192.168.100.7:22`, then
+Alpine 3.24.2/OpenRC on `192.168.100.7:2222`. All eight default services
+reported healthy, and a ten-sample stability watch passed 10/10 checks.
+Battery capacity rose from 29% to 30% while the pack cooled to 28.0°C.
+The previous V48 trial checked only `.8`; that observation
+missed the actual `.7` address and did not establish a boot failure. The
+current trial receipts are `logs/v48-boot-a-trial-1792948228582606428/`,
+`logs/v48-first-boot-1792948259460925317/`, and
+`logs/v48-stability-1792948664611119402/`.
 
 ## Reason
 
@@ -9,10 +20,8 @@ to run if the charger is online. The three gates together make a cable-woken
 shutdown cycle plausible. This is source review, not proof of the cause of
 the latest black-screen event.
 
-The old V47 local Wi-Fi path does not transmit the earlier UDP beacon; missing
-beacons cannot diagnose this boot. Battery capacity was last read many hours
-before this build and is now unknown. Lynx is currently away from Nexus and
-charging; no live change was made.
+The V47 local Wi-Fi path does not transmit the earlier UDP beacon; missing
+beacons cannot diagnose that boot.
 
 ## Exact change
 
@@ -22,8 +31,9 @@ charging; no live change was made.
   monitors to start while charging.
 - The stock kernel, command line, other ramdisk and supplement members, and
   image bytes beyond the supplement remain identical to V47.
-- Battery and thermal watchers remain present. Their behavior with a live
-  charger has **not** yet been verified; V48 must be watched during first boot.
+- Battery and thermal watchers remain present. They started and reported
+  healthy in the first V48 boot; charging protection and long-duration
+  behavior still need verification.
 
 The persistent Alpine battery reserve service can still request shutdown at
 critical capacity (10% or below), on high battery temperature, or if gauge
@@ -50,7 +60,7 @@ gauge capacity rose, so the status text cannot verify the effect of a write.
 The exact live binary equivalence and effective charge-current response
 remain unverified.
 
-After V48 boots and SSH, first run the controller's read-only `--probe` on
+Before enabling the optional cap, first run the controller's read-only `--probe` on
 Lynx and inspect the actual driver path, writable attribute, gauge identity,
 current, capacity, and temperature. Then perform a monitored one-shot control
 trial at a suitable charge level, verify the gauge-current trend over several
@@ -85,7 +95,8 @@ primary member changes, the single supplement script change, payload hashes,
 unchanged tail, shell syntax, and the existing host AVB boot model in locked
 and unlocked states. The AVB result matches the V47 model: the unlocked model
 loads the boot partition; the locked model rejects modified boot content.
-This does not establish a successful hardware boot.
+Offline validation alone did not establish hardware boot; the later pinned
+SSH trial above did.
 
 The builder and validator are:
 
@@ -97,7 +108,7 @@ python3 /noobia/lynx/tools/validate_v48_no_charger_shutdown.py
 The builder refuses to overwrite an existing candidate. Do not rerun it over
 the reviewed artifact.
 
-## Controlled hardware trial when Lynx returns
+## Repeat trial and rollback procedure
 
 1. Obtain a fresh power observation. The old 38% reading is stale. Keep Lynx
    cool and let her charge before any boot partition write.
@@ -109,11 +120,16 @@ the reviewed artifact.
 python3 /noobia/lynx/tools/lynx_boot_a_v48_trial.py --prepare
 ```
 
-4. Only after the fresh charge confirmation, flash **boot_a only**:
+4. After a fresh charge observation, flash **boot_a only**:
 
 ```sh
 python3 /noobia/lynx/tools/lynx_boot_a_v48_trial.py --flash-v48 --charged-confirmed
 ```
+
+The 2026-10-25 trial used `--battery-unknown-accepted` at Noob's explicit
+request because Fastboot exposed no battery level. The first Alpine gauge
+reading after boot was 29%; the flag records uncertainty rather than claiming
+the battery was charged.
 
 The command returns a `result.json` receipt and leaves Lynx in Fastboot.
 Check `v48-flashed-no-reboot` before issuing the separate reboot:

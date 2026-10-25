@@ -45,6 +45,8 @@ def main():
     mode.add_argument("--restore-v47", action="store_true")
     parser.add_argument("--charged-confirmed", action="store_true",
                         help="required for flash: fresh human observation of adequate charge")
+    parser.add_argument("--battery-unknown-accepted", action="store_true",
+                        help="flash with unknown charge after the user explicitly accepts that uncertainty")
     parser.add_argument("--flash-receipt", type=Path)
     args = parser.parse_args()
     local()
@@ -60,8 +62,8 @@ def main():
         return
     action = ("flash-v48" if args.flash_v48 else
               "restore-v47" if args.restore_v47 else "reboot-after-v48")
-    if args.flash_v48 and not args.charged_confirmed:
-        parser.error("--flash-v48 requires fresh --charged-confirmed")
+    if args.flash_v48 and not (args.charged_confirmed or args.battery_unknown_accepted):
+        parser.error("--flash-v48 requires --charged-confirmed or --battery-unknown-accepted")
     if args.reboot_after_v48:
         if args.flash_receipt is None:
             parser.error("--reboot-after-v48 requires --flash-receipt")
@@ -80,7 +82,9 @@ def main():
     report = {"state": "starting", "created_ns": time.time_ns(),
               "mode": action, "image_sha256": V47_SHA if args.restore_v47 else V48_SHA,
               "partition_scope": ["boot_a"], "slot_switch_allowed": False,
-              "charged_confirmed": bool(args.charged_confirmed), "operations": []}
+              "charged_confirmed": bool(args.charged_confirmed),
+              "battery_unknown_accepted": bool(args.battery_unknown_accepted),
+              "operations": []}
 
     def save():
         temp = receipt.with_suffix(".tmp")

@@ -278,16 +278,19 @@ protocol v1.0, `scmi_dev.1` bound to `scmi-tinysys`, and MMInfra logged
 
 The corrected bootstrap then registered DRM on this same boot. A single
 three-second DMA-BUF color-bar attempt returned exit 0, and Alpine SSH and
-all eight services stayed healthy. The trial found no CMDQ timeout or
-MMInfra restore BUG. It captured 2.7 MB of live `/dev/kmsg` on Nexus;
+all eight services stayed healthy. It removed the MMInfra restore BUG, but
+the kernel still logged many CMDQ error interrupts (`err:-22`); the trial's
+first, overly narrow error parser missed these. It captured 2.7 MB of live `/dev/kmsg` on Nexus;
 receipt: `logs/v48-dmabuf-trial-1792960703241053029/`. Some CMDQ debug
 lines contain the literal `timeout:false`, which is not evidence of a
-timeout. The DRM test disables its CRTC at the end. **No one has confirmed
-visible pixels**, so display hardware bring-up is not yet finished.
+timeout. The DRM test disables its CRTC at the end. A later 15-second trial
+returned exit 0 but Noob observed a black screen. Its receipt is
+`logs/v48-dmabuf-trial-1792962915844407881/`; its dmesg also contains
+CMDQ error interrupts. The display path remains incomplete.
 
 All suppliers and display modules remain RAM-only. The corrected
 `tools/lynx_v47_display_bootstrap.py --target v48 --apply` is prepared for
 a fresh boot. The one-off `--resume-suppliers` option is pinned to this
-recovery boot and must not be used later. The next useful test is a timed
-physical screen observation while a pattern is shown, followed by
-touchscreen coordinate verification once pixels are visible.
+recovery boot and must not be used later. The timed physical observation
+confirmed a black screen. Investigate the CMDQ error IRQs and IOMMU domain
+before another modeset; touchscreen coordinates can be tested separately.

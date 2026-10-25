@@ -39,6 +39,8 @@ def ssh(ip, command, port=2222, timeout=20):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", choices=TARGETS, default="v47")
+    parser.add_argument("--no-live-trace", action="store_true",
+                        help="use pstore and post-trial dmesg when /dev/kmsg streaming is unavailable")
     parser.add_argument("--show-seconds", type=int, choices=range(1, 16), metavar="1..15",
                         required=True)
     args = parser.parse_args()
@@ -95,17 +97,18 @@ def main():
             raise RuntimeError("battery, charger, or temperature outside display trial guard")
         # Keep a host-side kernel trace across a possible phone reboot. Pstore
         # can omit messages immediately before a BUG, including MMInfra errors.
-        stream_out = (out / "kmsg-live.stdout").open("wb")
-        stream_err = (out / "kmsg-live.stderr").open("wb")
-        stream_argv = ssh_command(ip, "cat /dev/kmsg")
-        stream_argv[-2:-2] = ["-p", "22"]
-        stream = subprocess.Popen(stream_argv, stdout=stream_out, stderr=stream_err)
-        time.sleep(1)
-        if stream.poll() is not None:
-            raise RuntimeError("kernel message stream ended before modeset")
+        if not args.no_live_trace:
+            stream_out = (out / "kmsg-live.stdout").open("wb")
+            stream_err = (out / "kmsg-live.stderr").open("wb")
+            stream_argv = ssh_command(ip, "cat /dev/kmsg")
+            stream_argv[-2:-2] = ["-p", "22"]
+            stream = subprocess.Popen(stream_argv, stdout=stream_out, stderr=stream_err)
+            time.sleep(1)
+            if stream.poll() is not None:
+                raise RuntimeError("kernel message stream ended before modeset")
         # One CRTC modeset only. Capture both streams even if SSH drops.
-        display = step("show", "/bin/busybox timeout 12 " + PROGRAM +
-                       f" --show {args.show_seconds}", timeout=20)
+        display = step("show", f"/bin/busybox timeout {args.show_seconds + 10} " + PROGRAM +
+                       f" --show {args.show_seconds}", timeout=args.show_seconds + 18)
         report["show_exit"] = display["exit"]
         report["show_timeout"] = display.get("timeout", False)
         after = step("after", "cat /proc/sys/kernel/random/boot_id; "
@@ -118,6 +121,9 @@ def main():
                     stamp = re.match(r"\[\s*([0-9]+(?:\.[0-9]+)?)\]", line)
                     if stamp and float(stamp.group(1)) >= trial_start_uptime and \
                        ("cmdq timeout" in line.lower() or
+                        "[cmdq][err]" in line.lower() or
+                        "[disp][e]" in line.lower() or
+                        "hre restore failed" in line.lower() or
                         "Unable to handle kernel" in line or
                         "Failed to power off domain mm_infra" in line):
                         errors.append(line[:250])

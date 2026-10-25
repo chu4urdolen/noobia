@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check or load the matching stock SPI touchscreen stack into V47 RAM.
+"""Check or load the matching stock SPI touchscreen stack into V47/V48 RAM.
 
 No firmware update command, reboot, boot write, or persistent service change.
 The touchscreen's own probe can talk to the controller; inspect its receipt.
@@ -19,7 +19,10 @@ from lynx_wifi_v19_contact import ssh_command
 ROOT = Path(__file__).resolve().parent.parent
 MODULE_DIR = ROOT / "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules"
 KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
-INIT_SHA = "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae"
+TARGETS = {
+    "v47": ("192.168.100.8", "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae"),
+    "v48": ("192.168.100.7", "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f"),
+}
 PANEL_MATCH = "oplus22823_tm_nt37705_fhd_dsi_cmd-synaptics-s3910"
 MODULES = (
     ("olc", "2f08e1db185eed2ff9d688f1379f031de4fa6f521b27bd780478b13d0154fb3b"),
@@ -32,17 +35,19 @@ MODULES = (
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", choices=TARGETS, default="v47")
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
+    ip, init_sha = TARGETS[args.target]
     os.umask(0o077)
-    out = ROOT / "logs" / f"v47-touch-bootstrap-{time.time_ns()}"
+    out = ROOT / "logs" / f"{args.target}-touch-bootstrap-{time.time_ns()}"
     out.mkdir(mode=0o700)
-    report = {"state": "starting", "apply": args.apply,
+    report = {"state": "starting", "target": args.target, "apply": args.apply,
               "boot_partition_writes": False, "firmware_update_commands": False,
               "steps": []}
 
     def step(label, command, payload=None, port=2222, timeout=22):
-        argv = ssh_command("192.168.100.8", command)
+        argv = ssh_command(ip, command)
         argv[-2:-2] = ["-p", str(port)]
         try:
             run = subprocess.run(argv, input=payload, capture_output=True,
@@ -72,8 +77,8 @@ def main():
             payloads.append((name, digest, data))
         lines = step("rescue_identity", "cat /proc/sys/kernel/random/boot_id; "
                      "uname -r; sha256sum /init | cut -c1-64", port=22).splitlines()
-        if len(lines) != 3 or lines[1:] != [KERNEL, INIT_SHA]:
-            raise RuntimeError("target is not the pinned V47 rescue and kernel")
+        if len(lines) != 3 or lines[1:] != [KERNEL, init_sha]:
+            raise RuntimeError("target is not the pinned rescue and kernel")
         boot_id = lines[0]
         report["boot_id"] = boot_id
         status = json.loads(step("alpine_health", "/usr/local/bin/lynx-status --assert-ready"))

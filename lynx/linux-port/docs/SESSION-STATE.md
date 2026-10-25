@@ -1,5 +1,22 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-25 V49 IOMMU boot candidate prepared offline
+
+Noob confirmed Lynx stayed black during the 15-second V48 color-bar test.
+The test returned exit 0 but kernel CMDQ error interrupts with `err:-22`
+occurred. The original trial parser missed them; it now detects them.
+Source review and read-only sysfs suggest a missing IOMMU domain for GCE.
+The stock `mtk_iommu.ko` is absent from V48's boot module order, although
+stock `modules.load` places it before CMDQ. See `V49-IOMMU-BEFORE-CMDQ.md`.
+
+An offline V49 candidate adds only this exact stock module and loads it
+before CMDQ. Its builder, independent validator, and boot_a-only trial tool
+passed offline checks. SHA-256 is
+`896aa4937b168090cd3c75d41995917dad05aedfbc7bf83790fe31342b061e0f`.
+The known-working V48 image is verified and ready for Fastboot restoration.
+**V49 has not been flashed.** The IOMMU hypothesis still needs a controlled
+hardware boot test when Lynx is in Fastboot and battery is adequate.
+
 ## Latest — 2026-10-25 V48 display command completes with SCMI chain
 
 The earlier MMInfra BUG exposed a missing module in our display bootstrap:
@@ -18,10 +35,17 @@ The corrected display bootstrap reused those verified suppliers, loaded the
 remaining modules into RAM, and registered connected 1240×2772 DRM:
 `logs/v48-display-bootstrap-1792960667157909902/`. A single three-second
 DMA-BUF color-bar modeset returned **exit 0** on the same boot, with Alpine,
-SSH, eight services, and ext4 healthy. No CMDQ timeout or MMInfra BUG was
-detected during this draw. Its live kernel log is preserved at
-`logs/v48-dmabuf-trial-1792960703241053029/`. The CRTC is disabled at the
-end of the test; **visible pixels have not been confirmed by an observer**.
+SSH, eight services, and ext4 healthy. The MMInfra BUG was fixed, but the
+kernel log contains CMDQ error interrupts with `err:-22` and repeated
+`cannot get dev ... domain`; the original narrow parser missed them. Its
+live kernel log is preserved at `logs/v48-dmabuf-trial-1792960703241053029/`.
+Noob watched a later 15-second test and reported the screen stayed black;
+that trial is `logs/v48-dmabuf-trial-1792962915844407881/` and shows the
+same CMDQ errors. The CRTC is disabled at the end of each test. Display
+output is **not working yet**. The GCE devices have `iommus` device-tree
+properties, but no visible `iommu_group` links; source review shows the
+`cannot get dev ... domain` message follows a null IOMMU domain lookup.
+Whether missing early IOMMU binding is the cause still needs verification.
 No boot partition changed. On the next boot these modules will need the
 corrected bootstrap order; they are not persistent.
 

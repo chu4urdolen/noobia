@@ -4,6 +4,22 @@ All phone-work artifacts are kept under `/noobia/lynx`. Argus is powered
 off after archive restoration; these tools and the Linux build do not require
 him. Cached ARM64 BusyBox validation evidence remains available locally.
 
+## Active tools and archived trials (2026-10-25)
+
+The active tree keeps the current V49 builder/validator, boot_a trial and V48
+rollback, SSH and Alpine wrappers, health/power diagnostics, and display/touch
+bring-up tools. One-off scripts from earlier failed trials were removed from
+the active directory after dependency analysis. Their names are in
+`ARCHIVED-PYTHON-TOOLS.txt`; their exact contents remain in Git commit
+`0477e55` and can be retrieved with
+`git show 0477e55:lynx/tools/NAME.py`. This cleanup did not touch images,
+kernel sources, receipts, phone storage, or the running V49 system.
+
+Current display proof: `trial_v47_dmabuf.py --target v49 --atomic
+--show-seconds 12 --brightness 400 --no-live-trace`. This is a bounded test,
+not a background service. The user must be told before any visual trial.
+See `../linux-port/docs/V49-IOMMU-BEFORE-CMDQ.md` for the observed result.
+
 ## Files
 
 - `platform-tools/adb`, `platform-tools/fastboot`: downloaded Google tools.

@@ -1,5 +1,48 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-25 rescue SSH continuity monitor running
+
+At Noob's request, `tools/monitor_lynx_rescue.py` now checks pinned V19 SSH
+on `192.168.100.7` every 20 seconds and records each result, outages, and
+boot-ID changes under `logs/rescue-continuity/`. The first two checks
+succeeded on boot ID `7dc7336d-00ce-4873-ac7b-2d3b86110cfe`; the monitor
+process remains active. Use `python3 tools/monitor_lynx_rescue.py --status`
+to inspect it and `--stop` to end it. This checks sampled online continuity,
+not whether the battery is charging. The phone is unchanged by this monitor.
+
+## Latest — 2026-10-25 V19 BusyBox rescue boot verified
+
+After the inconclusive V48 and cable-connected V47 boots, Noob requested
+rescue mode. Fastboot preflight matched Lynx and the saved V19 BusyBox image
+was restored to **boot_a only**. Fastboot reported transfer/write OK; receipt:
+`logs/v34-boot-a-trial-1792945597820040814/result.json`. The V19 listener
+was armed before the separate reboot. It received Lynx's beacon, verified
+pinned native SSH at `192.168.100.7`, and successfully sent the acknowledgment
+that cancels V19's fallback reboot. Receipt:
+`logs/wifi-v19-contact-1792945637427840925/result.json`. A second direct
+pinned SSH command succeeded on boot ID
+`7dc7336d-00ce-4873-ac7b-2d3b86110cfe`. Lynx remained plugged in for this
+trial at Noob's request. No battery or charging control was tested in this
+step. Current first priority is preserving this rescue foothold.
+
+## Latest — 2026-10-25 V48 first hardware trial inconclusive
+
+Noob charged Lynx, confirmed she was cool, and connected Fastboot on Nexus.
+Read-only preflight matched serial `89BYAY5L4T9HFUOV`, product, unlocked
+slot A, bootloader version, and partition sizes. The independently validated
+V48 image was flashed to **boot_a only**; Fastboot reported transfer and write
+OK. The guarded trial tool left her in Fastboot until the receipt was checked,
+then a separate Fastboot reboot was requested. Receipts:
+`logs/v48-boot-a-trial-1792943765836858381/result.json` and
+`logs/v48-boot-a-trial-1792943824394357269/result.json`.
+
+A read-only observer ran for 10 minutes. Neither pinned SSH port 22 nor 2222
+opened; after the reboot Nexus no longer saw a Lynx USB device or Fastboot
+endpoint. `logs/v48-first-boot-1792943820471549585/events.jsonl` contains
+the observation. No second flash or reboot occurred. No boot success or
+charging-control result can be claimed. Noob reports that Lynx feels cool;
+screen state is pending. The V47 rollback image remains verified locally.
+
 ## Latest — 2026-10-24 V48 charger boot fix prepared offline
 
 Noob reported that Lynx is away from Nexus and charging; current battery

@@ -10,6 +10,10 @@ Evidence: `logs/v49-dmabuf-trial-1792964620246017995/`. The driver still
 emitted idle-manager, ESD-read, and doze/shutdown warnings; no CMDQ timeout
 or reboot was observed. The pattern was transient, and no display service or
 GUI is installed. See `V49-IOMMU-BEFORE-CMDQ.md` for the exact sequence.
+The matching display modules and bounded replay commands are now stored on
+Alpine; their preparation and test-only checks passed without a visual trial.
+Receipt: `logs/v49-display-bundle-1792964869103429928/`. Startup is not
+enabled; the phone-side visual command still needs an announced observation.
 
 ## Earlier — 2026-10-25 V49 boots, touch coordinates verified, legacy display times out
 

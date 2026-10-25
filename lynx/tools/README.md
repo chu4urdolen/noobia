@@ -19,6 +19,9 @@ Current display proof: `trial_v47_dmabuf.py --target v49 --atomic
 --show-seconds 12 --brightness 400 --no-live-trace`. This is a bounded test,
 not a background service. The user must be told before any visual trial.
 See `../linux-port/docs/V49-IOMMU-BEFORE-CMDQ.md` for the observed result.
+`install_v49_display_bundle.py --install` stores the verified module sequence
+and manual replay commands on Alpine; its default mode only checks sources,
+identity, and health. It does not show pixels or enable startup.
 
 ## Files
 

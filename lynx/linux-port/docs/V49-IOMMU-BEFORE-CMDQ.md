@@ -89,3 +89,20 @@ The driver still logs idle-manager, DSI ESD-read, and shutdown/doze warnings
 during this transient test, but no CMDQ timeout or reboot. Those need review
 before making the display persistent. The temporary pattern exits and powers
 the panel down after 12 seconds; a display service and GUI do not yet exist.
+
+## Phone-side replay bundle
+
+`tools/install_v49_display_bundle.py --install` copied the exact eleven
+hash-verified stock modules, the proven atomic binary, and two shell commands
+to Alpine's ext4 root. Receipt:
+`logs/v49-display-bundle-1792964869103429928/result.json`. It verified the
+current V49 rescue/kernel identity, Alpine health, each transferred module,
+an idempotent module/DRM preparation, and a DRM atomic test-only commit.
+
+On Lynx, `/usr/local/bin/lynx-display-prepare` recreates the known module
+order and binds DSI if needed; it does not light the screen.
+`/usr/local/bin/lynx-display-show --check` tests the atomic configuration
+without visual output. `/usr/local/bin/lynx-display-show 12` is the bounded
+manual color-bar and brightness trial. The phone-side visual command has not
+yet been tested; notify the observer before running it. No startup service was
+enabled, and no boot image or partition was changed by this installation.

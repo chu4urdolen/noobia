@@ -77,3 +77,32 @@ suggests a panel prepare/state issue on the V50 boot, but does not establish
 why that sequence differed. The pixel pattern itself uses the same atomic
 commit path as V49. Review panel initialization and command timing offline
 before selecting a next trial. Noob will signal when ready for that trial.
+
+## Same-boot recovery and first Lynx UI visual proof
+
+Noob later signalled readiness. On the **same** V50 boot, with 63% battery,
+25°C pack, verified Hama DCP charging, DRM card present, and brightness zero,
+the original V49 atomic color-bar binary ran for eight seconds at temporary
+brightness 400. **Noob saw the test stripes.** The phone stayed on the same
+boot, brightness returned to zero, and Alpine health remained clear. The
+post-trial kernel scan found idle/doze warnings but **no new CMDQ timeout**.
+The panel driver logged `lcm_panel_reset`, `lcm_panel_init`, and
+`lcm_prepare: Successful` immediately before the backlight command. Receipt:
+`logs/v50-dmabuf-trial-1793053145280893284/result.json`.
+
+At Noob's next cue, the pinned V50 `--show-ui` binary used the same guarded
+atomic path for eight seconds with brightness 400. **Noob saw Lynx's status
+screen.** The program exited zero, brightness returned to zero, the phone
+stayed on boot ID `98813e2e-f528-419f-90fa-c9016dc0c005`, and Alpine health
+was clear at 64% battery, 25.1°C, with DCP charging. The kernel scan found
+idle-manager, ESD-read, and doze warnings, but **no new CMDQ timeout**.
+Receipt: `logs/v50-dmabuf-trial-1793053183316568088/result.json`.
+
+This proves the V50 UI can render on Lynx, including while charging from the
+Hama adapter. It does not yet prove that the **first** modeset after every
+cold boot works, nor that the display can remain on as a long-lived service.
+The first V50 UI attempt on this boot stayed black and timed out until ESD
+recovery had prepared the panel; the later successful color-bar and UI trials
+both used the same boot after that recovery. A clean-boot display sequence
+needs separate investigation. Do not run a new visual trial without Noob's
+readiness cue.

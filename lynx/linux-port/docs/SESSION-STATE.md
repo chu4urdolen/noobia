@@ -1,5 +1,17 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-27 Lynx status screen visually works
+
+On the same V50 boot after the earlier black-screen trial, Noob watched an
+eight-second atomic color-bar test and saw stripes. The panel logged a clean
+reset, initialization, and prepare sequence; no new CMDQ timeout occurred.
+At Noob's next cue, the V50 status-screen binary ran for eight seconds and
+**Noob saw it**. Brightness returned to zero, Alpine SSH and health stayed
+up, and the Hama charger remained recognized as DCP at 64% battery, 25.1°C.
+See `V50-DISPLAY-UI.md` for both receipts. The first modeset after a fresh
+boot is still unproven and had failed earlier on this boot; keep visual tests
+user-cued. V50 boot_a and recovery remain unchanged.
+
 ## Latest — 2026-10-27 V50 status screen remained black
 
 V50 display bootstrap completed on the still-healthy Alpine boot while the

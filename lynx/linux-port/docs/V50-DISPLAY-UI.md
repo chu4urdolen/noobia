@@ -67,3 +67,13 @@ trace is reviewed. Noob explicitly asked to be consulted before any next
 trial and will say when ready. At uptime 1655, read-only SSH confirmed the
 same boot, brightness zero, Alpine health clear, and no further CMDQ timeout
 after the two trial events.
+
+Offline comparison with the successful V49 atomic trial found a concrete
+sequence difference: V49 logged `lcm_panel_reset`, `lcm_panel_init`, and
+`lcm_prepare: Successful` immediately before the modeset. The captured V50
+log contains no `lcm_prepare` before its first event-644 timeout; its first
+`lcm_prepare: Successful` came during ESD recovery after the timeout. This
+suggests a panel prepare/state issue on the V50 boot, but does not establish
+why that sequence differed. The pixel pattern itself uses the same atomic
+commit path as V49. Review panel initialization and command timing offline
+before selecting a next trial. Noob will signal when ready for that trial.

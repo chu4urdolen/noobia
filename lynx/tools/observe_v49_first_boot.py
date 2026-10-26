@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Observe V49 recovery, Alpine, and early IOMMU state without writing Lynx."""
+"""Observe V49/V50 recovery, Alpine, and early IOMMU state without writes."""
 
+import argparse
 import json
 import os
 from pathlib import Path
@@ -12,7 +13,8 @@ from lynx_wifi_v19_contact import ssh_command
 
 
 ROOT = Path(__file__).resolve().parent.parent
-IPS = ("192.168.100.7", "192.168.100.8")
+IPS = {"v49": ("192.168.100.7", "192.168.100.8", "192.168.100.9"),
+       "v50": ("192.168.100.107",)}
 INIT_SHA = "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f"
 KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
 
@@ -52,8 +54,11 @@ def ssh(ip, port):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", choices=IPS, default="v49")
+    args = parser.parse_args()
     os.umask(0o077)
-    out = ROOT / "logs" / f"v49-first-boot-{time.time_ns()}"
+    out = ROOT / "logs" / f"{args.target}-first-boot-{time.time_ns()}"
     out.mkdir(mode=0o700)
     events = out / "events.jsonl"
     deadline = time.monotonic() + 600
@@ -61,7 +66,7 @@ def main():
     alpine_samples = 0
     print(json.dumps({"state": "listening", "events": str(events)}), flush=True)
     while time.monotonic() < deadline:
-        endpoints = [(ip, port) for ip in IPS for port in (22, 2222)
+        endpoints = [(ip, port) for ip in IPS[args.target] for port in (22, 2222)
                      if connected(ip, port)]
         if endpoints != last_ports:
             with events.open("a") as stream:

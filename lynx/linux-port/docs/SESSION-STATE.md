@@ -1,5 +1,16 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-26 V50 static `.107` prepared, flash held for charge
+
+The Noobia address book records `.7` for Syra. Lynx had also used `.7` on
+V49, creating an address conflict. Two V49 boots on 2026-10-26 did not yield
+authenticated SSH at the old `.7`/`.8` addresses. A brief Dropbear response
+at `.9` was not pinned-identity verified. Battery state is unknown because
+Fastboot provides no usable reading; Noob reported battery trouble.
+V50 was built and independently validated offline to put both rescue and
+Alpine handoff at the proposed free `.107`. V49 rollback is pinned. **No
+V50 flash occurred.** See `V50-STATIC-NOOBIA-IP.md` and wait for charge.
+
 ## Latest — 2026-10-25 first visible Lynx display output
 
 Noob watched the announced 12-second V49 atomic DRM + brightness 400 trial

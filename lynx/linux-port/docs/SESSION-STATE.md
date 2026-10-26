@@ -13,6 +13,11 @@ registered and Alpine stayed healthy. One fresh cable attach is pending to
 repeat detection with that PHY present. See `V50-CHARGER-TCPC.md` and the
 bounded charger observer under `logs/v50-charge-attach-1793037186391037082/`.
 No boot partition or persistent startup setting changed in these trials.
+Noob then reconnected the Hama cable once. BC1.2 completed after the stock
+27-second CDP wait and identified a dedicated charging port (`DCP`). The
+gauge reached 29%, with a cool 23.9°C pack. This proves charger-type detection
+with the PHY present on this boot; long-term charging and reboot persistence
+remain to be checked. See `V50-CHARGER-TCPC.md`.
 
 ## Latest — 2026-10-26 V50 boots Alpine at static `.107`; charging absent
 

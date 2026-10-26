@@ -78,3 +78,16 @@ stayed up. No boot partition or persistent startup file changed. The previous
 BC1.2 attempt had already timed out, so a fresh cable attach is needed to
 check whether the PHY resolves charger-type detection. Noob was asked for
 one unplug/reconnect at the phone end.
+
+Noob did that single unplug/reconnect on the same V50 boot. The bounded
+observer saw `online=2` again and capacity reach 29% at 23.9°C. Kernel logs
+showed the fresh Type-C `attach:2` at uptime 1956 seconds. The same device
+tree `cdp-block` check imposed a 27-second `CDP timeout`, after which the
+charger successfully set `F_BC12_EN=1`; its BC1.2 completion interrupt
+reported `port stat = DCP`. Sysfs `usb_type` changed from `[Unknown]` to
+`Unknown SDP CDP [DCP]`. No `failed to get usb2-phy` or `failed to set bc12`
+appeared for this attach. This proves the stock USB PHY fixes charger-type
+detection on the current boot. It does **not** yet verify full-rate charging,
+charge termination, or persistence across reboot. Keep the wall charger
+attached, observe capacity and temperature, then prepare a guarded startup
+sequence only after the charge trend is established.

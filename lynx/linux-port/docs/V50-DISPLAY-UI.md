@@ -121,3 +121,17 @@ receipt: `logs/v50-ui-stage-1793053967353526641/result.json`. It has **not**
 been run, put in OpenRC, or substituted for the working short-lived UI binary.
 The clean-boot display initialization issue must be resolved before enabling
 automatic startup.
+
+Noob then watched a controlled test on boot ID
+`2f55a194-dfd7-4664-b4cb-9d2275cc947c`. The staged persistent renderer
+started at temporary brightness 250; after 12 seconds it was still running,
+Alpine health and SSH passed, and no new CMDQ errors appeared. Noob confirmed
+that the status screen was visible and staying on. The process was left
+running on this boot. Receipt:
+`logs/v50-persistent-status-1793054143093274217/result.json`. This proves
+long-lived display operation on an already initialized panel. It does not
+prove automatic cold-boot initialization.
+
+The eleven matching stock display modules were copied with SHA-256 checks to
+`/var/lib/lynx-display/modules` on Alpine, without loading or enabling them.
+Receipt: `logs/v50-display-modules-1793054191746850016/result.json`.

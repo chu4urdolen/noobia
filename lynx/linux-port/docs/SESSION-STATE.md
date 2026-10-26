@@ -10,6 +10,11 @@ answered at `:2222` and passed three health observations. Battery was 25%,
 cable. The display trial is held while a working power source is arranged.
 See `V50-STATIC-NOOBIA-IP.md` and
 `logs/v50-first-boot-1793035460456770782/events.jsonl`.
+On this boot, stock `tcpc_mt6375.ko` and `tcpci_late_sync.ko` were each
+loaded once into RAM after guarded preflights. The controller registered and
+its IRQ enabled; Alpine stayed healthy at 26%, but the charger still showed
+`online=0`. A known-good wall charger check is pending. See
+`V50-CHARGER-TCPC.md`.
 
 ## Earlier — 2026-10-26 V50 static `.107` prepared offline
 

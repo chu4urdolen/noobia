@@ -106,3 +106,9 @@ without visual output. `/usr/local/bin/lynx-display-show 12` is the bounded
 manual color-bar and brightness trial. The phone-side visual command has not
 yet been tested; notify the observer before running it. No startup service was
 enabled, and no boot image or partition was changed by this installation.
+
+An optional OpenRC one-shot service is prepared offline at
+`linux-port/openrc-lynx-display-prepare`. It waits for Alpine SSH, checks
+health, then runs the verified module/bind sequence while leaving brightness
+off. It is **not installed or enabled** on Lynx; charging must be resolved
+before making display initialization automatic.

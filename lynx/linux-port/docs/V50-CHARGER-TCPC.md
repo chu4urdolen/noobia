@@ -33,3 +33,13 @@ hardware failure from `online=0` yet. Next: observe the same supply with a
 known-good wall charger connected. If attach appears, verify positive charge
 trend before making the module sequence persistent. If it does not, inspect
 the remaining stock Type-C/charging dependencies and VBUS ADC read-only.
+
+The next stock `mtk_chg_type_det.ko` source registers a notifier on
+`type_c_port0` and forwards Type-C plug events to the charger supply. Its
+`mtk_ctd` platform device was present and unbound. A third guarded RAM-only
+trial loaded the matching module after TCPC and late-sync. It bound and logged
+`bc12_sel = 0`, but no plug event had occurred yet and `online` remained zero.
+Alpine health passed at 27% battery. Receipt:
+`logs/v50-chg-type-det-1793036475594836645/`. No persistence or boot image
+change was made. A single unplug/replug or known-good wall charger attachment
+is the next controlled input; stop adding modules until that event is seen.

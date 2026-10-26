@@ -15,6 +15,9 @@ loaded once into RAM after guarded preflights. The controller registered and
 its IRQ enabled; Alpine stayed healthy at 26%, but the charger still showed
 `online=0`. A known-good wall charger check is pending. See
 `V50-CHARGER-TCPC.md`.
+The matching `mtk_chg_type_det.ko` attach bridge also bound cleanly in RAM;
+it had no new plug event to forward, so `online` remained zero. Lynx health
+passed at 27%. A cable replug is the next useful input.
 
 ## Earlier — 2026-10-26 V50 static `.107` prepared offline
 

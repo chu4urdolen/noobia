@@ -391,9 +391,12 @@ static int run(const char *action, unsigned int seconds)
 	drmModeRes *resources = NULL;
 	drmModeModeInfo mode = { 0 };
 	bool active = false;
+	bool persistent_ui = !strcmp(action, "--show-ui-until-signal");
 	bool atomic = !strcmp(action, "--atomic-test") ||
-		!strcmp(action, "--show-atomic") || !strcmp(action, "--show-ui");
-	bool ui = !strcmp(action, "--show-ui");
+		!strcmp(action, "--show-atomic") || !strcmp(action, "--show-ui") ||
+		persistent_ui;
+	bool ui = !strcmp(action, "--show-ui") || persistent_ui;
+	int shown_capacity = -1;
 	uint64_t prime_caps = 0;
 	const size_t length = ((size_t)STRIDE * HEIGHT + 4095U) & ~(size_t)4095U;
 
@@ -456,8 +459,10 @@ static int run(const char *action, unsigned int seconds)
 		fail("begin DMA-BUF CPU write");
 		goto cleanup;
 	}
-	if (ui)
-		paint_lynx_status(pixels, read_battery_percent());
+	if (ui) {
+		shown_capacity = read_battery_percent();
+		paint_lynx_status(pixels, shown_capacity);
+	}
 	else
 		paint_bars(pixels);
 	if (sync_buffer(buffer_fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE) < 0) {
@@ -513,12 +518,42 @@ static int run(const char *action, unsigned int seconds)
 	}
 	displayed:
 	active = true;
-	printf("displaying %s for %u seconds\n",
-	       ui ? "Lynx status" : "color bars", seconds);
+	if (persistent_ui)
+		printf("displaying Lynx status until signal\n");
+	else
+		printf("displaying %s for %u seconds\n",
+		       ui ? "Lynx status" : "color bars", seconds);
 	fflush(stdout);
-	struct timespec delay = { .tv_sec = seconds };
-	while (!stop_requested && nanosleep(&delay, &delay) < 0 && errno == EINTR)
-		;
+	if (persistent_ui) {
+		while (!stop_requested) {
+			struct timespec delay = { .tv_sec = 60 };
+			while (!stop_requested && nanosleep(&delay, &delay) < 0 && errno == EINTR)
+				;
+			if (stop_requested)
+				break;
+			int capacity = read_battery_percent();
+			if (capacity == shown_capacity)
+				continue;
+			if (sync_buffer(buffer_fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE) < 0) {
+				fail("begin status refresh");
+				rc = 1;
+				goto cleanup;
+			}
+			paint_lynx_status(pixels, capacity);
+			if (sync_buffer(buffer_fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE) < 0) {
+				fail("end status refresh");
+				rc = 1;
+				goto cleanup;
+			}
+			shown_capacity = capacity;
+			printf("battery=%d%%\n", shown_capacity);
+			fflush(stdout);
+		}
+	} else {
+		struct timespec delay = { .tv_sec = seconds };
+		while (!stop_requested && nanosleep(&delay, &delay) < 0 && errno == EINTR)
+			;
+	}
 	rc = 0;
 
 cleanup:
@@ -562,7 +597,8 @@ int main(int argc, char **argv)
 	sigaction(SIGTERM, &stop_action, NULL);
 	if (argc == 2 && (!strcmp(argv[1], "--probe") ||
 			  !strcmp(argv[1], "--allocate") ||
-			  !strcmp(argv[1], "--atomic-test")))
+			  !strcmp(argv[1], "--atomic-test") ||
+			  !strcmp(argv[1], "--show-ui-until-signal")))
 		return run(argv[1], 0);
 	if (argc == 3 && (!strcmp(argv[1], "--show") ||
 			  !strcmp(argv[1], "--show-atomic") ||
@@ -574,7 +610,7 @@ int main(int argc, char **argv)
 			return run(argv[1], seconds);
 		}
 	}
-	fprintf(stderr, "usage: %s --probe | --allocate | --atomic-test | --show SECONDS(1..15) | --show-atomic SECONDS(1..15) | --show-ui SECONDS(1..15)\n",
+	fprintf(stderr, "usage: %s --probe | --allocate | --atomic-test | --show SECONDS(1..15) | --show-atomic SECONDS(1..15) | --show-ui SECONDS(1..15) | --show-ui-until-signal\n",
 		argv[0]);
 	return 2;
 }

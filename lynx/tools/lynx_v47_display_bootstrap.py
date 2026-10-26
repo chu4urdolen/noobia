@@ -20,6 +20,8 @@ from lynx_wifi_v19_contact import ssh_command
 
 ROOT = Path(__file__).resolve().parent.parent
 MODULE_DIR = ROOT / "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules"
+PANEL_CANDIDATE = ROOT / "linux-port/artifacts/panel-cold-init-v50-offline/oplus22823_tm_nt37705_fhd_dsi_cmd-cold-init.ko"
+PANEL_CANDIDATE_SHA = "364611c2bd63342f80da331d33e995aae3082fcd6ee5e453fb5137b8cc2d7c35"
 INIT_SHAS = {
     "v47": "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae",
     "v48": "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f",
@@ -55,10 +57,12 @@ MODULES = (
 )
 
 
-def module_bytes():
+def module_bytes(panel_candidate=False):
     values = []
     for name, digest, check in MODULES:
         path = MODULE_DIR / (name + ".ko")
+        if panel_candidate and name == "oplus22823_tm_nt37705_fhd_dsi_cmd":
+            path, digest = PANEL_CANDIDATE, PANEL_CANDIDATE_SHA
         data = path.read_bytes()
         if hashlib.sha256(data).hexdigest() != digest:
             raise RuntimeError(f"{name}: stock module hash mismatch")
@@ -79,16 +83,20 @@ def main():
                         help="load verified modules and bind the panel once")
     parser.add_argument("--resume-suppliers", action="store_true",
                         help="on the pinned V48 recovery boot, reuse three separately verified suppliers")
+    parser.add_argument("--panel-candidate", action="store_true",
+                        help="V50 only: load the one-instruction cold-init panel module into RAM")
     args = parser.parse_args()
     if args.resume_suppliers and (args.target != "v48" or not args.apply):
         parser.error("--resume-suppliers requires --target v48 --apply")
+    if args.panel_candidate and (args.target != "v50" or not args.apply):
+        parser.error("--panel-candidate requires --target v50 --apply")
     ip = IPS[args.target]
-    modules = module_bytes()
+    modules = module_bytes(args.panel_candidate)
     os.umask(0o077)
     out = ROOT / "logs" / f"{args.target}-display-bootstrap-{time.time_ns()}"
     out.mkdir(mode=0o700)
     report = {"state": "starting", "target": args.target, "ip": ip,
-              "apply": args.apply,
+              "apply": args.apply, "panel_candidate": args.panel_candidate,
               "boot_partition_writes": False, "steps": []}
 
     def step(label, command, payload=None, port=2222, timeout=25):

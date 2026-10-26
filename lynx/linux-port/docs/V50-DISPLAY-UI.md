@@ -106,3 +106,18 @@ recovery had prepared the panel; the later successful color-bar and UI trials
 both used the same boot after that recovery. A clean-boot display sequence
 needs separate investigation. Do not run a new visual trial without Noob's
 readiness cue.
+
+## Persistent status program, staged but not enabled
+
+The status renderer now has `--show-ui-until-signal`. It keeps the DRM buffer
+and CRTC active, refreshes the battery reading once per minute when it changes,
+and disables the CRTC on SIGTERM or SIGINT. The original 1–15-second trial
+interface remains intact. `tools/stage_v50_ui_candidate.py --persistent`
+compiled it natively on Lynx into the separate
+`/var/lib/lynx-devroot/tmp/lynx_drm_status_persistent` path. The verified
+binary SHA-256 is
+`1bab6b4e95949b46b160178945439b7ed2e1e370ce39da935918b1cd7a5027f8`;
+receipt: `logs/v50-ui-stage-1793053967353526641/result.json`. It has **not**
+been run, put in OpenRC, or substituted for the working short-lived UI binary.
+The clean-boot display initialization issue must be resolved before enabling
+automatic startup.

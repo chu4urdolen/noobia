@@ -130,9 +130,11 @@ def main():
         report["thermal_max_mC"] = health["thermal"]["max_mC"]
         charger = step("charger_state", "set -eu; "
                        "supply=/sys/class/power_supply/11e01000.i2c:mt6375@34:chg; "
-                       "cat \"$supply/online\"; cat \"$supply/status\"").splitlines()
+                       "cat \"$supply/online\"; cat \"$supply/status\"; "
+                       "cat \"$supply/usb_type\"").splitlines()
         report["charger_online"] = charger[0] if charger else "unknown"
         report["charger_status"] = charger[1] if len(charger) > 1 else "unknown"
+        report["charger_usb_type"] = charger[2] if len(charger) > 2 else "unknown"
         state = step("display_state", "set -eu; "
                      'printf "CARD="; test -e /sys/class/drm/card0 && echo yes || echo no; '
                      'printf "PANEL="; test -e /sys/module/oplus22823_tm_nt37705_fhd_dsi_cmd && echo yes || echo no; '
@@ -153,12 +155,18 @@ def main():
             print(f"{args.target.upper()} target checked: boot {boot_id}, battery "
                   f"{report['battery_percent']}%, {state.replace(chr(10), ' ')}")
         else:
+            charger_safe = (report["charger_online"] == "0" or
+                            (args.target == "v50" and
+                             report["charger_online"] == "2" and
+                             report["charger_status"] == "Charging" and
+                             "[DCP]" in report["charger_usb_type"]))
             if (report["battery_percent"] < 50 or
-                report["charger_online"] != "0" or
+                not charger_safe or
                 report["battery_temperature_mC"] >= 30000 or
                 report["thermal_max_mC"] >= 45000):
-                raise RuntimeError("battery must be at least 50%, charger offline, "
-                                   "battery below 30°C, and sensors below 45°C")
+                raise RuntimeError("battery must be at least 50%, charger offline "
+                                   "or V50 DCP charging, battery below 30°C, "
+                                   "and sensors below 45°C")
             if "CARD=yes" in state or "PANEL=yes" in state or "DSI=yes" in state:
                 raise RuntimeError("display was already probed on this boot; refusing a repeat")
             for name, digest, check, data in modules:

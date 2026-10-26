@@ -24,11 +24,46 @@ Preparation on 2026-10-26:
 - The binary has **not** been executed. The panel remains dark on this boot.
 
 The V50 display and touch bootstrap tools now recognize the static V50 IP
-and pinned rescue image. The display trial retains a battery floor of 50%,
-an offline charger requirement, and the established temperature limits.
-Run the guarded trial only after charging is verified, and tell Noob before
-the visual check. Do not repeat panel binding on an already probed boot.
+and pinned rescue image. The display trial retains a battery floor of 50%
+and the established temperature limits. The original offline-charger rule
+predated reliable charging. V50 now also accepts a charger only when the
+stock driver reports `online=2`, `Charging`, and selected `[DCP]`; earlier
+targets retain their original offline requirement. Tell Noob before the
+visual check. Do not repeat panel binding on an already probed boot.
 
-Current charging evidence and unresolved attach state are in
-`V50-CHARGER-TCPC.md`. The Hama charger is being tested separately with a
-read-only, bounded observer, `tools/observe_v50_charge_attach.py`.
+The Hama charging stack is proven across one reboot; see
+`V50-CHARGING-STARTUP.md`. On 2026-10-27 the phone was already unplugged
+when the display guard was revisited, at 60% battery and 25.2°C.
+
+Noob reconnected the Hama cable. One display-bootstrap attempt stopped before
+loading a module because the new attach was still in its 27-second charger
+type check (`usb_type=[Unknown]`). The guard worked as intended. After the
+stock driver selected `[DCP]`, the V50 bootstrap completed on boot ID
+`98813e2e-f528-419f-90fa-c9016dc0c005`: DRM card registered and Alpine
+health passed. Receipt: `logs/v50-display-bootstrap-1793052265066021387/`.
+The panel remained dark. A separate test-only atomic commit of the pinned
+status-screen binary was accepted at 1240×2772@60 Hz, and Alpine health
+remained clear. This was the preflight before the visual trial below.
+
+Noob watched the first V50 status-screen trial on the Hama charger. The first
+attempt stopped before modeset because the optional `/dev/kmsg` stream exited
+with a broken pipe. Receipt:
+`logs/v50-dmabuf-trial-1793052317677198618/result.json`. Alpine remained
+healthy and panel brightness stayed zero. The second attempt used the
+documented post-trial `dmesg` fallback and completed one 12-second
+`--show-ui` run with brightness 400 for five seconds. The program printed
+`displaying Lynx status`, exited zero, and restored brightness to zero.
+Receipt: `logs/v50-dmabuf-trial-1793052336575098497/result.json`.
+
+**Noob saw only a black screen.** The kernel logged two genuine CMDQ thread
+timeouts while waiting for event 644 (the same event that affected an older
+legacy DRM test), CRTC timeout callbacks, and subsequent ESD/doze warnings during
+the second trial. These errors were absent from the successful V49 color-bar
+trial. A charger interaction is unproven; the V50 status image, panel state,
+and current boot's module ordering also differ. Lynx stayed on boot ID
+`98813e2e-f528-419f-90fa-c9016dc0c005` with Alpine health clear, charger
+DCP, 60% battery, and brightness zero. Stop display trials until the CMDQ
+trace is reviewed. Noob explicitly asked to be consulted before any next
+trial and will say when ready. At uptime 1655, read-only SSH confirmed the
+same boot, brightness zero, Alpine health clear, and no further CMDQ timeout
+after the two trial events.

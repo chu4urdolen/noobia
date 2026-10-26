@@ -113,13 +113,19 @@ def main():
         trial_start_uptime = health["uptime_seconds"]
         charger = step("charger", "set -eu; "
                        "supply=/sys/class/power_supply/11e01000.i2c:mt6375@34:chg; "
-                       "cat \"$supply/online\"; cat \"$supply/status\"")
+                       "cat \"$supply/online\"; cat \"$supply/status\"; "
+                       "cat \"$supply/usb_type\"")
         charger_lines = (out / "charger.stdout").read_text().splitlines()
         report["battery_percent"] = health["battery"]["capacity_percent"]
         report["thermal_max_mC"] = health["thermal"]["max_mC"]
+        report["charger"] = charger_lines
+        charger_safe = (len(charger_lines) == 3 and
+                        (charger_lines[0] == "0" or
+                         (args.target == "v50" and charger_lines[0] == "2" and
+                          charger_lines[1] == "Charging" and
+                          "[DCP]" in charger_lines[2])))
         if health["battery"]["capacity_percent"] < 50 or \
-           charger["exit"] != 0 or len(charger_lines) != 2 or \
-           charger_lines[0] != "0" or \
+           charger["exit"] != 0 or not charger_safe or \
            health["battery"]["temperature_mC"] >= 30000 or \
            health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("battery, charger, or temperature outside display trial guard")

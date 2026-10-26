@@ -1,5 +1,17 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-27 V50 status screen remained black
+
+V50 display bootstrap completed on the still-healthy Alpine boot while the
+verified Hama DCP charger was connected. The status-screen binary passed an
+atomic test-only commit. Noob watched one 12-second live trial: the program
+ran and brightness returned to zero, but the screen stayed black. Kernel
+logs show two CMDQ timeouts waiting for event 644 and ESD recovery messages.
+Lynx remained online, charging, and cool. No further timeout appeared in a
+later read-only check. **Do not run another display trial until Noob says
+ready.** See `V50-DISPLAY-UI.md` for receipts and comparison with V49's
+successful visual trial. The charging service is unaffected.
+
 ## Latest — 2026-10-26 autonomous charging stack verified on reboot
 
 At 54% battery, the matching USB PHY, TCPC, attach bridge, and late IRQ

@@ -74,6 +74,126 @@ static void paint_bars(uint32_t *pixels)
 	}
 }
 
+struct glyph {
+	char letter;
+	uint8_t row[7];
+};
+
+/* Small self-contained font for Lynx's initial status screen. */
+static const struct glyph font[] = {
+	{' ', {0, 0, 0, 0, 0, 0, 0}},
+	{'%', {0x19, 0x1a, 0x04, 0x04, 0x0b, 0x13, 0}},
+	{'0', {0x0e, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0e}},
+	{'1', {0x04, 0x0c, 0x04, 0x04, 0x04, 0x04, 0x0e}},
+	{'2', {0x0e, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1f}},
+	{'3', {0x1e, 0x01, 0x01, 0x0e, 0x01, 0x01, 0x1e}},
+	{'4', {0x02, 0x06, 0x0a, 0x12, 0x1f, 0x02, 0x02}},
+	{'5', {0x1f, 0x10, 0x10, 0x1e, 0x01, 0x01, 0x1e}},
+	{'6', {0x0e, 0x10, 0x10, 0x1e, 0x11, 0x11, 0x0e}},
+	{'7', {0x1f, 0x01, 0x02, 0x04, 0x04, 0x04, 0x04}},
+	{'8', {0x0e, 0x11, 0x11, 0x0e, 0x11, 0x11, 0x0e}},
+	{'9', {0x0e, 0x11, 0x11, 0x0f, 0x01, 0x01, 0x0e}},
+	{'A', {0x0e, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11}},
+	{'B', {0x1e, 0x11, 0x11, 0x1e, 0x11, 0x11, 0x1e}},
+	{'E', {0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x1f}},
+	{'I', {0x0e, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0e}},
+	{'L', {0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1f}},
+	{'N', {0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11}},
+	{'P', {0x1e, 0x11, 0x11, 0x1e, 0x10, 0x10, 0x10}},
+	{'R', {0x1e, 0x11, 0x11, 0x1e, 0x14, 0x12, 0x11}},
+	{'T', {0x1f, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04}},
+	{'U', {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e}},
+	{'V', {0x11, 0x11, 0x11, 0x11, 0x0a, 0x0a, 0x04}},
+	{'X', {0x11, 0x11, 0x0a, 0x04, 0x0a, 0x11, 0x11}},
+	{'Y', {0x11, 0x11, 0x0a, 0x04, 0x04, 0x04, 0x04}},
+};
+
+static void rectangle(uint32_t *pixels, unsigned int x, unsigned int y,
+		      unsigned int width, unsigned int height, uint32_t color)
+{
+	if (x >= WIDTH || y >= HEIGHT)
+		return;
+	if (width > WIDTH - x)
+		width = WIDTH - x;
+	if (height > HEIGHT - y)
+		height = HEIGHT - y;
+	for (unsigned int row = y; row < y + height; row++)
+		for (unsigned int col = x; col < x + width; col++)
+			pixels[(size_t)row * WIDTH + col] = color;
+}
+
+static const struct glyph *find_glyph(char letter)
+{
+	for (size_t i = 0; i < sizeof(font) / sizeof(font[0]); i++)
+		if (font[i].letter == letter)
+			return &font[i];
+	return &font[0];
+}
+
+static void draw_text(uint32_t *pixels, const char *word, unsigned int x,
+		      unsigned int y, unsigned int scale, uint32_t color)
+{
+	for (size_t i = 0; word[i]; i++) {
+		const struct glyph *glyph = find_glyph(word[i]);
+		for (unsigned int row = 0; row < 7; row++)
+			for (unsigned int col = 0; col < 5; col++)
+				if (glyph->row[row] & (0x10U >> col))
+					rectangle(pixels, x + (unsigned int)i * 6U * scale + col * scale,
+						  y + row * scale, scale, scale, color);
+	}
+}
+
+static int read_battery_percent(void)
+{
+	FILE *stream = fopen("/sys/bus/i2c/devices/7-0055/battery_snapshot", "r");
+	char line[160];
+	int value = -1;
+	if (!stream)
+		return -1;
+	while (fgets(line, sizeof(line), stream)) {
+		if (sscanf(line, "capacity_percent=%d", &value) == 1)
+			break;
+	}
+	fclose(stream);
+	return value >= 0 && value <= 100 ? value : -1;
+}
+
+static void paint_lynx_status(uint32_t *pixels, int capacity)
+{
+	const uint32_t background = 0x00121c29;
+	const uint32_t teal = 0x0009dcc4;
+	const uint32_t white = 0x00f5f8fa;
+	const uint32_t muted = 0x007d94a5;
+	const uint32_t amber = 0x00edb961;
+	char percent[16];
+	if (capacity < 0 || capacity > 100)
+		capacity = -1;
+
+	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
+		pixels[i] = background;
+	/* A few bold shapes keep the screen legible at phone viewing distance. */
+	rectangle(pixels, 0, 0, WIDTH, 36, teal);
+	rectangle(pixels, 190, 300, 860, 12, teal);
+	draw_text(pixels, "LYNX", 380, 380, 20, white);
+	draw_text(pixels, "NATIVE LINUX", 224, 620, 11, muted);
+	rectangle(pixels, 290, 970, 650, 220, muted);
+	rectangle(pixels, 308, 988, 614, 184, background);
+	rectangle(pixels, 940, 1035, 25, 90, muted);
+	if (capacity >= 0) {
+		rectangle(pixels, 322, 1002, (unsigned int)(586 * capacity / 100),
+			  156, capacity > 20 ? teal : amber);
+		snprintf(percent, sizeof(percent), "%d%%", capacity);
+		unsigned int digits = (unsigned int)strlen(percent);
+		unsigned int width = digits * 6U * 24U;
+		draw_text(pixels, percent, (WIDTH - width) / 2U, 1350, 24, white);
+	} else {
+		draw_text(pixels, "BATTERY", 200, 1350, 20, amber);
+	}
+	rectangle(pixels, 190, 1950, 860, 4, muted);
+	draw_text(pixels, "ALPINE", 384, 2050, 14, white);
+	rectangle(pixels, 0, HEIGHT - 36, WIDTH, 36, teal);
+}
+
 static uint32_t choose_crtc(int fd, drmModeRes *resources,
 			    drmModeConnector *connector)
 {
@@ -272,7 +392,8 @@ static int run(const char *action, unsigned int seconds)
 	drmModeModeInfo mode = { 0 };
 	bool active = false;
 	bool atomic = !strcmp(action, "--atomic-test") ||
-		!strcmp(action, "--show-atomic");
+		!strcmp(action, "--show-atomic") || !strcmp(action, "--show-ui");
+	bool ui = !strcmp(action, "--show-ui");
 	uint64_t prime_caps = 0;
 	const size_t length = ((size_t)STRIDE * HEIGHT + 4095U) & ~(size_t)4095U;
 
@@ -335,7 +456,10 @@ static int run(const char *action, unsigned int seconds)
 		fail("begin DMA-BUF CPU write");
 		goto cleanup;
 	}
-	paint_bars(pixels);
+	if (ui)
+		paint_lynx_status(pixels, read_battery_percent());
+	else
+		paint_bars(pixels);
 	if (sync_buffer(buffer_fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE) < 0) {
 		fail("end DMA-BUF CPU write");
 		goto cleanup;
@@ -389,7 +513,8 @@ static int run(const char *action, unsigned int seconds)
 	}
 	displayed:
 	active = true;
-	printf("displaying color bars for %u seconds\n", seconds);
+	printf("displaying %s for %u seconds\n",
+	       ui ? "Lynx status" : "color bars", seconds);
 	fflush(stdout);
 	struct timespec delay = { .tv_sec = seconds };
 	while (!stop_requested && nanosleep(&delay, &delay) < 0 && errno == EINTR)
@@ -440,7 +565,8 @@ int main(int argc, char **argv)
 			  !strcmp(argv[1], "--atomic-test")))
 		return run(argv[1], 0);
 	if (argc == 3 && (!strcmp(argv[1], "--show") ||
-			  !strcmp(argv[1], "--show-atomic"))) {
+			  !strcmp(argv[1], "--show-atomic") ||
+			  !strcmp(argv[1], "--show-ui"))) {
 		char *end;
 		unsigned long value = strtoul(argv[2], &end, 10);
 		if (*argv[2] && !*end && value >= 1 && value <= 15) {
@@ -448,7 +574,7 @@ int main(int argc, char **argv)
 			return run(argv[1], seconds);
 		}
 	}
-	fprintf(stderr, "usage: %s --probe | --allocate | --atomic-test | --show SECONDS(1..15) | --show-atomic SECONDS(1..15)\n",
+	fprintf(stderr, "usage: %s --probe | --allocate | --atomic-test | --show SECONDS(1..15) | --show-atomic SECONDS(1..15) | --show-ui SECONDS(1..15)\n",
 		argv[0]);
 	return 2;
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One bounded V47/V48 DMA-BUF display trial with durable host-side evidence.
+"""One bounded V47–V50 DMA-BUF display trial with durable host-side evidence.
 
 The DRM program and stock display modules must already be staged. This tool
 never writes boot partitions, never retries a modeset, and captures a reboot's
@@ -22,10 +22,13 @@ TARGETS = {
     "v47": ("192.168.100.8", "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae"),
     "v48": ("192.168.100.7", "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f"),
     "v49": ("192.168.100.7", "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f"),
+    "v50": ("192.168.100.107", "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f"),
 }
 PROGRAM = "/var/lib/lynx-devroot/tmp/lynx_drm_dmabuf_pattern"
 ATOMIC_PROGRAM = "/var/lib/lynx-devroot/tmp/lynx_drm_atomic_candidate"
 ATOMIC_SHA = "0406aa15f90547d571271efdba5cd7566277dfb5e4e56f209c5c1f7e9d9271e5"
+UI_PROGRAM = "/var/lib/lynx-devroot/tmp/lynx_drm_ui_candidate"
+UI_SHA = "69b6e00947b3741e3adbdfc966df33f9cb5abc137a2b64e8631b0ed868a4ed70"
 
 
 def ssh(ip, command, port=2222, timeout=20):
@@ -45,21 +48,28 @@ def main():
     parser.add_argument("--no-live-trace", action="store_true",
                         help="use pstore and post-trial dmesg when /dev/kmsg streaming is unavailable")
     parser.add_argument("--atomic", action="store_true",
-                        help="V49 only: use the validated atomic primary-plane candidate")
+                        help="use the validated atomic primary-plane color-bar candidate")
+    parser.add_argument("--ui", action="store_true",
+                        help="V50 only: show the new Lynx status-screen candidate")
     parser.add_argument("--brightness", type=int, choices=range(1, 1001),
-                        metavar="1..1000", help="V49 atomic only: set temporary panel brightness")
+                        metavar="1..1000", help="set temporary panel brightness with atomic output")
     parser.add_argument("--show-seconds", type=int, choices=range(1, 16), metavar="1..15",
                         required=True)
     args = parser.parse_args()
-    if args.atomic and args.target != "v49":
-        parser.error("--atomic currently requires --target v49")
-    if args.brightness is not None and not args.atomic:
-        parser.error("--brightness requires --atomic")
+    if args.atomic and args.ui:
+        parser.error("--atomic and --ui are mutually exclusive")
+    if args.atomic and args.target not in ("v49", "v50"):
+        parser.error("--atomic requires --target v49 or v50")
+    if args.ui and args.target != "v50":
+        parser.error("--ui requires --target v50")
+    if args.brightness is not None and not (args.atomic or args.ui):
+        parser.error("--brightness requires --atomic or --ui")
     ip, init_sha = TARGETS[args.target]
     os.umask(0o077)
     out = ROOT / "logs" / f"{args.target}-dmabuf-trial-{time.time_ns()}"
     out.mkdir(mode=0o700)
     report = {"state": "starting", "target": args.target, "atomic": args.atomic,
+              "ui": args.ui,
               "temporary_brightness": args.brightness,
               "boot_partition_writes": False,
               "show_seconds": args.show_seconds, "steps": []}
@@ -85,7 +95,7 @@ def main():
             raise RuntimeError("target is not the pinned rescue and kernel")
         boot_id = lines[0]
         report["boot_id"] = boot_id
-        if args.target == "v49":
+        if args.target in ("v49", "v50"):
             v49 = step("v49_iommu_boot", "set -eu; "
                        "grep -q 'CHECKPOINT_MODULE_OK mtk_iommu.ko' /run/lynx/boot.log; "
                        "test -L /sys/bus/platform/devices/1e980000.gce/iommu_group", port=22)
@@ -113,10 +123,12 @@ def main():
            health["battery"]["temperature_mC"] >= 30000 or \
            health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("battery, charger, or temperature outside display trial guard")
-        if args.atomic:
+        if args.atomic or args.ui:
+            selected_program = UI_PROGRAM if args.ui else ATOMIC_PROGRAM
+            selected_sha = UI_SHA if args.ui else ATOMIC_SHA
             atomic_preflight = step("atomic_binary", "set -eu; "
-                                    f'test "$(sha256sum {ATOMIC_PROGRAM} | cut -c1-64)" = "{ATOMIC_SHA}"; '
-                                    f"/bin/busybox timeout 12 {ATOMIC_PROGRAM} --atomic-test")
+                                    f'test "$(sha256sum {selected_program} | cut -c1-64)" = "{selected_sha}"; '
+                                    f"/bin/busybox timeout 12 {selected_program} --atomic-test")
             if atomic_preflight["exit"] != 0:
                 raise RuntimeError("atomic candidate hash or test-only commit failed")
         if args.brightness is not None:
@@ -138,8 +150,8 @@ def main():
             if stream.poll() is not None:
                 raise RuntimeError("kernel message stream ended before modeset")
         # One CRTC modeset only. Capture both streams even if SSH drops.
-        program = ATOMIC_PROGRAM if args.atomic else PROGRAM
-        mode = "--show-atomic" if args.atomic else "--show"
+        program = UI_PROGRAM if args.ui else (ATOMIC_PROGRAM if args.atomic else PROGRAM)
+        mode = "--show-ui" if args.ui else ("--show-atomic" if args.atomic else "--show")
         if args.brightness is None:
             show_command = (f"/bin/busybox timeout {args.show_seconds + 10} " +
                             program + f" {mode} {args.show_seconds}")
@@ -150,9 +162,9 @@ def main():
                 "set -eu; "
                 f"node={node}; test \"$(cat \"$node\")\" = 0; "
                 f"work={work}; mkdir -p \"$work\"; : > \"$work/show.log\"; "
-                f"({program} --show-atomic {args.show_seconds} > \"$work/show.log\" 2>&1) & pid=$!; "
+                f"({program} {mode} {args.show_seconds} > \"$work/show.log\" 2>&1) & pid=$!; "
                 "ready=0; n=0; while [ $n -lt 40 ]; do "
-                "if grep -q \"displaying color bars\" \"$work/show.log\"; then ready=1; break; fi; "
+                f"if grep -q \"displaying {'Lynx status' if args.ui else 'color bars'}\" \"$work/show.log\"; then ready=1; break; fi; "
                 "kill -0 $pid 2>/dev/null || break; "
                 "/bin/busybox sleep 0.1; n=$((n+1)); done; "
                 "if [ \"$ready\" != 1 ]; then cat \"$work/show.log\"; wait $pid; exit 1; fi; "

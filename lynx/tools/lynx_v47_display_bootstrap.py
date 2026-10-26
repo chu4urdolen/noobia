@@ -24,9 +24,10 @@ INIT_SHAS = {
     "v47": "ebc6bb746aaf710d915c47036f92ce0c4ed23a185dfb5349b90e654bab7ba4ae",
     "v48": "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f",
     "v49": "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f",
+    "v50": "b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f",
 }
 KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
-IPS = {"v47": "192.168.100.8", "v48": "192.168.100.7", "v49": "192.168.100.7"}
+IPS = {"v47": "192.168.100.8", "v48": "192.168.100.7", "v49": "192.168.100.7", "v50": "192.168.100.107"}
 MODULES = (
     ("cmdq-platform-mt6983", "3eabc1e9731637286264e7eb5a6d18485e668beb87b305797fcc43f10ef454ec",
      "grep -q '^cmdq_platform_mt6983 ' /proc/modules"),
@@ -112,7 +113,7 @@ def main():
             raise RuntimeError("target is not the pinned kernel and rescue image")
         boot_id = identity[0]
         report["boot_id"] = boot_id
-        if args.target == "v49":
+        if args.target in ("v49", "v50"):
             step("v49_iommu_boot", "set -eu; "
                  "grep -q 'CHECKPOINT_MODULE_OK mtk_iommu.ko' /run/lynx/boot.log; "
                  "grep -q '^mtk_iommu ' /proc/modules; "
@@ -161,7 +162,7 @@ def main():
             if "CARD=yes" in state or "PANEL=yes" in state or "DSI=yes" in state:
                 raise RuntimeError("display was already probed on this boot; refusing a repeat")
             for name, digest, check, data in modules:
-                if args.target == "v49" and name == "mtk_iommu":
+                if args.target in ("v49", "v50") and name == "mtk_iommu":
                     step("mtk_iommu_boot_reused", "set -eu; "
                          f'test "$(cat /proc/sys/kernel/random/boot_id)" = "{boot_id}"; '
                          f"{check}; test -L /sys/bus/platform/devices/1e980000.gce/iommu_group; "

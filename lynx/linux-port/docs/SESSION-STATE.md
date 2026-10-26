@@ -1,5 +1,16 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-26 autonomous charging stack verified on reboot
+
+At 54% battery, the matching USB PHY, TCPC, attach bridge, and late IRQ
+enable modules plus a guarded OpenRC service were installed on Alpine.
+The service was enabled, and one controlled reboot retained the V50 boot_a
+image. Rescue and Alpine returned on a new boot ID without user interaction.
+OpenRC loaded all four modules, and the still-connected Hama charger was
+automatically recognized as DCP. Gauge was 55%, about +325 mA signed current,
+25.6°C; Alpine health had no issues. See `V50-CHARGING-STARTUP.md` and the
+first-boot observer receipt there. V49 rollback and V50 image remain intact.
+
 ## Latest — 2026-10-26 Hama charger attached; USB PHY loaded in RAM
 
 Lynx remains on the V50 boot at `192.168.100.107` with Alpine SSH. Noob

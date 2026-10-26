@@ -88,7 +88,7 @@ def main():
                  "test -d /sys/class/phy")
             after = step("health_after", "/usr/local/bin/lynx-status --assert-ready")
             report["health_after"] = json.loads(after)
-            report["charger_after"] = step("charger_after", 
+            report["charger_after"] = step("charger_after",
                 f"cat '{CHARGER}/online'; cat '{CHARGER}/status'").splitlines()
             step("dmesg_after", "dmesg | tail -120")
             report["state"] = "module-loaded-same-boot"

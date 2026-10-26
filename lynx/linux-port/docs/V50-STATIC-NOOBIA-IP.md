@@ -45,5 +45,30 @@ and preserves slot B and recovery. Start
 `python3 tools/observe_v49_first_boot.py --target v50` before any reboot.
 If V50 fails and Fastboot is available, use the tool's `--restore-v49` path.
 
-**Hold:** No V50 flash or reboot until Lynx has had enough charge for a
-controlled boot and rollback. The user could not confirm charge on 2026-10-26.
+The initial flash hold was for an unknown battery level; Noob could not
+confirm charge at that point.
+An earlier Lynx hardware trial downloaded a boot image but the bootloader
+rejected `fastboot boot` as `unknown command` (see
+`RECOVERY-AND-FIRST-BOOT.md`), so a RAM-only V50 boot is unavailable.
+
+## Controlled trial after explicit authorization
+
+Noob then explicitly instructed Aria to flash despite the unknown battery
+level. The trial tool recorded `battery_unknown_user_authorized=true` and a
+fresh Fastboot preflight. It wrote **boot_a only** and Fastboot returned OKAY
+for the 64 MiB transfer and write. Flash receipt:
+`logs/v50-boot-a-trial-1793035445972539296/result.json`. The separate
+reboot receipt is `logs/v50-boot-a-trial-1793035467294656587/result.json`.
+
+The V50 observer found pinned rescue SSH at `192.168.100.107:22`; the rescue
+boot log states `LYNX_STATIC_NOOBIA_IP ... address=192.168.100.107` at uptime
+87 seconds. Alpine 3.24.2 then answered at `192.168.100.107:2222` and passed
+three identity/health samples. Observer:
+`logs/v50-first-boot-1793035460456770782/events.jsonl`. This proves one
+successful V50 native Linux boot with the fixed address. Slot B, recovery,
+bootloader, kernel and Alpine ext4 root were not changed by the flash.
+
+At uptime 263 seconds Alpine reported battery **25%**, 24.9°C, CPU maximum
+32.3°C, eight services running, and no ext4 errors. The MT6375 charger
+reported `online=0`, `status=Not charging` while Lynx was cabled to Nexus.
+Further display trials are held until external charging is established.

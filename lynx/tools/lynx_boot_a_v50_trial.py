@@ -44,8 +44,11 @@ def main():
     mode.add_argument("--flash-v50", action="store_true")
     mode.add_argument("--reboot-after-v50", action="store_true")
     mode.add_argument("--restore-v49", action="store_true")
-    parser.add_argument("--charged-confirmed", action="store_true",
-                        help="required for flash: fresh charge observation")
+    battery = parser.add_mutually_exclusive_group()
+    battery.add_argument("--charged-confirmed", action="store_true",
+                         help="fresh charge observation")
+    battery.add_argument("--battery-unknown-authorized", action="store_true",
+                         help="record explicit user authorization despite unknown charge")
     parser.add_argument("--flash-receipt", type=Path)
     args = parser.parse_args()
     local()
@@ -62,8 +65,8 @@ def main():
         return
     action = ("flash-v50" if args.flash_v50 else
               "restore-v49" if args.restore_v49 else "reboot-after-v50")
-    if args.flash_v50 and not args.charged_confirmed:
-        parser.error("--flash-v50 requires --charged-confirmed")
+    if args.flash_v50 and not (args.charged_confirmed or args.battery_unknown_authorized):
+        parser.error("--flash-v50 requires a fresh charge observation or explicit battery-unknown authorization")
     if args.reboot_after_v50:
         if args.flash_receipt is None:
             parser.error("--reboot-after-v50 requires --flash-receipt")
@@ -82,7 +85,9 @@ def main():
     report = {"state": "starting", "created_ns": time.time_ns(),
               "mode": action, "image_sha256": V49_SHA if args.restore_v49 else V50_SHA,
               "partition_scope": ["boot_a"], "slot_switch_allowed": False,
-              "charged_confirmed": bool(args.charged_confirmed), "operations": []}
+              "charged_confirmed": bool(args.charged_confirmed),
+              "battery_unknown_user_authorized": bool(args.battery_unknown_authorized),
+              "operations": []}
 
     def save():
         temp = receipt.with_suffix(".tmp")

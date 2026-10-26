@@ -90,7 +90,7 @@ def main():
                 if good and port == 2222:
                     alpine_samples += 1
                     if alpine_samples >= 3:
-                        print(json.dumps({"state": "v49-alpine-observed-3-times",
+                        print(json.dumps({"state": f"{args.target}-alpine-observed-3-times",
                                           "events": str(events)}), flush=True)
                         return
             time.sleep(15)

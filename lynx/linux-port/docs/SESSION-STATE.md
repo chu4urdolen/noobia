@@ -1,6 +1,17 @@
 # Current Lynx handoff state
 
-## Latest — 2026-10-26 V50 static `.107` prepared, flash held for charge
+## Latest — 2026-10-26 V50 boots Alpine at static `.107`; charging absent
+
+Noob explicitly authorized V50 flashing despite an unknown battery level.
+The guarded tool wrote boot_a only after Fastboot and rollback preflights.
+Pinned rescue SSH answered at `192.168.100.107:22`, then Alpine 3.24.2
+answered at `:2222` and passed three health observations. Battery was 25%,
+24.9°C; the MT6375 charger reported `online=0`, `Not charging` on the Nexus
+cable. The display trial is held while a working power source is arranged.
+See `V50-STATIC-NOOBIA-IP.md` and
+`logs/v50-first-boot-1793035460456770782/events.jsonl`.
+
+## Earlier — 2026-10-26 V50 static `.107` prepared offline
 
 The Noobia address book records `.7` for Syra. Lynx had also used `.7` on
 V49, creating an address conflict. Two V49 boots on 2026-10-26 did not yield
@@ -8,8 +19,9 @@ authenticated SSH at the old `.7`/`.8` addresses. A brief Dropbear response
 at `.9` was not pinned-identity verified. Battery state is unknown because
 Fastboot provides no usable reading; Noob reported battery trouble.
 V50 was built and independently validated offline to put both rescue and
-Alpine handoff at the proposed free `.107`. V49 rollback is pinned. **No
-V50 flash occurred.** See `V50-STATIC-NOOBIA-IP.md` and wait for charge.
+Alpine handoff at the proposed free `.107`. V49 rollback was pinned. At this
+point no V50 flash had occurred. Noob later authorized the controlled flash
+recorded above. See `V50-STATIC-NOOBIA-IP.md`.
 
 ## Latest — 2026-10-25 first visible Lynx display output
 

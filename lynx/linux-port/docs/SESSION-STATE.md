@@ -1,5 +1,19 @@
 # Current Lynx handoff state
 
+## Latest — 2026-10-26 Hama charger attached; USB PHY loaded in RAM
+
+Lynx remains on the V50 boot at `192.168.100.107` with Alpine SSH. Noob
+connected a Hama wall charger. The Type-C notifier observed the connection,
+and the charger changed from `online=0`, `Not charging` to `online=2`,
+`Charging`. The gauge still read 28% during the first minutes, with positive
+current and a cool pack; actual charge gain remains to be verified. The stock
+BC1.2 charger-type attempt timed out because `usb2-phy` was unavailable.
+A guarded RAM-only trial loaded the matching `phy-mtk-xsphy.ko`; the USB PHY
+registered and Alpine stayed healthy. One fresh cable attach is pending to
+repeat detection with that PHY present. See `V50-CHARGER-TCPC.md` and the
+bounded charger observer under `logs/v50-charge-attach-1793037186391037082/`.
+No boot partition or persistent startup setting changed in these trials.
+
 ## Latest — 2026-10-26 V50 boots Alpine at static `.107`; charging absent
 
 Noob explicitly authorized V50 flashing despite an unknown battery level.

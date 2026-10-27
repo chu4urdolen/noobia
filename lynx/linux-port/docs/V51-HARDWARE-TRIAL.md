@@ -20,11 +20,12 @@ three DSI instruction changes caused it.
 
 The phone requires physical Power + Volume Down to re-enter Fastboot. A
 bounded watcher at
-`logs/v51-auto-restore-watch-1793098399065105595/result.json` will invoke
-`tools/lynx_boot_a_v51_trial.py --restore-v50` only if the pinned Fastboot
-serial appears during its 600-second window. If that window expires, run the
-guarded restoration manually once Fastboot is available. Do not boot V51 again
-without a revised candidate and a way to collect earlier boot diagnostics.
+`logs/v51-auto-restore-watch-1793098399065105595/result.json` checked for
+the pinned serial for 600 seconds. It expired without seeing Fastboot and made
+**no restoration write**. Run the guarded
+`tools/lynx_boot_a_v51_trial.py --restore-v50` once Fastboot is available.
+Do not boot V51 again without a revised candidate and a way to collect earlier
+boot diagnostics.
 
 The portrait assets and controls remain staged on Alpine's persistent root.
 V50 should be restored before any further display work. The previously

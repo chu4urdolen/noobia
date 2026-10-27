@@ -1,0 +1,18 @@
+#!/sbin/openrc-run
+description="Lynx AW86907 haptic driver"
+
+depend() {
+    need lynx-display
+}
+
+start() {
+    ebegin "Loading Lynx haptic driver"
+    /usr/local/bin/lynx-haptic-bootstrap
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping Lynx haptic motor"
+    printf 0 > /sys/class/leds/vibrator/oplus_activate 2>/dev/null
+    eend $?
+}

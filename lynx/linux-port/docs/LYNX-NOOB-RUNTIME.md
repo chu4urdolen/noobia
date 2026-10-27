@@ -77,8 +77,9 @@ at 500 ms, ending on the standing portrait. Both were loaded and run over
 NRP/1 on Lynx: VM state `HALTED`, sequencer position `4/4`, and motor
 off afterward. The image-cycle thread also started, queued three bounded
 events, returned two through `POLL`, and stopped with `channel_busy=0`.
-Noob's tactile confirmation of the motor pulse remains separate from these
-software observations.
+Noob confirmed feeling the repeated 80 ms NRP/1 pulse. The repeat
+receipt is `logs/v50-haptic-repeat-1793138983869063779/`: command success,
+kernel motor state `1` then `0`, motor off afterward, and Alpine health ready.
 The third program started that compiled image thread through VM syscall
 330. The VM halted after 13 bytes while the thread continued, published three
 events, and then stopped on its own native stop call.

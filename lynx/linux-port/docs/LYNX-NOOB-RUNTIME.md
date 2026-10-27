@@ -99,11 +99,25 @@ checksum passed, 14 RAM waveforms. One direct 80 ms sysfs trial logged
 motor state `1` then `0`, and Alpine health stayed ready.
 
 `lynx-haptic` is an OpenRC service that verifies the exact module and
-firmware hashes, loads those two modules after the display supplier stack,
+firmware hashes, loads `kernel_fb.ko` before those two modules after the display supplier stack,
 checks the driver binding, and stops the motor. `lynx-noobd` depends on
 Wi-Fi and media and starts after haptic. Both are enabled in the default
-runlevel. This setup was verified on the running V50 boot. **A cold boot
-with these new services remains untested**; if haptic loading fails, the
+runlevel. The first cold boot exposed a missing `kernel_fb.ko` dependency:
+`haptic_feedback.ko` failed to load with `Unknown symbol fb_kevent_send_to_user`.
+The matching August stock `kernel_fb.ko` was staged on Alpine with SHA-256
+`d9c0e2546e6af4716e76c539bfe3339c9b52cbc4f88aa7c4c33717ad6201fade`,
+and the service now checks that `mtk_boot_common` is loaded and loads
+`kernel_fb` before `haptic_feedback` and `haptic`.
+
+On the next cold boot, all four services (`lynx-display`, `lynx-media`,
+`lynx-haptic`, `lynx-noobd`) returned without intervention. The boot retained
+the pinned V50 kernel, init, and boot partition checksum. NRP/1 answered
+`PING` and `HAPTIC_STATUS`; an 80 ms pulse logged motor state 1 then 0,
+and the motor returned to off. Alpine health was ready with no reported issues.
+The repeatable host check is `tools/verify_v50_noob_cold_boot.py`. Its successful
+receipt is `logs/v50-noob-cold-boot-1793140010040084706/`; the first boot
+and on-boot repair are recorded in `logs/v50-noob-cold-boot-1793139624662414307/`.
+If haptic loading fails later, the
 NRP endpoint can still answer image and sound calls, while haptic calls
 return unavailable. Sound itself still needs its separate audio module
 bootstrap after reboot.

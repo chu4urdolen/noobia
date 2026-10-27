@@ -20,6 +20,8 @@ load_one() {
     grep -q "^$name " /proc/modules
 }
 
+grep -q '^mtk_boot_common ' /proc/modules
+load_one kernel_fb d9c0e2546e6af4716e76c539bfe3339c9b52cbc4f88aa7c4c33717ad6201fade
 load_one haptic_feedback 583a664f4cdbc6a57875cac165186c0fb9417b23c2c6c72f20e0a7b7bcedb07f
 load_one haptic 2a6098b425efa146221703a9fa81d70f491540532721b9a3b352f709dd9e77a5
 

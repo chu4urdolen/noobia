@@ -67,7 +67,8 @@ ID, `1a524657-04f4-4306-9458-c5ced1c2bfb0`. Remote `status` returned
 `pose 01_standing_smile`; the full pose list and 500 ms dance were available.
 The first boot attempt failed Wi-Fi contact and returned to Fastboot under the
 V50 guard; one Fastboot reboot reached the successful boot without flashing.
-Visual confirmation for this specific automatic boot was requested separately.
+Noob visually confirmed that the portrait appears on touch and dims again
+after about ten seconds on this automatic boot.
 
 The first cold modeset timeout is still a driver problem to fix; the bounded
 retry is a verified workaround. The host confirmation guard in V50 also means

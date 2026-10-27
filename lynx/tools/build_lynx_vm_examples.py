@@ -61,3 +61,13 @@ MOVI r7, 1
 SYS_MIXED r0, SEQUENCE_SET, r0..r7, ""
 SYS r0, SEQUENCE_START
 HALT""")
+
+thread = mov(0, 500) + bytes([0x20, 1]) + struct.pack("<H", 330) + bytes([1, 0, 0])
+(OUT / "image_cycle_thread.hex").write_text(thread.hex() + "\n")
+(OUT / "image_cycle_thread.asm").write_text(
+    """# Start the compiled image-cycle thread at 500 ms and halt the VM.
+# Stop the thread separately with CALL IMAGE_CYCLE_STOP.
+MOVI r0, 500
+SYS r1, IMAGE_CYCLE_START, r0
+HALT
+""")

@@ -281,7 +281,7 @@ class Controller:
                     raise ValueError("queue full")
                 s["queue"].append(item)
                 self.save()
-                if s["current"] is None:
+                if s["mode"] == "stopped":
                     self.advance(kind)
             else:
                 self.start(kind, item)

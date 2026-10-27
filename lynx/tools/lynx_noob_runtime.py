@@ -19,6 +19,7 @@ NAME = re.compile(r"[a-z0-9_]{1,63}\Z")
 LED = Path("/sys/class/leds/vibrator")
 DISPLAY = Path("/var/lib/lynx-display")
 MEDIA = Path("/run/lynx/media.sock")
+_haptic_ready_at = 0.0
 
 
 class NativeError(ValueError):
@@ -66,6 +67,7 @@ def haptic_stop():
 
 
 def haptic_set(numbers, _text):
+    global _haptic_ready_at
     if len(numbers) != 2 or numbers[1] not in (0, 1):
         raise NativeError("usage: duration_ms(20..250) bit(0|1)")
     duration, bit = numbers
@@ -76,8 +78,12 @@ def haptic_set(numbers, _text):
         return 0, "motor=off"
     if not 20 <= duration <= 250:
         raise NativeError("duration must be 20..250 ms")
+    now = time.monotonic()
+    if now < _haptic_ready_at:
+        raise NativeError("haptic cooldown")
     LED.joinpath("oplus_duration").write_text(f"{duration}\n")
     LED.joinpath("oplus_activate").write_text("1\n")
+    _haptic_ready_at = now + (duration + 50) / 1000
     return 1, f"duration_ms={duration}"
 
 
@@ -465,11 +471,23 @@ class Runtime:
         reg(311, "IMAGE_CHOOSE", self.image_choose)
         reg(312, "IMAGE_POSE", self.image_pose)
         reg(313, "IMAGE_ANIMATE", self.image_animate)
+        reg(314, "IMAGE_QUEUE", self.image_queue)
+        reg(315, "IMAGE_PAUSE", lambda a, t: self.media_transport(a, t, "pause", "image"))
+        reg(316, "IMAGE_RESUME", lambda a, t: self.media_transport(a, t, "resume", "image"))
+        reg(317, "IMAGE_STOP", lambda a, t: self.media_transport(a, t, "stop", "image"))
+        reg(318, "IMAGE_NEXT", lambda a, t: self.media_transport(a, t, "next", "image"))
+        reg(319, "IMAGE_PREVIOUS", lambda a, t: self.media_transport(a, t, "previous", "image"))
         reg(330, "IMAGE_CYCLE_START", self.cycle_start)
         reg(331, "IMAGE_CYCLE_STOP", lambda a, t: self.cycle.stop())
         reg(332, "IMAGE_CYCLE_STATUS", lambda a, t: self.cycle.status())
         reg(333, "IMAGE_CYCLE_POLL", lambda a, t: self.cycle.events.pop(True))
         reg(340, "SOUND_PLAY", self.sound_play)
+        reg(341, "SOUND_QUEUE", self.sound_queue)
+        reg(342, "SOUND_PAUSE", lambda a, t: self.media_transport(a, t, "pause", "sound"))
+        reg(343, "SOUND_RESUME", lambda a, t: self.media_transport(a, t, "resume", "sound"))
+        reg(344, "SOUND_STOP", lambda a, t: self.media_transport(a, t, "stop", "sound"))
+        reg(345, "SOUND_NEXT", lambda a, t: self.media_transport(a, t, "next", "sound"))
+        reg(346, "SOUND_PREVIOUS", lambda a, t: self.media_transport(a, t, "previous", "sound"))
 
     @staticmethod
     def slot(args):
@@ -563,6 +581,27 @@ class Runtime:
             raise NativeError("usage: ASCII sound name")
         media("play", "sound", text)
         return 1, f"name={text}"
+
+    @staticmethod
+    def image_queue(args, text):
+        if args or not text or not NAME.fullmatch(text):
+            raise NativeError("usage: ASCII image name")
+        media("queue", "image", text)
+        return 1, f"queued={text}"
+
+    @staticmethod
+    def sound_queue(args, text):
+        if args or not text or not NAME.fullmatch(text):
+            raise NativeError("usage: ASCII sound name")
+        media("queue", "sound", text)
+        return 1, f"queued={text}"
+
+    @staticmethod
+    def media_transport(args, text, action, kind):
+        if args or text:
+            raise NativeError("usage: no arguments")
+        media(action, kind)
+        return 1, f"{kind}={action}"
 
     def tick(self):
         self.vm.tick()

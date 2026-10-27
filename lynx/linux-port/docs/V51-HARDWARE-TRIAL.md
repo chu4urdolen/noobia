@@ -18,18 +18,18 @@ the rescue fallback. No display service was started. This establishes a V51
 boot failure; it does not identify the failing initcall or prove which of the
 three DSI instruction changes caused it.
 
-The phone requires physical Power + Volume Down to re-enter Fastboot. A
+The phone required physical Power + Volume Down to re-enter Fastboot. A
 bounded watcher at
 `logs/v51-auto-restore-watch-1793098399065105595/result.json` checked for
 the pinned serial for 600 seconds. It expired without seeing Fastboot and made
-**no restoration write**. Run the guarded
-`tools/lynx_boot_a_v51_trial.py --restore-v50` once Fastboot is available.
-Do not boot V51 again without a revised candidate and a way to collect earlier
-boot diagnostics.
+**no restoration write**. Once Fastboot was available, the guarded
+`tools/lynx_boot_a_v51_trial.py --restore-v50` restored the exact V50 image;
+receipt: `logs/v51-boot-a-trial-1793099293836040326/result.json`.
+The full `boot_a` hash was checked after restoration. Do not boot V51 again
+without a revised candidate and a way to collect earlier boot diagnostics.
 
-The portrait assets and controls remain staged on Alpine's persistent root.
-V50 should be restored before any further display work. The previously
-confirmed V50 screen path uses RAM-loaded modules; its first cold modeset may
-time out and ESD recovery can initialize the panel before a later modeset.
-The next portrait trial should work from V50 over SSH before another boot
-partition experiment.
+The portrait assets and controls remain on Alpine's persistent root. V50 is
+restored and now starts the portrait service at boot. Its RAM-loaded display
+path has a first cold modeset timeout; ESD recovery initializes the panel and
+a second modeset succeeds. The automatic V50 boot check is recorded in
+`docs/LYNX-PORTRAIT-CONTROL.md`.

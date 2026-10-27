@@ -50,15 +50,29 @@ root SSH.
 ## Deployment state, 2026-10-27
 
 The 17 compressed frames, control CLI, native portrait renderer, verified
-display/touch modules, and OpenRC service are staged on Alpine. The service is
-**disabled** on V50. Its startup guard hashes the full `boot_a` partition and
-accepts only the exact unflashed V51 candidate
-`338f1280cbdc68e8896ff6b5ebb37fd79d0497280159ac35c962dd311f98847c`.
-The current V50 partition correctly fails this guard. The V50 rollback image
-`6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59`
-is ready. No portrait has yet been shown on the physical panel. Before a
-watched V51 trial, run `tools/lynx_boot_a_v51_trial.py --prepare`, confirm
-charge and recovery access, and tell Noob before starting the test.
+display/touch modules, and OpenRC service are installed on Alpine. The service
+is enabled in the default runlevel on the restored V50 boot image
+`6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59`.
+Its bootstrap checks that exact full `boot_a` hash before loading display or
+touch modules. The V50 rollback file remains on Nexus. No boot partition was
+modified for the portrait deployment.
+
+A cold boot on 2026-10-27 reached Alpine and started all eight core services,
+then OpenRC started `lynx-display` automatically. The first modeset reported
+a CMDQ timeout and `lcm_prepare:...Successful`; the service retried once and
+started the portrait renderer without another CMDQ error. The service reached
+`[ started ]` at uptime 265 seconds, its PID was present, and
+`lynx-status --assert-ready` passed. Rescue and Alpine reported the same boot
+ID, `1a524657-04f4-4306-9458-c5ced1c2bfb0`. Remote `status` returned
+`pose 01_standing_smile`; the full pose list and 500 ms dance were available.
+The first boot attempt failed Wi-Fi contact and returned to Fastboot under the
+V50 guard; one Fastboot reboot reached the successful boot without flashing.
+Visual confirmation for this specific automatic boot was requested separately.
+
+The first cold modeset timeout is still a driver problem to fix; the bounded
+retry is a verified workaround. The host confirmation guard in V50 also means
+Lynx is not yet fully independent of Nexus at boot. Prior watched hardware
+trials confirmed portrait, touch wake, and dance animation on the V50 panel.
 
 Offline checks passed: all 17 frames decoded on the phone, the renderer
 created a full-screen preview, remote pose/dance switching worked, and frame

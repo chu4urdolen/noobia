@@ -1,11 +1,11 @@
 #!/bin/sh
 # Load Lynx's verified display and touch modules from Alpine's persistent root.
-# The exact boot_a hash gates the untested V51 DSI cold-boot candidate.
+# The exact working V50 boot_a hash gates automatic display initialization.
 set -eu
 
 ROOT=/var/lib/lynx-display/modules
 LIST=/var/lib/lynx-display/modules.list
-V51_SHA=338f1280cbdc68e8896ff6b5ebb37fd79d0497280159ac35c962dd311f98847c
+V50_SHA=6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59
 KERNEL=5.10.149-android12-9-o-g311738fbb5a8
 PANEL_MATCH=oplus22823_tm_nt37705_fhd_dsi_cmd-synaptics-s3910
 
@@ -35,7 +35,7 @@ verify_files() {
       /var/lib/lynx-display/frames.sha256 >/dev/null)
 }
 
-require_v51() {
+require_v50() {
     boot_device=''
     for uevent in /sys/class/block/*/uevent; do
         grep -q '^PARTNAME=boot_a$' "$uevent" 2>/dev/null || continue
@@ -47,8 +47,8 @@ require_v51() {
         echo "boot_a size mismatch" >&2
         return 1
     }
-    [ "$(sha256sum "$boot_device" | cut -c1-64)" = "$V51_SHA" ] || {
-        echo "boot_a is not the exact V51 trial image" >&2
+    [ "$(sha256sum "$boot_device" | cut -c1-64)" = "$V50_SHA" ] || {
+        echo "boot_a is not the exact working V50 image" >&2
         return 1
     }
 }
@@ -93,12 +93,12 @@ case "${1:-}" in
     --check-files) verify_files ;;
     --start)
         verify_files
-        require_v51
+        require_v50
         load_modules
         status
         ;;
     --status)
-        require_v51
+        require_v50
         status
         ;;
     *) echo "usage: $0 --check-files|--start|--status" >&2; exit 2 ;;

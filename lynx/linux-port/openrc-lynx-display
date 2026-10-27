@@ -1,24 +1,13 @@
 #!/sbin/openrc-run
-description="Lynx native status display with ten-second touch wake"
+description="Lynx portrait display with ten-second touch wake"
 
 depend() {
-    need lynx-health
-    after lynx-dropbear lynx-charging-stack
+    need lynx-health lynx-battery-reserve lynx-local-logs lynx-wifi
+    need lynx-dropbear lynx-maintenance lynx-time-sync lynx-power-history
+    after lynx-charging-stack
 }
 
-start() {
-    ebegin "Starting Lynx display and touchscreen"
-    mkdir -p /var/log/lynx /run/lynx
-    if ! /usr/local/bin/lynx-display-bootstrap --start \
-        >>/var/log/lynx/display.log 2>&1; then
-        eend 1 "display bootstrap failed; see display.log"
-        return 1
-    fi
-    if [ -e /run/lynx/display-auto.pid ]; then
-        eend 1 "display PID file already exists"
-        return 1
-    fi
-    # Only lines written by this launch can establish that the panel was reached.
+launch_renderer() {
     touch /var/log/lynx/display.log
     old_lines=$(wc -l < /var/log/lynx/display.log)
     /bin/busybox nohup /usr/local/bin/lynx-portrait-display --show-portrait-touch-idle \
@@ -43,7 +32,88 @@ start() {
         printf 0 > /sys/kernel/oplus_display/oplus_brightness || true
         kill -TERM "$(cat /run/lynx/display-auto.pid)" 2>/dev/null || true
         rm -f /run/lynx/display-auto.pid
-        eend 1 "status renderer did not reach the panel"
+        return 1
+    fi
+}
+
+stop_renderer() {
+    printf 0 > /sys/kernel/oplus_display/oplus_brightness || true
+    if [ -s /run/lynx/display-auto.pid ]; then
+        pid=$(cat /run/lynx/display-auto.pid)
+        kill -TERM "$pid" 2>/dev/null || true
+        n=0
+        while kill -0 "$pid" 2>/dev/null && [ "$n" -lt 30 ]; do
+            /bin/busybox sleep 0.1
+            n=$((n + 1))
+        done
+        if kill -0 "$pid" 2>/dev/null; then
+            return 1
+        fi
+        rm -f /run/lynx/display-auto.pid
+    fi
+}
+
+start() {
+    ebegin "Starting Lynx portrait and touchscreen"
+    mkdir -p /var/log/lynx /run/lynx
+    n=0
+    until /usr/local/bin/lynx-status --assert-ready >/dev/null 2>&1; do
+        if [ "$n" -ge 15 ]; then
+            eend 1 "Alpine health was not ready after core services"
+            return 1
+        fi
+        /bin/busybox sleep 2
+        n=$((n + 1))
+    done
+    if ! /usr/local/bin/lynx-display-bootstrap --start \
+        >>/var/log/lynx/display.log 2>&1; then
+        eend 1 "display bootstrap failed; see display.log"
+        return 1
+    fi
+    if [ -e /run/lynx/display-auto.pid ]; then
+        eend 1 "display PID file already exists"
+        return 1
+    fi
+    before=$(dmesg | wc -l)
+    if ! launch_renderer; then
+        eend 1 "portrait renderer did not reach the panel"
+        return 1
+    fi
+    /bin/busybox sleep 12
+    if ! kill -0 "$(cat /run/lynx/display-auto.pid)" 2>/dev/null; then
+        stop_renderer || true
+        eend 1 "portrait renderer exited during first modeset"
+        return 1
+    fi
+    if dmesg | tail -n +"$((before + 1))" |
+       grep -Eiq 'cmdq timeout|\[cmdq\].*\[err\]'; then
+        if ! dmesg | tail -n +"$((before + 1))" |
+           grep -q 'lcm_prepare:.*Successful'; then
+            stop_renderer || true
+            eend 1 "first modeset failed without panel recovery"
+            return 1
+        fi
+        echo "first cold modeset recovered; retrying portrait" >>/var/log/lynx/display.log
+        if ! stop_renderer; then
+            eend 1 "warmup renderer did not stop"
+            return 1
+        fi
+        before=$(dmesg | wc -l)
+        if ! launch_renderer; then
+            eend 1 "portrait retry did not reach the panel"
+            return 1
+        fi
+        /bin/busybox sleep 4
+        if dmesg | tail -n +"$((before + 1))" |
+           grep -Eiq 'cmdq timeout|\[cmdq\].*\[err\]'; then
+            stop_renderer || true
+            eend 1 "portrait retry produced a kernel display error"
+            return 1
+        fi
+    fi
+    if ! /usr/local/bin/lynx-status --assert-ready >/dev/null; then
+        stop_renderer || true
+        eend 1 "Alpine health failed after portrait start"
         return 1
     fi
     eend 0
@@ -56,21 +126,7 @@ status() {
 }
 
 stop() {
-    ebegin "Stopping Lynx status display"
-    printf 0 > /sys/kernel/oplus_display/oplus_brightness || true
-    if [ -s /run/lynx/display-auto.pid ]; then
-        pid=$(cat /run/lynx/display-auto.pid)
-        kill -TERM "$pid" 2>/dev/null || true
-        n=0
-        while kill -0 "$pid" 2>/dev/null && [ "$n" -lt 30 ]; do
-            /bin/busybox sleep 0.1
-            n=$((n + 1))
-        done
-        if kill -0 "$pid" 2>/dev/null; then
-            eend 1 "renderer did not stop"
-            return 1
-        fi
-        rm -f /run/lynx/display-auto.pid
-    fi
-    eend 0
+    ebegin "Stopping Lynx portrait"
+    stop_renderer
+    eend $?
 }

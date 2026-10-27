@@ -9,6 +9,13 @@ KERNEL='5.10.149-android12-9-o-g311738fbb5a8'
 BB_SHA='999cb969d09093a71716cfc747bb53cdada3f332c05eb5046c56e0f66a4d6d22'
 def expected_init_hashes():
  hashes={BUILD['init_sha256']}
+ # V48-V51 keep this exact rescue /init while changing the supplement.
+ # Validate its known V50 carrier before accepting the added proof hash.
+ v50=ROOT/'linux-port/artifacts/static-noobia-ip-v50-offline/nord3-static-noobia-ip-v50-untested.img'
+ try:
+  if hashlib.sha256(v50.read_bytes()).hexdigest()=='6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59':
+   hashes.add('b560f233f5ecf838b5e948d0cd3685b676a84f3097adb00d2c8bfa6e5446ab1f')
+ except OSError: pass
  for name in ('openrc-gated-v20-guardv6','openrc-gated-v21-fastboot-timeout'):
   candidate=ROOT/'linux-port/artifacts'/name
   try:

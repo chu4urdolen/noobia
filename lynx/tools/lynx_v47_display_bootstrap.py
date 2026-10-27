@@ -167,7 +167,8 @@ def main():
                             (args.target == "v50" and
                              report["charger_online"] == "2" and
                              report["charger_status"] == "Charging" and
-                             "[DCP]" in report["charger_usb_type"]))
+                             report["battery_percent"] >= 80 and
+                             abs(report["battery_current_mA_signed"]) <= 500))
             if (report["battery_percent"] < 50 or
                 not charger_safe or
                 report["battery_temperature_mC"] >= 30000 or

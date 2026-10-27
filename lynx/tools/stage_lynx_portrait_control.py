@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Stage Lynx portraits, controls, and disabled service without lighting display."""
+"""Stage Lynx portraits and controls; accept a running verified V50 service."""
 
+import argparse
 import hashlib
 import json
 import os
@@ -21,8 +22,12 @@ OLD_PORTRAIT_SHA = "1955134790a78f0f4e73d68affd28d7388edffb14ec8a4773759adf71e04
 OLD_BOOTSTRAP = "07057d2b890e3731e93ded1f0695d6ac4c5b67ebd2145a4e290ae10316f73758"
 INTERMEDIATE_BOOTSTRAP = "9a4aaa1baadf4ceee0665f0ad25e8c246662b4a40c454754091fe9dd9f3856f8"
 LATEST_BOOTSTRAP = "c0db29966635407c9f92439868bfe2da6e14bc8abbe3a896659528817d278d43"
+CURRENT_BOOTSTRAP = "b423cd8c42b916a73b0df529ab271107ca28c4c58144ed179a5370934567c338"
 OLD_SERVICE = "8904db1154ec0bb9298fb27c79bb889c6f71d73e44163776fc5710d72fe8e11c"
 INTERMEDIATE_SERVICE = "029320ee9e1feca3eb8f6444fb4b400f13ee1302537830c34a1597787d108d57"
+CURRENT_SERVICE = "7ab690a0a19c9cf216d232f4522e0ade7c6f62db3754f4de13997431cb67bfad"
+V50_SERVICE = "70c028d1c277fcc09779e788b75e636c9c40e560a3c5a9c9ab6f63bcb0bddff4"
+AUTO_START_SERVICE = "cf4a95e9c33bec4d31565e78616958a21ca801c2a7a4f5f7041b5471ef89eeaa"
 
 
 def ssh(command, payload=None, port=2222, timeout=35):
@@ -32,11 +37,15 @@ def ssh(command, payload=None, port=2222, timeout=35):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--service-enabled-ok", action="store_true",
+                        help="update service file while the verified V50 service is running")
+    args = parser.parse_args()
     os.umask(0o077)
     out = ROOT / "logs" / f"portrait-stage-{time.time_ns()}"
     out.mkdir(mode=0o700)
     report = {"state": "starting", "boot_partition_writes": False,
-              "display_enabled": False, "service_enabled": False, "steps": []}
+              "service_enabled_at_start": args.service_enabled_ok, "steps": []}
 
     def step(label, command, payload=None, port=2222, timeout=35):
         run = ssh(command, payload, port, timeout)
@@ -115,15 +124,23 @@ def main():
                 (ROOT / "tools/lynx_displayctl.py").read_bytes(), "755")
         install("bootstrap", "/usr/local/bin/lynx-display-bootstrap",
                 (ROOT / "linux-port/lynx-display-bootstrap.sh").read_bytes(), "755",
-                (OLD_BOOTSTRAP, INTERMEDIATE_BOOTSTRAP, LATEST_BOOTSTRAP))
+                (OLD_BOOTSTRAP, INTERMEDIATE_BOOTSTRAP, LATEST_BOOTSTRAP,
+                 CURRENT_BOOTSTRAP))
         install("service", "/etc/init.d/lynx-display",
                 (ROOT / "linux-port/openrc-lynx-display").read_bytes(), "755",
-                (OLD_SERVICE, INTERMEDIATE_SERVICE))
+                (OLD_SERVICE, INTERMEDIATE_SERVICE, CURRENT_SERVICE,
+                 V50_SERVICE, AUTO_START_SERVICE))
         step("files", "/usr/local/bin/lynx-display-bootstrap --check-files")
         step("list", "/usr/local/bin/lynx-displayctl list")
-        step("disabled", "set -eu; test ! -e /etc/runlevels/default/lynx-display; "
-             "test ! -e /run/lynx/display-auto.pid; /usr/local/bin/lynx-status --assert-ready >/dev/null")
-        report["state"] = "portrait-control-staged-disabled"
+        if args.service_enabled_ok:
+            step("running", "set -eu; test -L /etc/runlevels/default/lynx-display; "
+                 "rc-service lynx-display status; test -s /run/lynx/display-auto.pid; "
+                 "/usr/local/bin/lynx-status --assert-ready >/dev/null")
+            report["state"] = "portrait-service-updated-running"
+        else:
+            step("disabled", "set -eu; test ! -e /etc/runlevels/default/lynx-display; "
+                 "test ! -e /run/lynx/display-auto.pid; /usr/local/bin/lynx-status --assert-ready >/dev/null")
+            report["state"] = "portrait-control-staged-disabled"
         report["frame_count"] = 17
         report["dance_frames"] = 11
     except Exception as exc:
@@ -132,7 +149,8 @@ def main():
     receipt = out / "result.json"
     receipt.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({"state": report["state"], "result": str(receipt)}))
-    if report["state"] != "portrait-control-staged-disabled":
+    if report["state"] not in ("portrait-control-staged-disabled",
+                               "portrait-service-updated-running"):
         raise SystemExit(1)
 
 

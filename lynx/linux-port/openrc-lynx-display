@@ -1,0 +1,64 @@
+#!/sbin/openrc-run
+description="Lynx native status display with ten-second touch wake"
+
+depend() {
+    need lynx-health
+    after lynx-dropbear lynx-charging-stack
+}
+
+start() {
+    ebegin "Starting Lynx display and touchscreen"
+    mkdir -p /var/log/lynx /run/lynx
+    if ! /usr/local/bin/lynx-display-bootstrap --start \
+        >>/var/log/lynx/display.log 2>&1; then
+        eend 1 "display bootstrap failed; see display.log"
+        return 1
+    fi
+    if [ -e /run/lynx/display-auto.pid ]; then
+        eend 1 "display PID file already exists"
+        return 1
+    fi
+    # Only lines written by this launch can establish that the panel was reached.
+    touch /var/log/lynx/display.log
+    old_lines=$(wc -l < /var/log/lynx/display.log)
+    /bin/busybox nohup /usr/local/bin/lynx-status-display --show-ui-touch-idle \
+        </dev/null >>/var/log/lynx/display.log 2>&1 &
+    echo $! > /run/lynx/display-auto.pid
+    /bin/busybox sleep 2
+    if ! kill -0 "$(cat /run/lynx/display-auto.pid)" 2>/dev/null ||
+       ! tail -n +"$((old_lines + 1))" /var/log/lynx/display.log |
+           grep -q 'displaying Lynx status with 10-second touch wake'; then
+        printf 0 > /sys/kernel/oplus_display/oplus_brightness || true
+        kill -TERM "$(cat /run/lynx/display-auto.pid)" 2>/dev/null || true
+        rm -f /run/lynx/display-auto.pid
+        eend 1 "status renderer did not reach the panel"
+        return 1
+    fi
+    eend 0
+}
+
+status() {
+    [ -s /run/lynx/display-auto.pid ] || return 1
+    kill -0 "$(cat /run/lynx/display-auto.pid)" 2>/dev/null || return 1
+    /usr/local/bin/lynx-display-bootstrap --status >/dev/null
+}
+
+stop() {
+    ebegin "Stopping Lynx status display"
+    printf 0 > /sys/kernel/oplus_display/oplus_brightness || true
+    if [ -s /run/lynx/display-auto.pid ]; then
+        pid=$(cat /run/lynx/display-auto.pid)
+        kill -TERM "$pid" 2>/dev/null || true
+        n=0
+        while kill -0 "$pid" 2>/dev/null && [ "$n" -lt 30 ]; do
+            /bin/busybox sleep 0.1
+            n=$((n + 1))
+        done
+        if kill -0 "$pid" 2>/dev/null; then
+            eend 1 "renderer did not stop"
+            return 1
+        fi
+        rm -f /run/lynx/display-auto.pid
+    fi
+    eend 0
+}

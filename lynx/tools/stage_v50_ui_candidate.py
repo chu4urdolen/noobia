@@ -30,17 +30,25 @@ def ssh(command, payload=None, port=2222, timeout=25):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--persistent", action="store_true",
-                        help="build the signal-controlled status screen at separate paths")
+    variant = parser.add_mutually_exclusive_group()
+    variant.add_argument("--persistent", action="store_true",
+                         help="build the signal-controlled status screen at separate paths")
+    variant.add_argument("--touch-idle", action="store_true",
+                         help="build the double-buffered, touch-wake status screen separately")
     args = parser.parse_args()
-    remote_source = ("/var/lib/lynx-devroot/tmp/lynx_drm_status_persistent.c"
-                     if args.persistent else REMOTE_SOURCE)
-    remote_binary = ("/var/lib/lynx-devroot/tmp/lynx_drm_status_persistent"
-                     if args.persistent else REMOTE_BINARY)
+    if args.touch_idle:
+        remote_source = "/var/lib/lynx-devroot/tmp/lynx_drm_status_touch_idle.c"
+        remote_binary = "/var/lib/lynx-devroot/tmp/lynx_drm_status_touch_idle"
+    elif args.persistent:
+        remote_source = "/var/lib/lynx-devroot/tmp/lynx_drm_status_persistent.c"
+        remote_binary = "/var/lib/lynx-devroot/tmp/lynx_drm_status_persistent"
+    else:
+        remote_source, remote_binary = REMOTE_SOURCE, REMOTE_BINARY
     os.umask(0o077)
     out = ROOT / "logs" / f"v50-ui-stage-{time.time_ns()}"
     out.mkdir(mode=0o700)
     report = {"state": "starting", "persistent": args.persistent,
+              "touch_idle": args.touch_idle,
               "remote_binary": remote_binary, "ui_binary_executed": False,
               "display_enabled": False, "boot_partition_writes": False,
               "steps": []}
@@ -57,8 +65,8 @@ def main():
     try:
         source = SOURCE.read_bytes()
         source_sha = hashlib.sha256(source).hexdigest()
-        if not args.persistent and source_sha != ORIGINAL_SOURCE_SHA:
-            raise RuntimeError("source changed; use --persistent to preserve the proven UI binary")
+        if not (args.persistent or args.touch_idle) and source_sha != ORIGINAL_SOURCE_SHA:
+            raise RuntimeError("source changed; select a separate candidate path")
         report["source_sha256"] = source_sha
         identity = step("identity", "cat /proc/sys/kernel/random/boot_id; "
                         "uname -r; sha256sum /init | cut -c1-64; "

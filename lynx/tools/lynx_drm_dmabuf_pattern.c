@@ -19,6 +19,8 @@
 #include <inttypes.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-heap.h>
+#include <linux/input.h>
+#include <poll.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -38,6 +40,9 @@
 #define STRIDE (WIDTH * 4U)
 #define HEAP_DEVICE "/dev/dma_heap/system"
 #define DRM_DEVICE "/dev/dri/card0"
+#define TOUCH_DEVICE "/dev/input/event0"
+#define TOUCH_NAME "/sys/class/input/input0/name"
+#define BRIGHTNESS_DEVICE "/sys/kernel/oplus_display/oplus_brightness"
 
 static volatile sig_atomic_t stop_requested;
 
@@ -60,6 +65,47 @@ static int sync_buffer(int fd, uint64_t flags)
 		rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &sync);
 	} while (rc == -1 && (errno == EINTR || errno == EAGAIN));
 	return rc;
+}
+
+static int set_brightness(unsigned int value)
+{
+	char text[16];
+	int fd = open(BRIGHTNESS_DEVICE, O_WRONLY | O_CLOEXEC);
+	if (fd < 0)
+		return -1;
+	int length = snprintf(text, sizeof(text), "%u\n", value);
+	int rc = write(fd, text, (size_t)length) == length ? 0 : -1;
+	int saved_errno = errno;
+	close(fd);
+	errno = saved_errno;
+	return rc;
+}
+
+static int verify_touch_device(void)
+{
+	char name[64] = { 0 };
+	int fd = open(TOUCH_NAME, O_RDONLY | O_CLOEXEC);
+	if (fd < 0)
+		return -1;
+	ssize_t count = read(fd, name, sizeof(name) - 1);
+	int saved_errno = errno;
+	close(fd);
+	errno = saved_errno;
+	if (count < 0)
+		return -1;
+	if (strcmp(name, "touchpanel\n")) {
+		errno = ENODEV;
+		return -1;
+	}
+	return open(TOUCH_DEVICE, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+}
+
+static uint64_t monotonic_milliseconds(void)
+{
+	struct timespec now;
+	if (clock_gettime(CLOCK_MONOTONIC, &now) < 0)
+		return 0;
+	return (uint64_t)now.tv_sec * 1000U + (uint64_t)now.tv_nsec / 1000000U;
 }
 
 static void paint_bars(uint32_t *pixels)
@@ -383,15 +429,62 @@ done:
 	return rc;
 }
 
+static int atomic_present_fb(int fd, uint32_t plane, uint32_t fb)
+{
+	drmModeAtomicReq *request = drmModeAtomicAlloc();
+	int rc = -1;
+	if (!request)
+		return -1;
+	if (add_property(fd, request, plane, DRM_MODE_OBJECT_PLANE,
+			 "FB_ID", fb) == 0)
+		rc = drmModeAtomicCommit(fd, request, 0, NULL);
+	drmModeAtomicFree(request);
+	return rc;
+}
+
+static int wait_for_touch_or_timeout(int fd, int timeout_ms)
+{
+	struct pollfd watch = { .fd = fd, .events = POLLIN };
+	int rc = poll(&watch, 1, timeout_ms);
+	if (rc < 0 && errno == EINTR)
+		return 0;
+	if (rc <= 0)
+		return rc;
+	if (watch.revents & (POLLERR | POLLHUP | POLLNVAL)) {
+		errno = EIO;
+		return -1;
+	}
+	if (!(watch.revents & POLLIN))
+		return 0;
+	struct input_event events[32];
+	ssize_t count = read(fd, events, sizeof(events));
+	if (count < 0 && errno == EAGAIN)
+		return 0;
+	if (count <= 0 || count % (ssize_t)sizeof(events[0])) {
+		errno = EIO;
+		return -1;
+	}
+	for (size_t i = 0; i < (size_t)count / sizeof(events[0]); i++)
+		if ((events[i].type == EV_KEY && events[i].code == BTN_TOUCH &&
+		     events[i].value == 1) ||
+		    (events[i].type == EV_ABS && events[i].code == ABS_MT_TRACKING_ID &&
+		     events[i].value >= 0))
+			return 1;
+	return 0;
+}
+
 static int run(const char *action, unsigned int seconds)
 {
-	int drm_fd = -1, heap_fd = -1, buffer_fd = -1, rc = 1;
-	void *pixels = MAP_FAILED;
-	uint32_t handle = 0, fb_id = 0, connector_id = 0, crtc_id = 0, plane_id = 0;
+	int drm_fd = -1, heap_fd = -1, buffer_fd = -1, buffer_fd2 = -1;
+	int touch_fd = -1, rc = 1;
+	void *pixels = MAP_FAILED, *pixels2 = MAP_FAILED;
+	uint32_t handle = 0, handle2 = 0, fb_id = 0, fb_id2 = 0;
+	uint32_t connector_id = 0, crtc_id = 0, plane_id = 0;
 	drmModeRes *resources = NULL;
 	drmModeModeInfo mode = { 0 };
 	bool active = false;
-	bool persistent_ui = !strcmp(action, "--show-ui-until-signal");
+	bool touch_idle = !strcmp(action, "--show-ui-touch-idle");
+	bool persistent_ui = !strcmp(action, "--show-ui-until-signal") || touch_idle;
 	bool atomic = !strcmp(action, "--atomic-test") ||
 		!strcmp(action, "--show-atomic") || !strcmp(action, "--show-ui") ||
 		persistent_ui;
@@ -399,6 +492,17 @@ static int run(const char *action, unsigned int seconds)
 	int shown_capacity = -1;
 	uint64_t prime_caps = 0;
 	const size_t length = ((size_t)STRIDE * HEIGHT + 4095U) & ~(size_t)4095U;
+	uint32_t current_fb = 0;
+	bool lit = false;
+	uint64_t lit_until = 0;
+
+	if (touch_idle) {
+		touch_fd = verify_touch_device();
+		if (touch_fd < 0) {
+			fail("open verified touchpanel input");
+			goto cleanup;
+		}
+	}
 
 	drm_fd = open(DRM_DEVICE, O_RDWR | O_CLOEXEC);
 	if (drm_fd < 0) {
@@ -482,6 +586,33 @@ static int run(const char *action, unsigned int seconds)
 		goto cleanup;
 	}
 	printf("framebuffer=%u\n", fb_id);
+	if (persistent_ui) {
+		struct dma_heap_allocation_data second = {
+			.len = length,
+			.fd_flags = O_RDWR | O_CLOEXEC,
+		};
+		if (ioctl(heap_fd, DMA_HEAP_IOCTL_ALLOC, &second) < 0) {
+			fail("allocate second status DMA-BUF");
+			goto cleanup;
+		}
+		buffer_fd2 = (int)second.fd;
+		pixels2 = mmap(NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED,
+			       buffer_fd2, 0);
+		if (pixels2 == MAP_FAILED) {
+			fail("map second status DMA-BUF");
+			goto cleanup;
+		}
+		if (drmPrimeFDToHandle(drm_fd, buffer_fd2, &handle2) < 0) {
+			fail("import second DMA-BUF into DRM");
+			goto cleanup;
+		}
+		uint32_t second_handles[4] = { handle2, 0, 0, 0 };
+		if (drmModeAddFB2(drm_fd, WIDTH, HEIGHT, DRM_FORMAT_XRGB8888,
+				  second_handles, pitches, offsets, &fb_id2, 0) < 0) {
+			fail("add second status framebuffer");
+			goto cleanup;
+		}
+	}
 	if (!strcmp(action, "--allocate")) {
 		rc = 0;
 		goto cleanup;
@@ -518,35 +649,78 @@ static int run(const char *action, unsigned int seconds)
 	}
 	displayed:
 	active = true;
+	current_fb = fb_id;
 	if (persistent_ui)
-		printf("displaying Lynx status until signal\n");
+		printf("displaying Lynx status %s\n",
+		       touch_idle ? "with 10-second touch wake" : "until signal");
 	else
 		printf("displaying %s for %u seconds\n",
 		       ui ? "Lynx status" : "color bars", seconds);
 	fflush(stdout);
 	if (persistent_ui) {
+		if (touch_idle) {
+			if (set_brightness(250) < 0) {
+				fail("light status screen");
+				goto cleanup;
+			}
+			lit = true;
+			lit_until = monotonic_milliseconds() + 10000U;
+		}
 		while (!stop_requested) {
-			struct timespec delay = { .tv_sec = 60 };
-			while (!stop_requested && nanosleep(&delay, &delay) < 0 && errno == EINTR)
-				;
+			if (touch_idle) {
+				int touch = wait_for_touch_or_timeout(touch_fd, 1000);
+				if (touch < 0) {
+					fail("read touchscreen event");
+					goto cleanup;
+				}
+				if (touch && !stop_requested) {
+					if (!lit && set_brightness(250) < 0) {
+						fail("wake status screen");
+						goto cleanup;
+					}
+					lit = true;
+					lit_until = monotonic_milliseconds() + 10000U;
+					printf("touch_wake\n");
+					fflush(stdout);
+				}
+				if (lit && monotonic_milliseconds() >= lit_until) {
+					if (set_brightness(0) < 0) {
+						fail("dim status screen");
+						goto cleanup;
+					}
+					lit = false;
+					printf("idle_dark\n");
+					fflush(stdout);
+				}
+			} else {
+				struct timespec delay = { .tv_sec = 60 };
+				while (!stop_requested && nanosleep(&delay, &delay) < 0 && errno == EINTR)
+					;
+			}
 			if (stop_requested)
 				break;
 			int capacity = read_battery_percent();
 			if (capacity == shown_capacity)
 				continue;
-			if (sync_buffer(buffer_fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE) < 0) {
+			int target_fd = current_fb == fb_id ? buffer_fd2 : buffer_fd;
+			uint32_t target_fb = current_fb == fb_id ? fb_id2 : fb_id;
+			void *target_pixels = current_fb == fb_id ? pixels2 : pixels;
+			if (sync_buffer(target_fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE) < 0) {
 				fail("begin status refresh");
-				rc = 1;
 				goto cleanup;
 			}
-			paint_lynx_status(pixels, capacity);
-			if (sync_buffer(buffer_fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE) < 0) {
+			paint_lynx_status(target_pixels, capacity);
+			if (sync_buffer(target_fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE) < 0) {
 				fail("end status refresh");
-				rc = 1;
 				goto cleanup;
 			}
+			if (atomic_present_fb(drm_fd, plane_id, target_fb) < 0) {
+				fail("present refreshed status framebuffer");
+				goto cleanup;
+			}
+			current_fb = target_fb;
 			shown_capacity = capacity;
-			printf("battery=%d%%\n", shown_capacity);
+			printf("presented_battery=%d%%\n", shown_capacity);
 			fflush(stdout);
 		}
 	} else {
@@ -557,6 +731,10 @@ static int run(const char *action, unsigned int seconds)
 	rc = 0;
 
 cleanup:
+	if (touch_idle && active && set_brightness(0) < 0) {
+		fail("turn off touch-idle brightness");
+		rc = 1;
+	}
 	if (active && (atomic ? atomic_disable(drm_fd, connector_id, crtc_id,
 						     plane_id) :
 			     drmModeSetCrtc(drm_fd, crtc_id, 0, 0, 0,
@@ -568,6 +746,10 @@ cleanup:
 		fail("remove test framebuffer");
 		rc = 1;
 	}
+	if (fb_id2 && drmModeRmFB(drm_fd, fb_id2) < 0) {
+		fail("remove second status framebuffer");
+		rc = 1;
+	}
 	if (handle) {
 		struct drm_gem_close close_arg = { .handle = handle };
 		if (drmIoctl(drm_fd, DRM_IOCTL_GEM_CLOSE, &close_arg) < 0) {
@@ -575,10 +757,23 @@ cleanup:
 			rc = 1;
 		}
 	}
+	if (handle2) {
+		struct drm_gem_close close_arg = { .handle = handle2 };
+		if (drmIoctl(drm_fd, DRM_IOCTL_GEM_CLOSE, &close_arg) < 0) {
+			fail("close second imported GEM handle");
+			rc = 1;
+		}
+	}
 	if (pixels != MAP_FAILED)
 		munmap(pixels, length);
+	if (pixels2 != MAP_FAILED)
+		munmap(pixels2, length);
 	if (buffer_fd >= 0)
 		close(buffer_fd);
+	if (buffer_fd2 >= 0)
+		close(buffer_fd2);
+	if (touch_fd >= 0)
+		close(touch_fd);
 	if (heap_fd >= 0)
 		close(heap_fd);
 	if (resources)
@@ -598,7 +793,8 @@ int main(int argc, char **argv)
 	if (argc == 2 && (!strcmp(argv[1], "--probe") ||
 			  !strcmp(argv[1], "--allocate") ||
 			  !strcmp(argv[1], "--atomic-test") ||
-			  !strcmp(argv[1], "--show-ui-until-signal")))
+			  !strcmp(argv[1], "--show-ui-until-signal") ||
+			  !strcmp(argv[1], "--show-ui-touch-idle")))
 		return run(argv[1], 0);
 	if (argc == 3 && (!strcmp(argv[1], "--show") ||
 			  !strcmp(argv[1], "--show-atomic") ||
@@ -610,7 +806,7 @@ int main(int argc, char **argv)
 			return run(argv[1], seconds);
 		}
 	}
-	fprintf(stderr, "usage: %s --probe | --allocate | --atomic-test | --show SECONDS(1..15) | --show-atomic SECONDS(1..15) | --show-ui SECONDS(1..15) | --show-ui-until-signal\n",
+	fprintf(stderr, "usage: %s --probe | --allocate | --atomic-test | --show SECONDS(1..15) | --show-atomic SECONDS(1..15) | --show-ui SECONDS(1..15) | --show-ui-until-signal | --show-ui-touch-idle\n",
 		argv[0]);
 	return 2;
 }

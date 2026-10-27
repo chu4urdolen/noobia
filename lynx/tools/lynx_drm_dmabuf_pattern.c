@@ -680,6 +680,7 @@ static int run(const char *action, unsigned int seconds)
 	struct scene scene = { 0 };
 	size_t shown_frame = 0;
 	uint64_t scene_started = 0;
+	uint64_t last_battery_poll = 0;
 	time_t shown_minute = 0;
 
 	if (touch_idle) {
@@ -751,6 +752,7 @@ static int run(const char *action, unsigned int seconds)
 	}
 	if (ui) {
 		shown_capacity = read_battery_percent();
+		last_battery_poll = monotonic_milliseconds();
 		if (portrait) {
 			if (read_scene(&scene) != 1 ||
 			    paint_lynx_portrait(pixels, scene.frames[0], shown_capacity) < 0) {
@@ -895,14 +897,19 @@ static int run(const char *action, unsigned int seconds)
 			}
 			if (stop_requested)
 				break;
-			int capacity = read_battery_percent();
+			uint64_t now_ms = monotonic_milliseconds();
+			int capacity = shown_capacity;
+			if (now_ms - last_battery_poll >= 1000U) {
+				capacity = read_battery_percent();
+				last_battery_poll = now_ms;
+			}
 			size_t next_frame = shown_frame;
 			int scene_result = 0;
 			time_t minute = time(NULL) / 60;
 			if (portrait) {
 				scene_result = read_scene(&scene);
 				if (scene_result == 1) {
-					scene_started = monotonic_milliseconds();
+					scene_started = now_ms;
 					next_frame = 0;
 					printf("scene=%s\n", scene.selection);
 					fflush(stdout);
@@ -910,7 +917,7 @@ static int run(const char *action, unsigned int seconds)
 					fprintf(stderr, "invalid portrait selection; keeping current scene\n");
 				}
 				if (scene.animate)
-					next_frame = ((monotonic_milliseconds() - scene_started) / 500U) %
+					next_frame = ((now_ms - scene_started) / 500U) %
 						     scene.count;
 			}
 			if (capacity == shown_capacity && (!portrait ||

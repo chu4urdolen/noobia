@@ -16,10 +16,11 @@ ROOT = Path(__file__).resolve().parent.parent
 PICS = ROOT / "pics/frames"
 REMOTE = "/var/lib/lynx-display/frames"
 PORTRAIT_BIN = "/var/lib/lynx-devroot/tmp/lynx_drm_portrait_candidate"
-PORTRAIT_SHA = "1955134790a78f0f4e73d68affd28d7388edffb14ec8a4773759adf71e046709"
-OLD_PORTRAIT_SHA = "5094033a4d91af7826e66dbe3fda89a82fe1f4ba990366b8b34068f9c4035d56"
+PORTRAIT_SHA = "9aa4014a44366e6676d8493c65e0178cf4a6cb358e341d5a2d2302d8b3683c3d"
+OLD_PORTRAIT_SHA = "1955134790a78f0f4e73d68affd28d7388edffb14ec8a4773759adf71e046709"
 OLD_BOOTSTRAP = "07057d2b890e3731e93ded1f0695d6ac4c5b67ebd2145a4e290ae10316f73758"
 INTERMEDIATE_BOOTSTRAP = "9a4aaa1baadf4ceee0665f0ad25e8c246662b4a40c454754091fe9dd9f3856f8"
+LATEST_BOOTSTRAP = "c0db29966635407c9f92439868bfe2da6e14bc8abbe3a896659528817d278d43"
 OLD_SERVICE = "8904db1154ec0bb9298fb27c79bb889c6f71d73e44163776fc5710d72fe8e11c"
 INTERMEDIATE_SERVICE = "029320ee9e1feca3eb8f6444fb4b400f13ee1302537830c34a1597787d108d57"
 
@@ -114,7 +115,7 @@ def main():
                 (ROOT / "tools/lynx_displayctl.py").read_bytes(), "755")
         install("bootstrap", "/usr/local/bin/lynx-display-bootstrap",
                 (ROOT / "linux-port/lynx-display-bootstrap.sh").read_bytes(), "755",
-                (OLD_BOOTSTRAP, INTERMEDIATE_BOOTSTRAP))
+                (OLD_BOOTSTRAP, INTERMEDIATE_BOOTSTRAP, LATEST_BOOTSTRAP))
         install("service", "/etc/init.d/lynx-display",
                 (ROOT / "linux-port/openrc-lynx-display").read_bytes(), "755",
                 (OLD_SERVICE, INTERMEDIATE_SERVICE))

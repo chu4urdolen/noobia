@@ -27,7 +27,7 @@ verify_files() {
     [ "$(sha256sum /usr/local/bin/lynx-status-display | cut -c1-64)" = \
       "1a3d21bd40f5903377b800d0bb085443c0653a8c5ff30e1abb964e5eab0e2387" ]
     [ "$(sha256sum /usr/local/bin/lynx-portrait-display | cut -c1-64)" = \
-      "1955134790a78f0f4e73d68affd28d7388edffb14ec8a4773759adf71e046709" ]
+      "9aa4014a44366e6676d8493c65e0178cf4a6cb358e341d5a2d2302d8b3683c3d" ]
     [ -x /usr/local/bin/lynx-displayctl ]
     [ -r /var/lib/lynx-display/frames/manifest.json ]
     [ -r /var/lib/lynx-display/frames.sha256 ]

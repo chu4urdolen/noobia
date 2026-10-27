@@ -34,6 +34,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 #include <drm_fourcc.h>
+#include <zlib.h>
 
 #define WIDTH 1240U
 #define HEIGHT 2772U
@@ -43,6 +44,9 @@
 #define TOUCH_DEVICE "/dev/input/event0"
 #define TOUCH_NAME "/sys/class/input/input0/name"
 #define BRIGHTNESS_DEVICE "/sys/kernel/oplus_display/oplus_brightness"
+#define FRAME_DIR "/var/lib/lynx-display/frames"
+#define SELECTION_FILE "/var/lib/lynx-display/selection"
+#define MAX_SCENE_FRAMES 64
 
 static volatile sig_atomic_t stop_requested;
 
@@ -129,6 +133,7 @@ struct glyph {
 static const struct glyph font[] = {
 	{' ', {0, 0, 0, 0, 0, 0, 0}},
 	{'%', {0x19, 0x1a, 0x04, 0x04, 0x0b, 0x13, 0}},
+	{':', {0, 0x04, 0x04, 0, 0x04, 0x04, 0}},
 	{'0', {0x0e, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0e}},
 	{'1', {0x04, 0x0c, 0x04, 0x04, 0x04, 0x04, 0x0e}},
 	{'2', {0x0e, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1f}},
@@ -236,8 +241,183 @@ static void paint_lynx_status(uint32_t *pixels, int capacity)
 		draw_text(pixels, "BATTERY", 200, 1350, 20, amber);
 	}
 	rectangle(pixels, 190, 1950, 860, 4, muted);
-	draw_text(pixels, "ALPINE", 384, 2050, 14, white);
 	rectangle(pixels, 0, HEIGHT - 36, WIDTH, 36, teal);
+}
+
+struct scene {
+	char selection[96];
+	char frames[MAX_SCENE_FRAMES][64];
+	size_t count;
+	bool animate;
+};
+
+static bool safe_name(const char *name)
+{
+	size_t length = strlen(name);
+	if (!length || length >= 64)
+		return false;
+	for (size_t i = 0; i < length; i++)
+		if (!((name[i] >= 'a' && name[i] <= 'z') ||
+		      (name[i] >= '0' && name[i] <= '9') || name[i] == '_'))
+			return false;
+	return true;
+}
+
+static int read_scene(struct scene *scene)
+{
+	char selection[96] = "pose 01_standing_smile";
+	FILE *file = fopen(SELECTION_FILE, "r");
+	if (file) {
+		if (!fgets(selection, sizeof(selection), file)) {
+			fclose(file);
+			return -1;
+		}
+		fclose(file);
+		selection[strcspn(selection, "\r\n")] = 0;
+	}
+	if (!strcmp(selection, scene->selection))
+		return 0;
+	struct scene candidate = { 0 };
+	if (snprintf(candidate.selection, sizeof(candidate.selection), "%s", selection) >=
+	    (int)sizeof(candidate.selection))
+		return -1;
+	const char *name;
+	if (!strncmp(selection, "pose ", 5)) {
+		name = selection + 5;
+		if (!safe_name(name))
+			return -1;
+		snprintf(candidate.frames[0], sizeof(candidate.frames[0]), "%s", name);
+		candidate.count = 1;
+	} else if (!strncmp(selection, "animate ", 8)) {
+		name = selection + 8;
+		if (!safe_name(name))
+			return -1;
+		char path[256];
+		snprintf(path, sizeof(path), FRAME_DIR "/%s.list", name);
+		file = fopen(path, "r");
+		if (!file)
+			return -1;
+		while (candidate.count < MAX_SCENE_FRAMES &&
+		       fgets(candidate.frames[candidate.count], sizeof(candidate.frames[0]), file)) {
+			char *frame = candidate.frames[candidate.count];
+			frame[strcspn(frame, "\r\n")] = 0;
+			if (!safe_name(frame)) {
+				fclose(file);
+				return -1;
+			}
+			candidate.count++;
+		}
+		fclose(file);
+		if (!candidate.count)
+			return -1;
+		candidate.animate = true;
+	} else {
+		return -1;
+	}
+	for (size_t i = 0; i < candidate.count; i++) {
+		char path[256];
+		snprintf(path, sizeof(path), FRAME_DIR "/%s.rgb565.gz", candidate.frames[i]);
+		if (access(path, R_OK))
+			return -1;
+	}
+	*scene = candidate;
+	return 1;
+}
+
+static int paint_lynx_portrait(uint32_t *pixels, const char *name, int capacity)
+{
+	char path[256];
+	if (!safe_name(name))
+		return -1;
+	snprintf(path, sizeof(path), FRAME_DIR "/%s.rgb565.gz", name);
+	gzFile input = gzopen(path, "rb");
+	if (!input)
+		return -1;
+	uint16_t *rgb565 = malloc((size_t)WIDTH * HEIGHT * sizeof(uint16_t));
+	if (!rgb565) {
+		gzclose(input);
+		return -1;
+	}
+	size_t total = (size_t)WIDTH * HEIGHT * sizeof(uint16_t);
+	size_t offset = 0;
+	while (offset < total) {
+		int n = gzread(input, (uint8_t *)rgb565 + offset,
+				 (unsigned int)((total - offset) > 1048576 ? 1048576 : total - offset));
+		if (n <= 0)
+			break;
+		offset += (size_t)n;
+	}
+	int extra = gzgetc(input);
+	int close_result = gzclose(input);
+	if (offset != total || extra != -1 || close_result != Z_OK) {
+		free(rgb565);
+		errno = EINVAL;
+		return -1;
+	}
+	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++) {
+		uint16_t color = rgb565[i];
+		pixels[i] = ((uint32_t)(color >> 11) << 19) |
+			    ((uint32_t)((color >> 5) & 63) << 10) |
+			    ((uint32_t)(color & 31) << 3);
+	}
+	free(rgb565);
+	const uint32_t white = 0x00f5f8fa, teal = 0x0009dcc4;
+	char value[24];
+	/* All original portraits have quiet black space above the ears. */
+	draw_text(pixels, "LYNX", 422, 85, 17, white);
+	time_t now = time(NULL);
+	if (now >= 1700000000) {
+		struct tm local;
+		if (localtime_r(&now, &local)) {
+			snprintf(value, sizeof(value), "%02d:%02d", local.tm_hour, local.tm_min);
+			draw_text(pixels, value, 130, 315, 12, white);
+		}
+	}
+	if (capacity >= 0 && capacity <= 100) {
+		snprintf(value, sizeof(value), "%d%%", capacity);
+		draw_text(pixels, value, 885, 315, 12, white);
+		rectangle(pixels, 860, 455, 300, 12, 0x00545b65);
+		rectangle(pixels, 860, 455, (unsigned int)(300 * capacity / 100),
+			  12, capacity > 20 ? teal : 0x00edb961);
+	}
+	return 0;
+}
+
+static int render_preview(const char *name, const char *output)
+{
+	uint32_t *pixels = malloc((size_t)WIDTH * HEIGHT * sizeof(uint32_t));
+	if (!pixels)
+		return 1;
+	if (paint_lynx_portrait(pixels, name, read_battery_percent()) < 0) {
+		fail("preview portrait");
+		free(pixels);
+		return 1;
+	}
+	FILE *stream = fopen(output, "wb");
+	if (!stream) {
+		fail("open preview output");
+		free(pixels);
+		return 1;
+	}
+	fprintf(stream, "P6\n%u %u\n255\n", WIDTH, HEIGHT);
+	for (size_t y = 0; y < HEIGHT; y++) {
+		uint8_t row[WIDTH * 3];
+		for (size_t x = 0; x < WIDTH; x++) {
+			uint32_t color = pixels[y * WIDTH + x];
+			row[x * 3] = (uint8_t)(color >> 16);
+			row[x * 3 + 1] = (uint8_t)(color >> 8);
+			row[x * 3 + 2] = (uint8_t)color;
+		}
+		if (fwrite(row, 1, sizeof(row), stream) != sizeof(row)) {
+			fail("write preview output");
+			fclose(stream);
+			free(pixels);
+			return 1;
+		}
+	}
+	int rc = fclose(stream);
+	free(pixels);
+	return rc ? 1 : 0;
 }
 
 static uint32_t choose_crtc(int fd, drmModeRes *resources,
@@ -484,6 +664,8 @@ static int run(const char *action, unsigned int seconds)
 	drmModeModeInfo mode = { 0 };
 	bool active = false;
 	bool touch_idle = !strcmp(action, "--show-ui-touch-idle");
+	bool portrait = !strcmp(action, "--show-portrait-touch-idle");
+	touch_idle = touch_idle || portrait;
 	bool persistent_ui = !strcmp(action, "--show-ui-until-signal") || touch_idle;
 	bool atomic = !strcmp(action, "--atomic-test") ||
 		!strcmp(action, "--show-atomic") || !strcmp(action, "--show-ui") ||
@@ -495,6 +677,10 @@ static int run(const char *action, unsigned int seconds)
 	uint32_t current_fb = 0;
 	bool lit = false;
 	uint64_t lit_until = 0;
+	struct scene scene = { 0 };
+	size_t shown_frame = 0;
+	uint64_t scene_started = 0;
+	time_t shown_minute = 0;
 
 	if (touch_idle) {
 		touch_fd = verify_touch_device();
@@ -565,7 +751,17 @@ static int run(const char *action, unsigned int seconds)
 	}
 	if (ui) {
 		shown_capacity = read_battery_percent();
-		paint_lynx_status(pixels, shown_capacity);
+		if (portrait) {
+			if (read_scene(&scene) != 1 ||
+			    paint_lynx_portrait(pixels, scene.frames[0], shown_capacity) < 0) {
+				fail("load initial Lynx portrait");
+				goto cleanup;
+			}
+			scene_started = monotonic_milliseconds();
+			shown_minute = time(NULL) / 60;
+		} else {
+			paint_lynx_status(pixels, shown_capacity);
+		}
 	}
 	else
 		paint_bars(pixels);
@@ -651,7 +847,7 @@ static int run(const char *action, unsigned int seconds)
 	active = true;
 	current_fb = fb_id;
 	if (persistent_ui)
-		printf("displaying Lynx status %s\n",
+		printf("displaying Lynx %s %s\n", portrait ? "portrait" : "status",
 		       touch_idle ? "with 10-second touch wake" : "until signal");
 	else
 		printf("displaying %s for %u seconds\n",
@@ -668,7 +864,7 @@ static int run(const char *action, unsigned int seconds)
 		}
 		while (!stop_requested) {
 			if (touch_idle) {
-				int touch = wait_for_touch_or_timeout(touch_fd, 1000);
+				int touch = wait_for_touch_or_timeout(touch_fd, portrait ? 100 : 1000);
 				if (touch < 0) {
 					fail("read touchscreen event");
 					goto cleanup;
@@ -700,7 +896,26 @@ static int run(const char *action, unsigned int seconds)
 			if (stop_requested)
 				break;
 			int capacity = read_battery_percent();
-			if (capacity == shown_capacity)
+			size_t next_frame = shown_frame;
+			int scene_result = 0;
+			time_t minute = time(NULL) / 60;
+			if (portrait) {
+				scene_result = read_scene(&scene);
+				if (scene_result == 1) {
+					scene_started = monotonic_milliseconds();
+					next_frame = 0;
+					printf("scene=%s\n", scene.selection);
+					fflush(stdout);
+				} else if (scene_result < 0) {
+					fprintf(stderr, "invalid portrait selection; keeping current scene\n");
+				}
+				if (scene.animate)
+					next_frame = ((monotonic_milliseconds() - scene_started) / 500U) %
+						     scene.count;
+			}
+			if (capacity == shown_capacity && (!portrait ||
+			    (next_frame == shown_frame && minute == shown_minute &&
+			     scene_result != 1)))
 				continue;
 			int target_fd = current_fb == fb_id ? buffer_fd2 : buffer_fd;
 			uint32_t target_fb = current_fb == fb_id ? fb_id2 : fb_id;
@@ -709,7 +924,15 @@ static int run(const char *action, unsigned int seconds)
 				fail("begin status refresh");
 				goto cleanup;
 			}
-			paint_lynx_status(target_pixels, capacity);
+			if (portrait) {
+				if (paint_lynx_portrait(target_pixels,
+						      scene.frames[next_frame], capacity) < 0) {
+					fail("render Lynx portrait");
+					goto cleanup;
+				}
+			} else {
+				paint_lynx_status(target_pixels, capacity);
+			}
 			if (sync_buffer(target_fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE) < 0) {
 				fail("end status refresh");
 				goto cleanup;
@@ -720,8 +943,15 @@ static int run(const char *action, unsigned int seconds)
 			}
 			current_fb = target_fb;
 			shown_capacity = capacity;
-			printf("presented_battery=%d%%\n", shown_capacity);
-			fflush(stdout);
+			shown_frame = next_frame;
+			shown_minute = minute;
+			if (portrait && !scene.animate)
+				printf("presented_pose=%s battery=%d%%\n",
+				       scene.frames[next_frame], shown_capacity);
+			else if (!portrait)
+				printf("presented_battery=%d%%\n", shown_capacity);
+			if (!portrait || !scene.animate)
+				fflush(stdout);
 		}
 	} else {
 		struct timespec delay = { .tv_sec = seconds };
@@ -790,11 +1020,14 @@ int main(int argc, char **argv)
 	sigemptyset(&stop_action.sa_mask);
 	sigaction(SIGINT, &stop_action, NULL);
 	sigaction(SIGTERM, &stop_action, NULL);
+	if (argc == 4 && !strcmp(argv[1], "--preview"))
+		return render_preview(argv[2], argv[3]);
 	if (argc == 2 && (!strcmp(argv[1], "--probe") ||
 			  !strcmp(argv[1], "--allocate") ||
 			  !strcmp(argv[1], "--atomic-test") ||
 			  !strcmp(argv[1], "--show-ui-until-signal") ||
-			  !strcmp(argv[1], "--show-ui-touch-idle")))
+			  !strcmp(argv[1], "--show-ui-touch-idle") ||
+			  !strcmp(argv[1], "--show-portrait-touch-idle")))
 		return run(argv[1], 0);
 	if (argc == 3 && (!strcmp(argv[1], "--show") ||
 			  !strcmp(argv[1], "--show-atomic") ||
@@ -806,7 +1039,7 @@ int main(int argc, char **argv)
 			return run(argv[1], seconds);
 		}
 	}
-	fprintf(stderr, "usage: %s --probe | --allocate | --atomic-test | --show SECONDS(1..15) | --show-atomic SECONDS(1..15) | --show-ui SECONDS(1..15) | --show-ui-until-signal | --show-ui-touch-idle\n",
+	fprintf(stderr, "usage: %s --probe | --allocate | --atomic-test | --show SECONDS(1..15) | --show-atomic SECONDS(1..15) | --show-ui SECONDS(1..15) | --show-ui-until-signal | --show-ui-touch-idle | --show-portrait-touch-idle\n",
 		argv[0]);
 	return 2;
 }

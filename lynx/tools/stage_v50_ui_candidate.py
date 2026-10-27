@@ -35,8 +35,13 @@ def main():
                          help="build the signal-controlled status screen at separate paths")
     variant.add_argument("--touch-idle", action="store_true",
                          help="build the double-buffered, touch-wake status screen separately")
+    variant.add_argument("--portrait", action="store_true",
+                         help="build the pose and animation renderer separately")
     args = parser.parse_args()
-    if args.touch_idle:
+    if args.portrait:
+        remote_source = "/var/lib/lynx-devroot/tmp/lynx_drm_portrait_candidate.c"
+        remote_binary = "/var/lib/lynx-devroot/tmp/lynx_drm_portrait_candidate"
+    elif args.touch_idle:
         remote_source = "/var/lib/lynx-devroot/tmp/lynx_drm_status_touch_idle.c"
         remote_binary = "/var/lib/lynx-devroot/tmp/lynx_drm_status_touch_idle"
     elif args.persistent:
@@ -48,7 +53,7 @@ def main():
     out = ROOT / "logs" / f"v50-ui-stage-{time.time_ns()}"
     out.mkdir(mode=0o700)
     report = {"state": "starting", "persistent": args.persistent,
-              "touch_idle": args.touch_idle,
+              "touch_idle": args.touch_idle, "portrait": args.portrait,
               "remote_binary": remote_binary, "ui_binary_executed": False,
               "display_enabled": False, "boot_partition_writes": False,
               "steps": []}
@@ -65,7 +70,7 @@ def main():
     try:
         source = SOURCE.read_bytes()
         source_sha = hashlib.sha256(source).hexdigest()
-        if not (args.persistent or args.touch_idle) and source_sha != ORIGINAL_SOURCE_SHA:
+        if not (args.persistent or args.touch_idle or args.portrait) and source_sha != ORIGINAL_SOURCE_SHA:
             raise RuntimeError("source changed; select a separate candidate path")
         report["source_sha256"] = source_sha
         identity = step("identity", "cat /proc/sys/kernel/random/boot_id; "
@@ -85,9 +90,20 @@ def main():
         report["battery_percent"] = health["battery"]["capacity_percent"]
         step("stage_source", f"cat > {remote_source}", payload=source, timeout=40)
         step("source_hash", f'test "$(sha256sum {remote_source} | cut -c1-64)" = "{source_sha}"')
+        for name in ("zlib.h", "zconf.h"):
+            header = (Path("/usr/include") / name).read_bytes()
+            expected = hashlib.sha256(header).hexdigest()
+            target = f"/var/lib/lynx-devroot/usr/include/{name}"
+            existing = step(name + "_existing", f"if test -e {target}; then sha256sum {target} | cut -c1-64; fi").strip()
+            if existing and existing != expected:
+                raise RuntimeError(f"{name}: existing target differs")
+            if not existing:
+                step(name + "_stage", f"cat > {target}", payload=header)
+                step(name + "_hash", f'test "$(sha256sum {target} | cut -c1-64)" = "{expected}"')
         compile_cmd = ("chroot /var/lib/lynx-devroot /usr/bin/gcc -std=c11 -O2 "
                        "-Wall -Wextra -Werror -I/usr/include/libdrm "
                        f"/tmp/{Path(remote_source).name} -ldrm "
+                      "-l:libz.so.1 "
                        f"-o /tmp/{Path(remote_binary).name}")
         step("native_compile", compile_cmd, timeout=55)
         binary_sha = step("binary_hash", f"sha256sum {remote_binary} | cut -c1-64").strip()

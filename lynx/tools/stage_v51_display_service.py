@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage, but do not enable, the verified Lynx display service on Alpine."""
+"""Stage the verified Lynx display modules and rescue status renderer on Alpine."""
 
 import hashlib
 import json
@@ -98,20 +98,18 @@ def main():
              f"test \"$(sha256sum /usr/local/bin/lynx-status-display | cut -c1-64)\" = {DISPLAY_SHA}; "
              "else cp " + DISPLAY_BIN + " /usr/local/bin/lynx-status-display; "
              "chmod 755 /usr/local/bin/lynx-status-display; fi")
-        for local, dest in (("lynx-display-bootstrap.sh", "/usr/local/bin/lynx-display-bootstrap"),
-                            ("openrc-lynx-display", "/etc/init.d/lynx-display")):
-            install(local, dest, (ROOT / "linux-port" / local).read_bytes(), "755")
-        step("check_files", "/usr/local/bin/lynx-display-bootstrap --check-files")
+        step("base_files", "set -eu; test -r /var/lib/lynx-display/modules.list; "
+             f'test "$(sha256sum /usr/local/bin/lynx-status-display | cut -c1-64)" = {DISPLAY_SHA}')
         step("confirm_disabled", "set -eu; test ! -e /etc/runlevels/default/lynx-display; "
              "test ! -e /run/lynx/display-auto.pid; /usr/local/bin/lynx-status --assert-ready >/dev/null")
-        report["state"] = "staged-disabled-on-v50"
+        report["state"] = "base-display-staged-disabled"
     except Exception as exc:
         report.update(state="failed-or-incomplete", error=str(exc))
     report["finished_ns"] = time.time_ns()
     receipt = out / "result.json"
     receipt.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({"state": report["state"], "result": str(receipt)}))
-    if report["state"] != "staged-disabled-on-v50":
+    if report["state"] != "base-display-staged-disabled":
         raise SystemExit(1)
 
 

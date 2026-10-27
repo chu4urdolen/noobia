@@ -21,13 +21,25 @@ start() {
     # Only lines written by this launch can establish that the panel was reached.
     touch /var/log/lynx/display.log
     old_lines=$(wc -l < /var/log/lynx/display.log)
-    /bin/busybox nohup /usr/local/bin/lynx-status-display --show-ui-touch-idle \
+    /bin/busybox nohup /usr/local/bin/lynx-portrait-display --show-portrait-touch-idle \
         </dev/null >>/var/log/lynx/display.log 2>&1 &
     echo $! > /run/lynx/display-auto.pid
-    /bin/busybox sleep 2
-    if ! kill -0 "$(cat /run/lynx/display-auto.pid)" 2>/dev/null ||
-       ! tail -n +"$((old_lines + 1))" /var/log/lynx/display.log |
-           grep -q 'displaying Lynx status with 10-second touch wake'; then
+    ready=0
+    n=0
+    while [ "$n" -lt 20 ]; do
+        if ! kill -0 "$(cat /run/lynx/display-auto.pid)" 2>/dev/null; then
+            break
+        fi
+        if tail -n +"$((old_lines + 1))" /var/log/lynx/display.log |
+           grep -q 'displaying Lynx portrait with 10-second touch wake'; then
+            ready=1
+            break
+        fi
+        /bin/busybox sleep 1
+        n=$((n + 1))
+    done
+    if [ "$ready" != 1 ] ||
+       ! kill -0 "$(cat /run/lynx/display-auto.pid)" 2>/dev/null; then
         printf 0 > /sys/kernel/oplus_display/oplus_brightness || true
         kill -TERM "$(cat /run/lynx/display-auto.pid)" 2>/dev/null || true
         rm -f /run/lynx/display-auto.pid

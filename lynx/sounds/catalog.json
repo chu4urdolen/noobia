@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "sounds": {
+    "beep": {
+      "file": "beep.wav",
+      "title": "Lynx 700 Hz beep"
+    },
+    "double_beep": {
+      "file": "double_beep.wav",
+      "title": "Two quiet beeps"
+    },
+    "chime": {
+      "file": "chime.wav",
+      "title": "Three-note chime"
+    }
+  }
+}

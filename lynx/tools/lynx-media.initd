@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+description="Lynx local sound and image queue controller"
+command="/usr/bin/python3"
+command_args="/usr/local/bin/lynx-media serve"
+command_background="yes"
+pidfile="/run/lynx/media.pid"
+output_log="/var/log/lynx-media.log"
+error_log="/var/log/lynx-media.log"
+
+depend() {
+    need localmount
+    after lynx-display
+}

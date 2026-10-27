@@ -18,6 +18,8 @@ The test route follows the stock ODM `Speaker_ForceEn` path: `I2S3_CH1 DL1_CH1=o
 
 Receipt: `logs/v50-audio-beep-trial-1793137219179008873/`. `run.stdout` contains `LYNX_MUTED_PLAYBACK_OK` and `LYNX_AUDIBLE_PLAYBACK_OK`; `after.stdout` confirms both speaker mute controls are `On`, both I2S3 DL1 routes are `off`, and the health check passed. These results establish a working ALSA playback path, pending human confirmation of actual sound. The log also contains `tfa98xx_adsp_send_chan_sel ... failed` during playback; investigate that before treating speaker output as production-ready.
 
+Noob thought they heard the first beep and requested a repeat. The identical bounded test succeeded again on the same boot; the post-test check confirmed both speakers muted, both DL1 routes off, and Alpine health ready. Receipt: `logs/v50-audio-beep-repeat-1793137682185121136/`. Human confirmation of the second audible result is pending.
+
 ## Next step
 
 If the beep was audible, package the corrected codec, dependencies, matching firmware, and conservative mixer setup into an optional Alpine service. Keep playback disabled at boot until an audible, volume-controlled trial and shutdown behavior are verified. If no beep was heard, inspect amplifier calibration and the `tfa98xx_adsp_send_chan_sel` failure before changing mixer routes again.

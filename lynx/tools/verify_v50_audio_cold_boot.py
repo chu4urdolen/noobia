@@ -59,6 +59,8 @@ def main():
         report["battery_percent_before"] = battery["capacity_percent"]
         step("audio_before", "set -eu; rc-service lynx-audio status; "
              "test -L /etc/runlevels/default/lynx-audio; "
+             "rc-service lynx-sensorhub status; "
+             "test -L /etc/runlevels/default/lynx-sensorhub; "
              "grep -q mt6983mt6338 /proc/asound/cards; "
              "test -x /usr/local/bin/lynx-audio-bootstrap; "
              "test -r /var/lib/lynx-audio/v1/modules.sha256")
@@ -121,14 +123,32 @@ def main():
         (out / "nrp_audio_after.stdout").write_bytes(answer)
         if b"NRP/1 61 OK value=1 detail=card=1 firmware=1\n" not in answer:
             raise RuntimeError("Noob audio readiness did not recover")
-        report["state"] = "audio-automatic-cold-boot-verified"
+        step("sensorhub_after", "set -eu; rc-service lynx-sensorhub status; "
+             "test -c /dev/hf_manager; grep -q 'bmi2xy acc' /proc/hf_manager; "
+             "test -x /usr/local/bin/lynx-hf-sample")
+        with socket.create_connection((IP, 4243), timeout=5) as conn:
+            conn.settimeout(5)
+            conn.sendall(b"NRP/1 62 CALL ACCEL_STATUS\nNRP/1 63 CALL ACCEL_VECTOR\n")
+            readings = b""
+            while readings.count(b"\n") < 2 and len(readings) < 4096:
+                readings += conn.recv(4096)
+        (out / "nrp_sensor_after.stdout").write_bytes(readings)
+        if (b"NRP/1 62 OK value=1 detail=registered=1\n" not in readings or
+            b"NRP/1 63 OK value=1 detail=x=" not in readings or
+            b" gain=1000\n" not in readings):
+            raise RuntimeError("Noob accelerometer did not recover")
+        step("sensor_idle_after", "set -eu; "
+             "sed -n '/Active List:/,/Debug Sub Module:/p' /proc/hf_manager | "
+             "grep -q '^Debug Sub Module:'; "
+             "/usr/local/bin/lynx-status --assert-ready >/dev/null")
+        report["state"] = "audio-and-sensorhub-cold-boot-verified"
     except Exception as exc:
         report.update(state="failed-or-incomplete", error=str(exc))
     report["finished_ns"] = time.time_ns()
     save()
     print(json.dumps({"state": report["state"], "receipt": str(out / "result.json"),
                       "error": report.get("error")}), flush=True)
-    if report["state"] != "audio-automatic-cold-boot-verified":
+    if report["state"] != "audio-and-sensorhub-cold-boot-verified":
         sys.exit(1)
 
 

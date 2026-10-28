@@ -24,6 +24,8 @@ GAUGE = Path("/sys/bus/i2c/devices/7-0055/battery_snapshot")
 THERMAL = Path("/sys/class/thermal")
 SOUND_CARDS = Path("/proc/asound/cards")
 TFA_FIRMWARE = Path("/sys/module/snd_soc_tfa98xx/parameters/fw_name")
+HF_MANAGER = Path("/dev/hf_manager")
+HF_SAMPLE = Path("/usr/local/bin/lynx-hf-sample")
 _haptic_ready_at = 0.0
 
 
@@ -522,6 +524,10 @@ class Runtime:
         self.cycle = ImageCycleThread()
         self.vm = Vm(self.registry)
         self.epoch = time.monotonic()
+        self.accel_cache = None
+        self.gyro_cache = None
+        self.mag_cache = None
+        self.optical_cache = {}
         self.register()
 
     def register(self):
@@ -569,6 +575,191 @@ class Runtime:
         reg(353, "BATTERY_VOLTAGE", battery_voltage)
         reg(354, "SOC_TEMP", soc_temp)
         reg(355, "AUDIO_READY", audio_ready)
+        reg(360, "ACCEL_X", lambda a, t: self.accel_axis(a, t, 0))
+        reg(361, "ACCEL_Y", lambda a, t: self.accel_axis(a, t, 1))
+        reg(362, "ACCEL_Z", lambda a, t: self.accel_axis(a, t, 2))
+        reg(363, "ACCEL_STATUS", self.accel_status)
+        reg(364, "ACCEL_VECTOR", self.accel_vector)
+        reg(365, "GYRO_X", lambda a, t: self.gyro_axis(a, t, 0))
+        reg(366, "GYRO_Y", lambda a, t: self.gyro_axis(a, t, 1))
+        reg(367, "GYRO_Z", lambda a, t: self.gyro_axis(a, t, 2))
+        reg(368, "GYRO_STATUS", self.gyro_status)
+        reg(369, "GYRO_VECTOR", self.gyro_vector)
+        reg(370, "PROX_STATUS", lambda a, t: self.optical_status(a, t, "tcs3701 ps"))
+        reg(371, "PROX_RAW", lambda a, t: self.optical_read(a, t, 8, "tcs3701 ps"))
+        reg(372, "LIGHT_STATUS", lambda a, t: self.optical_status(a, t, "tcs3408 als"))
+        reg(373, "LIGHT_RAW", lambda a, t: self.optical_read(a, t, 98, "tcs3408 als"))
+        reg(374, "MAG_X", lambda a, t: self.mag_axis(a, t, 0))
+        reg(375, "MAG_Y", lambda a, t: self.mag_axis(a, t, 1))
+        reg(376, "MAG_Z", lambda a, t: self.mag_axis(a, t, 2))
+        reg(377, "MAG_STATUS", self.mag_status)
+        reg(378, "MAG_VECTOR", self.mag_vector)
+
+    @staticmethod
+    def accel_status(args, text):
+        no_args(args, text)
+        try:
+            ready = HF_MANAGER.is_char_device() and "bmi2xy acc" in Path("/proc/hf_manager").read_text()
+        except OSError:
+            ready = False
+        return int(ready), f"registered={int(ready)}"
+
+    def accel_sample(self):
+        if self.accel_cache and time.monotonic() - self.accel_cache[0] < 0.8:
+            return self.accel_cache[1]
+        if self.accel_status([], "")[0] != 1:
+            raise NativeError("accelerometer unavailable")
+        try:
+            result = subprocess.run(["/usr/bin/python3", str(HF_SAMPLE),
+                                     "--seconds", "1", "--events", "3"],
+                                    capture_output=True, text=True, timeout=3, check=False)
+            if result.returncode:
+                raise NativeError("accelerometer sample failed")
+            sample = json.loads(result.stdout)
+            if (not sample.get("disabled") or not sample.get("events") or
+                sample.get("info", {}).get("name") != "bmi2xy acc" or
+                sample["info"].get("gain") != 1000):
+                raise NativeError("accelerometer result invalid")
+            xyz = sample["events"][-1]["raw_xyz"]
+            if len(xyz) != 3 or any(not isinstance(v, int) or abs(v) > 100000 for v in xyz):
+                raise NativeError("accelerometer axes invalid")
+        except (OSError, subprocess.TimeoutExpired, ValueError, KeyError) as exc:
+            raise NativeError("accelerometer sample unavailable") from exc
+        self.accel_cache = time.monotonic(), xyz
+        return xyz
+
+    def accel_axis(self, args, text, axis):
+        no_args(args, text)
+        xyz = self.accel_sample()
+        return xyz[axis], "unit=raw gain=1000"
+
+    def accel_vector(self, args, text):
+        no_args(args, text)
+        x, y, z = self.accel_sample()
+        return 1, f"x={x} y={y} z={z} gain=1000"
+
+    @staticmethod
+    def gyro_status(args, text):
+        no_args(args, text)
+        try:
+            ready = HF_MANAGER.is_char_device() and "bmi2xy gyro" in Path("/proc/hf_manager").read_text()
+        except OSError:
+            ready = False
+        return int(ready), f"registered={int(ready)}"
+
+    def gyro_sample(self):
+        if self.gyro_cache and time.monotonic() - self.gyro_cache[0] < 0.8:
+            return self.gyro_cache[1]
+        if self.gyro_status([], "")[0] != 1:
+            raise NativeError("gyroscope unavailable")
+        try:
+            result = subprocess.run(["/usr/bin/python3", str(HF_SAMPLE), "--sensor", "4",
+                                     "--seconds", "1", "--events", "3"],
+                                    capture_output=True, text=True, timeout=3, check=False)
+            if result.returncode:
+                raise NativeError("gyroscope sample failed")
+            sample = json.loads(result.stdout)
+            if (not sample.get("disabled") or not sample.get("events") or
+                sample.get("info", {}).get("name") != "bmi2xy gyro" or
+                sample["info"].get("gain") != 1000000):
+                raise NativeError("gyroscope result invalid")
+            xyz = sample["events"][-1]["raw_xyz"]
+            if len(xyz) != 3 or any(not isinstance(v, int) or abs(v) > 100000000 for v in xyz):
+                raise NativeError("gyroscope axes invalid")
+        except (OSError, subprocess.TimeoutExpired, ValueError, KeyError) as exc:
+            raise NativeError("gyroscope sample unavailable") from exc
+        self.gyro_cache = time.monotonic(), xyz
+        return xyz
+
+    def gyro_axis(self, args, text, axis):
+        no_args(args, text)
+        xyz = self.gyro_sample()
+        return xyz[axis], "unit=raw gain=1000000"
+
+    def gyro_vector(self, args, text):
+        no_args(args, text)
+        x, y, z = self.gyro_sample()
+        return 1, f"x={x} y={y} z={z} gain=1000000"
+
+    @staticmethod
+    def mag_status(args, text):
+        no_args(args, text)
+        try:
+            ready = HF_MANAGER.is_char_device() and "akm09918 mag" in Path("/proc/hf_manager").read_text()
+        except OSError:
+            ready = False
+        return int(ready), f"registered={int(ready)}"
+
+    def mag_sample(self):
+        if self.mag_cache and time.monotonic() - self.mag_cache[0] < 0.8:
+            return self.mag_cache[1]
+        if self.mag_status([], "")[0] != 1:
+            raise NativeError("magnetometer unavailable")
+        try:
+            result = subprocess.run(["/usr/bin/python3", str(HF_SAMPLE), "--sensor", "2",
+                                     "--seconds", "1", "--events", "3"],
+                                    capture_output=True, text=True, timeout=3, check=False)
+            if result.returncode:
+                raise NativeError("magnetometer sample failed")
+            sample = json.loads(result.stdout)
+            if (not sample.get("disabled") or not sample.get("events") or
+                sample.get("info", {}).get("name") != "akm09918 mag" or
+                sample["info"].get("gain") != 1000):
+                raise NativeError("magnetometer result invalid")
+            xyz = sample["events"][-1]["raw_xyz"]
+            if len(xyz) != 3 or any(not isinstance(v, int) or abs(v) > 100000000 for v in xyz):
+                raise NativeError("magnetometer axes invalid")
+        except (OSError, subprocess.TimeoutExpired, ValueError, KeyError) as exc:
+            raise NativeError("magnetometer sample unavailable") from exc
+        self.mag_cache = time.monotonic(), xyz
+        return xyz
+
+    def mag_axis(self, args, text, axis):
+        no_args(args, text)
+        xyz = self.mag_sample()
+        return xyz[axis], "unit=raw gain=1000"
+
+    def mag_vector(self, args, text):
+        no_args(args, text)
+        x, y, z = self.mag_sample()
+        return 1, f"x={x} y={y} z={z} gain=1000"
+
+    @staticmethod
+    def optical_status(args, text, name):
+        no_args(args, text)
+        try:
+            ready = HF_MANAGER.is_char_device() and name in Path("/proc/hf_manager").read_text()
+        except OSError:
+            ready = False
+        return int(ready), f"registered={int(ready)}"
+
+    def optical_read(self, args, text, sensor, name):
+        no_args(args, text)
+        cached = self.optical_cache.get(sensor)
+        if cached and time.monotonic() - cached[0] < 0.5:
+            words = cached[1]
+        else:
+            if self.optical_status([], "", name)[0] != 1:
+                raise NativeError("optical sensor unavailable")
+            try:
+                result = subprocess.run(["/usr/bin/python3", str(HF_SAMPLE),
+                                         "--sensor", str(sensor), "--seconds", "2",
+                                         "--events", "1"], capture_output=True,
+                                        text=True, timeout=3, check=False)
+                if result.returncode:
+                    raise NativeError("optical sensor sample failed")
+                sample = json.loads(result.stdout)
+                if (not sample.get("disabled") or not sample.get("events") or
+                    sample.get("info", {}).get("name") != name or
+                    sample["info"].get("gain") != 1):
+                    raise NativeError("optical sensor result invalid")
+                words = sample["events"][-1]["raw_xyz"]
+                if len(words) != 3 or any(not isinstance(v, int) for v in words):
+                    raise NativeError("optical sensor fields invalid")
+            except (OSError, subprocess.TimeoutExpired, ValueError, KeyError) as exc:
+                raise NativeError("optical sensor sample unavailable") from exc
+            self.optical_cache[sensor] = time.monotonic(), words
+        return words[0], f"raw1={words[1]} raw2={words[2]} gain=1"
 
     @staticmethod
     def slot(args):

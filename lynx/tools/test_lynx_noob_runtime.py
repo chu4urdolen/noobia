@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+from types import SimpleNamespace
 
 import lynx_noob_runtime
 from lynx_noob_runtime import Runtime
@@ -87,6 +88,52 @@ class RuntimeTest(unittest.TestCase):
                                  "NRP/1 2 OK value=36760 detail=unit=mC")
                 gauge.write_text(gauge.read_text().replace("capacity_error=0", "capacity_error=1"))
                 self.assertIn("ERR NATIVE_ERROR", runtime.dispatch("NRP/1 3 CALL BATTERY_PERCENT"))
+
+    def test_accelerometer_axes_share_one_bounded_sample(self):
+        sample = ('{"disabled":true,"events":[{"raw_xyz":[-88,186,9924]}],'
+                  '"info":{"name":"bmi2xy acc","gain":1000}}')
+        with patch.object(Runtime, "accel_status", return_value=(1, "registered=1")), \
+             patch.object(lynx_noob_runtime.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout=sample)) as run:
+            runtime = Runtime()
+            self.assertIn("value=-88", runtime.dispatch("NRP/1 1 CALL ACCEL_X"))
+            self.assertIn("value=186", runtime.dispatch("NRP/1 2 CALL ACCEL_Y"))
+            self.assertIn("value=9924", runtime.dispatch("NRP/1 3 CALL ACCEL_Z"))
+            self.assertEqual(run.call_count, 1)
+
+    def test_gyroscope_axes_share_one_bounded_sample(self):
+        sample = ('{"disabled":true,"events":[{"raw_xyz":[1064,-1064,2128]}],'
+                  '"info":{"name":"bmi2xy gyro","gain":1000000}}')
+        with patch.object(Runtime, "gyro_status", return_value=(1, "registered=1")), \
+             patch.object(lynx_noob_runtime.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout=sample)) as run:
+            runtime = Runtime()
+            self.assertIn("value=1064", runtime.dispatch("NRP/1 1 CALL GYRO_X"))
+            self.assertIn("value=-1064", runtime.dispatch("NRP/1 2 CALL GYRO_Y"))
+            self.assertIn("value=2128", runtime.dispatch("NRP/1 3 CALL GYRO_Z"))
+            self.assertEqual(run.call_count, 1)
+
+    def test_magnetometer_axes_share_one_bounded_sample(self):
+        sample = ('{"disabled":true,"events":[{"raw_xyz":[24,-16,39]}],'
+                  '"info":{"name":"akm09918 mag","gain":1000}}')
+        with patch.object(Runtime, "mag_status", return_value=(1, "registered=1")), \
+             patch.object(lynx_noob_runtime.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout=sample)) as run:
+            runtime = Runtime()
+            self.assertIn("value=24", runtime.dispatch("NRP/1 1 CALL MAG_X"))
+            self.assertIn("value=-16", runtime.dispatch("NRP/1 2 CALL MAG_Y"))
+            self.assertIn("value=39", runtime.dispatch("NRP/1 3 CALL MAG_Z"))
+            self.assertEqual(run.call_count, 1)
+
+    def test_optical_sensor_preserves_zero_reading(self):
+        sample = ('{"disabled":true,"events":[{"raw_xyz":[0,0,0]}],'
+                  '"info":{"name":"tcs3408 als","gain":1}}')
+        with patch.object(Runtime, "optical_status", return_value=(1, "registered=1")), \
+             patch.object(lynx_noob_runtime.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout=sample)):
+            runtime = Runtime()
+            self.assertEqual(runtime.dispatch("NRP/1 1 CALL LIGHT_RAW"),
+                             "NRP/1 1 OK value=0 detail=raw1=0 raw2=0 gain=1")
 
 
 if __name__ == "__main__":

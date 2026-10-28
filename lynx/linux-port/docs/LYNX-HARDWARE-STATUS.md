@@ -40,7 +40,8 @@ after each trial. Their gain metadata is 1,000,000; no physical calibration
 or coordinate-frame validation has been done.
 The next driver trials should proceed one stack
 at a time, with boot identity checks, module dependency review, a read-only
-probe first, and rollback over SSH.
+probe first, and rollback over SSH. The detailed test sequence is in
+[LYNX-REMAINING-HARDWARE-TRIALS.md](LYNX-REMAINING-HARDWARE-TRIALS.md).
 
 Read-only stock module inventory after the sensorhub milestone: Bluetooth's
 `bt_drv_6983.ko` matches the V50 kernel, with `btif_drv` still absent while

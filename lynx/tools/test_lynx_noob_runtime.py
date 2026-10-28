@@ -142,11 +142,11 @@ class RuntimeTest(unittest.TestCase):
         touch.feed(3, 53, 337)
         touch.feed(3, 54, 702)
         touch.feed(0, 0, 0)
-        self.assertIn("record=phase:1,x:337,y:702",
+        self.assertIn("record=phase:1,x:337,y:702,px:33,py:70",
                       self.runtime.dispatch("NRP/1 1 CALL TOUCH_POLL"))
         touch.feed(3, 57, -1)
         touch.feed(0, 0, 0)
-        self.assertIn("record=phase:0,x:337,y:702",
+        self.assertIn("record=phase:0,x:337,y:702,px:33,py:70",
                       self.runtime.dispatch("NRP/1 2 CALL TOUCH_POLL"))
         self.assertIn("event=0", self.runtime.dispatch("NRP/1 3 CALL TOUCH_POLL"))
 

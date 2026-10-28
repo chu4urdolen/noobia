@@ -38,7 +38,7 @@ def main():
         return proc.stdout.decode(errors="replace").strip()
 
     staged = "/tmp/lynx-noobd-touch-candidate"
-    backup = "/usr/local/bin/lynx-noobd.before-touch-20261028"
+    backup = "/usr/local/bin/lynx-noobd.before-touch-pixels-20261028"
     digest = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
     installed = False
     try:

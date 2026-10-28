@@ -8,7 +8,7 @@ No boot partition changed during the hardware work described here.
 | Hardware | Current Linux evidence | Noob interface |
 | --- | --- | --- |
 | Wi-Fi, storage, SSH | Alpine boots from `/dev/sdc85`, joins Noobia, opens SSH | NRP/1 transport; SSH remains for maintenance |
-| Display and touch | `lynx-display` runs; `/dev/dri/card0`, `/dev/input/event0` and `touchpanel` exist; runtime opens verified input | Pose and animation calls 310–319; touch status and queued first-contact events 380–381; physical event test pending |
+| Display and touch | `lynx-display` runs; `/dev/dri/card0`, `/dev/input/event0` and `touchpanel` exist; two physical taps yielded distinct press events | Pose and animation calls 310–319; touch status and queued first-contact events 380–381 |
 | Vibration | AW86907 driver and firmware load on cold boot | Bounded haptic calls 300–302 |
 | Sound | MT6983 ALSA card, corrected MT6338 codec, TFA98xx firmware, controlled beep | Sound calls 340–346; audio readiness call 355 |
 | Battery | Gauge at I²C `7-0055`, validated type 42495 and error flags | Read-only calls 350–353 |
@@ -46,7 +46,9 @@ and depends on loaded `conninfra`. Camera `imgsensor.ko` matches but needs
 `/dev/media*` node exists. Flashlight's module matches but its
 `mtk_battery_oc_throttling` dependency is absent. These are dependency
 findings, not working-device claims. The ALSA card exposes capture PCM nodes,
-but microphone routing and actual capture remain unverified.
+but microphone routing and actual capture remain unverified. The August ODM
+`test_path/mixer_paths.xml` names `Mic_Type_Mux_0`, which is absent from
+Lynx's current ALSA controls, so that test route cannot be applied as-is.
 
 The audio service stores the exact 75-module dependency plan and corrected
 codec under `/var/lib/lynx-audio/v1`, verifies every module hash, and loads

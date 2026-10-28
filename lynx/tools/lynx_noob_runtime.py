@@ -198,6 +198,7 @@ class TouchInput:
 
     EVENT = struct.Struct("llHHi")
     NAME_IOCTL = (2 << 30) | (64 << 16) | (ord("E") << 8) | 0x06
+    ABS_IOCTL = staticmethod(lambda code: (2 << 30) | (24 << 16) | (ord("E") << 8) | (0x40 + code))
 
     def __init__(self):
         self.fd = None
@@ -229,6 +230,14 @@ class TouchInput:
                 os.close(fd)
                 self.retry_at = time.monotonic() + 1
                 return
+            for code, expected in ((53, 12399), (54, 27719)):
+                axis = bytearray(24)
+                fcntl.ioctl(fd, self.ABS_IOCTL(code), axis, True)
+                _, low, high, _, _, _ = struct.unpack("6i", axis)
+                if (low, high) != (0, expected):
+                    os.close(fd)
+                    self.retry_at = time.monotonic() + 1
+                    return
             self.fd = fd
         except OSError:
             if 'fd' in locals():
@@ -252,7 +261,9 @@ class TouchInput:
         elif typ == 0 and code == 0 and self.changed:  # SYN_REPORT
             if self.x is not None and self.y is not None:
                 phase = 1 if self.down and not self.was_down else (2 if self.down else 0)
-                self.events.push({"phase": phase, "x": self.x, "y": self.y})
+                if 0 <= self.x <= 12399 and 0 <= self.y <= 27719:
+                    self.events.push({"phase": phase, "x": self.x, "y": self.y,
+                                      "px": self.x // 10, "py": self.y // 10})
             self.was_down = self.down
             self.changed = False
 

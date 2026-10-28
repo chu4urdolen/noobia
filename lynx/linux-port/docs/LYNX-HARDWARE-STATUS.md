@@ -48,12 +48,23 @@ Read-only stock module inventory after the sensorhub milestone: Bluetooth's
 the connectivity modules are loaded. GPS's `gps_drv_dl_v050.ko` also matches
 and depends on loaded `conninfra`. Camera `imgsensor.ko` matches but needs
 `mtk_ccu` and `v4l2-fwnode`, both currently absent; no `/dev/video*` or
-`/dev/media*` node exists. Flashlight's module matches but its
-`mtk_battery_oc_throttling` dependency is absent. These are dependency
+`/dev/media*` node exists. Before the flashlight probe,
+`mtk_battery_oc_throttling` was absent. These are dependency
 findings, not working-device claims. The ALSA card exposes capture PCM nodes,
-but microphone routing and actual capture remain unverified. The August ODM
+and a one-second capture returned 48,000 samples with the input mixer
+restored afterward. The nonzero signal may be a startup transient: a known
+haptic pulse caused no clear response. A later 700 Hz beep trial measured
+amplitude 29.96 versus 0.01 in a quiet late window. An external acoustic
+stimulus and cold boot are still needed before enabling microphone use in
+NRP/1. The August ODM
 `test_path/mixer_paths.xml` names `Mic_Type_Mux_0`, which is absent from
 Lynx's current ALSA controls, so that test route cannot be applied as-is.
+
+The exact `lm3642_22823` flashlight driver did bind during a RAM-only probe,
+but unloading the `flashlight` core timed out and Lynx lost Wi-Fi contact.
+No LED command was sent. The flashlight trial is paused pending recovery and
+review of the unload path; see
+[LYNX-REMAINING-HARDWARE-TRIALS.md](LYNX-REMAINING-HARDWARE-TRIALS.md).
 
 The audio service stores the exact 75-module dependency plan and corrected
 codec under `/var/lib/lynx-audio/v1`, verifies every module hash, and loads

@@ -1,7 +1,8 @@
 # Lynx remaining hardware trials
 
-Prepared 2026-10-28 for Lynx (OnePlus Nord 3 CPH2493, MT6983). **These are
-plans, not completed hardware tests.** The matching August 2023 CPH2493
+Prepared 2026-10-28 for Lynx (OnePlus Nord 3 CPH2493, MT6983). This records
+trial plans and observed results; **the remaining hardware is not yet enabled**.
+The matching August 2023 CPH2493
 stock package is under `linux-port/artifacts/stock-cph2493-August-eu-ota/`.
 Lynx currently runs Alpine V50 with kernel
 `5.10.149-android12-9-o-g311738fbb5a8`. The V50 `boot_a` image has SHA-256
@@ -14,7 +15,7 @@ See [LYNX-HARDWARE-STATUS.md](LYNX-HARDWARE-STATUS.md) for working hardware and
 | Order | Stack | Why here | Current boundary |
 | --- | --- | --- | --- |
 | 1 | Microphone | ALSA capture nodes already exist; no new kernel module is needed | Exact input mixer route is unknown |
-| 2 | Flashlight | Two matching modules; short, bounded actuation can be tested once the ioctl/sysfs ABI is reviewed | `mtk_battery_oc_throttling` and `flashlight` are absent |
+| 2 | Flashlight | Exact LM3642 driver identified; trial paused after unload hang | Binding worked, but Wi-Fi contact was lost while unloading the core |
 | 3 | GNSS | Three matching modules, with a plausible native Linux device path to investigate | `connscp` and all GPS modules are absent; Android's GNSS userspace cannot be assumed to run on Alpine |
 | 4 | Bluetooth | Matching module and firmware, but it shares connectivity infrastructure with working Wi-Fi | `btif_drv` is absent; preserve SSH before touching this stack |
 | 5 | Camera | Several dependencies and vendor-specific userspace pieces | No `/dev/video*` or `/dev/media*` node; `mtk_ccu` and `v4l2-fwnode` are absent |
@@ -63,6 +64,9 @@ stock test path is **not** an executable Alpine route as written.
 against the stock codec driver and device tree. Save *every* control value to
 be changed. Identify a route that does not connect capture to playback or
 activate a speaker. Keep sound output muted.
+The reviewed primary sources are OnePlus's Nord 3
+[MT6338 codec routes](https://github.com/OnePlusOSS/android_kernel_5.10_oneplus_mt6983/blob/oneplus/mt6983_t_13.1_oneplus_nord_3_5g/sound/soc/codecs/mt6338.c)
+and [MT6983 capture front end](https://github.com/OnePlusOSS/android_kernel_5.10_oneplus_mt6983/blob/oneplus/mt6983_t_13.1_oneplus_nord_3_5g/sound/soc/mediatek/mt6983/mt6983-afe-pcm.c).
 
 **Trial:** Apply the smallest reversible input route, capture at most one
 second to `/run` (tmpfs), compute only format, frame count, peak/RMS and
@@ -75,6 +79,34 @@ audio service still work afterward.
 stimulus, no speaker feedback, clean mixer restoration, and a healthy cold
 boot. Only then add a bounded capture or level API to the Noob runtime.
 
+**2026-10-28 first trial:** `tools/trial_v50_microphone.py` used the live
+`ADC_L_Mux` and `UL1_CH1 ADDA_UL_CH1` controls, leaving both speakers muted.
+One second at 48 kHz mono returned 48,000 samples (peak 3356, RMS 163.26),
+and both changed controls restored exactly. The boot ID and health assertion
+were unchanged. Kernel logs showed `ADDA Capture Enable`, `mt_mic_bias_0_event`,
+and `mt_pga_l_event`, followed by their shutdown events. Receipt:
+`logs/v50-microphone-trial-1793223350495266359/result.json`. A known
+acoustic stimulus has **not yet** been compared with the ambient baseline,
+so this is a working capture path, not final microphone validation. The
+preceding receipt `logs/v50-microphone-trial-1793223334657382940/result.json`
+records a parser rejection before any mixer change. A second one-second trial
+applied a single 80 ms haptic pulse while capturing. Its early 250 ms RMS was
+289.54, whereas the pulse window RMS was 4.35, with no clear response to the
+known stimulus. This suggests the earlier peak may be a capture startup
+transient; it does **not** confirm a working microphone. Mixer values and the
+haptic OFF state were verified afterward. Receipt:
+`logs/v50-microphone-trial-1793223666496784744/result.json`.
+
+Two further one-second captures compared the same late window with and
+without Lynx's existing quiet 700 Hz beep. Quiet late RMS was 3.9 and the
+700 Hz amplitude was 0.01; during the beep they were 31.5 and 29.96.
+No raw PCM was kept. Playback stopped, both speakers returned to mute,
+both input controls were restored, and health passed. Receipts:
+`logs/v50-microphone-trial-1793223805222328472/result.json` and
+`logs/v50-microphone-trial-1793223812227403737/result.json`.
+This establishes that capture responds to the beep, but an external clap
+is still needed to rule out internal audio coupling.
+
 ## 2. Flashlight
 
 **Known:** Matching vendor modules are `mtk_battery_oc_throttling.ko`
@@ -83,13 +115,26 @@ and `flashlight.ko`
 (`58dbf6edb80115078739a3b008ef73a2bad734f9c4812a1f34b8e28ae36bb915`).
 `flashlight` depends on `mtk_battery_oc_throttling` and the already loaded
 `mtk_pbm`. Android expects `/dev/flashlight`; that node is absent now.
+The packaged `flashlight.ko` advertises the generic
+`mediatek,flashlight_core` alias, and its embedded device name is
+`flashlights-none`. No separate `flashlights-*.ko` was found in this package,
+but the exact V4L2 provider **is** present as `lm3642_22823.ko` (SHA-256
+`96dc429c39453dbd0ba469069655bfafc43e329cc3216d912bb080e87b7bef67`).
+Read-only inspection of Lynx's **active** device tree identifies the LED chip
+as `i2c@11e02000/lm3642@63`, compatible
+`mediatek,lm3642_22823`. It appears as I²C device `6-0063` but has no
+bound driver in `/sys/bus/i2c/devices/6-0063/driver` before the trial. The stock `dtbo.img`
+contains several phone variants with other LED chips, so its overlays alone
+cannot identify Lynx's chip. The reviewed Nord 3 primary source is the
+[LM3642-22823 V4L2 driver](https://github.com/OnePlusOSS/android_kernel_5.10_oneplus_mt6983/blob/oneplus/mt6983_t_13.1_oneplus_nord_3_5g/drivers/misc/mediatek/flashlight/v4l2/lm3642_22823.c).
 
-**Prepare:** Review the driver's control ABI and the device-tree flashlight
-channels before writing any control. Check whether module probe alone creates
+**Prepare:** Review the exact driver's I²C register behavior, current table,
+control ABI, and the active device-tree channel before writing any control.
+Resolve the core unload hang first. Check whether module probe alone creates
 the expected node, and whether it changes battery/thermal state. Use a
 one-shot watchdog that explicitly turns the LED off even on an error.
 
-**Trial:** Load the two verified modules in dependency order in RAM. Inspect
+**Trial (on hold):** Load the three verified modules in dependency order in RAM. Inspect
 probe logs and device nodes first. If the ABI and current limit are known,
 request a single dim pulse of at most 100 ms while someone can see Lynx, then
 write OFF and verify OFF. Record the pulse duration, battery current, and
@@ -98,6 +143,20 @@ thermal readings. Do not expose raw brightness or indefinite ON through NRP/1.
 **Success before service:** visual confirmation, verified OFF after timeout,
 no health regression, and a successful reboot without the modules. A future
 Noob native should mirror the bounded haptic pattern: SET, STATUS, STOP.
+
+**2026-10-28 probe incident — further flashlight trials paused:** A RAM-only
+trial loaded matching `mtk_battery_oc_throttling`, `flashlight`, then
+`lm3642_22823` in that order, with health and Wi-Fi checks passing after
+each load. The exact driver bound I²C `6-0063` and `/dev/flashlight` appeared.
+No LED actuation was requested. `rmmod lm3642_22823` returned; the following
+`rmmod flashlight` SSH call timed out, and Lynx then stopped answering SSH
+and ping. The state of `flashlight` and `mtk_battery_oc_throttling` after
+contact loss is unknown. The trial changed no boot partition and staged only
+temporary files under `/run`. Receipt:
+`logs/v50-flashlight-probe-1793224037686461488/result.json`. The script
+`tools/trial_v50_flashlight_probe.py` is deliberately paused to prevent a
+repeat until Lynx is recovered and the unload failure is understood. Do not
+try an LED pulse or repeat the load/unload sequence as written.
 
 ## 3. GNSS
 

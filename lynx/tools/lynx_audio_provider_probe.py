@@ -21,6 +21,9 @@ MODULES = (
     ("mt6338_auxadc", STOCK / "vendor-ramdisk-unpacked/lib/modules/mt6338-auxadc.ko"),
     ("nvmem_mt6338_efuse", STOCK / "wifi-reference/vendor-dlkm-unpacked/lib/modules/nvmem-mt6338-efuse.ko"),
 )
+MIN_BATTERY = int(os.environ.get("LYNX_AUDIO_MIN_BATTERY_PERCENT", "50"))
+if not 25 <= MIN_BATTERY <= 100:
+    raise ValueError("audio battery threshold must be between 25 and 100 percent")
 
 
 def main():
@@ -50,7 +53,8 @@ def main():
         report["boot_id"] = identity[0]
         health = json.loads(step("health", "/usr/local/bin/lynx-status --assert-ready"))
         if health["boot_id"] != identity[0] or \
-           health["battery"]["capacity_percent"] < 50 or \
+           health["battery"]["capacity_percent"] < MIN_BATTERY or \
+           (MIN_BATTERY < 50 and health["battery"]["current_mA_signed"] <= 0) or \
            health["battery"]["temperature_mC"] >= 30000 or \
            health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("battery or thermal preflight failed")

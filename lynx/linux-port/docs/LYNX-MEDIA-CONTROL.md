@@ -65,3 +65,24 @@ Receipts: `logs/v50-media-install-1793137835538196884/`,
 `logs/v50-media-sound-queue-1793137880100498684/`,
 `logs/v50-media-catalog-1793137939299665073/`, and
 `logs/v50-media-cues-trial-1793137956510073959/`.
+
+## Remote control check after reboot
+
+On V50 boot `42256da1-930e-4469-9370-cfba5ff1fd93`, the audio card was
+initially absent. With Lynx charging, a one-time 25% battery floor was
+requested for the two RAM-only audio probes using
+`LYNX_AUDIO_MIN_BATTERY_PERCENT=25`; the normal default remains 50%.
+The probes require positive charging current whenever this override is below
+50%, and reject thresholds below 25%. The matching MT6338 providers and
+corrected sound card loaded, then the already installed matching TFA98xx
+firmware was selected and loaded with both speakers muted. Module receipts:
+`logs/v50-audio-provider-1793195496473276444/` and
+`logs/v50-audio-card-1793195506917057440/`.
+
+From Nexus, NRP/1 returned success for `CALL_MIXED IMAGE_POSE
+"05_using_device"`, `CALL_MIXED SOUND_PLAY "beep"`, and `CALL HAPTIC_SET 80 1`.
+The media queue recorded the beep; afterward both speaker mute controls were
+`On`, haptic status was inactive, and `lynx-status --assert-ready` reported
+no issues at 36% battery and 28.7°C battery temperature. Actual audibility
+of this beep requires confirmation from a person near Lynx. The audio modules
+remain RAM-only and must be loaded again after another reboot.

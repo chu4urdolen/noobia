@@ -21,6 +21,9 @@ PATCH_SHA = "216e38ff1fb5f65beed8c74124688003e8c8c78713d18fe15f2c2975caeaab91"
 KERNEL = old.KERNEL
 INIT = old.INIT_SHA
 BOOT = "6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59"
+MIN_BATTERY = int(os.environ.get("LYNX_AUDIO_MIN_BATTERY_PERCENT", "50"))
+if not 25 <= MIN_BATTERY <= 100:
+    raise ValueError("audio battery threshold must be between 25 and 100 percent")
 
 
 def ssh(command, *, data=None, port=2222, timeout=25):
@@ -69,7 +72,8 @@ def main():
         report["boot_id"] = identity[0]
         health = json.loads(step("health", "/usr/local/bin/lynx-status --assert-ready"))
         if health["boot_id"] != identity[0] or \
-           health["battery"]["capacity_percent"] < 50 or \
+            health["battery"]["capacity_percent"] < MIN_BATTERY or \
+            (MIN_BATTERY < 50 and health["battery"]["current_mA_signed"] <= 0) or \
            health["battery"]["temperature_mC"] >= 30000 or \
            health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("battery or thermal preflight failed")

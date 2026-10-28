@@ -150,6 +150,19 @@ class RuntimeTest(unittest.TestCase):
                       self.runtime.dispatch("NRP/1 2 CALL TOUCH_POLL"))
         self.assertIn("event=0", self.runtime.dispatch("NRP/1 3 CALL TOUCH_POLL"))
 
+    def test_fusion_axes_share_bounded_sample_and_reject_unknown_type(self):
+        sample = ('{"disabled":true,"events":[{"raw_xyz":[12,-34,56]}],'
+                  '"info":{"name":"gravity","gain":1000000}}')
+        with patch.object(Runtime, "fusion_status", return_value=(1, "registered=1")), \
+             patch.object(lynx_noob_runtime.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout=sample)) as run:
+            runtime = Runtime()
+            self.assertIn("value=12", runtime.dispatch("NRP/1 1 CALL FUSION_X 9"))
+            self.assertIn("value=-34", runtime.dispatch("NRP/1 2 CALL FUSION_Y 9"))
+            self.assertIn("value=56", runtime.dispatch("NRP/1 3 CALL FUSION_Z 9"))
+            self.assertEqual(run.call_count, 1)
+            self.assertIn("ERR NATIVE_ERROR", runtime.dispatch("NRP/1 4 CALL FUSION_X 72"))
+
 
 if __name__ == "__main__":
     unittest.main()

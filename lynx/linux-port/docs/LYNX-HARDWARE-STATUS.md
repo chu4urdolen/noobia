@@ -17,6 +17,7 @@ No boot partition changed during the hardware work described here.
 | Gyroscope | Bosch `bmi2xy gyro`; 16 bounded live events recorded | Raw vector and axis calls 365–369 |
 | Proximity and rear light | AMS `tcs3701 ps` and `tcs3408 als` return bounded events; stationary raw values need a physical response test | Status and raw calls 370–373 |
 | Magnetometer | AKM09918 returns 16 bounded live events | Raw vector and axis calls 374–378 |
+| Sensor fusion | MediaTek gravity, linear acceleration, rotation vector, and orientation each returned bounded events | Generic `FUSION_STATUS`, axis, and vector calls 382–386 with sensor type 9, 10, 11, or 3 |
 | Charging | MT6375 charger and battery reserve service | Monitored locally; remote charging controls are not exposed |
 
 The new numeric calls return one value per NRP/1 `CALL`, so they work from
@@ -34,6 +35,9 @@ Bosch accelerometer and gyroscope, magnetometer, proximity, ambient light,
 and other logical sensors. Accelerometer, gyroscope, magnetometer, proximity,
 and rear light samples have been read. Values are still raw driver values;
 physical units and optical response remain unverified.
+The four fusion sensors have also been sampled, with the sensor manager idle
+after each trial. Their gain metadata is 1,000,000; no physical calibration
+or coordinate-frame validation has been done.
 The next driver trials should proceed one stack
 at a time, with boot identity checks, module dependency review, a read-only
 probe first, and rollback over SSH.
@@ -73,3 +77,8 @@ receipts are `logs/v50-hf-gyroscope-1793200181549329489/`,
 disables each sensor after sampling, and `/proc/hf_manager` shows an empty
 active list. A subsequent clean boot started audio and sensorhub automatically,
 with NRP/1 accelerometer readings and the health assertion passing.
+
+The bounded four-sensor fusion trial receipt is
+`logs/v50-hf-fusion-1793210128107519984/result.json`. NRP/1 fusion
+installation and rollback files are recorded in
+`logs/v50-fusion-nrp-install-1793210212865323826/result.json`.

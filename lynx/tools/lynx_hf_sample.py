@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bounded Lynx hf_manager accelerometer sample; run on the phone only."""
+"""Bounded Lynx hf_manager sensor sample; run on the phone only."""
 
 import argparse
 import fcntl
@@ -16,7 +16,7 @@ IOCTL_PACKET_SIZE = 68
 REGISTER_STATUS = (3 << 30) | (IOCTL_PACKET_SIZE << 16) | (ord("a") << 8) | 1
 SENSOR_INFO = (3 << 30) | (IOCTL_PACKET_SIZE << 16) | (ord("a") << 8) | 6
 EVENT = struct.Struct("<qBBBB16i")
-SUPPORTED = (1, 2, 4, 8, 98)  # Motion, proximity, rear ambient light on Lynx.
+SUPPORTED = (1, 2, 3, 4, 8, 9, 10, 11, 98)  # Tested sensors and bounded fusion trial types.
 
 
 def command(sensor, action, delay_ns=0):

@@ -29,6 +29,7 @@ TFA_FIRMWARE = Path("/sys/module/snd_soc_tfa98xx/parameters/fw_name")
 TOUCH_DEVICE = "/dev/input/event0"
 HF_MANAGER = Path("/dev/hf_manager")
 HF_SAMPLE = Path("/usr/local/bin/lynx-hf-sample")
+FUSION = {3: "orientation", 9: "gravity", 10: "linear_acc", 11: "rot_vec"}
 _haptic_ready_at = 0.0
 
 
@@ -626,6 +627,7 @@ class Runtime:
         self.gyro_cache = None
         self.mag_cache = None
         self.optical_cache = {}
+        self.fusion_cache = {}
         self.touch = TouchInput()
         self.register()
 
@@ -695,6 +697,62 @@ class Runtime:
         reg(378, "MAG_VECTOR", self.mag_vector)
         reg(380, "TOUCH_STATUS", self.touch_status)
         reg(381, "TOUCH_POLL", self.touch_poll)
+        reg(382, "FUSION_STATUS", self.fusion_status)
+        reg(383, "FUSION_X", lambda a, t: self.fusion_axis(a, t, 0))
+        reg(384, "FUSION_Y", lambda a, t: self.fusion_axis(a, t, 1))
+        reg(385, "FUSION_Z", lambda a, t: self.fusion_axis(a, t, 2))
+        reg(386, "FUSION_VECTOR", self.fusion_vector)
+
+    @staticmethod
+    def fusion_type(args, text):
+        if text or len(args) != 1 or args[0] not in FUSION:
+            raise NativeError("usage: sensor_type(3|9|10|11)")
+        return args[0]
+
+    def fusion_status(self, args, text):
+        sensor = self.fusion_type(args, text)
+        try:
+            ready = (HF_MANAGER.is_char_device() and
+                     f"{FUSION[sensor]},mtk" in Path("/proc/hf_manager").read_text())
+        except OSError:
+            ready = False
+        return int(ready), f"type={sensor} name={FUSION[sensor]} registered={int(ready)}"
+
+    def fusion_sample(self, sensor):
+        cached = self.fusion_cache.get(sensor)
+        if cached and time.monotonic() - cached[0] < 0.8:
+            return cached[1]
+        if self.fusion_status([sensor], "")[0] != 1:
+            raise NativeError("fusion sensor unavailable")
+        try:
+            result = subprocess.run(["/usr/bin/python3", str(HF_SAMPLE),
+                                     "--sensor", str(sensor), "--seconds", "1",
+                                     "--events", "3"], capture_output=True,
+                                    text=True, timeout=3, check=False)
+            if result.returncode:
+                raise NativeError("fusion sensor sample failed")
+            sample = json.loads(result.stdout)
+            if (not sample.get("disabled") or not sample.get("events") or
+                sample.get("info", {}).get("name") != FUSION[sensor] or
+                sample["info"].get("gain") != 1000000):
+                raise NativeError("fusion sensor result invalid")
+            xyz = sample["events"][-1]["raw_xyz"]
+            if len(xyz) != 3 or any(not isinstance(v, int) or abs(v) > 1000000000 for v in xyz):
+                raise NativeError("fusion sensor axes invalid")
+        except (OSError, subprocess.TimeoutExpired, ValueError, KeyError) as exc:
+            raise NativeError("fusion sensor sample unavailable") from exc
+        self.fusion_cache[sensor] = time.monotonic(), xyz
+        return xyz
+
+    def fusion_axis(self, args, text, axis):
+        sensor = self.fusion_type(args, text)
+        xyz = self.fusion_sample(sensor)
+        return xyz[axis], f"type={sensor} name={FUSION[sensor]} unit=raw gain=1000000"
+
+    def fusion_vector(self, args, text):
+        sensor = self.fusion_type(args, text)
+        x, y, z = self.fusion_sample(sensor)
+        return 1, f"type={sensor} name={FUSION[sensor]} x={x} y={y} z={z} gain=1000000"
 
     def touch_status(self, args, text):
         no_args(args, text)

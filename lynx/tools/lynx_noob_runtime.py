@@ -3,7 +3,9 @@
 
 import argparse
 from collections import deque
+import fcntl
 import json
+import os
 from pathlib import Path
 import re
 import selectors
@@ -24,6 +26,7 @@ GAUGE = Path("/sys/bus/i2c/devices/7-0055/battery_snapshot")
 THERMAL = Path("/sys/class/thermal")
 SOUND_CARDS = Path("/proc/asound/cards")
 TFA_FIRMWARE = Path("/sys/module/snd_soc_tfa98xx/parameters/fw_name")
+TOUCH_DEVICE = "/dev/input/event0"
 HF_MANAGER = Path("/dev/hf_manager")
 HF_SAMPLE = Path("/usr/local/bin/lynx-hf-sample")
 _haptic_ready_at = 0.0
@@ -188,6 +191,90 @@ class RecordQueue:
     @staticmethod
     def serialize(record):
         return ",".join(f"{k}:{v}" for k, v in record.items())
+
+
+class TouchInput:
+    """Read one verified Synaptics contact without grabbing the display's fd."""
+
+    EVENT = struct.Struct("llHHi")
+    NAME_IOCTL = (2 << 30) | (64 << 16) | (ord("E") << 8) | 0x06
+
+    def __init__(self):
+        self.fd = None
+        self.retry_at = 0.0
+        self.pending = b""
+        self.slot = 0
+        self.down = False
+        self.x = None
+        self.y = None
+        self.changed = False
+        self.was_down = False
+        self.events = RecordQueue()
+
+    def close(self):
+        if self.fd is not None:
+            os.close(self.fd)
+            self.fd = None
+        self.pending = b""
+        self.retry_at = time.monotonic() + 1
+
+    def open_verified(self):
+        if self.fd is not None or time.monotonic() < self.retry_at:
+            return
+        try:
+            fd = os.open(TOUCH_DEVICE, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+            name = bytearray(64)
+            fcntl.ioctl(fd, self.NAME_IOCTL, name, True)
+            if name.split(b"\0", 1)[0] != b"touchpanel":
+                os.close(fd)
+                self.retry_at = time.monotonic() + 1
+                return
+            self.fd = fd
+        except OSError:
+            if 'fd' in locals():
+                os.close(fd)
+            self.retry_at = time.monotonic() + 1
+
+    def feed(self, typ, code, value):
+        if typ == 3:  # EV_ABS
+            if code == 47:  # ABS_MT_SLOT
+                self.slot = value
+            elif self.slot == 0:
+                if code == 57:  # ABS_MT_TRACKING_ID
+                    self.down = value >= 0
+                    self.changed = True
+                elif code == 53:  # ABS_MT_POSITION_X
+                    self.x = value
+                    self.changed = True
+                elif code == 54:  # ABS_MT_POSITION_Y
+                    self.y = value
+                    self.changed = True
+        elif typ == 0 and code == 0 and self.changed:  # SYN_REPORT
+            if self.x is not None and self.y is not None:
+                phase = 1 if self.down and not self.was_down else (2 if self.down else 0)
+                self.events.push({"phase": phase, "x": self.x, "y": self.y})
+            self.was_down = self.down
+            self.changed = False
+
+    def tick(self):
+        self.open_verified()
+        if self.fd is None:
+            return
+        try:
+            for _ in range(4):
+                chunk = os.read(self.fd, self.EVENT.size * 64)
+                if not chunk:
+                    break
+                self.pending += chunk
+                count = len(self.pending) // self.EVENT.size
+                for offset in range(0, count * self.EVENT.size, self.EVENT.size):
+                    _, _, typ, code, value = self.EVENT.unpack_from(self.pending, offset)
+                    self.feed(typ, code, value)
+                self.pending = self.pending[count * self.EVENT.size:]
+        except BlockingIOError:
+            pass
+        except OSError:
+            self.close()
 
 
 class NoobThreadProgram:
@@ -528,6 +615,7 @@ class Runtime:
         self.gyro_cache = None
         self.mag_cache = None
         self.optical_cache = {}
+        self.touch = TouchInput()
         self.register()
 
     def register(self):
@@ -594,6 +682,18 @@ class Runtime:
         reg(376, "MAG_Z", lambda a, t: self.mag_axis(a, t, 2))
         reg(377, "MAG_STATUS", self.mag_status)
         reg(378, "MAG_VECTOR", self.mag_vector)
+        reg(380, "TOUCH_STATUS", self.touch_status)
+        reg(381, "TOUCH_POLL", self.touch_poll)
+
+    def touch_status(self, args, text):
+        no_args(args, text)
+        return int(self.touch.fd is not None), (f"panel=touchpanel down={int(self.touch.down)} "
+                                                f"queued={len(self.touch.events.items)} "
+                                                f"dropped={self.touch.events.dropped}")
+
+    def touch_poll(self, args, text):
+        no_args(args, text)
+        return self.touch.events.pop(True)
 
     @staticmethod
     def accel_status(args, text):
@@ -876,6 +976,7 @@ class Runtime:
         return 1, f"{kind}={action}"
 
     def tick(self):
+        self.touch.tick()
         self.vm.tick()
         self.sequence.tick()
         try:
@@ -1025,6 +1126,7 @@ def serve(host, port, peer):
                     conn.close()
         runtime.sequence.stop()
         runtime.cycle.stop()
+        runtime.touch.close()
         haptic_stop()
         for conn in buffers:
             conn.close()

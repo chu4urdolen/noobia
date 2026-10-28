@@ -8,7 +8,7 @@ No boot partition changed during the hardware work described here.
 | Hardware | Current Linux evidence | Noob interface |
 | --- | --- | --- |
 | Wi-Fi, storage, SSH | Alpine boots from `/dev/sdc85`, joins Noobia, opens SSH | NRP/1 transport; SSH remains for maintenance |
-| Display and touch | `lynx-display` runs; `/dev/dri/card0`, `/dev/input/event0` and `touchpanel` exist | Pose and animation calls 310–319; touch events are not exposed yet |
+| Display and touch | `lynx-display` runs; `/dev/dri/card0`, `/dev/input/event0` and `touchpanel` exist; runtime opens verified input | Pose and animation calls 310–319; touch status and queued first-contact events 380–381; physical event test pending |
 | Vibration | AW86907 driver and firmware load on cold boot | Bounded haptic calls 300–302 |
 | Sound | MT6983 ALSA card, corrected MT6338 codec, TFA98xx firmware, controlled beep | Sound calls 340–346; audio readiness call 355 |
 | Battery | Gauge at I²C `7-0055`, validated type 42495 and error flags | Read-only calls 350–353 |
@@ -37,6 +37,16 @@ physical units and optical response remain unverified.
 The next driver trials should proceed one stack
 at a time, with boot identity checks, module dependency review, a read-only
 probe first, and rollback over SSH.
+
+Read-only stock module inventory after the sensorhub milestone: Bluetooth's
+`bt_drv_6983.ko` matches the V50 kernel, with `btif_drv` still absent while
+the connectivity modules are loaded. GPS's `gps_drv_dl_v050.ko` also matches
+and depends on loaded `conninfra`. Camera `imgsensor.ko` matches but needs
+`mtk_ccu` and `v4l2-fwnode`, both currently absent; no `/dev/video*` or
+`/dev/media*` node exists. Flashlight's module matches but its
+`mtk_battery_oc_throttling` dependency is absent. These are dependency
+findings, not working-device claims. The ALSA card exposes capture PCM nodes,
+but microphone routing and actual capture remain unverified.
 
 The audio service stores the exact 75-module dependency plan and corrected
 codec under `/var/lib/lynx-audio/v1`, verifies every module hash, and loads

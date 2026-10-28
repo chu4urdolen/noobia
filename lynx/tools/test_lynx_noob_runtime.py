@@ -135,6 +135,21 @@ class RuntimeTest(unittest.TestCase):
             self.assertEqual(runtime.dispatch("NRP/1 1 CALL LIGHT_RAW"),
                              "NRP/1 1 OK value=0 detail=raw1=0 raw2=0 gain=1")
 
+    def test_touch_events_capture_first_contact_and_release(self):
+        touch = self.runtime.touch
+        touch.feed(3, 47, 0)  # Slot zero.
+        touch.feed(3, 57, 42)  # New tracking id.
+        touch.feed(3, 53, 337)
+        touch.feed(3, 54, 702)
+        touch.feed(0, 0, 0)
+        self.assertIn("record=phase:1,x:337,y:702",
+                      self.runtime.dispatch("NRP/1 1 CALL TOUCH_POLL"))
+        touch.feed(3, 57, -1)
+        touch.feed(0, 0, 0)
+        self.assertIn("record=phase:0,x:337,y:702",
+                      self.runtime.dispatch("NRP/1 2 CALL TOUCH_POLL"))
+        self.assertIn("event=0", self.runtime.dispatch("NRP/1 3 CALL TOUCH_POLL"))
+
 
 if __name__ == "__main__":
     unittest.main()

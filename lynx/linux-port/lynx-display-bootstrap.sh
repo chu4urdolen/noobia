@@ -53,6 +53,27 @@ require_v50() {
     }
 }
 
+check_hardware_health() {
+    # A brief Wi-Fi or unrelated service transition must not abort a verified
+    # module load halfway through the display stack. The service still checks
+    # full Alpine health before and after startup.
+    /usr/local/bin/lynx-status | /usr/bin/python3 -c '
+import json, sys
+s = json.load(sys.stdin)
+b = s["battery"]
+t = s["thermal"]["max_mC"]
+ok = (b["gauge_type"] == 42495 and
+      all(value == 0 for value in b["read_errors"].values()) and
+      b["capacity_percent"] is not None and b["capacity_percent"] > 20 and
+      b["temperature_mC"] is not None and 0 < b["temperature_mC"] < 40000 and
+      t is not None and t < 55000 and
+      s["root_filesystem"]["ext4_errors_count"] == 0)
+if not ok:
+    print("display hardware guard failed", file=sys.stderr)
+sys.exit(0 if ok else 1)
+'
+}
+
 load_modules() {
     while read -r filename module digest; do
         [ -n "$filename" ] || continue
@@ -70,7 +91,8 @@ load_modules() {
             echo "module absent after load: $module" >&2
             return 1
         }
-        /usr/local/bin/lynx-status --assert-ready >/dev/null
+        echo "module present: $module"
+        check_hardware_health
         echo "loaded: $module"
         if [ "$module" = oplus22823_tm_nt37705_fhd_dsi_cmd ] && \
            [ ! -L /sys/bus/platform/devices/14017000.dsi/driver ]; then

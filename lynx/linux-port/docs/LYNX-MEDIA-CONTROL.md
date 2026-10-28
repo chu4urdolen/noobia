@@ -51,14 +51,10 @@ channel's queue. Both queues and history are stored in
 available but playback starts stopped. Speaker route controls are restored
 and both amplifiers are muted after playback, stop, or service exit.
 
-The service is enabled in Alpine's default OpenRC runlevel. On the current
-V50 boot it is running, and the corrected MT6338 audio module plus matching
-TFA98xx firmware have been loaded separately. The audio modules were loaded
-into RAM for this trial, so **sound will be unavailable after a reboot until
-the audio stack is loaded again**. The image controls remain available at
-boot. A later supervised audio bootstrap can make sound automatic; it should
-be tested on a cold boot before enabling it. No boot partition was changed
-for this media service.
+The media service is enabled in Alpine's default OpenRC runlevel. Its first
+audio trials loaded the corrected MT6338 module and matching TFA98xx firmware
+into RAM separately. The automatic audio bootstrap added later is described
+below. No boot partition was changed for these services.
 
 Receipts: `logs/v50-media-install-1793137835538196884/`,
 `logs/v50-media-control-trial-1793137849629603237/`,
@@ -84,5 +80,31 @@ From Nexus, NRP/1 returned success for `CALL_MIXED IMAGE_POSE
 The media queue recorded the beep; afterward both speaker mute controls were
 `On`, haptic status was inactive, and `lynx-status --assert-ready` reported
 no issues at 36% battery and 28.7°C battery temperature. Actual audibility
-of this beep requires confirmation from a person near Lynx. The audio modules
-remain RAM-only and must be loaded again after another reboot.
+of this beep requires confirmation from a person near Lynx. At that point the
+audio modules were RAM-only; automatic loading was added in the next step.
+
+## Automatic sound startup
+
+The matching module plan, corrected MT6338 codec, and TFA98xx firmware are now
+stored under `/var/lib/lynx-audio/v1` on Alpine. `lynx-audio` is enabled in
+the default OpenRC runlevel and loads the card after `lynx-display`, checks
+each module hash, waits for ALSA card registration, and keeps both speakers
+muted after firmware initialization. Its log is
+`/var/log/lynx-audio-bootstrap.log`. No boot partition was changed.
+
+The first cold boot needed a manual audio service start, so its receipt was
+corrected to `verified-after-manual-audio-start`:
+`logs/v50-audio-cold-boot-1793197983022386992/`. On the second clean boot,
+`lynx-display` stopped partway through its module list, leaving haptics and
+audio stopped. That failed check is
+`logs/v50-audio-cold-boot-1793198366206634557/`. The display module loader's
+per-module guard now checks battery, thermal, and filesystem integrity; the
+full Alpine health guard still runs before and after display startup.
+
+The next clean boot passed **without manual intervention**:
+`logs/v50-audio-cold-boot-1793198926121333822/`. Display, haptics, media,
+Noob runtime, and audio services were all running. NRP/1 `AUDIO_READY`
+returned `card=1 firmware=1`, `HAPTIC_STATUS` returned inactive, and
+`lynx-status --assert-ready` reported no issues at 51% battery and 29.5°C
+battery temperature. This verifies automatic sound readiness; it does not
+request audible playback at boot.

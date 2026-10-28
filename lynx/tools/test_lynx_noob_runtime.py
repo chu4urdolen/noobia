@@ -3,7 +3,11 @@
 
 import time
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
+import lynx_noob_runtime
 from lynx_noob_runtime import Runtime
 
 
@@ -61,6 +65,28 @@ class RuntimeTest(unittest.TestCase):
         self.assertIn("value=1", r.dispatch("NRP/1 2 CALL IMAGE_CYCLE_POLL"))
         self.assertIn("event=0", r.dispatch("NRP/1 3 CALL IMAGE_CYCLE_POLL"))
         self.assertIn("running=0", r.dispatch("NRP/1 4 CALL IMAGE_CYCLE_STOP"))
+
+    def test_read_only_phone_sensors_reject_bad_gauge_and_report_units(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            gauge = root / "battery_snapshot"
+            gauge.write_text("gauge_device_type=42495\ncapacity_percent=45\n"
+                             "capacity_error=0\ntemperature_millidegrees_celsius=28700\n"
+                             "temperature_error=0\ngauge_current_ma_signed=328\n"
+                             "current_error=0\npack_voltage_mv=7746\nvoltage_error=0\n")
+            zone = root / "thermal_zone0"
+            zone.mkdir()
+            (zone / "type").write_text("soc_max\n")
+            (zone / "temp").write_text("36760\n")
+            with patch.object(lynx_noob_runtime, "GAUGE", gauge), \
+                 patch.object(lynx_noob_runtime, "THERMAL", root):
+                runtime = Runtime()
+                self.assertEqual(runtime.dispatch("NRP/1 1 CALL BATTERY_PERCENT"),
+                                 "NRP/1 1 OK value=45 detail=unit=percent")
+                self.assertEqual(runtime.dispatch("NRP/1 2 CALL SOC_TEMP"),
+                                 "NRP/1 2 OK value=36760 detail=unit=mC")
+                gauge.write_text(gauge.read_text().replace("capacity_error=0", "capacity_error=1"))
+                self.assertIn("ERR NATIVE_ERROR", runtime.dispatch("NRP/1 3 CALL BATTERY_PERCENT"))
 
 
 if __name__ == "__main__":

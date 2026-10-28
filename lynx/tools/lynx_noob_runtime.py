@@ -10,6 +10,7 @@ import selectors
 import signal
 import socket
 import struct
+import subprocess
 import time
 
 VERSION = "NRP/1"
@@ -19,6 +20,10 @@ NAME = re.compile(r"[a-z0-9_]{1,63}\Z")
 LED = Path("/sys/class/leds/vibrator")
 DISPLAY = Path("/var/lib/lynx-display")
 MEDIA = Path("/run/lynx/media.sock")
+GAUGE = Path("/sys/bus/i2c/devices/7-0055/battery_snapshot")
+THERMAL = Path("/sys/class/thermal")
+SOUND_CARDS = Path("/proc/asound/cards")
+TFA_FIRMWARE = Path("/sys/module/snd_soc_tfa98xx/parameters/fw_name")
 _haptic_ready_at = 0.0
 
 
@@ -85,6 +90,76 @@ def haptic_set(numbers, _text):
     LED.joinpath("oplus_activate").write_text("1\n")
     _haptic_ready_at = now + (duration + 50) / 1000
     return 1, f"duration_ms={duration}"
+
+
+def no_args(numbers, text):
+    if numbers or text:
+        raise NativeError("usage: no arguments")
+
+
+def gauge_reading(field, error, low, high):
+    try:
+        fields = dict(line.split("=", 1) for line in GAUGE.read_text().splitlines()
+                      if "=" in line)
+        if int(fields["gauge_device_type"]) != 42495 or int(fields[error + "_error"]) != 0:
+            raise NativeError("battery gauge read failed")
+        value = int(fields[field])
+    except (OSError, KeyError, ValueError) as exc:
+        raise NativeError("battery gauge unavailable") from exc
+    if not low <= value <= high:
+        raise NativeError("battery reading out of range")
+    return value
+
+
+def battery_percent(numbers, text):
+    no_args(numbers, text)
+    return gauge_reading("capacity_percent", "capacity", 0, 100), "unit=percent"
+
+
+def battery_temp(numbers, text):
+    no_args(numbers, text)
+    return gauge_reading("temperature_millidegrees_celsius", "temperature", -20000, 80000), "unit=mC"
+
+
+def battery_current(numbers, text):
+    no_args(numbers, text)
+    return gauge_reading("gauge_current_ma_signed", "current", -10000, 10000), "unit=mA_signed"
+
+
+def battery_voltage(numbers, text):
+    no_args(numbers, text)
+    return gauge_reading("pack_voltage_mv", "voltage", 5000, 10000), "unit=mV"
+
+
+def soc_temp(numbers, text):
+    no_args(numbers, text)
+    try:
+        readings = [int((zone / "temp").read_text()) for zone in THERMAL.glob("thermal_zone*")
+                    if (zone / "type").read_text().strip() == "soc_max"]
+    except (OSError, ValueError) as exc:
+        raise NativeError("SoC thermal reading unavailable") from exc
+    if len(readings) != 1 or not -20000 <= readings[0] <= 120000:
+        raise NativeError("SoC thermal reading invalid")
+    return readings[0], "unit=mC"
+
+
+def audio_ready(numbers, text):
+    no_args(numbers, text)
+    try:
+        cards = SOUND_CARDS.read_text()
+        firmware = TFA_FIRMWARE.read_text().strip()
+    except OSError:
+        return 0, "card=0 firmware=0"
+    card = "mt6983mt6338" in cards
+    if not card or firmware != "tfa98xx.cnt":
+        return 0, f"card={int(card)} firmware=0"
+    try:
+        result = subprocess.run(["amixer", "-c0", "cget", "name=TFA98XX Firmware"],
+                                capture_output=True, text=True, timeout=2, check=False)
+        loaded = result.returncode == 0 and ": values=1" in result.stdout
+    except (OSError, subprocess.TimeoutExpired):
+        loaded = False
+    return int(loaded), f"card=1 firmware={int(loaded)}"
 
 
 class RecordQueue:
@@ -488,6 +563,12 @@ class Runtime:
         reg(344, "SOUND_STOP", lambda a, t: self.media_transport(a, t, "stop", "sound"))
         reg(345, "SOUND_NEXT", lambda a, t: self.media_transport(a, t, "next", "sound"))
         reg(346, "SOUND_PREVIOUS", lambda a, t: self.media_transport(a, t, "previous", "sound"))
+        reg(350, "BATTERY_PERCENT", battery_percent)
+        reg(351, "BATTERY_TEMP", battery_temp)
+        reg(352, "BATTERY_CURRENT", battery_current)
+        reg(353, "BATTERY_VOLTAGE", battery_voltage)
+        reg(354, "SOC_TEMP", soc_temp)
+        reg(355, "AUDIO_READY", audio_ready)
 
     @staticmethod
     def slot(args):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Guarded same-boot OpenRC start, BLE PING/INFO, and STOP trial for Lynx V52."""
 
+import argparse
 from datetime import datetime, timezone
 import json
 import os
@@ -22,6 +23,9 @@ def phone(command, timeout=10):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--audible-smoke", action="store_true")
+    args = parser.parse_args()
     receipt = ROOT / "logs" / f"v52-bluetooth-service-{time.time_ns()}"
     receipt.mkdir(mode=0o700)
     remote = "/run/lynx-bt-service-trial-" + str(time.time_ns())
@@ -115,6 +119,7 @@ def main():
         central = subprocess.run(["python3", str(ROOT / "tools/lynx_ble_nexus_ping.py"),
                                   "--factory-address-receipt",
                                   str(ROOT / "logs/v52-bt-factory-address-1793365780727214907.json"),
+                                  "--audible-smoke" if args.audible_smoke else "--vm-smoke",
                                   "--seconds", "25"],
                                  env=env, capture_output=True, timeout=32)
         (receipt / "nexus-gatt.stdout").write_bytes(central.stdout)
@@ -122,9 +127,10 @@ def main():
         report["nexus_ping"] = json.loads(central.stdout) if central.returncode == 0 else \
             {"exit": central.returncode}
         save()
-        if report["nexus_ping"].get("state") != "ping-info-complete":
-            raise RuntimeError("BLE PING/INFO did not complete")
-        report["state"] = "ping-info-complete-awaiting-stop"
+        expected = "audible-smoke-complete" if args.audible_smoke else "vm-smoke-complete"
+        if report["nexus_ping"].get("state") != expected:
+            raise RuntimeError("authenticated BLE VM smoke test did not complete")
+        report["state"] = "authenticated-vm-complete-awaiting-stop"
     except Exception as exc:
         report.update(state="failed", error=str(exc))
     finally:
@@ -164,17 +170,17 @@ def main():
                 report["watchdog_cancelled"] = False
         if armed and not report.get("watchdog_cancelled"):
             report["watchdog_reboot_expected_within_seconds"] = 90
-        if report["state"] == "ping-info-complete-awaiting-stop" and \
+        if report["state"] == "authenticated-vm-complete-awaiting-stop" and \
                 report.get("teardown_verified") and report.get("health_after") and \
                 report.get("watchdog_cancelled"):
-            report["state"] = "service-start-ping-info-stop-healthy"
+            report["state"] = "authenticated-vm-start-stop-healthy"
         report["ended_at_utc"] = datetime.now(timezone.utc).isoformat()
         report["ended_monotonic_ns"] = time.monotonic_ns()
         save()
     print(json.dumps({"state": report["state"], "receipt": str(receipt / "result.json"),
                       "watchdog_cancelled": report.get("watchdog_cancelled"),
                       "error": report.get("error")}))
-    if report["state"] != "service-start-ping-info-stop-healthy":
+    if report["state"] != "authenticated-vm-start-stop-healthy":
         raise SystemExit(1)
 
 

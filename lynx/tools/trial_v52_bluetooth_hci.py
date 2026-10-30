@@ -244,6 +244,11 @@ def main():
             step("gatt_stage", f"cat > {remote}/gatt.py; "
                  f'test "$(sha256sum {remote}/gatt.py | cut -c1-64)" = {gatt_sha}; '
                  f"/usr/bin/python3 -m py_compile {remote}/gatt.py", gatt_source)
+            auth_source = (ROOT / "tools/lynx_ble_auth.py").read_bytes()
+            auth_sha = hashlib.sha256(auth_source).hexdigest()
+            step("gatt_auth_stage", f"cat > {remote}/lynx_ble_auth.py; "
+                 f'test "$(sha256sum {remote}/lynx_ble_auth.py | cut -c1-64)" = {auth_sha}; '
+                 f"/usr/bin/python3 -m py_compile {remote}/lynx_ble_auth.py", auth_source)
             archive = io.BytesIO()
             with tarfile.open(fileobj=archive, mode="w:gz") as tar:
                 tar.add(ROOT / "tools/vendor_dbus_next/dbus_next", arcname="dbus_next",

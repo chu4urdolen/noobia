@@ -17,6 +17,7 @@ import subprocess
 import time
 
 from lynx_hardware import inventory as hardware_inventory
+from lynx_ble_auth import Authenticator, load_key
 
 VERSION = "NRP/1"
 PHONE_IP = "192.168.100.107"
@@ -1173,7 +1174,8 @@ class Runtime:
         return head, numbers, text
 
 
-def serve(host, port, peer, local_socket="", local_uid=0):
+def serve(host, port, peer, local_socket="", local_uid=0, nexus_key_file=""):
+    nexus_key = load_key(nexus_key_file) if nexus_key_file else None
     runtime = Runtime()
     selector = selectors.DefaultSelector()
     active = True
@@ -1209,16 +1211,20 @@ def serve(host, port, peer, local_socket="", local_uid=0):
             local_server.setblocking(False)
             selector.register(local_server, selectors.EVENT_READ)
         buffers = {}
+        remote_auth = {}
         while active:
             runtime.tick()
             while runtime.sequence.events:
                 event = ("NRP/1 0 EVENT " + runtime.sequence.events.popleft() + "\n").encode()
                 for conn in list(buffers):
+                    if conn in remote_auth and remote_auth[conn].highest_sequence == 0:
+                        continue
                     try:
                         conn.sendall(event)
                     except OSError:
                         selector.unregister(conn)
                         buffers.pop(conn, None)
+                        remote_auth.pop(conn, None)
                         conn.close()
             for key, _ in selector.select(0.02):
                 if key.fileobj is server or key.fileobj is local_server:
@@ -1231,6 +1237,10 @@ def serve(host, port, peer, local_socket="", local_uid=0):
                                                socket.SO_PEERCRED, 12))[1] != local_uid:
                         conn.close()
                         continue
+                    if key.fileobj is server and nexus_key is not None:
+                        auth = Authenticator(nexus_key, max_frame=4096)
+                        conn.sendall(auth.challenge_line())
+                        remote_auth[conn] = auth
                     conn.setblocking(False)
                     buffers[conn] = b""
                     selector.register(conn, selectors.EVENT_READ)
@@ -1246,14 +1256,19 @@ def serve(host, port, peer, local_socket="", local_uid=0):
                     while b"\n" in buffers[conn]:
                         line, buffers[conn] = buffers[conn].split(b"\n", 1)
                         try:
+                            if conn in remote_auth:
+                                line = remote_auth[conn].accept(line + b"\n").rstrip(b"\n")
                             request = line.decode("ascii").rstrip("\r")
                             answer = runtime.dispatch(request)
+                        except ValueError as exc:
+                            raise ConnectionError from exc
                         except UnicodeDecodeError:
                             answer = "NRP/1 0 ERR BAD_REQUEST non_ascii"
                         conn.sendall((answer + "\n").encode())
                 except (ConnectionError, OSError):
                     selector.unregister(conn)
                     buffers.pop(conn, None)
+                    remote_auth.pop(conn, None)
                     conn.close()
         runtime.sequence.stop()
         runtime.cycle.stop()
@@ -1270,5 +1285,8 @@ if __name__ == "__main__":
     parser.add_argument("--peer", default=NEXUS_IP)
     parser.add_argument("--local-socket", default="",
                         help="optional root-only Unix socket for local transports")
+    parser.add_argument("--nexus-key-file", default="/etc/lynx/nrp-nexus.key",
+                        help="root-only Nexus issuer key; required by the network service")
     args = parser.parse_args()
-    serve(args.host, args.port, args.peer, args.local_socket)
+    serve(args.host, args.port, args.peer, args.local_socket,
+          nexus_key_file=args.nexus_key_file)

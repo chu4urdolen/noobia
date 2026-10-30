@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Temporary, read-only Lynx NRP/1 GATT endpoint for a guarded BlueZ trial.
-
-Only PING and INFO are accepted. No pairing, VM, or hardware calls are exposed.
-The response is read from a separate characteristic, including ATT offsets.
-Run as root in the same mount namespace as /run/lynx/noobd.sock.
-"""
+"""Nexus-authenticated Lynx NRP/1 GATT endpoint for a guarded BlueZ trial."""
 
 import argparse
 import asyncio
@@ -12,45 +7,51 @@ import os
 import re
 import signal
 import socket
+import time
 
 from dbus_next import DBusError, Variant
 from dbus_next.aio import MessageBus
 from dbus_next.constants import BusType, PropertyAccess
 from dbus_next.service import ServiceInterface, dbus_property, method
 
+from lynx_ble_auth import Authenticator, FragmentAssembler, load_key
+
 
 ROOT = "/org/noobia/lynx"
 SERVICE_PATH = ROOT + "/service0"
 REQUEST_PATH = SERVICE_PATH + "/request"
 RESPONSE_PATH = SERVICE_PATH + "/response"
+CHALLENGE_PATH = SERVICE_PATH + "/challenge"
 ADV_PATH = ROOT + "/advertisement0"
 SERVICE_UUID = "6e6f6f62-6961-4c59-4e58-000000000001"
 REQUEST_UUID = "6e6f6f62-6961-4c59-4e58-000000000002"
 RESPONSE_UUID = "6e6f6f62-6961-4c59-4e58-000000000003"
-REQUEST_PATTERN = re.compile(rb"NRP/1 ([0-9]{1,10}) (PING|INFO)\n")
+CHALLENGE_UUID = "6e6f6f62-6961-4c59-4e58-000000000004"
+REQUEST_PATTERN = re.compile(rb"NRP/1 ([0-9]{1,10}) [A-Z_]+(?: [^\n]*)?\n")
 
 
-def forward_read_only(request, path="/run/lynx/noobd.sock", timeout=1.5):
-    """Validate before crossing the privileged local NRP socket boundary."""
-    if len(request) > 128 or not REQUEST_PATTERN.fullmatch(request):
-        raise ValueError("only one complete PING or INFO line is accepted")
-    request_id = REQUEST_PATTERN.fullmatch(request).group(1)
+def forward_nrp(request, path="/run/lynx/noobd.sock", timeout=9):
+    """Forward one authenticated request to the existing root-only runtime."""
+    match = REQUEST_PATTERN.fullmatch(request)
+    if len(request) > 512 or not match:
+        raise ValueError("invalid bounded NRP request")
+    request_id = match.group(1)
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as conn:
         conn.settimeout(timeout)
         conn.connect(path)
         conn.sendall(request)
-        received = bytearray()
-        while len(received) < 512:
-            chunk = conn.recv(512 - len(received))
-            if not chunk:
-                break
-            received.extend(chunk)
-            if b"\n" in received:
-                break
-    line, sep, rest = received.partition(b"\n")
-    if not sep or rest or not line.startswith(b"NRP/1 " + request_id + b" OK "):
-        raise RuntimeError("unexpected local NRP response")
-    return bytes(line + b"\n")
+        with conn.makefile("rb") as stream:
+            for _ in range(32):
+                answer = stream.readline(4097)
+                if not answer.endswith(b"\n") or len(answer) > 4096:
+                    raise RuntimeError("incomplete local NRP response")
+                if answer.startswith(b"NRP/1 0 EVENT "):
+                    continue
+                if answer.startswith(b"NRP/1 " + request_id + b" OK") or \
+                        answer.startswith(b"NRP/1 " + request_id + b" ERR"):
+                    return answer
+                raise RuntimeError("unexpected local NRP response")
+    raise RuntimeError("too many local NRP events")
 
 
 class ObjectManager(ServiceInterface):
@@ -70,6 +71,10 @@ class ObjectManager(ServiceInterface):
             RESPONSE_PATH: {"org.bluez.GattCharacteristic1": {
                 "UUID": Variant("s", RESPONSE_UUID),
                 "Service": Variant("o", SERVICE_PATH),
+                "Flags": Variant("as", ["read"])}},
+            CHALLENGE_PATH: {"org.bluez.GattCharacteristic1": {
+                "UUID": Variant("s", CHALLENGE_UUID),
+                "Service": Variant("o", SERVICE_PATH),
                 "Flags": Variant("as", ["read"])}}
         }
 
@@ -88,9 +93,11 @@ class GattService(ServiceInterface):
 
 
 class RequestCharacteristic(ServiceInterface):
-    def __init__(self, reply):
+    def __init__(self, reply, auth):
         super().__init__("org.bluez.GattCharacteristic1")
         self.reply = reply
+        self.auth = auth
+        self.fragments = FragmentAssembler()
 
     @dbus_property(access=PropertyAccess.READ)
     def UUID(self) -> "s":
@@ -109,19 +116,35 @@ class RequestCharacteristic(ServiceInterface):
         if options.get("offset", Variant("q", 0)).value != 0 or \
                 options.get("prepare-authorize", Variant("b", False)).value:
             raise DBusError("org.bluez.Error.NotSupported", "fragmented writes are disabled")
+        device = options.get("device")
+        if device is None or options.get("type", Variant("s", "request")).value != "request":
+            raise DBusError("org.bluez.Error.NotAuthorized", "device request required")
         try:
-            answer = await asyncio.to_thread(forward_read_only, bytes(value))
+            frame = self.fragments.add(device.value, bytes(value))
+            if frame is None:
+                return
+            request = self.auth.accept(frame)
         except ValueError as exc:
-            raise DBusError("org.bluez.Error.NotPermitted", str(exc)) from exc
+            raise DBusError("org.bluez.Error.NotAuthorized", str(exc)) from exc
+        try:
+            answer = await asyncio.to_thread(forward_nrp, request)
         except (OSError, RuntimeError) as exc:
             raise DBusError("org.bluez.Error.Failed", type(exc).__name__) from exc
-        self.reply.value = answer
+        self.reply.set_reply(device.value, answer)
 
 
 class ResponseCharacteristic(ServiceInterface):
     def __init__(self):
         super().__init__("org.bluez.GattCharacteristic1")
-        self.value = b"NRP/1 0 ERR NO_REQUEST\n"
+        self.replies = {}
+
+    def set_reply(self, device, answer):
+        if len(self.replies) >= 16:
+            self.replies = {peer: item for peer, item in self.replies.items()
+                            if item[1] > time.monotonic()}
+            if len(self.replies) >= 16:
+                self.replies.pop(min(self.replies, key=lambda peer: self.replies[peer][1]))
+        self.replies[device] = (answer, time.monotonic() + 30)
 
     @dbus_property(access=PropertyAccess.READ)
     def UUID(self) -> "s":
@@ -137,10 +160,43 @@ class ResponseCharacteristic(ServiceInterface):
 
     @method()
     def ReadValue(self, options: "a{sv}") -> "ay":
+        device = options.get("device")
+        if device is None or device.value not in self.replies:
+            raise DBusError("org.bluez.Error.NotAuthorized", "no response for device")
+        value, expiry = self.replies[device.value]
+        if time.monotonic() > expiry:
+            self.replies.pop(device.value, None)
+            raise DBusError("org.bluez.Error.NotAuthorized", "response expired")
         offset = options.get("offset", Variant("q", 0)).value
-        if offset > len(self.value):
+        if offset > len(value):
             raise DBusError("org.bluez.Error.InvalidOffset", "past response")
-        return self.value[offset:]
+        return value[offset:]
+
+
+class ChallengeCharacteristic(ServiceInterface):
+    def __init__(self, auth):
+        super().__init__("org.bluez.GattCharacteristic1")
+        self.auth = auth
+
+    @dbus_property(access=PropertyAccess.READ)
+    def UUID(self) -> "s":
+        return CHALLENGE_UUID
+
+    @dbus_property(access=PropertyAccess.READ)
+    def Service(self) -> "o":
+        return SERVICE_PATH
+
+    @dbus_property(access=PropertyAccess.READ)
+    def Flags(self) -> "as":
+        return ["read"]
+
+    @method()
+    def ReadValue(self, options: "a{sv}") -> "ay":
+        value = self.auth.challenge_line()
+        offset = options.get("offset", Variant("q", 0)).value
+        if offset > len(value):
+            raise DBusError("org.bluez.Error.InvalidOffset", "past challenge")
+        return value[offset:]
 
 
 class Advertisement(ServiceInterface):
@@ -164,15 +220,17 @@ class Advertisement(ServiceInterface):
         return "Lynx"
 
 
-async def run(seconds):
+async def run(seconds, key_file):
     if os.geteuid() != 0:
         raise RuntimeError("root required for local NRP socket")
+    auth = Authenticator(load_key(key_file))
     bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
     response = ResponseCharacteristic()
     bus.export(ROOT, ObjectManager())
     bus.export(SERVICE_PATH, GattService())
-    bus.export(REQUEST_PATH, RequestCharacteristic(response))
+    bus.export(REQUEST_PATH, RequestCharacteristic(response, auth))
     bus.export(RESPONSE_PATH, response)
+    bus.export(CHALLENGE_PATH, ChallengeCharacteristic(auth))
     bus.export(ADV_PATH, Advertisement())
     manager = bus.get_proxy_object("org.bluez", "/org/bluez/hci0",
                                    await bus.introspect("org.bluez", "/org/bluez/hci0"))
@@ -208,7 +266,8 @@ async def run(seconds):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seconds", type=int, required=True)
+    parser.add_argument("--nexus-key-file", default="/etc/lynx/nrp-nexus.key")
     args = parser.parse_args()
     if not 0 <= args.seconds <= 120:
         parser.error("seconds must be 0..120; 0 runs until SIGTERM")
-    asyncio.run(run(args.seconds))
+    asyncio.run(run(args.seconds, args.nexus_key_file))

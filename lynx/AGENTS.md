@@ -2,6 +2,9 @@
 
 Lynx is the OnePlus Nord 3 CPH2493 / MT6983. All project files, tools, build
 artifacts, test fixtures, and raw captures belong under `/noobia/lynx`.
+The current code and hardware entry points are indexed in
+`/noobia/docs/noobs/LYNX.md`; the wider repository map is
+`/noobia/docs/CODE-MAP.md`. Keep those pointers current as interfaces change.
 
 Noob explicitly asks that timing always be considered. For hardware trials:
 

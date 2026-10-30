@@ -1,9 +1,18 @@
 # Lynx hardware and Noob runtime status
 
-Lynx is a OnePlus Nord 3 CPH2493, MT6983, running native Alpine on the V50
+Lynx is a OnePlus Nord 3 CPH2493, MT6983, running native Alpine on the V52
 boot image. The runtime speaks the Iris-compatible NRP/1 protocol at
 `192.168.100.107:4243`, currently accepting Nexus (`192.168.100.106`).
-No boot partition changed during the hardware work described here.
+V52 changed only `boot_a` from the working V50 image; its exact V50 rollback
+remains available. The successful shared-radio calibration, HCI response,
+Nexus Bluetooth connection under Lynx's factory address, and native GNSS NMEA
+evidence are in
+[LYNX-CONNECTIVITY-PRECAL.md](LYNX-CONNECTIVITY-PRECAL.md).
+That report also records a bounded standard `hci0` bridge and a successful
+BlueZ power-on trial. The bridge and BlueZ are not started automatically.
+The later bounded GATT trial exchanged NRP/1 `PING`/`PONG` with Nexus over
+BLE without pairing. See [LYNX-BLUETOOTH-NRP.md](LYNX-BLUETOOTH-NRP.md) for
+the receipt and service boundary; this endpoint is still transient.
 
 | Hardware | Current Linux evidence | Noob interface |
 | --- | --- | --- |
@@ -26,6 +35,30 @@ reply: percent, millidegrees Celsius, signed milliamps, and millivolts.
 Invalid gauge/error readings return `NATIVE_ERROR` rather than a plausible
 number. `AUDIO_READY` checks the ALSA card and loaded TFA98xx firmware.
 
+Read-only `MIC_STATUS`, `FLASH_STATUS`, `GNSS_STATUS`, `BT_STATUS`, and
+`CAMERA_STATUS` calls (IDs 390–394) now share their inventory with Lynx's
+local JSON-stdin wrappers. They report an interface separately from functional
+validation; Bluetooth discovery and connection work on V52. GNSS emitted
+checksum-valid NMEA, but its last GGA fix quality was 0 and no position has
+been measured.
+See [LYNX-HARDWARE-TOOLS.md](LYNX-HARDWARE-TOOLS.md) for the interface.
+The read-only V52 inventory was updated: `BT_STATUS` now reports
+the live `/dev/stpbt` interface, `GNSS_STATUS` reports the NMEA trial, and
+both keep `validated=0` until their full functions are established. Receipt:
+`logs/v52-hardware-evidence-1793368998197318672.json`.
+`MIC_LEVEL` (ID 395) now takes a one-second, level-only sample through the
+tested ALSA route and restores the mixer. Local and NRP/1 calls succeeded;
+no PCM was saved. An external clap validated its acoustic response.
+
+The local display now has Console and Status buttons along the bottom. Noob's
+physical taps opened both pages and returned home. Console now has a basic
+touch keyboard and output feed backed by an unprivileged shell. Noob has
+confirmed the horizontal and vertical console scroll bars work. The Status
+page shows validated pack and SoC readings,
+Wi-Fi, local service/driver indicators, and explicit unavailable labels for
+hardware still under development. The expanded page is installed on V50;
+see [LYNX-SCREEN-NAVIGATION.md](LYNX-SCREEN-NAVIGATION.md).
+
 The stock module bundle contains `bt_drv_6983.ko`, `gps_drv_dl_v050.ko`, `nfc_i2c.ko`,
 `imgsensor.ko`, `flashlight.ko`, and video codec modules. Their presence in
 firmware does not establish working hardware. On the observed Alpine boot,
@@ -38,6 +71,12 @@ physical units and optical response remain unverified.
 The four fusion sensors have also been sampled, with the sensor manager idle
 after each trial. Their gain metadata is 1,000,000; no physical calibration
 or coordinate-frame validation has been done.
+On 2026-10-29, NRP/1 live calls returned accelerometer, gyroscope,
+magnetometer, proximity, and all four fusion vectors after the Fastboot
+recovery. The ambient light call returned `value=0`, so its current optical
+response remains unverified. `TOUCH_STATUS` reported the panel registered,
+with no finger down and no dropped events. Receipt:
+`logs/v50-visible-sensor-check-1793225599863859026.json`.
 The next driver trials should proceed one stack
 at a time, with boot identity checks, module dependency review, a read-only
 probe first, and rollback over SSH. The detailed test sequence is in
@@ -62,8 +101,9 @@ Lynx's current ALSA controls, so that test route cannot be applied as-is.
 
 The exact `lm3642_22823` flashlight driver did bind during a RAM-only probe,
 but unloading the `flashlight` core timed out and Lynx lost Wi-Fi contact.
-No LED command was sent. The flashlight trial is paused pending recovery and
-review of the unload path; see
+No LED command was sent. V50 was recovered with `fastboot reboot` and verified
+healthy, with the temporary modules gone. The flashlight trial remains paused
+pending review of the unload path; see
 [LYNX-REMAINING-HARDWARE-TRIALS.md](LYNX-REMAINING-HARDWARE-TRIALS.md).
 
 The audio service stores the exact 75-module dependency plan and corrected

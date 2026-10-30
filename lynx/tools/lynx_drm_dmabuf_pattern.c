@@ -15,7 +15,10 @@
 
 #define _POSIX_C_SOURCE 200809L
 #include <errno.h>
+#include <arpa/inet.h>
+#include <ctype.h>
 #include <fcntl.h>
+#include <ifaddrs.h>
 #include <inttypes.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-heap.h>
@@ -29,6 +32,9 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
 #include <xf86drm.h>
@@ -46,6 +52,8 @@
 #define BRIGHTNESS_DEVICE "/sys/kernel/oplus_display/oplus_brightness"
 #define FRAME_DIR "/var/lib/lynx-display/frames"
 #define SELECTION_FILE "/var/lib/lynx-display/selection"
+#define CONSOLE_SNAPSHOT "/run/lynx-console/snapshot.txt"
+#define CONSOLE_SOCKET "/run/lynx-console/control.sock"
 #define MAX_SCENE_FRAMES 64
 
 static volatile sig_atomic_t stop_requested;
@@ -133,6 +141,36 @@ struct glyph {
 static const struct glyph font[] = {
 	{' ', {0, 0, 0, 0, 0, 0, 0}},
 	{'%', {0x19, 0x1a, 0x04, 0x04, 0x0b, 0x13, 0}},
+	{'.', {0, 0, 0, 0, 0, 0x0c, 0x0c}},
+	{'-', {0, 0, 0, 0x1f, 0, 0, 0}},
+	{'/', {0x01, 0x02, 0x02, 0x04, 0x08, 0x08, 0x10}},
+	{'?', {0x0e, 0x11, 0x01, 0x02, 0x04, 0, 0x04}},
+	{'!', {0x04, 0x04, 0x04, 0x04, 0x04, 0, 0x04}},
+	{'\\', {0x10, 0x08, 0x08, 0x04, 0x02, 0x02, 0x01}},
+	{'{', {0x03, 0x04, 0x04, 0x18, 0x04, 0x04, 0x03}},
+	{'}', {0x18, 0x04, 0x04, 0x03, 0x04, 0x04, 0x18}},
+	{'_', {0, 0, 0, 0, 0, 0, 0x1f}},
+	{'=', {0, 0x1f, 0, 0x1f, 0, 0, 0}},
+	{'+', {0, 0x04, 0x04, 0x1f, 0x04, 0x04, 0}},
+	{'*', {0, 0x15, 0x0e, 0x1f, 0x0e, 0x15, 0}},
+	{'$', {0x04, 0x0f, 0x14, 0x0e, 0x05, 0x1e, 0x04}},
+	{'<', {0x02, 0x04, 0x08, 0x10, 0x08, 0x04, 0x02}},
+	{'>', {0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08}},
+	{'(', {0x02, 0x04, 0x08, 0x08, 0x08, 0x04, 0x02}},
+	{')', {0x08, 0x04, 0x02, 0x02, 0x02, 0x04, 0x08}},
+	{'[', {0x0e, 0x08, 0x08, 0x08, 0x08, 0x08, 0x0e}},
+	{']', {0x0e, 0x02, 0x02, 0x02, 0x02, 0x02, 0x0e}},
+	{'|', {0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04}},
+	{',', {0, 0, 0, 0, 0x0c, 0x0c, 0x08}},
+	{';', {0, 0x0c, 0x0c, 0, 0x0c, 0x0c, 0x08}},
+	{'\'', {0x04, 0x04, 0x08, 0, 0, 0, 0}},
+	{'"', {0x0a, 0x0a, 0, 0, 0, 0, 0}},
+	{'#', {0x0a, 0x1f, 0x0a, 0x1f, 0x0a, 0, 0}},
+	{'@', {0x0e, 0x11, 0x17, 0x15, 0x17, 0x10, 0x0e}},
+	{'&', {0x0c, 0x12, 0x14, 0x08, 0x15, 0x12, 0x0d}},
+	{'^', {0x04, 0x0a, 0x11, 0, 0, 0, 0}},
+	{'~', {0, 0, 0x09, 0x16, 0, 0, 0}},
+	{'`', {0x08, 0x04, 0x02, 0, 0, 0, 0}},
 	{':', {0, 0x04, 0x04, 0, 0x04, 0x04, 0}},
 	{'0', {0x0e, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0e}},
 	{'1', {0x04, 0x0c, 0x04, 0x04, 0x04, 0x04, 0x0e}},
@@ -146,17 +184,56 @@ static const struct glyph font[] = {
 	{'9', {0x0e, 0x11, 0x11, 0x0f, 0x01, 0x01, 0x0e}},
 	{'A', {0x0e, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11}},
 	{'B', {0x1e, 0x11, 0x11, 0x1e, 0x11, 0x11, 0x1e}},
+	{'C', {0x0e, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0e}},
+	{'D', {0x1e, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1e}},
 	{'E', {0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x1f}},
+	{'F', {0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x10}},
+	{'G', {0x0e, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0e}},
+	{'H', {0x11, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11}},
 	{'I', {0x0e, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0e}},
+	{'J', {0x07, 0x02, 0x02, 0x02, 0x12, 0x12, 0x0c}},
+	{'K', {0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11}},
 	{'L', {0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1f}},
+	{'M', {0x11, 0x1b, 0x15, 0x15, 0x11, 0x11, 0x11}},
 	{'N', {0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11}},
+	{'O', {0x0e, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e}},
 	{'P', {0x1e, 0x11, 0x11, 0x1e, 0x10, 0x10, 0x10}},
+	{'Q', {0x0e, 0x11, 0x11, 0x11, 0x15, 0x12, 0x0d}},
 	{'R', {0x1e, 0x11, 0x11, 0x1e, 0x14, 0x12, 0x11}},
+	{'S', {0x0f, 0x10, 0x10, 0x0e, 0x01, 0x01, 0x1e}},
 	{'T', {0x1f, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04}},
 	{'U', {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e}},
 	{'V', {0x11, 0x11, 0x11, 0x11, 0x0a, 0x0a, 0x04}},
+	{'W', {0x11, 0x11, 0x11, 0x15, 0x15, 0x15, 0x0a}},
 	{'X', {0x11, 0x11, 0x0a, 0x04, 0x0a, 0x11, 0x11}},
 	{'Y', {0x11, 0x11, 0x0a, 0x04, 0x04, 0x04, 0x04}},
+	{'Z', {0x1f, 0x01, 0x02, 0x04, 0x08, 0x10, 0x1f}},
+	{'a', {0, 0, 0x0e, 0x01, 0x0f, 0x11, 0x0f}},
+	{'b', {0x10, 0x10, 0x1e, 0x11, 0x11, 0x11, 0x1e}},
+	{'c', {0, 0, 0x0e, 0x11, 0x10, 0x11, 0x0e}},
+	{'d', {0x01, 0x01, 0x0f, 0x11, 0x11, 0x11, 0x0f}},
+	{'e', {0, 0, 0x0e, 0x11, 0x1f, 0x10, 0x0e}},
+	{'f', {0x06, 0x08, 0x1e, 0x08, 0x08, 0x08, 0x08}},
+	{'g', {0, 0, 0x0f, 0x11, 0x0f, 0x01, 0x0e}},
+	{'h', {0x10, 0x10, 0x1e, 0x11, 0x11, 0x11, 0x11}},
+	{'i', {0x04, 0, 0x0c, 0x04, 0x04, 0x04, 0x0e}},
+	{'j', {0x02, 0, 0x06, 0x02, 0x02, 0x12, 0x0c}},
+	{'k', {0x10, 0x10, 0x12, 0x14, 0x18, 0x14, 0x12}},
+	{'l', {0x0c, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0e}},
+	{'m', {0, 0, 0x1a, 0x15, 0x15, 0x15, 0x15}},
+	{'n', {0, 0, 0x1e, 0x11, 0x11, 0x11, 0x11}},
+	{'o', {0, 0, 0x0e, 0x11, 0x11, 0x11, 0x0e}},
+	{'p', {0, 0, 0x1e, 0x11, 0x1e, 0x10, 0x10}},
+	{'q', {0, 0, 0x0f, 0x11, 0x0f, 0x01, 0x01}},
+	{'r', {0, 0, 0x16, 0x19, 0x10, 0x10, 0x10}},
+	{'s', {0, 0, 0x0f, 0x10, 0x0e, 0x01, 0x1e}},
+	{'t', {0x08, 0x08, 0x1e, 0x08, 0x08, 0x09, 0x06}},
+	{'u', {0, 0, 0x11, 0x11, 0x11, 0x13, 0x0d}},
+	{'v', {0, 0, 0x11, 0x11, 0x11, 0x0a, 0x04}},
+	{'w', {0, 0, 0x11, 0x11, 0x15, 0x15, 0x0a}},
+	{'x', {0, 0, 0x11, 0x0a, 0x04, 0x0a, 0x11}},
+	{'y', {0, 0, 0x11, 0x11, 0x0f, 0x01, 0x0e}},
+	{'z', {0, 0, 0x1f, 0x02, 0x04, 0x08, 0x1f}},
 };
 
 static void rectangle(uint32_t *pixels, unsigned int x, unsigned int y,
@@ -177,6 +254,9 @@ static const struct glyph *find_glyph(char letter)
 {
 	for (size_t i = 0; i < sizeof(font) / sizeof(font[0]); i++)
 		if (font[i].letter == letter)
+			return &font[i];
+	for (size_t i = 0; i < sizeof(font) / sizeof(font[0]); i++)
+		if (font[i].letter == '?')
 			return &font[i];
 	return &font[0];
 }
@@ -383,12 +463,493 @@ static int paint_lynx_portrait(uint32_t *pixels, const char *name, int capacity)
 	return 0;
 }
 
-static int render_preview(const char *name, const char *output)
+enum lynx_page { PAGE_HOME, PAGE_CONSOLE, PAGE_STATUS };
+static char console_input[161];
+static size_t console_input_length;
+static bool console_uppercase, console_symbols, console_send_failed;
+static unsigned int console_output_offset, console_input_offset;
+static unsigned int console_history_count, console_history_offset;
+
+static const char *console_letter_rows[] = {
+	"1234567890", "qwertyuiop", "asdfghjkl-", "zxcvbnm./_"
+};
+static const char *console_symbol_rows[] = {
+	"!@#$%^&*()", "[]{}\\|;:'\"", "+=<>?,.`~/", "1234567890"
+};
+
+static unsigned int console_sequence(void)
+{
+	FILE *stream = fopen(CONSOLE_SNAPSHOT, "r");
+	unsigned int sequence = 0;
+	if (stream) {
+		if (fscanf(stream, "SEQ %u", &sequence) != 1)
+			sequence = 0;
+		fclose(stream);
+	}
+	return sequence;
+}
+
+static int console_send(void)
+{
+	if (!console_input_length)
+		return 0;
+	int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+	if (fd < 0)
+		return -1;
+	struct sockaddr_un address = { .sun_family = AF_UNIX };
+	snprintf(address.sun_path, sizeof(address.sun_path), "%s", CONSOLE_SOCKET);
+	struct timeval timeout = { .tv_sec = 1 };
+	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	int result = -1;
+	if (connect(fd, (struct sockaddr *)&address, sizeof(address)) == 0) {
+		char request[330], response[16];
+		size_t n = 0;
+		memcpy(request, "SEND ", 5);
+		n = 5;
+		static const char hex[] = "0123456789abcdef";
+		for (size_t i = 0; i < console_input_length; i++) {
+			unsigned char ch = (unsigned char)console_input[i];
+			request[n++] = hex[ch >> 4];
+			request[n++] = hex[ch & 15];
+		}
+		request[n++] = '\n';
+		if (write(fd, request, n) == (ssize_t)n) {
+			ssize_t got = read(fd, response, sizeof(response));
+			if (got >= 3 && !memcmp(response, "OK\n", 3))
+				result = 0;
+		}
+	}
+	close(fd);
+	if (!result) {
+		console_input_length = 0;
+		console_input[0] = 0;
+		console_input_offset = 0;
+	}
+	return result;
+}
+
+static void console_key(unsigned int x, unsigned int y)
+{
+	console_send_failed = false;
+	if (x >= 1185 && x < 1235 && y >= 450 && y < 1370) {
+		unsigned int maximum = console_history_count > 14 ?
+			console_history_count - 14 : 0;
+		console_history_offset = maximum - (y - 450) * maximum / 919U;
+		return;
+	}
+	if (x >= 75 && x < 1165 && y >= 1380 && y < 1425) {
+		console_output_offset = (x - 75) * 55U / 1089U;
+		return;
+	}
+	if (x >= 75 && x < 1165 && y >= 1605 && y < 1645) {
+		unsigned int maximum = console_input_length > 40 ?
+			(unsigned int)console_input_length - 40U : 0;
+		console_input_offset = (x - 75) * maximum / 1089U;
+		return;
+	}
+	bool edited = false;
+	if (y >= 1650 && y < 2280 && x >= 55) {
+		unsigned int row = (y - 1650) / 160;
+		unsigned int offset = (y - 1650) % 160;
+		unsigned int column = (x - 55) / 113;
+		if (row < 4 && offset < 145 && column < 10 &&
+		    (x - 55) % 113 < 105 && console_input_length < 160) {
+			char ch = (console_symbols ? console_symbol_rows[row] :
+				console_letter_rows[row])[column];
+			if (console_uppercase && !console_symbols)
+				ch = (char)toupper((unsigned char)ch);
+			console_input[console_input_length++] = ch;
+			console_input[console_input_length] = 0;
+			edited = true;
+		}
+	} else if (y >= 2290 && y < 2450) {
+		if (x >= 55 && x < 185)
+			console_uppercase = !console_uppercase;
+		else if (x >= 195 && x < 325)
+			console_symbols = !console_symbols;
+		else if (x >= 335 && x < 755 && console_input_length < 160) {
+			console_input[console_input_length++] = ' ';
+			console_input[console_input_length] = 0;
+			edited = true;
+		} else if (x >= 765 && x < 945 && console_input_length) {
+			console_input[--console_input_length] = 0;
+			edited = true;
+		} else if (x >= 955 && x < 1185)
+			console_send_failed = console_send() < 0;
+	}
+	if (edited)
+		console_input_offset = console_input_length > 40 ?
+			(unsigned int)console_input_length - 40U : 0;
+}
+
+static int self_test_console_keys(void)
+{
+	console_input_length = 0;
+	console_uppercase = false;
+	console_symbols = false;
+	console_input[0] = 0;
+	console_key(55, 1810);  /* q */
+	console_key(55, 2290);  /* shift */
+	console_key(168, 1810); /* W */
+	console_key(195, 2290); /* symbols */
+	console_key(959, 1970); /* ~ */
+	console_key(507, 1810); /* backslash */
+	console_key(335, 2290); /* space */
+	console_key(765, 2290); /* backspace */
+	console_key(1164, 1390); /* output scroll */
+	int good = !strcmp(console_input, "qW~\\") && console_input_length == 4 &&
+		console_uppercase && console_symbols && console_output_offset == 55;
+	memset(console_input, 'x', 80);
+	console_input[80] = 0;
+	console_input_length = 80;
+	console_key(1164, 1610); /* input to far right */
+	good = good && console_input_offset == 40;
+	console_key(75, 1610); /* input to far left */
+	good = good && console_input_offset == 0;
+	console_key(55, 1810); /* typing follows the end */
+	good = good && console_input_length == 81 && console_input_offset == 41;
+	console_history_count = 64;
+	console_key(1190, 450); /* oldest output */
+	good = good && console_history_offset == 50;
+	console_key(1190, 1369); /* latest output */
+	good = good && console_history_offset == 0;
+	console_key(1190, 910); /* middle of the output history */
+	good = good && console_history_offset > 0 && console_history_offset < 50;
+	printf("console keys %s\n", good ? "PASS" : "FAIL");
+	return good ? 0 : 1;
+}
+
+static void console_button(uint32_t *pixels, unsigned int x,
+			   unsigned int y, unsigned int width, const char *label)
+{
+	rectangle(pixels, x, y, width, 145, 0x00334e5b);
+	draw_text(pixels, label, x + (width < 150 ? 6 : 18), y + 43,
+		  width < 150 ? 4 : width < 200 ? 5 : 6, 0x00f5f8fa);
+}
+
+static void console_scrollbar(uint32_t *pixels, unsigned int y,
+			      unsigned int offset, unsigned int maximum,
+			      unsigned int thumb_width)
+{
+	const unsigned int x = 75, width = 1090;
+	if (thumb_width > width)
+		thumb_width = width;
+	rectangle(pixels, x, y, width, 45, 0x00334e5b);
+	unsigned int position = maximum ?
+		(width - thumb_width) * offset / maximum : 0;
+	rectangle(pixels, x + position, y, thumb_width, 45, 0x0009dcc4);
+}
+
+static void console_vertical_scrollbar(uint32_t *pixels, unsigned int count)
+{
+	const unsigned int x = 1185, y = 450, height = 920;
+	const unsigned int maximum = count > 14 ? count - 14 : 0;
+	unsigned int thumb = count > 14 ? height * 14 / count : height;
+	if (thumb < 80)
+		thumb = 80;
+	unsigned int position = maximum ?
+		(height - thumb) * (maximum - console_history_offset) / maximum : 0;
+	rectangle(pixels, x, y, 50, height, 0x00334e5b);
+	rectangle(pixels, x, y + position, 50, thumb, 0x0009dcc4);
+}
+
+static void paint_console(uint32_t *pixels)
+{
+	const uint32_t white = 0x00f5f8fa, teal = 0x0009dcc4;
+	const uint32_t amber = 0x00edb961, red = 0x00ff8d86;
+	draw_text(pixels, "STDOUT", 75, 365, 5, white);
+	draw_text(pixels, "STDERR", 365, 365, 5, red);
+	draw_text(pixels, "STDWARN", 655, 365, 5, amber);
+	struct { char kind; char text[101]; } rows[64] = { 0 };
+	unsigned int count = 0;
+	FILE *stream = fopen(CONSOLE_SNAPSHOT, "r");
+	if (stream) {
+		char line[256];
+		fgets(line, sizeof(line), stream);
+		while (fgets(line, sizeof(line), stream)) {
+			if (line[1] != '|')
+				continue;
+			char kind = line[0];
+			char *message = line + 2;
+			message[strcspn(message, "\r\n")] = 0;
+			unsigned int slot = count < 64 ? count : 63;
+			if (count >= 64)
+				memmove(rows, rows + 1, sizeof(rows[0]) * 63);
+			rows[slot].kind = kind;
+			snprintf(rows[slot].text, sizeof(rows[slot].text), "%s", message);
+			count++;
+		}
+		fclose(stream);
+	} else {
+		draw_text(pixels, "CONSOLE STARTING", 75, 470, 5, amber);
+	}
+	if (count > 64)
+		count = 64;
+	console_history_count = count;
+	unsigned int visible = count > 14 ? 14 : count;
+	unsigned int maximum = count - visible;
+	if (console_history_offset > maximum)
+		console_history_offset = maximum;
+	unsigned int first = maximum - console_history_offset;
+	for (unsigned int i = 0; i < visible; i++) {
+		unsigned int row = first + i;
+		uint32_t color = rows[row].kind == 'E' ? red :
+			rows[row].kind == 'W' ? amber : rows[row].kind == 'I' ? teal : white;
+		char text[46] = { 0 };
+		if (console_output_offset < strlen(rows[row].text))
+			snprintf(text, sizeof(text), "%.*s", 45,
+				 rows[row].text + console_output_offset);
+		draw_text(pixels, text, 75, 460 + i * 67, 4, color);
+	}
+	console_vertical_scrollbar(pixels, count);
+	console_scrollbar(pixels, 1390, console_output_offset, 55, 490);
+	rectangle(pixels, 55, 1450, 1130, 145, 0x00253b49);
+	draw_text(pixels, "STDIN", 75, 1471, 4, teal);
+	char shown[41] = { 0 };
+	snprintf(shown, sizeof(shown), "%.*s", 40,
+		 console_input + console_input_offset);
+	draw_text(pixels, shown, 75, 1530, 5, white);
+	if (console_send_failed)
+		draw_text(pixels, "SEND FAILED", 820, 1471, 4, red);
+	unsigned int input_max = console_input_length > 40 ?
+		(unsigned int)console_input_length - 40U : 0;
+	unsigned int thumb = console_input_length > 40 ?
+		1090U * 40U / (unsigned int)console_input_length : 1090U;
+	console_scrollbar(pixels, 1600, console_input_offset, input_max, thumb);
+	for (unsigned int row = 0; row < 4; row++) {
+		for (unsigned int column = 0; column < 10; column++) {
+			char label[] = { (console_symbols ? console_symbol_rows[row] :
+				console_letter_rows[row])[column], 0 };
+			if (!console_symbols)
+				label[0] = (char)toupper((unsigned char)label[0]);
+			console_button(pixels, 55 + column * 113,
+				       1650 + row * 160, 105, label);
+		}
+	}
+	console_button(pixels, 55, 2290, 130,
+		       console_uppercase ? "UPPER" : "LOWER");
+	console_button(pixels, 195, 2290, 130,
+		       console_symbols ? "ABC" : "SYM");
+	console_button(pixels, 335, 2290, 420, "SPACE");
+	console_button(pixels, 765, 2290, 180, "BACK");
+	console_button(pixels, 955, 2290, 230, "ENTER");
+}
+
+static int read_integer(const char *path)
+{
+	FILE *stream = fopen(path, "r");
+	int value;
+	if (!stream)
+		return -1;
+	int found = fscanf(stream, "%d", &value);
+	fclose(stream);
+	return found == 1 ? value : -1;
+}
+
+static bool file_contains(const char *path, const char *needle)
+{
+	FILE *stream = fopen(path, "r");
+	char line[256];
+	if (!stream)
+		return false;
+	bool found = false;
+	while (fgets(line, sizeof(line), stream)) {
+		if (strstr(line, needle)) {
+			found = true;
+			break;
+		}
+	}
+	fclose(stream);
+	return found;
+}
+
+static bool pid_matches(const char *pidfile, const char *needle)
+{
+	int pid = read_integer(pidfile);
+	if (pid <= 1 || kill(pid, 0) < 0)
+		return false;
+	char path[64], command[512];
+	snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
+	FILE *stream = fopen(path, "rb");
+	if (!stream)
+		return false;
+	size_t size = fread(command, 1, sizeof(command) - 1, stream);
+	fclose(stream);
+	for (size_t i = 0; i < size; i++)
+		if (!command[i])
+			command[i] = ' ';
+	command[size] = 0;
+	return strstr(command, needle) != NULL;
+}
+
+static void battery_snapshot(int *capacity, int *temp_mc, int *current_ma,
+			     int *voltage_mv)
+{
+	*capacity = *temp_mc = *current_ma = *voltage_mv = -1;
+	FILE *stream = fopen("/sys/bus/i2c/devices/7-0055/battery_snapshot", "r");
+	char line[160];
+	int capacity_error = 1, temperature_error = 1, current_error = 1;
+	int voltage_error = 1;
+	if (!stream)
+		return;
+	while (fgets(line, sizeof(line), stream)) {
+		sscanf(line, "capacity_percent=%d", capacity);
+		sscanf(line, "temperature_millidegrees_celsius=%d", temp_mc);
+		sscanf(line, "gauge_current_ma_signed=%d", current_ma);
+		sscanf(line, "pack_voltage_mv=%d", voltage_mv);
+		sscanf(line, "capacity_error=%d", &capacity_error);
+		sscanf(line, "temperature_error=%d", &temperature_error);
+		sscanf(line, "current_error=%d", &current_error);
+		sscanf(line, "voltage_error=%d", &voltage_error);
+	}
+	fclose(stream);
+	if (capacity_error || *capacity < 0 || *capacity > 100)
+		*capacity = -1;
+	if (temperature_error || *temp_mc < -20000 || *temp_mc > 80000)
+		*temp_mc = -1;
+	if (current_error || *current_ma < -10000 || *current_ma > 10000)
+		*current_ma = -1;
+	if (voltage_error || *voltage_mv < 5000 || *voltage_mv > 10000)
+		*voltage_mv = -1;
+}
+
+static void wifi_address(char *output, size_t size)
+{
+	snprintf(output, size, "UNAVAILABLE");
+	struct ifaddrs *interfaces = NULL;
+	if (getifaddrs(&interfaces) < 0)
+		return;
+	for (struct ifaddrs *item = interfaces; item; item = item->ifa_next) {
+		if (item->ifa_addr && !strcmp(item->ifa_name, "wlan0") &&
+		    item->ifa_addr->sa_family == AF_INET) {
+			inet_ntop(AF_INET,
+				&((struct sockaddr_in *)item->ifa_addr)->sin_addr,
+				output, size);
+			break;
+		}
+	}
+	freeifaddrs(interfaces);
+}
+
+static void nav_buttons(uint32_t *pixels, enum lynx_page page)
+{
+	const uint32_t dark = 0x00121c29, teal = 0x0009dcc4;
+	const uint32_t white = 0x00f5f8fa, muted = 0x00546572;
+	rectangle(pixels, 0, 2510, WIDTH, 262, dark);
+	rectangle(pixels, 50, 2550, 545, 160,
+		  page == PAGE_CONSOLE ? teal : muted);
+	rectangle(pixels, 645, 2550, 545, 160,
+		  page == PAGE_STATUS ? teal : muted);
+	draw_text(pixels, "CONSOLE", 123, 2601, 7, white);
+	draw_text(pixels, "STATUS", 790, 2601, 7, white);
+}
+
+static void status_item(uint32_t *pixels, unsigned int column,
+			unsigned int row, const char *label, const char *value)
+{
+	unsigned int x = column ? 660 : 75;
+	unsigned int y = 430 + row * 205;
+	draw_text(pixels, label, x, y, 5, 0x007d94a5);
+	draw_text(pixels, value, x, y + 72, 6, 0x00f5f8fa);
+}
+
+static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
+			   const char *pose, int capacity)
+{
+	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa;
+	const uint32_t teal = 0x0009dcc4;
+	char value[48];
+	if (page == PAGE_HOME) {
+		if (paint_lynx_portrait(pixels, pose, capacity) < 0)
+			return -1;
+		nav_buttons(pixels, page);
+		return 0;
+	}
+	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
+		pixels[i] = dark;
+	rectangle(pixels, 0, 0, WIDTH, 28, teal);
+	draw_text(pixels, page == PAGE_CONSOLE ? "CONSOLE" : "STATUS",
+		  85, 155, 13, white);
+	rectangle(pixels, 75, 340, 1090, 5, teal);
+	if (page == PAGE_CONSOLE) {
+		paint_console(pixels);
+		nav_buttons(pixels, page);
+		return 0;
+	}
+	int pack_capacity, pack_temp, pack_current, pack_voltage;
+	battery_snapshot(&pack_capacity, &pack_temp, &pack_current, &pack_voltage);
+	if (pack_capacity >= 0)
+		snprintf(value, sizeof(value), "%d%%", pack_capacity);
+	else
+		snprintf(value, sizeof(value), "UNAVAILABLE");
+	status_item(pixels, 0, 0, "BATTERY", value);
+	if (pack_temp >= 0)
+		snprintf(value, sizeof(value), "%d.%dC", pack_temp / 1000,
+			 (pack_temp % 1000) / 100);
+	else
+		snprintf(value, sizeof(value), "UNAVAILABLE");
+	status_item(pixels, 0, 1, "PACK TEMP", value);
+	int soc_temp = file_contains("/sys/class/thermal/thermal_zone0/type", "soc_max") ?
+		read_integer("/sys/class/thermal/thermal_zone0/temp") : -1;
+	if (soc_temp >= 0 && soc_temp < 100000)
+		snprintf(value, sizeof(value), "%d.%dC", soc_temp / 1000,
+			 (soc_temp % 1000) / 100);
+	else
+		snprintf(value, sizeof(value), "UNAVAILABLE");
+	status_item(pixels, 0, 2, "SOC TEMP", value);
+	if (pack_current != -1)
+		snprintf(value, sizeof(value), "%dMA", pack_current);
+	else
+		snprintf(value, sizeof(value), "UNAVAILABLE");
+	status_item(pixels, 0, 3, "CURRENT", value);
+	if (pack_voltage >= 0)
+		snprintf(value, sizeof(value), "%dMV", pack_voltage);
+	else
+		snprintf(value, sizeof(value), "UNAVAILABLE");
+	status_item(pixels, 0, 4, "VOLTAGE", value);
+	status_item(pixels, 0, 5, "CHARGING",
+		    file_contains("/sys/class/power_supply/11e01000.i2c:mt6375@34:chg/status",
+				  "Charging") ? "YES" : "NO");
+	wifi_address(value, sizeof(value));
+	status_item(pixels, 0, 6, "WIFI", value);
+	status_item(pixels, 0, 7, "AUDIO CARD",
+		    file_contains("/proc/asound/cards", "mt6983mt6338") ? "PRESENT" : "UNAVAILABLE");
+	status_item(pixels, 0, 8, "SSH",
+		    pid_matches("/run/lynx/alpine-dropbear-2222.pid", "dropbear") ?
+		    "RUNNING" : "UNAVAILABLE");
+	status_item(pixels, 0, 9, "TOUCH",
+		    file_contains("/sys/class/input/input0/name", "touchpanel") &&
+		    access("/dev/input/event0", R_OK) == 0 ?
+		    "PRESENT" : "UNAVAILABLE");
+	status_item(pixels, 1, 0, "HAPTIC",
+		    access("/sys/class/leds/vibrator/oplus_duration", R_OK) == 0 ?
+		    "PRESENT" : "UNAVAILABLE");
+	status_item(pixels, 1, 1, "MOTION",
+		    file_contains("/proc/hf_manager", "bmi2xy acc") ? "REGISTERED" : "UNAVAILABLE");
+	status_item(pixels, 1, 2, "COMPASS",
+		    file_contains("/proc/hf_manager", "akm09918 mag") ? "REGISTERED" : "UNAVAILABLE");
+	status_item(pixels, 1, 3, "PROXIMITY",
+		    file_contains("/proc/hf_manager", "tcs3701 ps") ? "REGISTERED" : "UNAVAILABLE");
+	status_item(pixels, 1, 4, "LIGHT",
+		    file_contains("/proc/hf_manager", "tcs3408 als") ? "REGISTERED" : "UNAVAILABLE");
+	status_item(pixels, 1, 5, "GPS", "UNAVAILABLE");
+	status_item(pixels, 1, 6, "BLUETOOTH", "UNAVAILABLE");
+	status_item(pixels, 1, 7, "CAMERA", "UNAVAILABLE");
+	status_item(pixels, 1, 8, "FLASHLIGHT", "UNAVAILABLE");
+	status_item(pixels, 1, 9, "NOOB NRP",
+		    pid_matches("/run/lynx/noobd.pid", "lynx-noobd") ?
+		    "RUNNING" : "UNAVAILABLE");
+	nav_buttons(pixels, page);
+	return 0;
+}
+
+static int render_preview(const char *name, const char *output,
+			  enum lynx_page page)
 {
 	uint32_t *pixels = malloc((size_t)WIDTH * HEIGHT * sizeof(uint32_t));
 	if (!pixels)
 		return 1;
-	if (paint_lynx_portrait(pixels, name, read_battery_percent()) < 0) {
+	if (paint_lynx_page(pixels, page, name, read_battery_percent()) < 0) {
 		fail("preview portrait");
 		free(pixels);
 		return 1;
@@ -622,8 +1183,18 @@ static int atomic_present_fb(int fd, uint32_t plane, uint32_t fb)
 	return rc;
 }
 
-static int wait_for_touch_or_timeout(int fd, int timeout_ms)
+struct touch_state {
+	int slot;
+	int x, y;
+	bool down, have_x, have_y;
+};
+
+static int wait_for_touch_or_timeout(int fd, int timeout_ms,
+				     struct touch_state *state,
+				     bool *released, int *tap_x, int *tap_y)
 {
+	*released = false;
+	*tap_x = *tap_y = -1;
 	struct pollfd watch = { .fd = fd, .events = POLLIN };
 	int rc = poll(&watch, 1, timeout_ms);
 	if (rc < 0 && errno == EINTR)
@@ -644,13 +1215,80 @@ static int wait_for_touch_or_timeout(int fd, int timeout_ms)
 		errno = EIO;
 		return -1;
 	}
-	for (size_t i = 0; i < (size_t)count / sizeof(events[0]); i++)
-		if ((events[i].type == EV_KEY && events[i].code == BTN_TOUCH &&
-		     events[i].value == 1) ||
-		    (events[i].type == EV_ABS && events[i].code == ABS_MT_TRACKING_ID &&
-		     events[i].value >= 0))
-			return 1;
-	return 0;
+	int press = 0;
+	for (size_t i = 0; i < (size_t)count / sizeof(events[0]); i++) {
+		struct input_event *event = &events[i];
+		if (event->type == EV_ABS && event->code == ABS_MT_SLOT) {
+			state->slot = event->value;
+			continue;
+		}
+		if (event->type == EV_ABS && state->slot == 0) {
+			if (event->code == ABS_MT_POSITION_X) {
+				state->x = event->value;
+				state->have_x = true;
+			} else if (event->code == ABS_MT_POSITION_Y) {
+				state->y = event->value;
+				state->have_y = true;
+			} else if (event->code == ABS_MT_TRACKING_ID) {
+				if (event->value >= 0 && !state->down) {
+					state->down = true;
+					state->have_x = state->have_y = false;
+					press = 1;
+				} else if (event->value < 0 && state->down) {
+					*released = true;
+					if (state->have_x && state->have_y) {
+						*tap_x = state->x;
+						*tap_y = state->y;
+					}
+					state->down = false;
+				}
+			}
+		}
+		if (event->type == EV_KEY && event->code == BTN_TOUCH) {
+			if (event->value == 1 && !state->down) {
+				state->down = true;
+				state->have_x = state->have_y = false;
+				press = 1;
+			} else if (event->value == 0 && state->down) {
+				*released = true;
+				if (state->have_x && state->have_y) {
+					*tap_x = state->x;
+					*tap_y = state->y;
+				}
+				state->down = false;
+			}
+		}
+	}
+	return press;
+}
+
+static int self_test_touch(void)
+{
+	int fds[2];
+	if (pipe(fds) < 0)
+		return 1;
+	struct touch_state state = { 0 };
+	bool released;
+	int x, y;
+	struct input_event start[] = {
+		{ .type = EV_ABS, .code = ABS_MT_TRACKING_ID, .value = 7 },
+		{ .type = EV_ABS, .code = ABS_MT_POSITION_X, .value = 8500 },
+		{ .type = EV_ABS, .code = ABS_MT_POSITION_Y, .value = 26200 },
+	};
+	struct input_event end = {
+		.type = EV_ABS, .code = ABS_MT_TRACKING_ID, .value = -1
+	};
+	int ok = write(fds[1], start, sizeof(start)) == (ssize_t)sizeof(start) &&
+		 wait_for_touch_or_timeout(fds[0], 100, &state,
+					   &released, &x, &y) == 1 && !released &&
+		 write(fds[1], &end, sizeof(end)) == (ssize_t)sizeof(end) &&
+		 wait_for_touch_or_timeout(fds[0], 100, &state,
+					   &released, &x, &y) == 0 &&
+		 released && x == 8500 && y == 26200;
+	close(fds[0]);
+	close(fds[1]);
+	printf("touch parser %s\n", ok ? "PASS" : "FAIL");
+	return ok ? 0 : 1;
 }
 
 static int run(const char *action, unsigned int seconds)
@@ -681,7 +1319,12 @@ static int run(const char *action, unsigned int seconds)
 	size_t shown_frame = 0;
 	uint64_t scene_started = 0;
 	uint64_t last_battery_poll = 0;
+	uint64_t last_page_refresh = 0;
+	unsigned int shown_console_sequence = 0;
 	time_t shown_minute = 0;
+	enum lynx_page page = PAGE_HOME;
+	struct touch_state touch_state = { 0 };
+	bool page_changed = false, suppress_tap = false;
 
 	if (touch_idle) {
 		touch_fd = verify_touch_device();
@@ -755,7 +1398,7 @@ static int run(const char *action, unsigned int seconds)
 		last_battery_poll = monotonic_milliseconds();
 		if (portrait) {
 			if (read_scene(&scene) != 1 ||
-			    paint_lynx_portrait(pixels, scene.frames[0], shown_capacity) < 0) {
+			    paint_lynx_page(pixels, PAGE_HOME, scene.frames[0], shown_capacity) < 0) {
 				fail("load initial Lynx portrait");
 				goto cleanup;
 			}
@@ -866,20 +1509,57 @@ static int run(const char *action, unsigned int seconds)
 		}
 		while (!stop_requested) {
 			if (touch_idle) {
-				int touch = wait_for_touch_or_timeout(touch_fd, portrait ? 100 : 1000);
+				bool released;
+				int tap_x, tap_y;
+				int touch = wait_for_touch_or_timeout(touch_fd,
+					portrait ? 100 : 1000, &touch_state,
+					&released, &tap_x, &tap_y);
 				if (touch < 0) {
 					fail("read touchscreen event");
 					goto cleanup;
 				}
 				if (touch && !stop_requested) {
-					if (!lit && set_brightness(250) < 0) {
-						fail("wake status screen");
-						goto cleanup;
+					if (!lit) {
+						suppress_tap = true;
+						if (set_brightness(250) < 0) {
+							fail("wake status screen");
+							goto cleanup;
+						}
 					}
 					lit = true;
 					lit_until = monotonic_milliseconds() + 10000U;
 					printf("touch_wake\n");
 					fflush(stdout);
+				}
+				if (released) {
+					if (portrait && lit && !suppress_tap &&
+					    tap_x >= 0 && tap_x <= 12399 &&
+					    tap_y >= 0 && tap_y <= 27719) {
+						int x = tap_x * (int)WIDTH / 12400;
+						int y = tap_y * (int)HEIGHT / 27720;
+						enum lynx_page target = page;
+						if (y >= 2550 && y < 2710) {
+							if (x >= 50 && x < 595)
+								target = page == PAGE_CONSOLE ?
+									 PAGE_HOME : PAGE_CONSOLE;
+							else if (x >= 645 && x < 1190)
+								target = page == PAGE_STATUS ?
+									 PAGE_HOME : PAGE_STATUS;
+						} else if (page == PAGE_CONSOLE &&
+							   y >= 450 && y < 2450) {
+							console_key((unsigned int)x, (unsigned int)y);
+							page_changed = true;
+						}
+						if (target != page) {
+							page = target;
+							page_changed = true;
+							printf("page=%s\n", page == PAGE_HOME ?
+							       "home" : page == PAGE_CONSOLE ?
+							       "console" : "status");
+							fflush(stdout);
+						}
+					}
+					suppress_tap = false;
 				}
 				if (lit && monotonic_milliseconds() >= lit_until) {
 					if (set_brightness(0) < 0) {
@@ -920,9 +1600,17 @@ static int run(const char *action, unsigned int seconds)
 					next_frame = ((now_ms - scene_started) / 500U) %
 						     scene.count;
 			}
+			bool status_refresh = portrait && page == PAGE_STATUS && lit &&
+				now_ms - last_page_refresh >= 5000U;
+			unsigned int console_seq = page == PAGE_CONSOLE ?
+				console_sequence() : 0;
+			bool console_refresh = portrait && page == PAGE_CONSOLE && lit &&
+				console_seq != shown_console_sequence;
 			if (capacity == shown_capacity && (!portrait ||
-			    (next_frame == shown_frame && minute == shown_minute &&
-			     scene_result != 1)))
+			    (!page_changed && !status_refresh && !console_refresh &&
+			     (page != PAGE_HOME ||
+			      (next_frame == shown_frame && minute == shown_minute &&
+			       scene_result != 1)))))
 				continue;
 			int target_fd = current_fb == fb_id ? buffer_fd2 : buffer_fd;
 			uint32_t target_fb = current_fb == fb_id ? fb_id2 : fb_id;
@@ -932,8 +1620,8 @@ static int run(const char *action, unsigned int seconds)
 				goto cleanup;
 			}
 			if (portrait) {
-				if (paint_lynx_portrait(target_pixels,
-						      scene.frames[next_frame], capacity) < 0) {
+				if (paint_lynx_page(target_pixels, page,
+						    scene.frames[next_frame], capacity) < 0) {
 					fail("render Lynx portrait");
 					goto cleanup;
 				}
@@ -952,6 +1640,11 @@ static int run(const char *action, unsigned int seconds)
 			shown_capacity = capacity;
 			shown_frame = next_frame;
 			shown_minute = minute;
+			page_changed = false;
+			if (page == PAGE_STATUS)
+				last_page_refresh = now_ms;
+			if (page == PAGE_CONSOLE)
+				shown_console_sequence = console_seq;
 			if (portrait && !scene.animate)
 				printf("presented_pose=%s battery=%d%%\n",
 				       scene.frames[next_frame], shown_capacity);
@@ -1028,7 +1721,22 @@ int main(int argc, char **argv)
 	sigaction(SIGINT, &stop_action, NULL);
 	sigaction(SIGTERM, &stop_action, NULL);
 	if (argc == 4 && !strcmp(argv[1], "--preview"))
-		return render_preview(argv[2], argv[3]);
+		return render_preview(argv[2], argv[3], PAGE_HOME);
+	if (argc == 2 && !strcmp(argv[1], "--self-test-touch"))
+		return self_test_touch();
+	if (argc == 2 && !strcmp(argv[1], "--self-test-console-keys"))
+		return self_test_console_keys();
+	if (argc == 4 && !strcmp(argv[1], "--preview-page")) {
+		if (!strcmp(argv[2], "console"))
+			return render_preview("", argv[3], PAGE_CONSOLE);
+		if (!strcmp(argv[2], "status"))
+			return render_preview("", argv[3], PAGE_STATUS);
+		return 2;
+	}
+	if (argc == 3 && !strcmp(argv[1], "--preview-console-symbols")) {
+		console_symbols = true;
+		return render_preview("", argv[2], PAGE_CONSOLE);
+	}
 	if (argc == 2 && (!strcmp(argv[1], "--probe") ||
 			  !strcmp(argv[1], "--allocate") ||
 			  !strcmp(argv[1], "--atomic-test") ||

@@ -1,11 +1,12 @@
 #!/bin/sh
 # Load Lynx's verified display and touch modules from Alpine's persistent root.
-# The exact working V50 boot_a hash gates automatic display initialization.
+# Exact working V50 and V52 boot_a hashes gate display initialization.
 set -eu
 
 ROOT=/var/lib/lynx-display/modules
 LIST=/var/lib/lynx-display/modules.list
 V50_SHA=6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59
+V52_SHA=9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf
 KERNEL=5.10.149-android12-9-o-g311738fbb5a8
 PANEL_MATCH=oplus22823_tm_nt37705_fhd_dsi_cmd-synaptics-s3910
 
@@ -27,7 +28,7 @@ verify_files() {
     [ "$(sha256sum /usr/local/bin/lynx-status-display | cut -c1-64)" = \
       "1a3d21bd40f5903377b800d0bb085443c0653a8c5ff30e1abb964e5eab0e2387" ]
     [ "$(sha256sum /usr/local/bin/lynx-portrait-display | cut -c1-64)" = \
-      "9aa4014a44366e6676d8493c65e0178cf4a6cb358e341d5a2d2302d8b3683c3d" ]
+      "656fa401e5d1c67fe94208d3d25a9af3761a3e513b92c19968662c3ecfb073f0" ]
     [ -x /usr/local/bin/lynx-displayctl ]
     [ -r /var/lib/lynx-display/frames/manifest.json ]
     [ -r /var/lib/lynx-display/frames.sha256 ]
@@ -35,7 +36,7 @@ verify_files() {
       /var/lib/lynx-display/frames.sha256 >/dev/null)
 }
 
-require_v50() {
+require_working_boot() {
     boot_device=''
     for uevent in /sys/class/block/*/uevent; do
         grep -q '^PARTNAME=boot_a$' "$uevent" 2>/dev/null || continue
@@ -47,10 +48,11 @@ require_v50() {
         echo "boot_a size mismatch" >&2
         return 1
     }
-    [ "$(sha256sum "$boot_device" | cut -c1-64)" = "$V50_SHA" ] || {
-        echo "boot_a is not the exact working V50 image" >&2
-        return 1
-    }
+    boot_sha=$(sha256sum "$boot_device" | cut -c1-64)
+    case "$boot_sha" in
+        "$V50_SHA"|"$V52_SHA") ;;
+        *) echo "boot_a is not a verified working V50/V52 image" >&2; return 1 ;;
+    esac
 }
 
 check_hardware_health() {
@@ -115,12 +117,12 @@ case "${1:-}" in
     --check-files) verify_files ;;
     --start)
         verify_files
-        require_v50
+        require_working_boot
         load_modules
         status
         ;;
     --status)
-        require_v50
+        require_working_boot
         status
         ;;
     *) echo "usage: $0 --check-files|--start|--status" >&2; exit 2 ;;

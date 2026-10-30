@@ -10,11 +10,44 @@ from types import SimpleNamespace
 
 import lynx_noob_runtime
 from lynx_noob_runtime import Runtime
+from lynx_hardware import inventory
 
 
 class RuntimeTest(unittest.TestCase):
     def setUp(self):
         self.runtime = Runtime()
+
+    def test_hardware_status_distinguishes_validated_mic_from_gnss_nodes(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "proc/asound").mkdir(parents=True)
+            (root / "proc/asound/cards").write_text("0 [mt6983mt6338]\n")
+            (root / "dev/snd").mkdir(parents=True)
+            (root / "dev/snd/pcmC0D11c").touch()
+            (root / "dev/ccci_c2k_agps").touch()
+            state = inventory(root)
+            self.assertTrue(state["microphone"]["interface_ready"])
+            self.assertTrue(state["microphone"]["validated"])
+            self.assertFalse(state["gnss"]["interface_ready"])
+            (root / "dev/gpsdl0").touch()
+            (root / "sys/module/gps_drv_dl_v050").mkdir(parents=True)
+            gps = inventory(root)["gnss"]
+            self.assertTrue(gps["interface_ready"])
+            self.assertFalse(gps["validated"])
+            self.assertTrue(gps["evidence"]["nmea_trial_verified"])
+            self.assertFalse(gps["evidence"]["position_fix_verified"])
+            (root / "dev/stpbt").touch()
+            (root / "sys/module/bt_drv_6983").mkdir(parents=True)
+            bt = inventory(root)["bluetooth"]
+            self.assertTrue(bt["interface_ready"])
+            self.assertFalse(bt["validated"])
+            self.assertTrue(bt["evidence"]["nexus_le_connection_trial_verified"])
+            self.assertFalse(bt["evidence"]["noobian_bluetooth_transport_verified"])
+            with patch.object(lynx_noob_runtime, "hardware_inventory", return_value=state):
+                self.assertIn("value=1 detail=interface_ready=1 validated=1",
+                              self.runtime.dispatch("NRP/1 39 CALL MIC_STATUS"))
+                self.assertIn("value=0 detail=interface_ready=0 validated=0",
+                              self.runtime.dispatch("NRP/1 40 CALL FLASH_STATUS"))
 
     def test_nrp_frame_and_common_vm(self):
         r = self.runtime

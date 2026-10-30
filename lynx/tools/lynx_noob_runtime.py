@@ -3,6 +3,7 @@
 
 import argparse
 from collections import deque
+from contextlib import ExitStack
 import fcntl
 import json
 import os
@@ -14,6 +15,8 @@ import socket
 import struct
 import subprocess
 import time
+
+from lynx_hardware import inventory as hardware_inventory
 
 VERSION = "NRP/1"
 PHONE_IP = "192.168.100.107"
@@ -702,6 +705,40 @@ class Runtime:
         reg(384, "FUSION_Y", lambda a, t: self.fusion_axis(a, t, 1))
         reg(385, "FUSION_Z", lambda a, t: self.fusion_axis(a, t, 2))
         reg(386, "FUSION_VECTOR", self.fusion_vector)
+        reg(390, "MIC_STATUS", lambda a, t: self.hardware_status(a, t, "microphone"))
+        reg(391, "FLASH_STATUS", lambda a, t: self.hardware_status(a, t, "flashlight"))
+        reg(392, "GNSS_STATUS", lambda a, t: self.hardware_status(a, t, "gnss"))
+        reg(393, "BT_STATUS", lambda a, t: self.hardware_status(a, t, "bluetooth"))
+        reg(394, "CAMERA_STATUS", lambda a, t: self.hardware_status(a, t, "camera"))
+        reg(395, "MIC_LEVEL", self.mic_level)
+
+    @staticmethod
+    def hardware_status(args, text, device):
+        no_args(args, text)
+        state = hardware_inventory()[device]
+        ready = int(state["interface_ready"])
+        validated = int(state["validated"])
+        return validated, f"interface_ready={ready} validated={validated}"
+
+    @staticmethod
+    def mic_level(args, text):
+        no_args(args, text)
+        try:
+            result = subprocess.run(["/usr/bin/python3", "/usr/local/bin/lynx-mic-level"],
+                                    capture_output=True, text=True, timeout=7, check=False)
+            sample = json.loads(result.stdout)
+            if (result.returncode or sample.get("captured") is not True or
+                sample.get("mixer_restored") is not True or
+                sample.get("raw_audio_retained") is not False or
+                sample.get("external_sound_validated") is not False):
+                raise NativeError("microphone level capture failed")
+            rms100 = round(float(sample["late_rms"]) * 100)
+            if not 0 <= rms100 <= 3276800:
+                raise NativeError("microphone level invalid")
+        except (OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:
+            raise NativeError("microphone level unavailable") from exc
+        return rms100, (f"rms_x100={rms100} peak={sample['late_peak']} "
+                        "duration_ms=1000 external_validated=0")
 
     @staticmethod
     def fusion_type(args, text):
@@ -1071,7 +1108,7 @@ class Runtime:
         if command == "PING":
             return "PONG"
         if command == "INFO":
-            return "name=Lynx firmware=alpine-v50 protocol=1 vm=1"
+            return "name=Lynx firmware=alpine-native protocol=1 vm=1"
         if command == "CAPS":
             names = ",".join(f"{ident}:{name}" for ident, (name, _) in sorted(self.registry.by_id.items()))
             return f"caps=VM,SEQUENCE,THREAD,NATIVE_ASCII,HAPTIC,DISPLAY,AUDIO functions={names}"
@@ -1136,7 +1173,7 @@ class Runtime:
         return head, numbers, text
 
 
-def serve(host, port, peer):
+def serve(host, port, peer, local_socket="", local_uid=0):
     runtime = Runtime()
     selector = selectors.DefaultSelector()
     active = True
@@ -1145,12 +1182,32 @@ def serve(host, port, peer):
         active = False
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+    with ExitStack() as scope:
+        server = scope.enter_context(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((host, port))
         server.listen(8)
         server.setblocking(False)
         selector.register(server, selectors.EVENT_READ)
+        local_server = None
+        if local_socket:
+            path = Path(local_socket)
+            if path.exists() or path.is_symlink():
+                raise RuntimeError("local NRP socket path already exists")
+            local_server = scope.enter_context(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM))
+            local_server.bind(local_socket)
+            os.chmod(local_socket, 0o600)
+            inode = path.stat().st_ino
+            def remove_local_socket():
+                try:
+                    if path.is_socket() and path.stat().st_ino == inode:
+                        path.unlink()
+                except FileNotFoundError:
+                    pass
+            scope.callback(remove_local_socket)
+            local_server.listen(4)
+            local_server.setblocking(False)
+            selector.register(local_server, selectors.EVENT_READ)
         buffers = {}
         while active:
             runtime.tick()
@@ -1164,9 +1221,14 @@ def serve(host, port, peer):
                         buffers.pop(conn, None)
                         conn.close()
             for key, _ in selector.select(0.02):
-                if key.fileobj is server:
-                    conn, address = server.accept()
-                    if peer != "*" and address[0] != peer:
+                if key.fileobj is server or key.fileobj is local_server:
+                    conn, address = key.fileobj.accept()
+                    if key.fileobj is server and peer != "*" and address[0] != peer:
+                        conn.close()
+                        continue
+                    if key.fileobj is local_server and \
+                            struct.unpack("3i", conn.getsockopt(socket.SOL_SOCKET,
+                                               socket.SO_PEERCRED, 12))[1] != local_uid:
                         conn.close()
                         continue
                     conn.setblocking(False)
@@ -1206,5 +1268,7 @@ if __name__ == "__main__":
     parser.add_argument("--host", default=PHONE_IP)
     parser.add_argument("--port", type=int, default=4243)
     parser.add_argument("--peer", default=NEXUS_IP)
+    parser.add_argument("--local-socket", default="",
+                        help="optional root-only Unix socket for local transports")
     args = parser.parse_args()
-    serve(args.host, args.port, args.peer)
+    serve(args.host, args.port, args.peer, args.local_socket)

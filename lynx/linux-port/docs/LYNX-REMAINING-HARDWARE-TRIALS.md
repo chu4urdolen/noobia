@@ -17,7 +17,7 @@ See [LYNX-HARDWARE-STATUS.md](LYNX-HARDWARE-STATUS.md) for working hardware and
 | 1 | Microphone | ALSA capture nodes already exist; no new kernel module is needed | Exact input mixer route is unknown |
 | 2 | Flashlight | Exact LM3642 driver identified; trial paused after unload hang | Binding worked, but Wi-Fi contact was lost while unloading the core |
 | 3 | GNSS | Three matching modules, with a plausible native Linux device path to investigate | `connscp` and all GPS modules are absent; Android's GNSS userspace cannot be assumed to run on Alpine |
-| 4 | Bluetooth | Matching module and firmware, but it shares connectivity infrastructure with working Wi-Fi | `btif_drv` is absent; preserve SSH before touching this stack |
+| 4 | Bluetooth | Matching module and firmware, but it shares connectivity infrastructure with working Wi-Fi | Both modules now load in RAM; vendor initialization remains |
 | 5 | Camera | Several dependencies and vendor-specific userspace pieces | No `/dev/video*` or `/dev/media*` node; `mtk_ccu` and `v4l2-fwnode` are absent |
 
 For **each** trial, first record `boot_id`, `uname -r`, the V50 boot hash,
@@ -104,8 +104,11 @@ No raw PCM was kept. Playback stopped, both speakers returned to mute,
 both input controls were restored, and health passed. Receipts:
 `logs/v50-microphone-trial-1793223805222328472/result.json` and
 `logs/v50-microphone-trial-1793223812227403737/result.json`.
-This establishes that capture responds to the beep, but an external clap
-is still needed to rule out internal audio coupling.
+This established response to the beep. The user then confirmed an external
+clap on the same boot: RMS × 100 rose from a quiet median of 499 to a maximum
+of 5888 (11.8×), with peak 1164. No raw audio was saved; controls were
+restored and Alpine health passed. Receipt:
+`logs/v50-microphone-clap-1793305372427637018.json`.
 
 ## 2. Flashlight
 
@@ -158,6 +161,33 @@ temporary files under `/run`. Receipt:
 repeat until Lynx is recovered and the unload failure is understood. Do not
 try an LED pulse or repeat the load/unload sequence as written.
 
+**Recovery verified:** With Lynx connected in Fastboot, read-only getvars
+reported `product: k6983v1_64`, `current-slot: a`, and `unlocked: yes`.
+`fastboot reboot` succeeded without writing any partition (receipt:
+`logs/v50-recovery-reboot-1793224979745750278/result.json`). BusyBox rescue
+SSH returned first; its health check completed and handed off to Alpine.
+Alpine SSH then returned with boot ID
+`d7a150f8-b500-4256-ab8b-ee00120a0704`. The boot image on `/dev/sdc39`
+still had the exact V50 SHA-256
+`6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59`.
+`lynx-status --assert-ready` passed, all six control services were started,
+and NRP/1 `PING` returned `PONG`. All three probe modules were absent and
+the LM3642 I²C device was unbound. The incident did not require reflashing.
+The cause of the core unload timeout remains unknown; the flashlight trial
+stays paused.
+
+**Offline source review:** `flashlight_exit()` calls
+`platform_driver_unregister()`, whose remove path calls `fl_uninit()`.
+`fl_uninit()` holds `fl_mutex` while invoking each registered device's
+`flashlight_open`, `flashlight_set_driver`, `fl_enable`, and
+`flashlight_release` operations. That path may block if a device operation
+waits on hardware or another lock; there is no kernel trace proving which
+call stalled here. The core also registers a battery overcurrent callback
+at initialization, with no corresponding unregister call visible in this
+source. Treat unloading the stock core as unsafe until the callback lifetime
+and remove path are resolved. This is a source-level concern, not a confirmed
+cause of Lynx's contact loss.
+
 ## 3. GNSS
 
 **Known:** The stock Android init files `init.gps_scp.rc`, `init.gps_pwr.rc`,
@@ -176,12 +206,13 @@ receive measurements or NMEA and whether a userspace daemon is required.
 Check that loading `connscp` will not reset the working Wi-Fi path. Arrange a
 physical recovery window because connectivity is shared.
 
-**Trial:** In RAM, one module at a time in dependency order:
-`connscp`, `gps_scp`, `gps_pwr`, `gps_drv_dl_v050`. After each load, capture
-logs and check Wi-Fi/SSH, thermals, device nodes, and idle power. Stop before
-requesting a fix if a module destabilizes connectivity. A first valid fix
-requires an outdoor test and an independently checked position/time; module
-load or a device node alone is not GNSS success.
+**Trial result, 2026-10-29:** All four matching modules loaded in RAM, one
+at a time with timed reboot fallbacks. Wi-Fi, SSH, and Alpine health stayed
+intact. The driver exposed `/dev/gpsdl0`, `/dev/gpsdl1`, `/dev/gps2scp`,
+and `/dev/gps_pwr`; no receiver power or fix was attempted. Receipts are
+listed in `LYNX-HARDWARE-TOOLS.md`. Next map the GPS device ABI and native
+userspace flow, then verify outdoors against an independent position/time.
+A node alone is not a GNSS fix.
 
 ## 4. Bluetooth
 
@@ -201,12 +232,15 @@ the matching stock files. Determine whether the driver exposes standard HCI,
 a character device, or a vendor transport needing a native daemon. Preserve
 current Wi-Fi/SSH and schedule the trial when physical recovery is available.
 
-**Trial:** Stage exact modules and firmware, then load `btif_drv` followed by
-`bt_drv_6983` in RAM. Inspect probe logs, device nodes, and any HCI interface
-without pairing or advertising first. Keep checking SSH and battery current.
-Only after a stable interface exists should a short local scan and a known
-consenting-device pairing be attempted. A loaded module is not proof of
-Bluetooth operation.
+**Trial result, 2026-10-29:** Both exact modules loaded sequentially in RAM
+under a timed reboot fallback. SSH, Wi-Fi, and Alpine health stayed intact.
+The driver created `/dev/stpbt` but no HCI controller; its log reported a
+failed flavor-bin lookup. Receipts:
+`logs/v50-bluetooth-btif_drv-1793305632764445738/result.json` and
+`logs/v50-bluetooth-bt_drv_6983-1793305649275022156/result.json`. Neither
+module was unloaded because a prior unrelated driver unload hung. Next map
+the stock vendor transport and firmware initialization before radio operation,
+scanning, or pairing. A loaded module is not proof of Bluetooth operation.
 
 ## 5. Camera
 

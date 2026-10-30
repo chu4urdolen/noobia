@@ -96,9 +96,9 @@ def parse_manifest(data):
     return block_size, partitions
 
 
-def reconstruct(partition, block_size, fetch_blob):
+def reconstruct(partition, block_size, fetch_blob, max_size=67108864):
     size = partition['size']
-    if not isinstance(size, int) or not 0 < size <= 67108864 or len(partition['hash']) != 32:
+    if not isinstance(size, int) or not 0 < size <= max_size or len(partition['hash']) != 32:
         raise ValueError('Unexpected selected partition size or digest')
     if partition['old_partition_info_present']:
         raise ValueError('Source-dependent partition cannot be extracted independently')

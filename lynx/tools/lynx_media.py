@@ -146,7 +146,7 @@ class Controller:
 
     def freeze_image(self):
         s = self.channels["image"]
-        if not s["current"]:
+        if s["mode"] != "playing" or s["started"] is None or not s["current"]:
             return
         entry = self.validate("image", s["current"])
         if entry["type"] != "animation":

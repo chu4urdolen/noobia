@@ -53,6 +53,8 @@ with no VM running and no thread or sequence active.
 | 382 | `FUSION_STATUS` | sensor type 3, 9, 10, or 11 | Registered orientation, gravity, linear acceleration, or rotation vector |
 | 383–385 | `FUSION_X`, `FUSION_Y`, `FUSION_Z` | sensor type | Raw axes from one cached bounded sample |
 | 386 | `FUSION_VECTOR` | sensor type | One full raw X/Y/Z sample with gain metadata |
+| 390–394 | `MIC_STATUS`, `FLASH_STATUS`, `GNSS_STATUS`, `BT_STATUS`, `CAMERA_STATUS` | none | Shared read-only hardware inventory; `value=0` until functional validation |
+| 395 | `MIC_LEVEL` | none | One-second level-only capture; integer value is late RMS × 100, external acoustic response unverified |
 
 Images and sounds resolve through the already installed `lynx-media`
 service. Pose names and animations come from its current display manifest.
@@ -86,6 +88,9 @@ python3 tools/lynx_noobctl.py CALL BATTERY_PERCENT
 python3 tools/lynx_noobctl.py CALL BATTERY_TEMP
 python3 tools/lynx_noobctl.py CALL SOC_TEMP
 python3 tools/lynx_noobctl.py CALL AUDIO_READY
+python3 tools/lynx_noobctl.py CALL MIC_STATUS
+python3 tools/lynx_noobctl.py CALL MIC_LEVEL
+python3 tools/lynx_noobctl.py CALL GNSS_STATUS
 python3 tools/lynx_noobctl.py CALL ACCEL_STATUS
 python3 tools/lynx_noobctl.py CALL ACCEL_VECTOR
 python3 tools/lynx_noobctl.py CALL GYRO_VECTOR

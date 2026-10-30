@@ -56,6 +56,26 @@ audio trials loaded the corrected MT6338 module and matching TFA98xx firmware
 into RAM separately. The automatic audio bootstrap added later is described
 below. No boot partition was changed for these services.
 
+## 2026-10-29 animation completion fix
+
+A visible dance, chime, and 80 ms haptic demonstration succeeded, but a
+subsequent `play image 01_standing_smile` failed with a `float`/`NoneType`
+subtraction. After the dance completed, the image channel was stopped while
+its `current` item still named the animation and `started` was `None`.
+`start()` called `stop_current()`, which called `freeze_image()` on that
+already completed animation. The renderer was restored to the standing pose
+using `lynx-displayctl` while the media service was repaired.
+
+`freeze_image()` now returns unless the image is actively playing with a
+start timestamp. The previous installed script was backed up on Lynx as
+`/usr/local/bin/lynx-media.before-animation-fix`; the corrected script is
+`/usr/local/bin/lynx-media` with SHA-256
+`b9a63d0fc43d3c551d1f81a1ee41ec98259d70dab089aae814cf2b17367a51ab`.
+The media service and its dependent `lynx-noobd` restarted successfully.
+A second full dance followed by a return to the standing portrait succeeded;
+NRP/1 `PING` answered and `HAPTIC_STATUS` returned inactive. Receipt:
+`logs/v50-visible-demo-retest-1793225578049031098.json`.
+
 Receipts: `logs/v50-media-install-1793137835538196884/`,
 `logs/v50-media-control-trial-1793137849629603237/`,
 `logs/v50-media-sound-queue-1793137880100498684/`,

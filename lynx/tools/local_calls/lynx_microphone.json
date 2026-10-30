@@ -1,0 +1,12 @@
+{
+  "description": "Entity: Lynx. Read microphone interface status and validation state. This does not activate hardware or prove operation.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 10,
+  "example": {}
+}

@@ -121,6 +121,81 @@ loaded the existing MT6983 card and firmware, and `AUDIO_READY` returned
 `card=1 firmware=1` before the audible trial. Keep this as a preflight for
 later sound tests.
 
+## Reconnect and supervisor trials, 2026-10-30
+
+The initial live GATT endpoint kept one authentication sequence for the
+entire service run. That prevented a fresh BLE connection from starting at
+sequence 1. `AuthSessions` now issues a new challenge per BlueZ device path
+on an offset-zero challenge read, expires idle sessions, rejects old signed
+frames, and clears the prior response on renewal. The guarded update receipt
+is `lynx/logs/v52-bluetooth-sessions-1793391156888664724/result.json`;
+the previous GATT file is saved on Lynx as
+`/usr/local/bin/lynx-ble-gatt.before-reconnect`.
+
+A guarded live trial disconnected and reconnected in the same service run.
+It observed a fresh challenge, rejected the old signed frame, and found the
+loaded VM still `READY`, then ran and reset it. Service STOP removed `hci0`
+and Alpine stayed healthy. Receipt:
+`lynx/logs/v52-bluetooth-service-1793391163649963019/result.json`.
+
+OpenRC now uses `supervise-daemon` for `lynx-bluetooth`, with an eight-second
+restart delay and at most three attempts per ten minutes. The old init script
+is `/etc/init.d/lynx-bluetooth.before-supervisor`; update receipt:
+`lynx/logs/v52-bluetooth-supervisor-1793391316090072184/result.json`.
+A guarded trial stopped the GATT child. The service restarted, accepted a
+fresh authenticated VM reconnect, then stopped cleanly with Wi-Fi, SSH, and
+Alpine health intact. Receipt:
+`lynx/logs/v52-bluetooth-service-1793391400834625283/result.json`.
+
+**The reboot trial was inconclusive because its timers were too short.** A one-shot 180-second boot guard
+and `lynx-bluetooth` were added to the default OpenRC runlevel, then `reboot`
+was sent. Alpine/SSH did not return within the trial's 125-second window;
+the live rollback attempt could not connect. No partition was written. The
+user subsequently reported Lynx in Fastboot without USB, hours after the
+test. The boot guard cannot run while the phone is in Fastboot. Receipt:
+`lynx/logs/v52-bluetooth-reboot-1793391583551810582/result.json`.
+After USB reconnection, read-only Fastboot queries still reported the
+expected product, slot A, `slot-successful:a=yes`, `slot-unbootable:a=no`,
+and retry count 7. One `fastboot reboot` was accepted, but Alpine/SSH did not
+return within 100 seconds; the phone also was not enumerated in Fastboot at
+the end of the wait. No partition was written. Recovery attempt receipt:
+`lynx/logs/v52-bt-fastboot-recovery-1793445997609440027/result.json`.
+The recovery boot image and slot B were not changed by these Bluetooth trials.
+
+### Recovery result, 2026-10-31
+
+The verified V50 image was restored to **boot_a only**, with receipt
+`lynx/logs/v52-boot-a-trial-1793446431457649292/result.json`. The first
+100-second SSH wait after `fastboot reboot` still expired, but Lynx later
+appeared on Wi-Fi with a new V50 boot ID. The Nexus monitor read 25% battery
+at that point. On Alpine, `boot_a` matched V50's SHA-256, health reported no
+issues, and Bluetooth was stopped and absent from the default runlevel.
+The one-shot boot guard was also removed. Its persistent log confirms that it
+timed out during the prior V52 boot, removed Bluetooth from the default
+runlevel, stopped the service, and requested a reboot. This explains why
+Bluetooth was already boot-disabled on V50.
+
+The archived V52 boot log shows Wi-Fi's local SSH check passing at uptime
+39.66 seconds, health passing at 201 seconds, and the persistent Alpine PID1
+handoff beginning at 211.53 seconds. The first reboot trial stopped polling
+for Alpine SSH after 125 seconds, and the later Fastboot recovery script
+stopped after 100 seconds. Both windows ended **before** the documented Alpine
+handoff. V52's power history showed 88% battery during the guard interval;
+the later 25% reading belongs to the V50 recovery boot, after intervening
+hours. We therefore have no evidence from these timers that Bluetooth made
+the V52 boot fail. The detailed read-only log copy is
+`lynx/logs/v52-auto-bt-boot-review-1793446970350856614/`.
+
+Future scripts now allow 450 seconds for the Alpine/SSH check and 660 seconds
+for the boot rollback guard. These durations have **not** been trialed on
+hardware. The radio stays boot-disabled on the restored V50 image until Lynx
+has charge for another controlled V52 test.
+
+Do not re-enable Bluetooth at boot until the phone is charged and a guarded
+trial verifies Wi-Fi association, SSH, battery current, and Bluetooth at the
+same time. The same-boot Bluetooth service, reconnect, and crash-recovery
+trials remain valid; automatic startup remains unverified.
+
 The object tree, registration, advertising, and read/write option contracts
 follow the official [BlueZ GATT API](https://bluez.readthedocs.io/en/latest/gatt-api/)
 and [Advertising API](https://bluez.readthedocs.io/en/latest/advertising-api/).

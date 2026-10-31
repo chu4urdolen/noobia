@@ -28,6 +28,46 @@ REQUEST_UUID = "6e6f6f62-6961-4c59-4e58-000000000002"
 RESPONSE_UUID = "6e6f6f62-6961-4c59-4e58-000000000003"
 CHALLENGE_UUID = "6e6f6f62-6961-4c59-4e58-000000000004"
 REQUEST_PATTERN = re.compile(rb"NRP/1 ([0-9]{1,10}) [A-Z_]+(?: [^\n]*)?\n")
+MAX_SESSIONS = 16
+SESSION_IDLE_SECONDS = 600
+
+
+class AuthSessions:
+    """Give every BlueZ device path a fresh challenge on offset-zero read."""
+
+    def __init__(self, key):
+        self.key = key
+        self.sessions = {}
+
+    def _prune(self):
+        now = time.monotonic()
+        self.sessions = {peer: value for peer, value in self.sessions.items()
+                         if value[1] > now}
+
+    def begin(self, device):
+        if not device:
+            raise ValueError("BlueZ device required")
+        self._prune()
+        if device not in self.sessions and len(self.sessions) >= MAX_SESSIONS:
+            raise ValueError("too many Bluetooth sessions")
+        auth = Authenticator(self.key)
+        self.sessions[device] = (auth, time.monotonic() + SESSION_IDLE_SECONDS)
+        return auth.challenge_line()
+
+    def challenge(self, device):
+        self._prune()
+        if device not in self.sessions:
+            raise ValueError("Bluetooth challenge expired")
+        return self.sessions[device][0].challenge_line()
+
+    def accept(self, device, frame):
+        self._prune()
+        if device not in self.sessions:
+            raise ValueError("Bluetooth challenge required")
+        auth, _ = self.sessions[device]
+        request = auth.accept(frame)
+        self.sessions[device] = (auth, time.monotonic() + SESSION_IDLE_SECONDS)
+        return request
 
 
 def forward_nrp(request, path="/run/lynx/noobd.sock", timeout=9):
@@ -123,7 +163,7 @@ class RequestCharacteristic(ServiceInterface):
             frame = self.fragments.add(device.value, bytes(value))
             if frame is None:
                 return
-            request = self.auth.accept(frame)
+            request = self.auth.accept(device.value, frame)
         except ValueError as exc:
             raise DBusError("org.bluez.Error.NotAuthorized", str(exc)) from exc
         try:
@@ -145,6 +185,9 @@ class ResponseCharacteristic(ServiceInterface):
             if len(self.replies) >= 16:
                 self.replies.pop(min(self.replies, key=lambda peer: self.replies[peer][1]))
         self.replies[device] = (answer, time.monotonic() + 30)
+
+    def clear(self, device):
+        self.replies.pop(device, None)
 
     @dbus_property(access=PropertyAccess.READ)
     def UUID(self) -> "s":
@@ -174,9 +217,11 @@ class ResponseCharacteristic(ServiceInterface):
 
 
 class ChallengeCharacteristic(ServiceInterface):
-    def __init__(self, auth):
+    def __init__(self, auth, reply=None, request=None):
         super().__init__("org.bluez.GattCharacteristic1")
         self.auth = auth
+        self.reply = reply
+        self.request = request
 
     @dbus_property(access=PropertyAccess.READ)
     def UUID(self) -> "s":
@@ -192,8 +237,21 @@ class ChallengeCharacteristic(ServiceInterface):
 
     @method()
     def ReadValue(self, options: "a{sv}") -> "ay":
-        value = self.auth.challenge_line()
+        device = options.get("device")
+        if device is None:
+            raise DBusError("org.bluez.Error.NotAuthorized", "device required")
         offset = options.get("offset", Variant("q", 0)).value
+        try:
+            if offset == 0:
+                value = self.auth.begin(device.value)
+                if self.reply is not None:
+                    self.reply.clear(device.value)
+                if self.request is not None:
+                    self.request.fragments.pending.pop(device.value, None)
+            else:
+                value = self.auth.challenge(device.value)
+        except ValueError as exc:
+            raise DBusError("org.bluez.Error.NotAuthorized", str(exc)) from exc
         if offset > len(value):
             raise DBusError("org.bluez.Error.InvalidOffset", "past challenge")
         return value[offset:]
@@ -223,14 +281,15 @@ class Advertisement(ServiceInterface):
 async def run(seconds, key_file):
     if os.geteuid() != 0:
         raise RuntimeError("root required for local NRP socket")
-    auth = Authenticator(load_key(key_file))
+    auth = AuthSessions(load_key(key_file))
     bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
     response = ResponseCharacteristic()
     bus.export(ROOT, ObjectManager())
     bus.export(SERVICE_PATH, GattService())
-    bus.export(REQUEST_PATH, RequestCharacteristic(response, auth))
+    request = RequestCharacteristic(response, auth)
+    bus.export(REQUEST_PATH, request)
     bus.export(RESPONSE_PATH, response)
-    bus.export(CHALLENGE_PATH, ChallengeCharacteristic(auth))
+    bus.export(CHALLENGE_PATH, ChallengeCharacteristic(auth, response, request))
     bus.export(ADV_PATH, Advertisement())
     manager = bus.get_proxy_object("org.bluez", "/org/bluez/hci0",
                                    await bus.introspect("org.bluez", "/org/bluez/hci0"))

@@ -10,6 +10,7 @@
 !/tools/*.c
 !/tools/*.h
 !/tools/*.sh
+!/tools/lynx-presence.service
 !/tools/README.md
 !/tools/lynx-ssh
 !/tools/lynx-alpine

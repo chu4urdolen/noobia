@@ -1,7 +1,10 @@
 # Lynx code map
 
 Lynx is the OnePlus Nord 3 CPH2493 / MT6983. The current native OS is Alpine
-on the V52 boot image, with BusyBox rescue and an exact V50 rollback. Her observed Noobia address is
+on the restored V50 boot image after an inconclusive V52 Bluetooth reboot
+trial whose SSH timer ended before Alpine's handoff. V52 remains a saved
+candidate; BusyBox rescue and exact V50
+rollback remain available. Her observed Noobia address is
 `192.168.100.107`. Check live identity and health before a hardware trial.
 
 | Need | Source and notes |
@@ -12,6 +15,7 @@ on the V52 boot image, with BusyBox rescue and an exact V50 rollback. Her observ
 | Trial sequence and known hazards | [`LYNX-REMAINING-HARDWARE-TRIALS.md`](../../lynx/linux-port/docs/LYNX-REMAINING-HARDWARE-TRIALS.md) |
 | NRP/1 server and native calls | `lynx/tools/lynx_noob_runtime.py`; [`LYNX-NOOB-RUNTIME.md`](../../lynx/linux-port/docs/LYNX-NOOB-RUNTIME.md) |
 | Nexus remote client | `lynx/tools/lynx_noobctl.py` |
+| Nexus presence monitor | [`LYNX-PRESENCE.md`](../../lynx/linux-port/docs/LYNX-PRESENCE.md); `lynx/tools/lynx_presence.py` |
 | Local hardware backend and agent wrappers | `lynx/tools/lynx_hardware.py`, `lynx/tools/lynx_microphone_level.py`, `lynx/tools/local_calls/`; [tool contract](../../lynx/linux-port/docs/LYNX-HARDWARE-TOOLS.md) |
 | Display, keyboard, scrolling | `lynx/tools/lynx_drm_dmabuf_pattern.c`; [`LYNX-CONSOLE.md`](../../lynx/linux-port/docs/LYNX-CONSOLE.md) |
 | Media control | `lynx/tools/lynx_media.py`; [`LYNX-MEDIA-CONTROL.md`](../../lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md) |

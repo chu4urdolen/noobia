@@ -1,7 +1,8 @@
 # Lynx hardware and Noob runtime status
 
-Lynx is a OnePlus Nord 3 CPH2493, MT6983, running native Alpine on the V52
-boot image. The runtime speaks the Iris-compatible NRP/1 protocol at
+Lynx is a OnePlus Nord 3 CPH2493, MT6983, running native Alpine. Her current
+boot image is the restored V50 while V52 Bluetooth automatic startup awaits
+a properly timed reboot test. The runtime speaks the Iris-compatible NRP/1 protocol at
 `192.168.100.107:4243`, currently accepting Nexus (`192.168.100.106`).
 V52 changed only `boot_a` from the working V50 image; its exact V50 rollback
 remains available. The successful shared-radio calibration, HCI response,

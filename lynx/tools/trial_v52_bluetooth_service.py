@@ -25,6 +25,8 @@ def phone(command, timeout=10):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--audible-smoke", action="store_true")
+    parser.add_argument("--reconnect-smoke", action="store_true")
+    parser.add_argument("--crash-recovery-smoke", action="store_true")
     args = parser.parse_args()
     receipt = ROOT / "logs" / f"v52-bluetooth-service-{time.time_ns()}"
     receipt.mkdir(mode=0o700)
@@ -82,8 +84,9 @@ def main():
              "! rc-service dbus status >/dev/null 2>&1; "
              "! rc-update show default | grep -q lynx-bluetooth; "
              "test \"$(cat /sys/module/firmware_class/parameters/path)\" = /vendor/firmware")
+        watchdog_seconds = 150 if args.crash_recovery_smoke else 90
         watchdog = ("#!/bin/sh\n"
-                    "sleep 90\n"
+                    f"sleep {watchdog_seconds}\n"
                     f"test -e {remote}/cancel && exit 0\n"
                     f"echo watchdog-reboot > {remote}/state\n"
                     "exec /sbin/reboot\n")
@@ -119,7 +122,8 @@ def main():
         central = subprocess.run(["python3", str(ROOT / "tools/lynx_ble_nexus_ping.py"),
                                   "--factory-address-receipt",
                                   str(ROOT / "logs/v52-bt-factory-address-1793365780727214907.json"),
-                                  "--audible-smoke" if args.audible_smoke else "--vm-smoke",
+                                  "--audible-smoke" if args.audible_smoke else
+                                  "--reconnect-smoke" if args.reconnect_smoke else "--vm-smoke",
                                   "--seconds", "25"],
                                  env=env, capture_output=True, timeout=32)
         (receipt / "nexus-gatt.stdout").write_bytes(central.stdout)
@@ -127,9 +131,59 @@ def main():
         report["nexus_ping"] = json.loads(central.stdout) if central.returncode == 0 else \
             {"exit": central.returncode}
         save()
-        expected = "audible-smoke-complete" if args.audible_smoke else "vm-smoke-complete"
+        expected = ("audible-smoke-complete" if args.audible_smoke else
+                    "reconnect-smoke-complete" if args.reconnect_smoke else
+                    "vm-smoke-complete")
         if report["nexus_ping"].get("state") != expected:
             raise RuntimeError("authenticated BLE VM smoke test did not complete")
+        if args.crash_recovery_smoke:
+            process_query = ("set -e\n/usr/bin/python3 - <<'PY'\n"
+                             "from pathlib import Path\n"
+                             "matches=[]\n"
+                             "for path in Path('/proc').glob('[0-9]*/cmdline'):\n"
+                             " try: parts=path.read_bytes().split(b'\\0')\n"
+                             " except OSError: continue\n"
+                             " if parts[:4] == [b'/usr/bin/python3', "
+                             "b'/usr/local/bin/lynx-ble-gatt', b'--seconds', b'0']:\n"
+                             "  matches.append(int(path.parent.name))\n"
+                             "assert len(matches)==1, matches\n"
+                             "print(matches[0])\nPY")
+            old_pid = int(step("gatt_pid_before", process_query).strip())
+            step("inject_gatt_exit", f"kill -TERM {old_pid}")
+            recovered = False
+            deadline = time.monotonic() + 38
+            while time.monotonic() < deadline:
+                result = phone(process_query + "\ntest -f /run/lynx/bluetooth/ready; "
+                               "rc-service lynx-bluetooth status >/dev/null 2>&1",
+                               timeout=6)
+                if result.returncode == 0:
+                    try:
+                        new_pid = int(result.stdout.decode().strip())
+                    except ValueError:
+                        new_pid = old_pid
+                    if new_pid != old_pid:
+                        recovered = True
+                        report["gatt_pid_after"] = new_pid
+                        break
+                time.sleep(0.5)
+            report["gatt_recovered"] = recovered
+            save()
+            if not recovered:
+                raise RuntimeError("GATT child did not recover under OpenRC supervision")
+            second = subprocess.run(
+                ["python3", str(ROOT / "tools/lynx_ble_nexus_ping.py"),
+                 "--factory-address-receipt",
+                 str(ROOT / "logs/v52-bt-factory-address-1793365780727214907.json"),
+                 "--reconnect-smoke", "--seconds", "25"],
+                env=env, capture_output=True, timeout=32)
+            (receipt / "nexus_after_recovery.stdout").write_bytes(second.stdout)
+            (receipt / "nexus_after_recovery.stderr").write_bytes(second.stderr)
+            report["nexus_after_recovery"] = (
+                json.loads(second.stdout) if second.returncode == 0 else
+                {"exit": second.returncode})
+            save()
+            if report["nexus_after_recovery"].get("state") != "reconnect-smoke-complete":
+                raise RuntimeError("GATT recovery did not restore authenticated VM")
         report["state"] = "authenticated-vm-complete-awaiting-stop"
     except Exception as exc:
         report.update(state="failed", error=str(exc))
@@ -169,7 +223,7 @@ def main():
             except (OSError, subprocess.TimeoutExpired):
                 report["watchdog_cancelled"] = False
         if armed and not report.get("watchdog_cancelled"):
-            report["watchdog_reboot_expected_within_seconds"] = 90
+            report["watchdog_reboot_expected_within_seconds"] = watchdog_seconds
         if report["state"] == "authenticated-vm-complete-awaiting-stop" and \
                 report.get("teardown_verified") and report.get("health_after") and \
                 report.get("watchdog_cancelled"):

@@ -15,7 +15,8 @@ from lynx_ble_auth import envelope, fragments, load_key
 from lynx_ble_gatt_probe import CHALLENGE_UUID, REQUEST_UUID, RESPONSE_UUID, SERVICE_UUID
 
 
-async def trial(address, seconds, key, vm_smoke=False, audible_smoke=False):
+async def trial(address, seconds, key, vm_smoke=False, audible_smoke=False,
+                reconnect_smoke=False):
     bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
     root = bus.get_proxy_object("org.bluez", "/",
                                 await bus.introspect("org.bluez", "/"))
@@ -117,7 +118,7 @@ async def trial(address, seconds, key, vm_smoke=False, audible_smoke=False):
         if not result["info_ok"]:
             result["state"] = "unexpected-info-reply"
             return result
-        if vm_smoke or audible_smoke:
+        if vm_smoke or audible_smoke or reconnect_smoke:
             status = await exchange(54, "STATUS")
             if b"state=EMPTY" not in status:
                 result["state"] = "vm-not-empty"
@@ -150,6 +151,33 @@ async def trial(address, seconds, key, vm_smoke=False, audible_smoke=False):
                 program = "00"
             loaded = await exchange(55, "LOAD " + program)
             result["vm_loaded"] = loaded == f"NRP/1 55 OK loaded={len(program) // 2}\n".encode()
+            if reconnect_smoke:
+                old_nonce = nonce
+                old_frame = envelope(key, old_nonce, sequence + 1,
+                                     b"NRP/1 65 STATUS\n")
+                await asyncio.wait_for(device.call_disconnect(), timeout=5)
+                await asyncio.sleep(0.5)
+                await asyncio.wait_for(device.call_connect(), timeout=10)
+                refreshed = bytes(await asyncio.wait_for(
+                    challenge.call_read_value({}), timeout=5))
+                refreshed_match = re.fullmatch(rb"AUTH/1 CHALLENGE ([0-9a-f]{64})\n",
+                                              refreshed)
+                if not refreshed_match:
+                    result["state"] = "reconnect-challenge-missing"
+                    return result
+                nonce = bytes.fromhex(refreshed_match.group(1).decode())
+                result["fresh_challenge"] = nonce != old_nonce
+                sequence = 0
+                try:
+                    for chunk in fragments(old_frame):
+                        await asyncio.wait_for(request.call_write_value(
+                            chunk, {"type": Variant("s", "request")}), timeout=10)
+                except DBusError:
+                    result["old_session_rejected"] = True
+                else:
+                    result["old_session_rejected"] = False
+                resumed = await exchange(59, "STATUS")
+                result["vm_preserved_across_reconnect"] = b"state=READY" in resumed
             started = await exchange(56, "RUN")
             result["vm_started"] = started == b"NRP/1 56 OK started\n"
             if audible_smoke:
@@ -163,7 +191,12 @@ async def trial(address, seconds, key, vm_smoke=False, audible_smoke=False):
             checks = ["unsigned_rejected", "vm_loaded", "vm_started", "vm_halted", "vm_reset"]
             if audible_smoke:
                 checks += ["audio_ready", "direct_beep_accepted", "vm_beep_calls_succeeded"]
-            result["state"] = (("audible-smoke-complete" if audible_smoke else "vm-smoke-complete")
+            if reconnect_smoke:
+                checks += ["fresh_challenge", "old_session_rejected",
+                           "vm_preserved_across_reconnect"]
+            result["state"] = (("audible-smoke-complete" if audible_smoke else
+                                "reconnect-smoke-complete" if reconnect_smoke else
+                                "vm-smoke-complete")
                                if all(result.get(k) for k in checks) else "vm-smoke-failed")
         else:
             result["state"] = "ping-info-complete"
@@ -186,6 +219,7 @@ if __name__ == "__main__":
                         default=Path("/noobia/lynx/private/nrp-nexus.key"))
     parser.add_argument("--vm-smoke", action="store_true")
     parser.add_argument("--audible-smoke", action="store_true")
+    parser.add_argument("--reconnect-smoke", action="store_true")
     parser.add_argument("--seconds", type=int, default=25)
     args = parser.parse_args()
     receipt = json.loads(args.factory_address_receipt.read_text())
@@ -196,4 +230,5 @@ if __name__ == "__main__":
     key = load_key(args.nexus_key_file)
     print(json.dumps(asyncio.run(trial(receipt["address"], args.seconds, key,
                                        vm_smoke=args.vm_smoke,
-                                       audible_smoke=args.audible_smoke))))
+                                       audible_smoke=args.audible_smoke,
+                                       reconnect_smoke=args.reconnect_smoke))))

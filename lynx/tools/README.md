@@ -4,7 +4,7 @@ All phone-work artifacts are kept under `/noobia/lynx`. Argus is powered
 off after archive restoration; these tools and the Linux build do not require
 him. Cached ARM64 BusyBox validation evidence remains available locally.
 
-## Current V52 entry points (2026-10-30)
+## Current V50 recovery and V52 Bluetooth work (2026-10-31)
 
 Use the [Lynx code map](../../docs/noobs/LYNX.md) and
 [hardware tool contract](../linux-port/docs/LYNX-HARDWARE-TOOLS.md) for current
@@ -33,18 +33,28 @@ neither service at boot. The bridge's exact one-bit feature correction and
 rollback evidence are in the connectivity report. `lynx_bt_mgmt_query.py`
 checks kernel management index visibility without revealing payloads.
 The `--gatt-probe` variant stages `lynx_ble_gatt_probe.py` and a temporary
-Python D-Bus library in RAM. `lynx_ble_nexus_ping.py` proved an unpaired
-NRP/1 `PING` round trip over BLE on V52; see
+Python D-Bus library in RAM. `lynx_ble_nexus_ping.py` proved authenticated
+NRP/1 commands and VM calls over BLE on V52, including a fresh challenge and
+preserved VM state across a reconnect; see
 [`LYNX-BLUETOOTH-NRP.md`](../linux-port/docs/LYNX-BLUETOOTH-NRP.md).
-Bluetooth remains off at boot and the GATT probe accepts only `PING`/`INFO`.
+The GATT endpoint requires the Nexus key for all remote commands. Bluetooth
+remains off at boot after an automatic-start trial with insufficient wait time.
 The trial scripts use Python `dbus-next==0.2.3` on Nexus. Recreate the ignored
 local dependency with `python3 -m pip install --no-deps --target /noobia/lynx/tools/vendor_dbus_next dbus-next==0.2.3`;
 the installer stages that pure-Python package on Lynx from this directory.
-`lynx_bluetoothd.py` and `lynx-bluetooth-openrc.sh` are an installed but
-boot-disabled service candidate. `trial_v52_bluetooth_service.py` proved three
-same-boot start, BLE PING (later INFO), and stop cycles with healthy cleanup. See the
-Bluetooth NRP report before enabling it at boot; authorization and power-use
-tests are still open.
+`lynx_bluetoothd.py` and `lynx-bluetooth-openrc.sh` are installed but
+boot-disabled. `trial_v52_bluetooth_service.py` proved same-boot start/stop,
+authenticated VM reconnect, and OpenRC restart after a GATT child crash.
+`trial_v52_bluetooth_reboot.py` documents the inconclusive automatic-start trial;
+`recover_v52_bluetooth_reboot.py` and the exact V50 rollback image document
+recovery. Do not re-enable Bluetooth at boot until the startup failure is
+explained and Lynx has adequate charge.
+
+On Nexus, `lynx_presence.py` is the low-duty systemd user service reporting
+USB Fastboot, Wi-Fi/SSH, Bluetooth connection, and the last battery reading.
+Read `state/presence/current.json`; see
+[`LYNX-PRESENCE.md`](../linux-port/docs/LYNX-PRESENCE.md). This monitor never
+flashes, reboots, scans Bluetooth, or changes Lynx.
 `trial_v52_gps_pwr.py` and `trial_v52_gps_scp_stack.py` loaded the exact stock
 GNSS power/SCP modules into V52 RAM. `trial_v52_gnss_mnld.py --start-mnl
 --capture-logd --port2` is the bounded native NMEA trial, and

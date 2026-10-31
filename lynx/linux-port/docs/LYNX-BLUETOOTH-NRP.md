@@ -275,6 +275,19 @@ paths exposed no readable record. The persistent guard log also lacked a
 start line for the failed V52 boot. The last kernel messages were from the
 successful V50 boot; they do not identify the prior reset cause.
 
+`tools/trial_v52_bluetooth_after_alpine.py` is the staged next trial. Its
+default mode is read-only. `--start` requires the exact V52 boot hash, at
+least 240 seconds of Alpine uptime, healthy Wi-Fi/Noobian services, battery
+at least 20%, and no Bluetooth default-runlevel link. It arms a bounded
+reboot watchdog, starts Bluetooth only after those checks, verifies signed
+BLE reconnect and VM continuity from Nexus, samples health for 1–15 minutes,
+then stops the radio and cancels the watchdog after teardown. The optional
+`--leave-running` keeps the service on only after a successful sustained
+trial. It never changes an OpenRC runlevel or partition. On the current V50
+boot its read-only preflight refused the V52 identity with no radio start:
+`lynx/logs/v52-bt-after-alpine-1793465203090081096/result.json`. The live
+V52 path remains untested.
+
 Do not enable Bluetooth at boot for normal operation until a guarded reboot
 trial verifies Alpine, Wi-Fi, SSH, battery current, and Bluetooth together.
 Same-boot Bluetooth, reconnect, and child-crash recovery are proven; automatic

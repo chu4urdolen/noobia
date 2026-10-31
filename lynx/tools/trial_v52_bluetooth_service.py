@@ -74,7 +74,7 @@ def main():
             raise RuntimeError("boot_a differs from exact V52")
         report["boot_id"] = identity[0]
         health = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready"))
-        if health["issues"] or health["battery"]["capacity_percent"] < 50 or \
+        if health["issues"] or health["battery"]["capacity_percent"] < 20 or \
                 health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("power or Alpine health preflight failed")
         step("service_preflight", "set -eu; test -f /etc/init.d/lynx-bluetooth; "

@@ -37,3 +37,7 @@ The monitor was installed and started on 2026-10-31 after V50 restored
 Alpine/Wi-Fi. Its first observation was `alpine_wifi`, Bluetooth disconnected,
 and 25% battery. Presence changes can lag by one poll; Bluetooth link changes
 can lag up to one minute.
+
+The status file marks battery readings at or below 10% as `low`, at or below
+5% as `critical`, and all other valid readings as `normal`. This is an
+observation only; the monitor never controls Lynx's power or charging.

@@ -63,7 +63,7 @@ def verify_boot_and_firmware():
         raise RuntimeError("NRP local socket is unavailable")
 
 
-def health(min_battery=30):
+def health(min_battery=15):
     status = json.loads(run(["/usr/local/bin/lynx-status", "--assert-ready"], timeout=8))
     if status["issues"] or status["battery"]["capacity_percent"] < min_battery or \
             status["battery"]["temperature_mC"] >= 40000 or \
@@ -127,7 +127,7 @@ def supervise():
     (RUNTIME / "ready").unlink(missing_ok=True)
     try:
         verify_boot_and_firmware()
-        health(min_battery=40)
+        health(min_battery=20)
         if service_running("bluetooth"):
             raise RuntimeError("BlueZ is already owned by another service")
         event("preflight-ok")

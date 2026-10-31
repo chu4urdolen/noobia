@@ -188,10 +188,19 @@ the V52 boot fail. The detailed read-only log copy is
 
 Future scripts now allow 450 seconds for the Alpine/SSH check and 660 seconds
 for the boot rollback guard. These durations have **not** been trialed on
-hardware. The radio stays boot-disabled on the restored V50 image until Lynx
-has charge for another controlled V52 test.
+hardware. The radio stays boot-disabled on the restored V50 image until the
+next controlled V52 test.
 
-Do not re-enable Bluetooth at boot until the phone is charged and a guarded
+On 2026-10-31, Noob clarified that 25% is sufficient for a trial while 5%
+is not. The Bluetooth supervisor's reserve was adjusted to require at least
+20% to start and to stop its radio service below 15%, leaving margin above
+Lynx's existing critical battery guard. The guarded passive install on V50
+did not start Bluetooth or change `boot_a`; receipts:
+`lynx/logs/v52-bluetooth-battery-guard-1793447670895867348/result.json` and
+`lynx/logs/v52-bluetooth-battery-guard-v2-1793447753633128241/result.json`.
+The final threshold has not yet had a V52 radio trial.
+
+Do not re-enable Bluetooth at boot until a guarded
 trial verifies Wi-Fi association, SSH, battery current, and Bluetooth at the
 same time. The same-boot Bluetooth service, reconnect, and crash-recovery
 trials remain valid; automatic startup remains unverified.

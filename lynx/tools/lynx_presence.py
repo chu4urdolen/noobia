@@ -106,6 +106,19 @@ def location(signals):
     return "not_observed"
 
 
+def battery_alert(battery):
+    if not battery:
+        return "unknown"
+    percent = battery.get("percent")
+    if not isinstance(percent, int):
+        return "unknown"
+    if percent <= 5:
+        return "critical"
+    if percent <= 10:
+        return "low"
+    return "normal"
+
+
 def write_status(directory, status, prior):
     directory.mkdir(parents=True, exist_ok=True)
     destination = directory / "current.json"
@@ -114,7 +127,7 @@ def write_status(directory, status, prior):
     temporary.replace(destination)
     changed = prior is None or any(status.get(key) != prior.get(key) for key in
                                    ("state", "usb_present", "fastboot_usb", "wifi_ssh",
-                                    "bluetooth_connected"))
+                                    "bluetooth_connected", "battery_alert"))
     if changed:
         with (directory / "transitions.jsonl").open("a") as history:
             history.write(json.dumps(status, sort_keys=True) + "\n")
@@ -158,6 +171,7 @@ def main():
             last_battery = started
         status = {"schema": 1, "observed_at_utc": now(), "state": location(signals),
                   **signals, "battery": battery,
+                  "battery_alert": battery_alert(battery),
                   "bluetooth_note": "connected link only; no active radio scan"}
         write_status(args.state_dir, status, previous)
         previous = status

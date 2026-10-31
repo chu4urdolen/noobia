@@ -20,8 +20,15 @@ COMPONENTS = {
     "supervisor": (ROOT / "tools/lynx-bluetooth-openrc.sh", "/etc/init.d/lynx-bluetooth",
                    "c204f5571e454e46a88ad6f7bd643857a26abf64ca1063e88b51721c52d214c4",
                    "supervisor", "/bin/sh -n"),
+    "battery-guard": (ROOT / "tools/lynx_bluetoothd.py", "/usr/local/bin/lynx-bluetoothd",
+                      "cdba5157a00d92605b342743111e2c722dfed64c8075cc261aaf0e33503aee1f",
+                      "battery-guard", "/usr/bin/python3 -m py_compile"),
+    "battery-guard-v2": (ROOT / "tools/lynx_bluetoothd.py", "/usr/local/bin/lynx-bluetoothd",
+                         "d29580097d4e907644fe323dd665bc797aef17ff468b046f1ec595ea6c88b827",
+                         "battery-guard-v2", "/usr/bin/python3 -m py_compile"),
 }
 BOOT_SHA = "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf"
+V50_SHA = "6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59"
 
 
 def phone(command, payload=None, timeout=15):
@@ -57,12 +64,13 @@ def main():
 
     try:
         status = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready"))
-        if status["issues"] or status["battery"]["capacity_percent"] < 50 or \
+        if status["issues"] or status["battery"]["capacity_percent"] < 20 or \
                 status["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("Alpine or power preflight failed")
         report["boot_id"] = status["boot_id"]
-        step("identity", "set -eu; test \"$(sha256sum /dev/sdc39 | cut -c1-64)\" = "
-             + BOOT_SHA + "; ! rc-service lynx-bluetooth status >/dev/null 2>&1")
+        step("identity", "set -eu; boot=$(sha256sum /dev/sdc39 | cut -c1-64); "
+             "case \"$boot\" in " + BOOT_SHA + "|" + V50_SHA + ") ;; "
+             "*) exit 1;; esac; ! rc-service lynx-bluetooth status >/dev/null 2>&1")
         if args.rollback:
             step("rollback", "set -eu; test \"$(sha256sum " + target +
                  " | cut -c1-64)\" = " + new_sha + "; test \"$(sha256sum " +

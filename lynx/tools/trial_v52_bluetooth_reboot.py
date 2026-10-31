@@ -66,7 +66,7 @@ def main():
     reboot_sent = False
     try:
         before = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready"))
-        if before["issues"] or before["battery"]["capacity_percent"] < 70 or \
+        if before["issues"] or before["battery"]["capacity_percent"] < 20 or \
                 before["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("Alpine, battery, or temperature preflight failed")
         report["boot_id_before"] = before["boot_id"]

@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from lynx_presence import location, usb_probe
+from lynx_presence import battery_alert, location, usb_probe
 
 
 class PresenceTests(unittest.TestCase):
@@ -36,6 +36,12 @@ class PresenceTests(unittest.TestCase):
         self.assertEqual(location(signals), "bluetooth_connected")
         signals["wifi_ssh"] = True
         self.assertEqual(location(signals), "alpine_wifi")
+
+    def test_battery_alert_respects_reserve_margin(self):
+        self.assertEqual(battery_alert({"percent": 25}), "normal")
+        self.assertEqual(battery_alert({"percent": 10}), "low")
+        self.assertEqual(battery_alert({"percent": 5}), "critical")
+        self.assertEqual(battery_alert(None), "unknown")
 
 
 if __name__ == "__main__":

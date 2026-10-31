@@ -14,3 +14,15 @@ depend() {
     need lynx-wifi lynx-noobd
     after lynx-display
 }
+
+start_pre() {
+    if [ -f /etc/lynx/bt-firstboot-trial ]; then
+        mkdir -p /run/lynx/bt-firstboot-guard
+        if [ -r /run/lynx/bt-firstboot-guard/pid ] &&
+           kill -0 "$(cat /run/lynx/bt-firstboot-guard/pid)" 2>/dev/null; then
+            return 0
+        fi
+        /usr/bin/setsid /bin/sh /usr/local/bin/lynx-bt-firstboot-guard \
+            </dev/null >>/var/log/lynx-bt-firstboot-guard.log 2>&1 &
+    fi
+}

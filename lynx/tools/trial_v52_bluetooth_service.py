@@ -77,14 +77,20 @@ def main():
         if health["issues"] or health["battery"]["capacity_percent"] < 20 or \
                 health["thermal"]["max_mC"] >= 45000:
             raise RuntimeError("power or Alpine health preflight failed")
-        step("service_preflight", "set -eu; test -f /etc/init.d/lynx-bluetooth; "
-             "test -S /run/lynx/noobd.sock; "
-             "! rc-service lynx-bluetooth status >/dev/null 2>&1; "
-             "! rc-service bluetooth status >/dev/null 2>&1; "
-             "! rc-service dbus status >/dev/null 2>&1; "
-             "! rc-update show default | grep -q lynx-bluetooth; "
-             "test \"$(cat /sys/module/firmware_class/parameters/path)\" = /vendor/firmware")
-        watchdog_seconds = 150 if args.crash_recovery_smoke else 90
+        preflight = ("set -eu; test -f /etc/init.d/lynx-bluetooth; "
+                     "test -S /run/lynx/noobd.sock; "
+                     "! rc-service lynx-bluetooth status >/dev/null 2>&1; "
+                     "! rc-service bluetooth status >/dev/null 2>&1; "
+                     "! rc-service dbus status >/dev/null 2>&1; "
+                     "! rc-update show default | grep -q lynx-bluetooth; "
+                     "test \"$(cat /sys/module/firmware_class/parameters/path)\" = /vendor/firmware")
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            if phone(preflight, timeout=5).returncode == 0:
+                break
+            time.sleep(1)
+        step("service_preflight", preflight)
+        watchdog_seconds = 240 if args.crash_recovery_smoke else 150
         watchdog = ("#!/bin/sh\n"
                     f"sleep {watchdog_seconds}\n"
                     f"test -e {remote}/cancel && exit 0\n"
@@ -124,8 +130,8 @@ def main():
                                   str(ROOT / "logs/v52-bt-factory-address-1793365780727214907.json"),
                                   "--audible-smoke" if args.audible_smoke else
                                   "--reconnect-smoke" if args.reconnect_smoke else "--vm-smoke",
-                                  "--seconds", "25"],
-                                 env=env, capture_output=True, timeout=32)
+                                  "--seconds", "40"],
+                                 env=env, capture_output=True, timeout=80)
         (receipt / "nexus-gatt.stdout").write_bytes(central.stdout)
         (receipt / "nexus-gatt.stderr").write_bytes(central.stderr)
         report["nexus_ping"] = json.loads(central.stdout) if central.returncode == 0 else \
@@ -174,8 +180,8 @@ def main():
                 ["python3", str(ROOT / "tools/lynx_ble_nexus_ping.py"),
                  "--factory-address-receipt",
                  str(ROOT / "logs/v52-bt-factory-address-1793365780727214907.json"),
-                 "--reconnect-smoke", "--seconds", "25"],
-                env=env, capture_output=True, timeout=32)
+                 "--reconnect-smoke", "--seconds", "40"],
+                env=env, capture_output=True, timeout=80)
             (receipt / "nexus_after_recovery.stdout").write_bytes(second.stdout)
             (receipt / "nexus_after_recovery.stderr").write_bytes(second.stderr)
             report["nexus_after_recovery"] = (

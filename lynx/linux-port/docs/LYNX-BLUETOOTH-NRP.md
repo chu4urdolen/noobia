@@ -200,10 +200,44 @@ did not start Bluetooth or change `boot_a`; receipts:
 `lynx/logs/v52-bluetooth-battery-guard-v2-1793447753633128241/result.json`.
 The final threshold has not yet had a V52 radio trial.
 
-Do not re-enable Bluetooth at boot until a guarded
-trial verifies Wi-Fi association, SSH, battery current, and Bluetooth at the
-same time. The same-boot Bluetooth service, reconnect, and crash-recovery
-trials remain valid; automatic startup remains unverified.
+### Latest V52 trials, 2026-10-31
+
+V52 was flashed to `boot_a` only and booted from Fastboot into healthy Alpine.
+The bounded same-boot service trial passed authenticated PING/INFO, unsigned
+request rejection, reconnect with a fresh challenge, VM state preservation,
+and clean radio teardown. The first automatic-start reboot reached Alpine and
+Bluetooth ready, but Nexus discovery exceeded a 25-second client deadline.
+The same-boot rerun passed after allowing 40 seconds for discovery and a
+separate GATT-resolution deadline. Receipts:
+`lynx/logs/v52-bt-fastboot-recovery-1793448380509660010/result.json`,
+`lynx/logs/v52-bluetooth-service-1793448698158063611/result.json`, and
+`lynx/logs/v52-bluetooth-service-1793449310204055874/result.json`.
+
+An integrated first-boot guard then passed a 15-second live test: it started
+from OpenRC `start_pre`, disabled Bluetooth autostart, stopped the radio, and
+left Alpine healthy. Receipt:
+`lynx/logs/v52-bt-integrated-guard-1793449522329594978/result.json`.
+The subsequent automatic-start reboot did **not** reach Alpine SSH. Nexus
+passively observed USB Fastboot after about five minutes; read-only Fastboot
+queries reported slot A still bootable. No new Alpine power-history boot ID or
+pstore record exists for that attempt, and the guard log contains no start
+entry from it. This does not locate the failure within the kernel/boot chain,
+and it does not prove Bluetooth caused it. Receipt:
+`lynx/logs/v52-bluetooth-reboot-1793449551490815372/result.json`.
+
+The verified V50 image was restored to `boot_a` only and booted to healthy
+Alpine/Wi-Fi. Its boot hash matches V50, Bluetooth is stopped and absent from
+the default runlevel, and the trial marker is absent. Receipt:
+`lynx/logs/v52-bt-fastboot-recovery-1793449933925684721/result.json`.
+The Nexus presence monitor currently sees V50 on Wi-Fi. The next automatic
+startup trial must use OpenRC's graceful shutdown path, retain a host-side
+USB Fastboot observer, and leave a clear rollback receipt. These script
+changes are staged locally and have not been used on Lynx yet.
+
+Do not enable Bluetooth at boot for normal operation until a guarded reboot
+trial verifies Alpine, Wi-Fi, SSH, battery current, and Bluetooth together.
+Same-boot Bluetooth, reconnect, and child-crash recovery are proven; automatic
+startup is still unverified.
 
 The object tree, registration, advertising, and read/write option contracts
 follow the official [BlueZ GATT API](https://bluez.readthedocs.io/en/latest/gatt-api/)
@@ -222,8 +256,8 @@ and [Device](https://bluez.readthedocs.io/en/latest/device-api/) methods.
   bounded `PING` and `INFO` exchanges without pairing. **Done**, with signed
   commands and an unsigned-request rejection test.
 - A simple native call, a VM load/run/status cycle, and disconnect/reconnect
-  use the same runtime state seen over Wi-Fi. **Native call and VM done;**
-  disconnect/reconnect preserving VM state still untested.
+  use the same runtime state seen over Wi-Fi. **Done in guarded same-boot
+  trials.**
 - A cold boot with the service enabled retains display, battery monitoring,
   thermal limits, Wi-Fi, SSH, and the V50 Fastboot rollback. Any service
   failure leaves SSH available and Bluetooth off.

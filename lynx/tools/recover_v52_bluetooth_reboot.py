@@ -82,6 +82,7 @@ def main():
         record("boot_evidence", logs)
         disable = phone("set -eu; rc-update del lynx-bluetooth default || true; "
                         "rc-service lynx-bluetooth stop || true; "
+                        "rm -f /etc/lynx/bt-firstboot-trial; "
                         "mkdir -p /run/lynx-bt-firstboot-guard; "
                         "touch /run/lynx-bt-firstboot-guard/cancel; "
                         "rc-update del lynx-bt-firstboot-guard default || true; "

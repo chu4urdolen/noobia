@@ -38,17 +38,21 @@ NRP/1 commands and VM calls over BLE on V52, including a fresh challenge and
 preserved VM state across a reconnect; see
 [`LYNX-BLUETOOTH-NRP.md`](../linux-port/docs/LYNX-BLUETOOTH-NRP.md).
 The GATT endpoint requires the Nexus key for all remote commands. Bluetooth
-remains off at boot after an automatic-start trial with insufficient wait time.
+remains off at boot. A later automatic-start attempt returned to Fastboot
+before Alpine SSH; the exact cause is unknown.
 The trial scripts use Python `dbus-next==0.2.3` on Nexus. Recreate the ignored
 local dependency with `python3 -m pip install --no-deps --target /noobia/lynx/tools/vendor_dbus_next dbus-next==0.2.3`;
 the installer stages that pure-Python package on Lynx from this directory.
 `lynx_bluetoothd.py` and `lynx-bluetooth-openrc.sh` are installed but
 boot-disabled. `trial_v52_bluetooth_service.py` proved same-boot start/stop,
 authenticated VM reconnect, and OpenRC restart after a GATT child crash.
-`trial_v52_bluetooth_reboot.py` documents the inconclusive automatic-start trial;
-`recover_v52_bluetooth_reboot.py` and the exact V50 rollback image document
-recovery. Do not re-enable Bluetooth at boot until the startup failure is
-explained and Lynx has adequate charge.
+`trial_v52_bluetooth_reboot.py` stages an integrated first-boot guard and now
+uses OpenRC shutdown and passive Fastboot detection. This revision has not
+been run on hardware. `recover_v52_bluetooth_reboot.py` and the exact V50
+rollback image document recovery. V50 is currently restored and healthy;
+do not re-enable Bluetooth at boot until the startup path passes a guarded
+trial. `lynx_bt_firstboot_guard.sh` and the OpenRC `start_pre` integration
+passed a 15-second same-boot guard test, but did not run in the failed boot.
 
 On Nexus, `lynx_presence.py` is the low-duty systemd user service reporting
 USB Fastboot, Wi-Fi/SSH, Bluetooth connection, and the last battery reading.

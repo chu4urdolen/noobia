@@ -55,7 +55,9 @@ async def trial(address, seconds, key, vm_smoke=False, audible_smoke=False,
         device = device_obj.get_interface("org.bluez.Device1")
         await asyncio.wait_for(device.call_connect(), timeout=10)
         result["connected"] = True
-        while asyncio.get_running_loop().time() < deadline:
+        chars = {}
+        resolve_deadline = asyncio.get_running_loop().time() + 15
+        while asyncio.get_running_loop().time() < resolve_deadline:
             objects = await manager.call_get_managed_objects()
             service_paths = [p for p, props in objects.items()
                              if props.get("org.bluez.GattService1", {}).get(

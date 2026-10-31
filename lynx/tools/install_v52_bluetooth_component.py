@@ -26,6 +26,9 @@ COMPONENTS = {
     "battery-guard-v2": (ROOT / "tools/lynx_bluetoothd.py", "/usr/local/bin/lynx-bluetoothd",
                          "d29580097d4e907644fe323dd665bc797aef17ff468b046f1ec595ea6c88b827",
                          "battery-guard-v2", "/usr/bin/python3 -m py_compile"),
+    "boot-guard-openrc": (ROOT / "tools/lynx-bluetooth-openrc.sh", "/etc/init.d/lynx-bluetooth",
+                          "d9857e4fa633c636316e72da2c8dc1bb40af4fc32ac37bbecacb0d8b25aa5493",
+                          "boot-guard-openrc", "/bin/sh -n"),
 }
 BOOT_SHA = "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf"
 V50_SHA = "6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59"

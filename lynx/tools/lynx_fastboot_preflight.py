@@ -20,7 +20,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--connect', action='store_true', help='Run only the fixed getvar queries against Lynx')
     args = parser.parse_args()
-    commands = [[str(FASTBOOT), '-s', SERIAL, 'getvar', variable] for variable in VARIABLES]
+    commands = [['sudo', '-n', str(FASTBOOT), '-s', SERIAL, 'getvar', variable]
+                for variable in VARIABLES]
     if not args.connect:
         print(json.dumps({'mode': 'offline-plan', 'serial': SERIAL, 'commands': commands,
                           'phone_contacted': False, 'writes_allowed': False}, indent=2))

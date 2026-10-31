@@ -49,9 +49,9 @@ def main():
     args = parser.parse_args()
     local()
     commands = {
-        "flash-v52": [str(base.FASTBOOT), "-s", base.SERIAL, "flash", "boot_a", str(V52)],
-        "restore-v50": [str(base.FASTBOOT), "-s", base.SERIAL, "flash", "boot_a", str(V50)],
-        "reboot-after-v52": [str(base.FASTBOOT), "-s", base.SERIAL, "reboot"],
+        "flash-v52": ["sudo", "-n", str(base.FASTBOOT), "-s", base.SERIAL, "flash", "boot_a", str(V52)],
+        "restore-v50": ["sudo", "-n", str(base.FASTBOOT), "-s", base.SERIAL, "flash", "boot_a", str(V50)],
+        "reboot-after-v52": ["sudo", "-n", str(base.FASTBOOT), "-s", base.SERIAL, "reboot"],
     }
     if args.prepare:
         print(json.dumps({"state": "offline-ready-flash-held", "v52_sha256": V52_SHA,

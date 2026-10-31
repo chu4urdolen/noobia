@@ -29,6 +29,10 @@ COMPONENTS = {
     "boot-guard-openrc": (ROOT / "tools/lynx-bluetooth-openrc.sh", "/etc/init.d/lynx-bluetooth",
                           "d9857e4fa633c636316e72da2c8dc1bb40af4fc32ac37bbecacb0d8b25aa5493",
                           "boot-guard-openrc", "/bin/sh -n"),
+    "boot-guard-script": (ROOT / "tools/lynx_bt_firstboot_guard.sh",
+                          "/usr/local/bin/lynx-bt-firstboot-guard",
+                          "0a582f4af25bf3b285d3d008d9ddf4c0929dc4e20925489a24b7bf5052c2317d",
+                          "boot-guard-script", "/bin/sh -n"),
 }
 BOOT_SHA = "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf"
 V50_SHA = "6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59"

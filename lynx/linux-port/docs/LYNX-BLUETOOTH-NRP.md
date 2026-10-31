@@ -229,10 +229,51 @@ The verified V50 image was restored to `boot_a` only and booted to healthy
 Alpine/Wi-Fi. Its boot hash matches V50, Bluetooth is stopped and absent from
 the default runlevel, and the trial marker is absent. Receipt:
 `lynx/logs/v52-bt-fastboot-recovery-1793449933925684721/result.json`.
-The Nexus presence monitor currently sees V50 on Wi-Fi. The next automatic
-startup trial must use OpenRC's graceful shutdown path, retain a host-side
-USB Fastboot observer, and leave a clear rollback receipt. These script
-changes are staged locally and have not been used on Lynx yet.
+The Nexus presence monitor saw V50 on Wi-Fi after that recovery. A later
+trial used OpenRC's graceful shutdown path and a host-side USB Fastboot
+observer, as recorded below.
+
+### Graceful reboot trial, 2026-10-31
+
+USB Fastboot preflight initially timed out because the script used an
+unprivileged USB command while the current device node required `sudo -n`.
+That attempt made no partition write. The preflight and V52 boot_a trial now
+use the same noninteractive sudo path; the repeated full preflight passed.
+V52 was flashed to `boot_a` only and booted into healthy Alpine/SSH with the
+expected hash, battery 29%, and Bluetooth disabled. Receipts:
+`lynx/logs/v52-boot-a-trial-1793450533301121989/result.json`,
+`lynx/logs/v52-boot-a-trial-1793450572899829185/result.json`, and
+`lynx/logs/v52-boot-a-trial-1793450578523983243/result.json`.
+
+With Lynx later at 44% battery, the guard script gained a start record and
+was installed without starting the radio or changing `boot_a`:
+`lynx/logs/v52-bluetooth-boot-guard-script-1793463900594513194/result.json`.
+The automatic-start trial armed the 660-second guard, added Bluetooth to the
+default OpenRC runlevel, and requested a graceful `openrc-shutdown -r now`.
+Nexus then observed USB Fastboot before Alpine SSH. The guard has no new
+start entry; Alpine power history has no new boot ID for the failed attempt.
+This second failure with a different reboot command makes the earlier direct
+`reboot` call an insufficient explanation. It still does not prove precisely
+where boot stopped or that the radio driver ran. Receipt:
+`lynx/logs/v52-bluetooth-reboot-1793463917883713251/result.json`.
+
+V50 was restored to `boot_a` only and returned to Alpine/SSH with 44% battery.
+The Bluetooth runlevel link and marker were removed. The recovery helper's
+immediate final health assertion caught a brief `lynx-health` restart at
+uptime 230 seconds and reported failure; a later read-only check at uptime
+244 seconds confirmed V50's boot hash, healthy services, Wi-Fi, absent marker,
+and stopped Bluetooth. The helper now separates cleanup from a bounded
+settled-health check. Receipts:
+`lynx/logs/v52-boot-a-trial-1793464180420430243/result.json` and
+`lynx/logs/v52-bt-fastboot-recovery-1793464186134310110/result.json`.
+
+The next startup design should keep `lynx-bluetooth` out of OpenRC's default
+dependency graph until persistent Alpine is healthy. Test delayed local start
+with a rollback timer on a V52 boot, then test autonomous startup separately.
+After V50 recovery, `/sys/fs/pstore` was empty and the checked boot-reason
+paths exposed no readable record. The persistent guard log also lacked a
+start line for the failed V52 boot. The last kernel messages were from the
+successful V50 boot; they do not identify the prior reset cause.
 
 Do not enable Bluetooth at boot for normal operation until a guarded reboot
 trial verifies Alpine, Wi-Fi, SSH, battery current, and Bluetooth together.

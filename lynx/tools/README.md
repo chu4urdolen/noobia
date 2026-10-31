@@ -46,10 +46,11 @@ the installer stages that pure-Python package on Lynx from this directory.
 `lynx_bluetoothd.py` and `lynx-bluetooth-openrc.sh` are installed but
 boot-disabled. `trial_v52_bluetooth_service.py` proved same-boot start/stop,
 authenticated VM reconnect, and OpenRC restart after a GATT child crash.
-`trial_v52_bluetooth_reboot.py` stages an integrated first-boot guard and now
-uses OpenRC shutdown and passive Fastboot detection. This revision has not
-been run on hardware. `recover_v52_bluetooth_reboot.py` and the exact V50
-rollback image document recovery. V50 is currently restored and healthy;
+`trial_v52_bluetooth_reboot.py` stages an integrated first-boot guard and
+uses OpenRC shutdown and passive Fastboot detection. Its 2026-10-31 trial
+returned to Fastboot before Alpine SSH. `recover_v52_bluetooth_reboot.py`
+and the exact V50 rollback image document recovery. V50 is currently
+restored and healthy;
 do not re-enable Bluetooth at boot until the startup path passes a guarded
 trial. `lynx_bt_firstboot_guard.sh` and the OpenRC `start_pre` integration
 passed a 15-second same-boot guard test, but did not run in the failed boot.

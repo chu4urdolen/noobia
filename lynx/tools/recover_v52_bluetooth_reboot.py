@@ -88,10 +88,27 @@ def main():
                         "rc-update del lynx-bt-firstboot-guard default || true; "
                         "rm -f /etc/init.d/lynx-bt-firstboot-guard; "
                         "! rc-update show default | grep -q lynx-bluetooth; "
-                        "/usr/local/bin/lynx-status --assert-ready", timeout=20)
+                        "test ! -e /etc/lynx/bt-firstboot-trial", timeout=20)
         record("disable_bluetooth_autostart", disable)
         if disable.returncode:
             raise RuntimeError("Alpine returned but Bluetooth autostart rollback failed")
+        # OpenRC health can briefly restart at the 211-second handoff. Verify
+        # the settled state separately from the durable autostart removal.
+        deadline = time.monotonic() + 45
+        while time.monotonic() < deadline:
+            try:
+                settled = phone("set -eu; test \"$(sha256sum /dev/sdc39 | cut -c1-64)\" = "
+                                "6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59; "
+                                "! rc-service lynx-bluetooth status >/dev/null 2>&1; "
+                                "/usr/local/bin/lynx-status --assert-ready", timeout=8)
+                if settled.returncode == 0:
+                    record("settled_health", settled)
+                    break
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+            time.sleep(2)
+        else:
+            raise RuntimeError("Bluetooth rollback completed but Alpine health did not settle")
         report["state"] = "alpine-healthy-bluetooth-autostart-disabled"
     except Exception as exc:
         report.update(state="failed", error=str(exc))

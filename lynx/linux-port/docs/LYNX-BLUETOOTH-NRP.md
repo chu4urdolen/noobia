@@ -338,8 +338,9 @@ V50 remains the working exact rollback.
 
 `tools/capture_v52_boot_stream.py` is the read-only collector for a diagnostic boot.
 Start `--capture` **after** a guarded V52 flash and **before** its Fastboot
-reboot. It waits for pinned rescue SSH on port 22, verifies the exact V52
-boot hash and BusyBox PID 1, then streams `/dev/kmsg` to Nexus while taking
+reboot. The revised collector also listens for V52's token-matched Wi-Fi
+beacon on Nexus UDP port 5514. It waits for pinned rescue SSH on port 22,
+verifies the exact V52 boot hash and BusyBox PID 1, then streams `/dev/kmsg` to Nexus while taking
 bounded rescue boot-log snapshots. It observes Alpine SSH and USB Fastboot,
 caps the stream at 32 MiB, and never writes to Lynx. Its live test result is
 recorded below. It cannot capture a boot that fails before rescue SSH; that

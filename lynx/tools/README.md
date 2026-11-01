@@ -60,8 +60,10 @@ hash-pinned V50 read of a persistent boot log. Its 2026-11-01 receipt shows
 the retained V52-style handoff trace belongs to an older successful boot;
 the raw boot log stays in local `logs/`.
 `capture_v52_boot_stream.py` is the read-only collector for a
-V52 diagnostic boot; it pins rescue SSH, streams kernel messages across the
-Alpine handoff, and records a Fastboot return or healthy Alpine result.
+V52 diagnostic boot; it listens for the V52 image's token-matched UDP Wi-Fi
+beacon, pins rescue SSH, streams kernel messages across the Alpine handoff,
+and records a Fastboot return or healthy Alpine result. The beacon can show
+Wi-Fi reached Nexus before SSH; no beacon does not identify where boot stopped.
 On 2026-11-01 that collector captured a healthy V52 handoff. The delayed
 Bluetooth trial then passed authenticated BLE reconnect/VM checks and ten
 health samples over five minutes, with no Bluetooth boot link. A later

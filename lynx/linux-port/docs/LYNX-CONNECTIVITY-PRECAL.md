@@ -33,6 +33,16 @@ power. V52's successful calibration and Bluetooth trial later confirmed this
 as the cause of the Bluetooth stall. It was also a contributor to the V50 GNSS
 stall; the receiver has further work beyond calibration.
 
+For a future RAM-only V50 trial, the stock `wmt_cdev_wifi.c` source exposes
+`/dev/wmtWifi`: writing `0` requests `WLAN_OPID_FUNC_OFF`, and writing `1`
+requests `WLAN_OPID_FUNC_ON`. This may let a local on-phone program power
+Wi-Fi off, register the matching BT modules, wait for shared pre-calibration,
+and restore Wi-Fi without changing `boot_a`. It has **not** been tested on
+Lynx. Turning Wi-Fi off would remove SSH during the sequence; a local timeout,
+verified module and firmware hashes, local logs, and a tested V50 reboot
+fallback are prerequisites. Merely writing `0`/`1` or inserting BT on the
+current V50 boot is not a validated Bluetooth fix.
+
 The Bluetooth probe restored the original firmware path and canceled its
 reboot watchdog after a healthy SSH check. The still-blocked kernel process
 was later cleared by a normal Linux reboot. Lynx returned to V50 Alpine with

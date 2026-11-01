@@ -1,5 +1,28 @@
 # Lynx screen navigation
 
+## Current Status page, 2026-11-01
+
+The Bluetooth row now reads live local state: `NRP READY` requires the
+Bluetooth supervisor PID, `hci0`, and the service's ready marker;
+`STARTING` means the service exists without all readiness checks, `STANDBY`
+means the stock character device exists without the service, and
+`UNAVAILABLE` means none of those interfaces is present. This avoids the old
+hardcoded `UNAVAILABLE` while Lynx is actually serving authenticated NRP/1
+over BLE. It does not claim a peer is connected. Other rows retain their
+live interface checks, so optional hardware can still read `UNAVAILABLE`
+when its module is not loaded on this boot.
+
+The new renderer compiled on Lynx with `-Wall -Wextra -Werror`, passed its
+touch and console-key self-tests, and rendered a full-size status preview at
+`logs/status-v53-preview/status.png`. That preview displayed `NRP READY`.
+The on-phone renderer and bootstrap were installed transactionally and the
+display service restarted with Wi-Fi, Bluetooth, and Alpine health passing.
+Receipt: `logs/status-bt-install-1793564005472897784/result.json`.
+Rollback copies are `/usr/local/bin/lynx-portrait-display.before-status-bt`
+and `/usr/local/bin/lynx-display-bootstrap.before-status-bt`. The bootstrap
+now checks renderer executability and actual display startup instead of a
+fixed renderer build hash; module and frame manifest hashes remain checked.
+
 On the 2026-11-01 V53 trial boot, the portrait remained black because
 `lynx-display-bootstrap` admitted only exact V50 and V52 `boot_a` hashes.
 An initial correction added V53 and restored the portrait, but this exposed

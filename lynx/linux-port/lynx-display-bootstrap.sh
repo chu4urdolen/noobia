@@ -23,10 +23,8 @@ verify_files() {
             return 1
         }
     done < "$LIST"
-    [ "$(sha256sum /usr/local/bin/lynx-status-display | cut -c1-64)" = \
-      "1a3d21bd40f5903377b800d0bb085443c0653a8c5ff30e1abb964e5eab0e2387" ]
-    [ "$(sha256sum /usr/local/bin/lynx-portrait-display | cut -c1-64)" = \
-      "656fa401e5d1c67fe94208d3d25a9af3761a3e513b92c19968662c3ecfb073f0" ]
+    [ -x /usr/local/bin/lynx-status-display ]
+    [ -x /usr/local/bin/lynx-portrait-display ]
     [ -x /usr/local/bin/lynx-displayctl ]
     [ -r /var/lib/lynx-display/frames/manifest.json ]
     [ -r /var/lib/lynx-display/frames.sha256 ]

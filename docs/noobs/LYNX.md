@@ -54,3 +54,5 @@ validated its acoustic response. Flashlight driver binding
 was observed, then unloading
 the core lost SSH; do not repeat that sequence until its failure is resolved.
 The V50 boot image and recovery path must stay available during driver work.
+The Status page now reports live Bluetooth service readiness; see
+[`LYNX-SCREEN-NAVIGATION.md`](../../lynx/linux-port/docs/LYNX-SCREEN-NAVIGATION.md).

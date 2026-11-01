@@ -933,7 +933,14 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 	status_item(pixels, 1, 4, "LIGHT",
 		    file_contains("/proc/hf_manager", "tcs3408 als") ? "REGISTERED" : "UNAVAILABLE");
 	status_item(pixels, 1, 5, "GPS", "UNAVAILABLE");
-	status_item(pixels, 1, 6, "BLUETOOTH", "UNAVAILABLE");
+	const bool bt_service = pid_matches("/run/lynx/bluetoothd.pid",
+					  "lynx-bluetoothd");
+	const bool bt_controller = access("/sys/class/bluetooth/hci0", F_OK) == 0;
+	const bool bt_ready = file_contains("/run/lynx/bluetooth/ready", "ready");
+	status_item(pixels, 1, 6, "BLUETOOTH",
+		    bt_service && bt_controller && bt_ready ? "NRP READY" :
+		    bt_service ? "STARTING" :
+		    access("/dev/stpbt", R_OK) == 0 ? "STANDBY" : "UNAVAILABLE");
 	status_item(pixels, 1, 7, "CAMERA", "UNAVAILABLE");
 	status_item(pixels, 1, 8, "FLASHLIGHT", "UNAVAILABLE");
 	status_item(pixels, 1, 9, "NOOB NRP",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bluetooth service supervisor for verified V52 or V53 boots.
+"""Bluetooth service supervisor with radio-order and firmware checks.
 
 Run inside a private mount namespace. Keep existing Wi-Fi/SSH independent.
 Only the diagnostic PING/INFO GATT endpoint is started.
@@ -15,10 +15,7 @@ import subprocess
 import time
 
 
-ALLOWED_BOOT_SHAS = {
-    "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf",  # V52
-    "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e",  # V53
-}
+KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
 ROOT = Path("/usr/local/share/lynx-bluetooth")
 MANIFEST = ROOT / "firmware-sha256.json"
 FIRMWARE = Path("/vendor/firmware")
@@ -39,11 +36,42 @@ def event(name, **fields):
     print(json.dumps({"event": name, "at": int(time.time()), **fields}), flush=True)
 
 
+def radio_boot_order(log):
+    """Require BT registration and a calibration settle period before Wi-Fi."""
+    events = (
+        "CHECKPOINT_MODULE_OK wlan_drv_gen4m_6983.ko",
+        "CHECKPOINT_MODULE_OK btif_drv.ko",
+        "CHECKPOINT_MODULE_OK bt_drv_6983.ko",
+        "WIFI_STAGE WIFI_STATION_POWER_ON",
+    )
+    times = {}
+    for line in log.splitlines():
+        if not line.startswith("LYNX_WIFI uptime="):
+            continue
+        try:
+            stamp, name = line[len("LYNX_WIFI uptime="):].split(" ", 1)
+            if name in events:
+                if name in times:
+                    return False
+                times[name] = float(stamp)
+        except ValueError:
+            return False
+    if set(times) != set(events):
+        return False
+    wlan, btif, bt, station = (times[name] for name in events)
+    return 0 < wlan < btif < bt < station and station - bt >= 20
+
+
 def verify_boot_and_firmware():
     if os.geteuid() != 0:
         raise RuntimeError("root required")
-    if run(["sha256sum", "/dev/sdc39"], timeout=20).split()[0] not in ALLOWED_BOOT_SHAS:
-        raise RuntimeError("boot_a is not a verified Bluetooth image")
+    if run(["uname", "-r"]).strip() != KERNEL:
+        raise RuntimeError("Bluetooth modules need the verified kernel ABI")
+    loaded = {line.split()[0] for line in Path("/proc/modules").read_text().splitlines()}
+    if not {"wlan_drv_gen4m_6983", "btif_drv", "bt_drv_6983"} <= loaded:
+        raise RuntimeError("matching Wi-Fi/Bluetooth modules are not loaded")
+    if not radio_boot_order(Path("/run/lynx/boot.log").read_text()):
+        raise RuntimeError("Bluetooth was not registered before Wi-Fi with a settle period")
     if "PARTNAME=nvdata" not in Path("/sys/class/block/sdc10/uevent").read_text().splitlines():
         raise RuntimeError("nvdata block identity mismatch")
     if Path("/sys/module/firmware_class/parameters/path").read_text().strip() != \

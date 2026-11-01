@@ -1,16 +1,20 @@
 # Lynx screen navigation
 
 On the 2026-11-01 V53 trial boot, the portrait remained black because
-`lynx-display-bootstrap` admitted only the exact V50 and V52 `boot_a` hashes.
-Lynx's Alpine, Wi-Fi, Bluetooth, and health checks were otherwise working.
-The bootstrap now also admits the exact V53 hash
-`c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e`.
-The previous on-phone file is `/usr/local/bin/lynx-display-bootstrap.before-v53`.
-Starting `lynx-display` rendered the portrait at 76%, recovered the first
-cold modeset on its existing retry path, and entered the intended 10-second
-idle dark state. Service status, renderer PID, Bluetooth, Wi-Fi, and Alpine
-health passed afterward. One touch should wake the screen; that physical
-touch has not been retested on V53.
+`lynx-display-bootstrap` admitted only exact V50 and V52 `boot_a` hashes.
+An initial correction added V53 and restored the portrait, but this exposed
+the wrong boundary: a normal display service should not require an exact boot
+image SHA after the kernel and hardware checks pass. The current bootstrap
+has **no boot-image hash gate**. It checks the exact kernel ABI, display module
+manifest hashes, panel and touch interfaces, and Alpine health. The previous
+on-phone versions are `/usr/local/bin/lynx-display-bootstrap.before-v53` and
+`/usr/local/bin/lynx-display-bootstrap.before-no-boot-hash`.
+
+The current bootstrap's `--check-files` and `--status` passed on V53 while the
+renderer and Bluetooth remained running. A prior service start rendered the
+portrait at 76%, recovered the first cold modeset on its existing retry path,
+and entered the intended 10-second idle dark state. One touch should wake the
+screen; that physical touch has not been retested on V53.
 
 Requested 2026-10-29 after Noob confirmed the visible dance and chime.
 Installed as a V50 Alpine display program update on 2026-10-29. No partition

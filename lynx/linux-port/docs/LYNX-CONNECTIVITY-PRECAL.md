@@ -178,14 +178,26 @@ The first V53 boot reached rescue SSH at 73 seconds and healthy Alpine at
 monitor then verified Alpine for another 30 seconds. Receipt:
 `logs/v53-live-boot-stream-1793561719804848814/result.json`.
 
-The persistent Bluetooth service was updated to accept only the exact V52
-or V53 boot SHA. Its previous on-phone program was retained as
-`/usr/local/bin/lynx-bluetoothd.before-v53`. On V53, a guarded one-minute
+The persistent Bluetooth service initially accepted only the exact V52 or V53
+boot SHA. That version is retained as
+`/usr/local/bin/lynx-bluetoothd.before-boot-order`. The current service instead
+checks the kernel ABI, loaded stock Wi-Fi/Bluetooth modules, and this boot's
+RAM stage log: WLAN registration, BTIF, BT, then Wi-Fi power-on after at least
+20 seconds. It also verifies the seven firmware hashes, factory-address block
+identity, NRP socket, and Alpine health. This rejects V50's late RAM module
+insertion without tying the service to a specific boot image SHA. On V53,
+the guard passed and a guarded one-minute
 trial passed BLE discovery, signed `PING` and `INFO`, fresh challenge after
 reconnect, stale-session rejection, and VM preservation. The service remains
 running on that boot; the default OpenRC runlevel still excludes it. Wi-Fi,
 SSH, battery, and thermal health passed afterward. Receipt:
 `logs/v53-bt-after-alpine-1793562040322835446/result.json`.
+
+After replacing the on-phone service with the boot-order guard, another
+guarded BLE reconnect/VM trial passed and left Bluetooth running. The display
+service was likewise changed to check kernel, modules, panel and touch instead
+of an exact boot hash. Receipt:
+`logs/v53-bt-after-alpine-1793563191669105848/result.json`.
 
 After Bluetooth stopped cleanly at uptime 490 seconds, the kernel logged
 `btmtk_set_power_off` and `conninfra_pwr_off`. A monitored OpenRC warm reboot

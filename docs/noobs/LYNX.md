@@ -15,6 +15,12 @@ available. Her observed Noobia address is
 The persistent Alpine root uses `Europe/Sofia`; its local time was verified
 after the latest V50 restoration.
 
+**Service compatibility rule:** normal Lynx services must check the kernel,
+required modules, hardware interfaces, firmware, and health they actually
+need. Do not pin a normal service to a whole `boot_a` image SHA: that caused
+the display to stay black after V53 booted successfully. Keep exact image
+hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
+
 | Need | Source and notes |
 | --- | --- |
 | Current hardware evidence | [`LYNX-HARDWARE-STATUS.md`](../../lynx/linux-port/docs/LYNX-HARDWARE-STATUS.md) |

@@ -1,13 +1,10 @@
 #!/bin/sh
 # Load Lynx's verified display and touch modules from Alpine's persistent root.
-# Exact verified V50, V52, and V53 boot_a hashes gate display initialization.
+# Check the actual kernel, display modules, panel, and touch interfaces.
 set -eu
 
 ROOT=/var/lib/lynx-display/modules
 LIST=/var/lib/lynx-display/modules.list
-V50_SHA=6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59
-V52_SHA=9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf
-V53_SHA=c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e
 KERNEL=5.10.149-android12-9-o-g311738fbb5a8
 PANEL_MATCH=oplus22823_tm_nt37705_fhd_dsi_cmd-synaptics-s3910
 
@@ -35,25 +32,6 @@ verify_files() {
     [ -r /var/lib/lynx-display/frames.sha256 ]
     (cd /var/lib/lynx-display/frames && sha256sum -c \
       /var/lib/lynx-display/frames.sha256 >/dev/null)
-}
-
-require_working_boot() {
-    boot_device=''
-    for uevent in /sys/class/block/*/uevent; do
-        grep -q '^PARTNAME=boot_a$' "$uevent" 2>/dev/null || continue
-        [ -z "$boot_device" ] || { echo "duplicate boot_a device" >&2; return 1; }
-        boot_device=/dev/$(basename "$(dirname "$uevent")")
-    done
-    [ -b "$boot_device" ] || { echo "boot_a device absent" >&2; return 1; }
-    [ "$(cat /sys/class/block/$(basename "$boot_device")/size)" = 131072 ] || {
-        echo "boot_a size mismatch" >&2
-        return 1
-    }
-    boot_sha=$(sha256sum "$boot_device" | cut -c1-64)
-    case "$boot_sha" in
-        "$V50_SHA"|"$V52_SHA"|"$V53_SHA") ;;
-        *) echo "boot_a is not a verified working V50/V52/V53 image" >&2; return 1 ;;
-    esac
 }
 
 check_hardware_health() {
@@ -106,6 +84,7 @@ load_modules() {
 }
 
 status() {
+    [ "$(uname -r)" = "$KERNEL" ]
     [ -c /dev/dri/card0 ]
     [ "$(cat /sys/class/drm/card0-DSI-1/status)" = connected ]
     [ "$(cat /sys/class/input/input0/name)" = touchpanel ]
@@ -118,12 +97,10 @@ case "${1:-}" in
     --check-files) verify_files ;;
     --start)
         verify_files
-        require_working_boot
         load_modules
         status
         ;;
     --status)
-        require_working_boot
         status
         ;;
     *) echo "usage: $0 --check-files|--start|--status" >&2; exit 2 ;;

@@ -450,14 +450,14 @@ separate Bluetooth history, uptime, and other warm-reset state. Receipts:
 - `logs/v52-boot-a-trial-1793543417389527927/result.json`
 - `logs/v52-bt-fastboot-recovery-1793543428443873914/result.json`
 
-**Current live state:** verified V50 Alpine/Wi-Fi/SSH, Bluetooth off and
-autostart disabled. Sofia timezone is installed on the persistent Alpine root
-and survived V50 restoration. V52 remains an unreliable warm-reboot image;
-do not repeat the unchanged long-uptime trial without a new diagnostic or
-isolation variable.
+**Current live state, 2026-11-01:** trial V53 Alpine/Wi-Fi/SSH with Bluetooth
+running after a second authenticated BLE trial. V53 passed an initial boot
+and one short-uptime warm reboot. Bluetooth autostart remains disabled;
+long-uptime reboot reliability is unverified. The exact V50 image remains
+the proven rollback. See `LYNX-CONNECTIVITY-PRECAL.md` for V53 receipts.
 
-Bluetooth service start/stop is RAM-only once V52 has booted successfully.
-The present V50 boot cannot gain working Bluetooth simply by loading its
+Bluetooth service start/stop is RAM-only once V52 or V53 has booted successfully.
+The prior V50 boot cannot gain working Bluetooth simply by loading its
 modules: Wi-Fi is already powered when BT registers, the shared pre-calibration
 remains at status 0, and the prior V50 `/dev/stpbt` open blocked in kernel
 state D. Two guarded V50 trials of the stock `/dev/wmtWifi` power-off path

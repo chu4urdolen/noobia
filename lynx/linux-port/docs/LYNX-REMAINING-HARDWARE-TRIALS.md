@@ -4,8 +4,10 @@ Prepared 2026-10-28 for Lynx (OnePlus Nord 3 CPH2493, MT6983). This records
 trial plans and observed results; **the remaining hardware is not yet enabled**.
 The matching August 2023 CPH2493
 stock package is under `linux-port/artifacts/stock-cph2493-August-eu-ota/`.
-Lynx currently runs Alpine V50 with kernel
-`5.10.149-android12-9-o-g311738fbb5a8`. The V50 `boot_a` image has SHA-256
+Lynx currently runs trial Alpine V53 with kernel
+`5.10.149-android12-9-o-g311738fbb5a8`; Bluetooth works after boot on two
+monitored boots, while long-uptime reboot reliability remains unverified.
+The exact V50 rollback `boot_a` image has SHA-256
 `6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59`.
 See [LYNX-HARDWARE-STATUS.md](LYNX-HARDWARE-STATUS.md) for working hardware and
 [LYNX-NOOB-RUNTIME.md](LYNX-NOOB-RUNTIME.md) for the existing NRP/1 interface.

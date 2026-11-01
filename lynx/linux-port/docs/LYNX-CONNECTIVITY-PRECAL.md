@@ -49,6 +49,22 @@ It loaded neither module, changed no Wi-Fi or boot partition state, and left
 Alpine healthy. The RAM stage disappears at reboot. Receipt:
 `logs/v50-bt-ram-stage-1793544002038306524/result.json`.
 
+A guarded Wi-Fi-only off/on probe was then staged in RAM. Its read-only
+preflight passed at 55% battery. The detached local trial lost Wi-Fi/SSH and
+did not reconnect within the local recovery window. Nexus observed loss at
+15:49:14 UTC and a new, healthy V50 Alpine boot at 15:58:14 UTC. The exact
+step where the probe stopped is unknown: its stage log was in `/run` and was
+lost on reboot, while `/sys/fs/pstore` was empty afterward. Bluetooth modules
+were **never loaded** in this trial. The watchdog was armed for 300 seconds,
+and the return timing is consistent with its V50 reboot fallback, but the
+missing local log prevents proving which reset path executed. Receipts:
+`logs/v50-wifi-cycle-stage-1793548116860668870/result.json` and
+`logs/v50-wifi-cycle-live-1793548135776494701/result.json` (with host
+presence journal). Do not repeat the radio cycle unchanged. The retained
+source `tools/trial_v50_wifi_cycle_local.py` now writes synced persistent
+stage events and requires an explicit repeat flag, but that revision has not
+been tried on hardware. The RAM module stage was cleared by this reboot.
+
 The Bluetooth probe restored the original firmware path and canceled its
 reboot watchdog after a healthy SSH check. The still-blocked kernel process
 was later cleared by a normal Linux reboot. Lynx returned to V50 Alpine with

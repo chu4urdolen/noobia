@@ -70,6 +70,12 @@ health samples over five minutes, with no Bluetooth boot link. A later
 monitored warm reboot returned to Fastboot before rescue SSH, leaving no
 kernel stream; V50 was restored and verified healthy. See
 `LYNX-BLUETOOTH-NRP.md` for the exact receipts and reboot limitation.
+Two later V52 warm reboots passed, but a long-uptime trial returned to
+Fastboot despite confirmed Bluetooth power-off and a 60-second wait.
+`trial_v52_radio_quiesce_reboot.py` is retained forensic source for that
+failed experiment and is no longer installed on Lynx.
+`install_lynx_sofia_timezone.py` installed the host's TZif file on the
+persistent Alpine root; Sofia time survived V50 rollback.
 `trial_v52_bluetooth_reboot.py` stages an integrated first-boot guard and
 uses OpenRC shutdown and passive Fastboot detection. Its 2026-10-31 trial
 returned to Fastboot before Alpine SSH. `recover_v52_bluetooth_reboot.py`

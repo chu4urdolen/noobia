@@ -414,11 +414,56 @@ the supervisor completed; it does not prove the radio hardware finished
 powering off. A later diagnostic should check the kernel's BT power-off
 messages before requesting a warm reboot.
 
-**Current live state after this trial:** verified V50 Alpine/Wi-Fi/SSH;
-Bluetooth off. The prior five-minute delayed Bluetooth pass is valid for
-that V52 session, but it did not establish reliable reboot. Investigate
-warm radio/conninfra reset and early rescue contact before restoring V52
-for another sustained-service trial.
+### Bluetooth use, warm reboots, and failed radio quiesce, 2026-11-01
+
+A later guarded `boot_a`-only V52 flash reached healthy Alpine. The passive
+collector captured rescue SSH and 1.8 MiB of kernel messages, then verified
+Alpine for another 30 seconds. With Bluetooth never started on that boot,
+one monitored warm reboot also reached healthy Alpine and SSH. On the new
+boot, a one-minute authenticated Bluetooth trial passed, stopped the service,
+and removed `hci0`. Kernel logs recorded `btmtk_set_power_off` and
+`conninfra_pwr_off` at uptime 378 seconds. A subsequent warm reboot again
+reached healthy Alpine. These are two successful V52 warm reboots, one with
+Bluetooth never started and one after an explicit stop. Receipts:
+
+- `logs/v52-live-boot-stream-1793534335817297883/result.json`
+- `logs/v52-live-boot-stream-1793534644102437017/result.json`
+- `logs/v52-bt-after-alpine-1793534966911271968/result.json`
+- `logs/v52-bt-shutdown-audit-1793535089732716967/result.json`
+- `logs/v52-live-boot-stream-1793535106905452694/result.json`
+
+After a much longer uptime, another one-minute Bluetooth trial passed and
+left the service running. An experimental reboot wrapper stopped the service,
+verified `conninfra_pwr_off`, waited 60 seconds, and requested OpenRC reboot.
+This boot **returned to Fastboot before rescue SSH**. The collector received
+no Wi-Fi beacon and no kernel stream. It also received no beacon on the three
+successful boots, so absence of that beacon does not locate the failure.
+The wrapper was removed from Lynx after recovery; its source is retained as
+`tools/trial_v52_radio_quiesce_reboot.py` with an explicit repeat gate.
+The failed trial had about 7,951 seconds of uptime before stopping Bluetooth,
+versus about 378 seconds in the successful stop trial. The evidence does not
+separate Bluetooth history, uptime, and other warm-reset state. Receipts:
+
+- `logs/v52-bt-after-alpine-1793542970480755566/result.json`
+- `logs/v52-radio-safe-reboot-trial-1793543084947269287/result.json`
+- `logs/v52-live-boot-stream-1793543073522839821/result.json`
+- `logs/v52-boot-a-trial-1793543417389527927/result.json`
+- `logs/v52-bt-fastboot-recovery-1793543428443873914/result.json`
+
+**Current live state:** verified V50 Alpine/Wi-Fi/SSH, Bluetooth off and
+autostart disabled. Sofia timezone is installed on the persistent Alpine root
+and survived V50 restoration. V52 remains an unreliable warm-reboot image;
+do not repeat the unchanged long-uptime trial without a new diagnostic or
+isolation variable.
+
+Bluetooth service start/stop is RAM-only once V52 has booted successfully.
+The present V50 boot cannot gain working Bluetooth simply by loading its
+modules: Wi-Fi is already powered when BT registers, the shared pre-calibration
+remains at status 0, and the prior V50 `/dev/stpbt` open blocked in kernel
+state D. A RAM-only V50 sequence would have to power Wi-Fi off, trigger shared
+calibration with both drivers registered, and restore Wi-Fi locally. That
+sequence needs a local recovery mechanism because SSH would disappear during
+the transition; it has not been tested.
 
 Do not enable Bluetooth at boot for normal operation until a guarded reboot
 trial verifies Alpine, Wi-Fi, SSH, battery current, and Bluetooth together.

@@ -2,12 +2,15 @@
 
 Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the latest 2026-11-01
 checkpoint, she is running verified V50 Alpine with Wi-Fi and SSH. V52
-Bluetooth passed a five-minute authenticated trial when started after a
-healthy boot, but a later warm reboot returned to Fastboot before rescue SSH;
-V52 is not yet a dependable reboot image.
+Bluetooth passes authenticated RAM-only start/stop trials after a healthy
+boot, but long-uptime warm reboots have returned to Fastboot before rescue
+SSH even after an explicit radio power-off and 60-second wait. V52 is not yet
+a dependable reboot image.
 BusyBox rescue and exact V50
 rollback remain available. Her observed Noobia address is
 `192.168.100.107`. Check live identity and health before a hardware trial.
+The persistent Alpine root uses `Europe/Sofia`; its local time was verified
+after the latest V50 restoration.
 
 | Need | Source and notes |
 | --- | --- |

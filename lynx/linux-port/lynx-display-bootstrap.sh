@@ -1,12 +1,13 @@
 #!/bin/sh
 # Load Lynx's verified display and touch modules from Alpine's persistent root.
-# Exact working V50 and V52 boot_a hashes gate display initialization.
+# Exact verified V50, V52, and V53 boot_a hashes gate display initialization.
 set -eu
 
 ROOT=/var/lib/lynx-display/modules
 LIST=/var/lib/lynx-display/modules.list
 V50_SHA=6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59
 V52_SHA=9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf
+V53_SHA=c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e
 KERNEL=5.10.149-android12-9-o-g311738fbb5a8
 PANEL_MATCH=oplus22823_tm_nt37705_fhd_dsi_cmd-synaptics-s3910
 
@@ -50,8 +51,8 @@ require_working_boot() {
     }
     boot_sha=$(sha256sum "$boot_device" | cut -c1-64)
     case "$boot_sha" in
-        "$V50_SHA"|"$V52_SHA") ;;
-        *) echo "boot_a is not a verified working V50/V52 image" >&2; return 1 ;;
+        "$V50_SHA"|"$V52_SHA"|"$V53_SHA") ;;
+        *) echo "boot_a is not a verified working V50/V52/V53 image" >&2; return 1 ;;
     esac
 }
 

@@ -1,5 +1,17 @@
 # Lynx screen navigation
 
+On the 2026-11-01 V53 trial boot, the portrait remained black because
+`lynx-display-bootstrap` admitted only the exact V50 and V52 `boot_a` hashes.
+Lynx's Alpine, Wi-Fi, Bluetooth, and health checks were otherwise working.
+The bootstrap now also admits the exact V53 hash
+`c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e`.
+The previous on-phone file is `/usr/local/bin/lynx-display-bootstrap.before-v53`.
+Starting `lynx-display` rendered the portrait at 76%, recovered the first
+cold modeset on its existing retry path, and entered the intended 10-second
+idle dark state. Service status, renderer PID, Bluetooth, Wi-Fi, and Alpine
+health passed afterward. One touch should wake the screen; that physical
+touch has not been retested on V53.
+
 Requested 2026-10-29 after Noob confirmed the visible dance and chime.
 Installed as a V50 Alpine display program update on 2026-10-29. No partition
 was flashed. The original renderer and bootstrap are backed up on Lynx as

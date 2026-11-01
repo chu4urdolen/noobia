@@ -60,15 +60,16 @@ V52 diagnostic boot; it pins rescue SSH, streams kernel messages across the
 Alpine handoff, and records a Fastboot return or healthy Alpine result.
 On 2026-11-01 that collector captured a healthy V52 handoff. The delayed
 Bluetooth trial then passed authenticated BLE reconnect/VM checks and ten
-health samples over five minutes; the service was left running, with no
-Bluetooth boot link. See `LYNX-BLUETOOTH-NRP.md` for the exact receipts and
-the continuing V52 reboot limitation.
+health samples over five minutes, with no Bluetooth boot link. A later
+monitored warm reboot returned to Fastboot before rescue SSH, leaving no
+kernel stream; V50 was restored and verified healthy. See
+`LYNX-BLUETOOTH-NRP.md` for the exact receipts and reboot limitation.
 `trial_v52_bluetooth_reboot.py` stages an integrated first-boot guard and
 uses OpenRC shutdown and passive Fastboot detection. Its 2026-10-31 trial
 returned to Fastboot before Alpine SSH. `recover_v52_bluetooth_reboot.py`
-and the exact V50 rollback image document recovery. V52 is currently
-running with Bluetooth started after Alpine; V50 remains the verified
-rollback. Do not re-enable Bluetooth at boot until the startup path passes a guarded
+and the exact V50 rollback image document recovery. V50 is currently
+running; V52's delayed Bluetooth pass is saved, but its reboot remains
+unreliable. Do not re-enable Bluetooth at boot until the startup path passes a guarded
 trial. `lynx_bt_firstboot_guard.sh` and the OpenRC `start_pre` integration
 passed a 15-second same-boot guard test, but did not run in the failed boot.
 

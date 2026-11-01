@@ -1,9 +1,10 @@
 # Lynx code map
 
-Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the 2026-11-01 checkpoint,
-she is running V52 Alpine with Bluetooth started **after** a healthy boot;
-Wi-Fi and SSH remain up. A separate V52 boot returned to Fastboot with
-Bluetooth autostart disabled, so V52 is not yet a dependable reboot image.
+Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the latest 2026-11-01
+checkpoint, she is running verified V50 Alpine with Wi-Fi and SSH. V52
+Bluetooth passed a five-minute authenticated trial when started after a
+healthy boot, but a later warm reboot returned to Fastboot before rescue SSH;
+V52 is not yet a dependable reboot image.
 BusyBox rescue and exact V50
 rollback remain available. Her observed Noobia address is
 `192.168.100.107`. Check live identity and health before a hardware trial.

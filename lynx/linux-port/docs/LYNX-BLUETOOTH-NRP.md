@@ -369,12 +369,39 @@ Bluetooth startup link. Receipts:
 `lynx/logs/v52-bt-after-alpine-1793529607956660475/result.json` and
 `lynx/logs/v52-bt-after-alpine-1793529612974351999/result.json`.
 
-**Current live state at this checkpoint:** V52 Alpine with Bluetooth running
+**Live state at that checkpoint:** V52 Alpine with Bluetooth running
 and V50 preserved as the exact Fastboot rollback. The V52 image has also
 returned to Fastboot on a boot with Bluetooth autostart disabled. Therefore
 the running service is a working session, while autonomous restart remains
 unproven. Keep Bluetooth out of the boot runlevel. Do not infer that every
 V52 boot will succeed from this one pass.
+
+### Monitored warm reboot, 2026-11-01
+
+After roughly 45 minutes of healthy V52 Alpine with Bluetooth running,
+`openrc-shutdown -r now` was issued with a read-only rescue SSH/kernel stream
+collector already listening. Bluetooth remained absent from the boot
+runlevel. Lynx returned to USB Fastboot without the collector ever reaching
+rescue SSH on port 22. No kernel stream was captured on this boot. This is an
+earlier **observable** failure boundary than the retained trace discussed
+above; lack of rescue SSH does not prove that Linux PID 1 never executed.
+Receipts:
+`lynx/logs/v52-monitored-reboot-1793532084119118630/result.json` and
+`lynx/logs/v52-live-boot-stream-1793532076594415580/result.json`.
+
+V50 was restored to `boot_a` only and returned to healthy Alpine/SSH, with
+Bluetooth autostart absent. A new read-only `expdb` prefix capture matched
+the preceding capture's ramconsole and pstore hashes exactly, so it provides
+no new trace for this warm reboot. Receipts:
+`lynx/logs/v52-boot-a-trial-1793532335520376012/result.json`,
+`lynx/logs/v52-bt-fastboot-recovery-1793532340726488244/result.json`, and
+`lynx/logs/v50-expdb-after-v52-1793532587861599649/result.json`.
+
+**Current live state after this trial:** verified V50 Alpine/Wi-Fi/SSH;
+Bluetooth off. The prior five-minute delayed Bluetooth pass is valid for
+that V52 session, but it did not establish reliable reboot. Investigate
+warm radio/conninfra reset and early rescue contact before restoring V52
+for another sustained-service trial.
 
 Do not enable Bluetooth at boot for normal operation until a guarded reboot
 trial verifies Alpine, Wi-Fi, SSH, battery current, and Bluetooth together.

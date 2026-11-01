@@ -7,9 +7,10 @@ him. Cached ARM64 BusyBox validation evidence remains available locally.
 ## Current V50 recovery and V52 Bluetooth work (2026-10-31)
 
 V53 is the current **trial** image: it adds a 30-second shared-radio
-calibration settle period before Wi-Fi power-on. The first monitored boot
-reached healthy Alpine, and a guarded authenticated BLE trial passed and left
-Bluetooth running, still disabled at boot. See
+calibration settle period before Wi-Fi power-on. Two monitored boots,
+including one short-uptime warm reboot, reached healthy Alpine. Authenticated
+BLE trials passed on each boot; Bluetooth is now running, still disabled at
+boot. Long-uptime reboot reliability is unverified. See
 [`LYNX-CONNECTIVITY-PRECAL.md`](../linux-port/docs/LYNX-CONNECTIVITY-PRECAL.md).
 `build_v53_precal_settle.py` rebuilds the exact offline image;
 `lynx_boot_a_v53_trial.py` pins V53 and V50 rollback for a `boot_a`-only trial.

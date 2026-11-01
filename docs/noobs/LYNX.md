@@ -3,8 +3,9 @@
 Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the latest 2026-11-01
 checkpoint, she is running trial V53 Alpine with Wi-Fi, SSH, and a Bluetooth
 service started after boot. V53 waits for shared-radio calibration before
-requesting Wi-Fi. Its first monitored boot and authenticated BLE trial passed;
-warm-reboot reliability and automatic Bluetooth startup remain unverified. V52
+requesting Wi-Fi. Two monitored boots, including one short-uptime warm reboot,
+and authenticated BLE trials passed. Long-uptime reboot reliability and
+automatic Bluetooth startup remain unverified. V52
 Bluetooth passes authenticated RAM-only start/stop trials after a healthy
 boot, but long-uptime warm reboots have returned to Fastboot before rescue
 SSH even after an explicit radio power-off and 60-second wait. V52 is not yet

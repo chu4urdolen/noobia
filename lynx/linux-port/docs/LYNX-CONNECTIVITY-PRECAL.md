@@ -187,9 +187,20 @@ running on that boot; the default OpenRC runlevel still excludes it. Wi-Fi,
 SSH, battery, and thermal health passed afterward. Receipt:
 `logs/v53-bt-after-alpine-1793562040322835446/result.json`.
 
-V53's cold boot and same-boot Bluetooth work. Warm-reboot reliability and
-automatic Bluetooth startup are unverified. Do not infer a durable fix from
-this single boot; preserve V50 as the known rollback.
+After Bluetooth stopped cleanly at uptime 490 seconds, the kernel logged
+`btmtk_set_power_off` and `conninfra_pwr_off`. A monitored OpenRC warm reboot
+then reached rescue SSH at 77 seconds and healthy Alpine at 249 seconds;
+the monitor verified another 30 seconds of service. On that second boot,
+calibration completed at uptime 20.57 seconds before Wi-Fi power-on at
+47.84 seconds. A new guarded BLE trial again passed authenticated reconnect,
+VM preservation, and one minute of health, then left Bluetooth running.
+Receipts: `logs/v53-live-boot-stream-1793562231092335635/result.json` and
+`logs/v53-bt-after-alpine-1793562518317964344/result.json`.
+
+V53 has now passed initial boot and one short-uptime warm reboot with Bluetooth
+tested on each boot. Long-uptime reboot reliability and automatic Bluetooth
+startup are unverified. Do not infer a durable fix from two boots; preserve
+V50 as the known rollback.
 
 ## Prepared native Bluetooth transport probe
 

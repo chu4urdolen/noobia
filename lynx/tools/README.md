@@ -49,7 +49,12 @@ authenticated VM reconnect, and OpenRC restart after a GATT child crash.
 `trial_v52_bluetooth_after_alpine.py` stages the next bounded trial: it waits
 for a healthy V52 Alpine boot and tests sustained Bluetooth without adding
 the service to the boot runlevel. Its default check refuses V50 without a
-write; `--start` is the guarded live action.
+write; `--start` is the guarded live action. The 2026-11-01 boot-disabled
+V52 control returned to Fastboot before Alpine SSH, so the live delayed trial
+is held until V52 boot reliability is understood. `return_fastboot_from_alpine.py`
+proved a one-shot RAM-only, hash-pinned V50 return to USB Fastboot after a
+fresh battery check. `capture_v50_expdb_prefix.py` reads and privately
+compares retained boot logs without a partition write.
 `trial_v52_bluetooth_reboot.py` stages an integrated first-boot guard and
 uses OpenRC shutdown and passive Fastboot detection. Its 2026-10-31 trial
 returned to Fastboot before Alpine SSH. `recover_v52_bluetooth_reboot.py`

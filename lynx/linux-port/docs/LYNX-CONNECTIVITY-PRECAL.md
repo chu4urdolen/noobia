@@ -75,6 +75,15 @@ The flash followed a fresh V50 health reading at 49%, with positive charge
 and normal temperatures. Preserve the working V50 image and Fastboot access.
 If a future V52 boot fails, restore V50 to `boot_a` and stop for diagnosis.
 
+That contingency occurred on 2026-11-01: an unchanged V52 boot with Alpine
+Bluetooth autostart disabled returned to Fastboot before Alpine SSH. V50 was
+restored and verified healthy. A retained expdb trace shows V52-style early
+BT module loads and a rescue-to-Alpine handoff marker, but its static token
+does not prove it came from that specific boot. See
+`LYNX-BLUETOOTH-NRP.md` for receipts and provenance limits. V52's shared
+calibration success on earlier boots remains valid; repeatability is now the
+blocking issue for a dependable Bluetooth service.
+
 V52 reached rescue SSH, Wi-Fi, and Alpine. The kernel recorded the expected
 calibration scheduling from status 0, Bluetooth calibration success, Wi-Fi
 calibration success, and final `pre_cal` return 0. All eight core Alpine

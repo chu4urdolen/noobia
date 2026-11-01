@@ -288,6 +288,49 @@ boot its read-only preflight refused the V52 identity with no radio start:
 `lynx/logs/v52-bt-after-alpine-1793465203090081096/result.json`. The live
 V52 path remains untested.
 
+### V52 boot-disabled control, 2026-11-01
+
+After an overnight gap, Lynx appeared in USB Fastboot. Fastboot cannot report
+a usable battery value on this bootloader, so V50 was booted first. Its live
+Alpine health check reported 33% battery, no issues, and the exact V50 boot
+hash. The previously tested freestanding ARM64 RESTART2(`bootloader`) helper
+was staged in RAM with its SHA-256 checked, invoked once after `sync`, and
+returned to verified USB Fastboot in about ten seconds. The helper wrote no
+partition. Receipt:
+`lynx/logs/v50-alpine-fastboot-return-1793528329961324836/result.json`.
+
+The exact V52 image was then flashed to `boot_a` only and rebooted with
+`lynx-bluetooth` **absent** from the default runlevel. Nexus observed USB
+Fastboot again at roughly 242 seconds; there was no Alpine SSH and no
+Bluetooth service trial. The observation persisted through 278 seconds.
+V50 was restored to `boot_a` only, rebooted, and verified healthy with
+Bluetooth autostart absent. Receipts:
+`lynx/logs/v52-boot-a-trial-1793528347221672615/result.json`,
+`lynx/logs/v52-boot-a-trial-1793528352107833993/result.json`,
+`lynx/logs/v52-boot-a-trial-1793528644442104287/result.json`, and
+`lynx/logs/v52-bt-fastboot-recovery-1793528649259893639/result.json`.
+
+This control means an OpenRC Bluetooth default-runlevel link is **not
+required** for the Fastboot return. Do not retry the unchanged V52 image
+merely to test delayed radio startup.
+
+A read-only capture of the first 0xF0000 bytes of `expdb` on recovered V50
+found a changed retained pstore region. It contains a trace with V52's two
+early Bluetooth module loads, rescue Wi-Fi/SSH readiness, and
+`PERSISTENT_OPENRC_PID1_HANDOFF_BEGIN` at uptime 207.46 seconds. The saved
+successful V52 boot log from 2026-10-31 recorded that handoff at 211.53
+seconds, so this is a different trace. The retained record has no literal
+kernel panic or later Alpine event. The static session token and retention
+format do **not** prove that it belongs to the immediately preceding failed
+boot. Capture and region hashes are in
+`lynx/logs/v50-expdb-after-v52-1793528962511434915/result.json`; the raw
+capture stays local and private. `/sys/fs/pstore` was empty after recovery.
+
+The current boundary is between rescue's recorded PID 1 handoff and durable
+Alpine service evidence. Investigate V52's early BT module effects and add
+provenance for that boundary before another image trial. V50 remains the
+working system and exact rollback.
+
 Do not enable Bluetooth at boot for normal operation until a guarded reboot
 trial verifies Alpine, Wi-Fi, SSH, battery current, and Bluetooth together.
 Same-boot Bluetooth, reconnect, and child-crash recovery are proven; automatic

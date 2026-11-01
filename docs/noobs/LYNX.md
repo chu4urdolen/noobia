@@ -1,9 +1,10 @@
 # Lynx code map
 
 Lynx is the OnePlus Nord 3 CPH2493 / MT6983. The current native OS is Alpine
-on the restored V50 boot image after an inconclusive V52 Bluetooth reboot
-trial whose SSH timer ended before Alpine's handoff. V52 remains a saved
-candidate; BusyBox rescue and exact V50
+on the restored V50 boot image. A 2026-11-01 V52 boot returned to Fastboot
+with Bluetooth autostart disabled; a retained trace reached the Alpine PID 1
+handoff, but its provenance is not certain. V52 remains a saved candidate,
+not a dependable boot. BusyBox rescue and exact V50
 rollback remain available. Her observed Noobia address is
 `192.168.100.107`. Check live identity and health before a hardware trial.
 
@@ -22,6 +23,7 @@ rollback remain available. Her observed Noobia address is
 | Microphone capture experiment | `lynx/tools/trial_v50_microphone.py`; external clap validated on V50 |
 | Flashlight probe incident | `lynx/tools/trial_v50_flashlight_probe.py`; core unload hung, further trial paused |
 | Boot restoration | [`RECOVERY-AND-FIRST-BOOT.md`](../../lynx/linux-port/docs/RECOVERY-AND-FIRST-BOOT.md) and `lynx/tools/lynx_boot_a_v50_trial.py` |
+| V50 Alpine to Fastboot and retained logs | `lynx/tools/return_fastboot_from_alpine.py`, `lynx/tools/capture_v50_expdb_prefix.py`; [Bluetooth boot evidence](../../lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md) |
 | Deferred cleanup after a stable build | [`LYNX-CLEANUP-WHEN-STABLE.md`](../../lynx/linux-port/docs/LYNX-CLEANUP-WHEN-STABLE.md) |
 | One-shot OpenAI inference test | `lynx/tools/lynx_inference_probe.py`, `lynx/tools/trial_v50_openai_inference.py`; [inference notes](../../lynx/linux-port/docs/LYNX-INFERENCE.md) |
 

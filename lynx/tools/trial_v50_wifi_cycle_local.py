@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Experimental V50 Wi-Fi off/on probe; first live trial lost Wi-Fi.
+"""Historical V50 Wi-Fi off/on probe; stock power-off timed out twice.
 
 This is a prerequisite for RAM-only BT calibration. --check is read-only.
 --run disconnects SSH temporarily and may trigger one V50 recovery reboot.
-Repeat only after reviewing the first trial and its missing step-log boundary.
+Bringing the netdev down did not fix the stock power-off timeout. Retain this
+source and receipts for diagnosis. No further live run is enabled.
 """
 
 import argparse
@@ -103,6 +104,19 @@ def write_wmt(value):
         os.close(fd)
 
 
+def kernel_snapshot(reason):
+    result = command(["dmesg"], timeout=12, check=False)
+    lines = result.stdout.splitlines()[-350:]
+    target = Path("/var/log/lynx") / ("wifi-cycle-kmsg-" + boot_id() + ".log")
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW,
+                 0o600)
+    with os.fdopen(fd, "w") as out:
+        out.write("\n".join(lines) + "\n")
+        out.flush()
+        os.fsync(out.fileno())
+    record("kernel-snapshot", reason=reason, lines=len(lines))
+
+
 def restore_wifi():
     write_wmt(b"S")  # Stock source powers on Wi-Fi before station mode.
     record("station-power-on-requested")
@@ -138,8 +152,8 @@ def main():
     args = parser.parse_args()
     if args.check == args.run:
         parser.error("select exactly one of --check or --run")
-    if args.run and not args.experimental_repeat:
-        parser.error("first Wi-Fi cycle lost SSH; explicit --experimental-repeat required")
+    if args.run:
+        parser.error("stock Wi-Fi power-off returned EIO in two guarded trials; live run disabled")
     status = preflight()
     if args.check:
         print(json.dumps({"state": "eligible-no-radio-change", "boot_id": boot_id(),
@@ -168,6 +182,8 @@ def main():
         if wpa_pids():
             raise RuntimeError("old WPA process did not stop")
         record("wpa-stopped")
+        command(["/sbin/ip", "link", "set", "wlan0", "down"], timeout=15)
+        record("netdev-down")
         write_wmt(b"0")
         record("wifi-power-off-requested")
         time.sleep(3)
@@ -183,6 +199,10 @@ def main():
         record("watchdog-cancelled")
     except Exception as exc:
         record("failed", error=str(exc))
+        try:
+            kernel_snapshot("failure")
+        except (OSError, RuntimeError, subprocess.TimeoutExpired) as snapshot_exc:
+            record("kernel-snapshot-failed", error=str(snapshot_exc))
         raise
 
 

@@ -460,10 +460,12 @@ Bluetooth service start/stop is RAM-only once V52 has booted successfully.
 The present V50 boot cannot gain working Bluetooth simply by loading its
 modules: Wi-Fi is already powered when BT registers, the shared pre-calibration
 remains at status 0, and the prior V50 `/dev/stpbt` open blocked in kernel
-state D. A RAM-only V50 sequence would have to power Wi-Fi off, trigger shared
-calibration with both drivers registered, and restore Wi-Fi locally. That
-sequence needs a local recovery mechanism because SSH would disappear during
-the transition; it has not been tested.
+state D. Two guarded V50 trials of the stock `/dev/wmtWifi` power-off path
+returned `EIO` after ten seconds, including one with `wlan0` down. Both
+required a watchdog reboot to recover SSH; no BT module was loaded. See
+`LYNX-CONNECTIVITY-PRECAL.md` for receipts. A different radio transition
+or an early-boot solution is required; do not repeat that stock power-off
+sequence unchanged.
 
 Do not enable Bluetooth at boot for normal operation until a guarded reboot
 trial verifies Alpine, Wi-Fi, SSH, battery current, and Bluetooth together.

@@ -79,12 +79,17 @@ persistent Alpine root; Sofia time survived V50 rollback.
 `stage_v50_bt_ram.py` pins the live V50 identity and copies the matching
 stock BT modules into `/run/lynx-bt-ram/` without loading them. V50 still
 needs shared radio calibration before BT can open.
-`trial_v50_wifi_cycle_local.py` is a phone-local Wi-Fi off/on experiment.
+`trial_v50_wifi_cycle_local.py` is a retained phone-local Wi-Fi off/on experiment;
+its live mode is disabled.
 Its first live trial lost Wi-Fi and returned to a new healthy V50 boot near
 the watchdog window; no BT module was loaded. The first script logged only
 to RAM, so the exact failure step is unknown. The retained source now writes
-synced persistent events and gates any repeat. The previous RAM module stage
+synced persistent events. The previous RAM module stage
 was cleared by the reboot.
+An instrumented repeat located `EIO` at the stock `/dev/wmtWifi` power-off
+write after ten seconds. Bringing `wlan0` down first produced the same
+result in a third guarded trial. Bluetooth remained unloaded; V50 recovered
+both times. Do not repeat this Wi-Fi cycle without a different mechanism.
 `trial_v52_bluetooth_reboot.py` stages an integrated first-boot guard and
 uses OpenRC shutdown and passive Fastboot detection. Its 2026-10-31 trial
 returned to Fastboot before Alpine SSH. `recover_v52_bluetooth_reboot.py`

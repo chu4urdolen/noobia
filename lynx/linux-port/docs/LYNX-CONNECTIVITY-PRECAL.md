@@ -33,12 +33,13 @@ power. V52's successful calibration and Bluetooth trial later confirmed this
 as the cause of the Bluetooth stall. It was also a contributor to the V50 GNSS
 stall; the receiver has further work beyond calibration.
 
-For a future RAM-only V50 trial, the stock `wmt_cdev_wifi.c` source exposes
+For the investigated RAM-only V50 route, the stock `wmt_cdev_wifi.c` source exposes
 `/dev/wmtWifi`: writing `0` requests `WLAN_OPID_FUNC_OFF`, and writing `1`
 requests `WLAN_OPID_FUNC_ON`. This may let a local on-phone program power
 Wi-Fi off, register the matching BT modules, wait for shared pre-calibration,
-and restore Wi-Fi without changing `boot_a`. It has **not** been tested on
-Lynx. Turning Wi-Fi off would remove SSH during the sequence; a local timeout,
+and restore Wi-Fi without changing `boot_a`. The guarded trials below found
+that its power-off request times out on Lynx. Turning Wi-Fi off removes SSH
+during the sequence; a local timeout,
 verified module and firmware hashes, local logs, and a tested V50 reboot
 fallback are prerequisites. Merely writing `0`/`1` or inserting BT on the
 current V50 boot is not a validated Bluetooth fix.
@@ -61,9 +62,34 @@ missing local log prevents proving which reset path executed. Receipts:
 `logs/v50-wifi-cycle-stage-1793548116860668870/result.json` and
 `logs/v50-wifi-cycle-live-1793548135776494701/result.json` (with host
 presence journal). Do not repeat the radio cycle unchanged. The retained
-source `tools/trial_v50_wifi_cycle_local.py` now writes synced persistent
-stage events and requires an explicit repeat flag, but that revision has not
-been tried on hardware. The RAM module stage was cleared by this reboot.
+source `tools/trial_v50_wifi_cycle_local.py` writes synced persistent
+stage events; its live mode is now disabled after the two instrumented
+failures below. The RAM module stage was cleared by this reboot.
+
+The instrumented repeat on 2026-11-01 recovered the decisive userspace
+boundary. After WPA stopped, the write of `0` to `/dev/wmtWifi` returned
+`EIO` about ten seconds later. No BT module was loaded and the script never
+requested Wi-Fi power-on. The persistent log records `preflight`,
+`watchdog-armed`, `wpa-stopped`, `failed` with `[Errno 5] I/O error`, and
+`watchdog-reboot-requested`. V50 then returned with a new boot ID, 57%
+battery, and no health issues. The source's `mtk_wcn_wlan_func_ctrl()` has a
+10-second completion timeout around the WLAN off callback, consistent with
+this timing; the kernel log from that failed boot was not retained, so the
+specific callback failure is not established. Receipt:
+`logs/v50-wifi-cycle-log-recovered-1793549448313234786/result.json`.
+
+A third guarded trial changed one variable: it brought `wlan0` down after
+stopping WPA and before writing `0` to `/dev/wmtWifi`. The persistent events
+record `netdev-down`, followed ten seconds later by the same `EIO` on the
+stock power-off write. No `wifi-power-off-requested` event occurred and no
+BT module was loaded. The failure handler attempted to capture a bounded
+`dmesg` snapshot, but no snapshot or snapshot-failure event reached storage
+before the watchdog reboot. This does not identify whether the snapshot
+process blocked in the kernel or failed for another reason. Lynx returned on
+verified V50 with healthy Alpine and 58% battery. Receipt:
+`logs/v50-wifi-cycle-netdev-down-recovery-1793550146963875467/result.json`.
+Do not repeat the `/dev/wmtWifi` off request as implemented; taking the
+netdev down did not resolve its timeout.
 
 The Bluetooth probe restored the original firmware path and canceled its
 reboot watchdog after a healthy SSH check. The still-blocked kernel process

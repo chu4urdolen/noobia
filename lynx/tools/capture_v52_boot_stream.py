@@ -25,13 +25,16 @@ from ramdisk_codec import decompress
 V52_SHA = "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf"
 ADDRESS = "192.168.100.107"
 V52_IMAGE = PORT / "artifacts/bt-before-wifi-v52-offline/nord3-bt-before-wifi-v52-untested.img"
+V53_SHA = "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e"
+V53_IMAGE = PORT / "artifacts/bt-precal-settle-v53-offline/nord3-bt-precal-settle-v53-untested.img"
+CANDIDATES = {"v52": (V52_IMAGE, V52_SHA), "v53": (V53_IMAGE, V53_SHA)}
 
 
-def beacon_identity():
+def beacon_identity(candidate_image, candidate_sha):
     """Read the exact image's expected rescue beacon without exposing its token."""
-    image = V52_IMAGE.read_bytes()
-    if hashlib.sha256(image).hexdigest() != V52_SHA:
-        raise RuntimeError("V52 image hash mismatch")
+    image = candidate_image.read_bytes()
+    if hashlib.sha256(image).hexdigest() != candidate_sha:
+        raise RuntimeError("candidate image hash mismatch")
     primary = read_newc(decompress(read_boot_v4(image)["ramdisk"]))
     size = int(primary["etc/lynx/payload-bytes"]["data"].strip())
     recipe = json.loads((PORT / "known-good-v19/recipe.json").read_text())
@@ -55,6 +58,7 @@ def phone(command, port, timeout=7):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--capture", action="store_true")
+    parser.add_argument("--candidate", choices=CANDIDATES, default="v52")
     parser.add_argument("--seconds", type=int, default=420)
     args = parser.parse_args()
     if not 240 <= args.seconds <= 600:
@@ -65,12 +69,13 @@ def main():
                           "beacon": "passive UDP 5514 before rescue SSH",
                           "seconds": args.seconds}))
         return
-    expected_beacon, collector_ip = beacon_identity()
+    candidate_image, candidate_sha = CANDIDATES[args.candidate]
+    expected_beacon, collector_ip = beacon_identity(candidate_image, candidate_sha)
     os.umask(0o077)
-    out = ROOT / "logs" / f"v52-live-boot-stream-{time.time_ns()}"
+    out = ROOT / "logs" / f"{args.candidate}-live-boot-stream-{time.time_ns()}"
     out.mkdir(mode=0o700)
     report = {"state": "waiting-rescue-ssh", "phone_writes": False,
-              "expected_boot_sha256": V52_SHA, "seconds": args.seconds,
+              "expected_boot_sha256": candidate_sha, "seconds": args.seconds,
               "events": []}
 
     def save():
@@ -115,7 +120,7 @@ def main():
                 proof = None
             if proof and proof.returncode == 0:
                 lines = proof.stdout.splitlines()
-                if len(lines) >= 3 and lines[1] == V52_SHA and \
+                if len(lines) >= 3 and lines[1] == candidate_sha and \
                         lines[2] == "/bin/busybox":
                     report["boot_id"] = lines[0]
                     event("rescue-identity-confirmed", boot_id=lines[0])

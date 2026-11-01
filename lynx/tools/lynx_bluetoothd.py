@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepared V52-only Bluetooth service supervisor. Disabled until live stop tests.
+"""Bluetooth service supervisor for verified V52 or V53 boots.
 
 Run inside a private mount namespace. Keep existing Wi-Fi/SSH independent.
 Only the diagnostic PING/INFO GATT endpoint is started.
@@ -15,7 +15,10 @@ import subprocess
 import time
 
 
-BOOT_SHA = "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf"
+ALLOWED_BOOT_SHAS = {
+    "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf",  # V52
+    "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e",  # V53
+}
 ROOT = Path("/usr/local/share/lynx-bluetooth")
 MANIFEST = ROOT / "firmware-sha256.json"
 FIRMWARE = Path("/vendor/firmware")
@@ -39,8 +42,8 @@ def event(name, **fields):
 def verify_boot_and_firmware():
     if os.geteuid() != 0:
         raise RuntimeError("root required")
-    if run(["sha256sum", "/dev/sdc39"], timeout=20).split()[0] != BOOT_SHA:
-        raise RuntimeError("boot_a is not exact V52")
+    if run(["sha256sum", "/dev/sdc39"], timeout=20).split()[0] not in ALLOWED_BOOT_SHAS:
+        raise RuntimeError("boot_a is not a verified Bluetooth image")
     if "PARTNAME=nvdata" not in Path("/sys/class/block/sdc10/uevent").read_text().splitlines():
         raise RuntimeError("nvdata block identity mismatch")
     if Path("/sys/module/firmware_class/parameters/path").read_text().strip() != \

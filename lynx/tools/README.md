@@ -6,6 +6,20 @@ him. Cached ARM64 BusyBox validation evidence remains available locally.
 
 ## Current V50 recovery and V52 Bluetooth work (2026-10-31)
 
+V53 is the current **trial** image: it adds a 30-second shared-radio
+calibration settle period before Wi-Fi power-on. The first monitored boot
+reached healthy Alpine, and a guarded authenticated BLE trial passed and left
+Bluetooth running, still disabled at boot. See
+[`LYNX-CONNECTIVITY-PRECAL.md`](../linux-port/docs/LYNX-CONNECTIVITY-PRECAL.md).
+`build_v53_precal_settle.py` rebuilds the exact offline image;
+`lynx_boot_a_v53_trial.py` pins V53 and V50 rollback for a `boot_a`-only trial.
+`capture_v52_boot_stream.py --candidate v53` captures its rescue kernel stream.
+`trial_v52_bluetooth_after_alpine.py --candidate v53` runs a bounded post-boot
+Bluetooth trial. Warm reboot reliability remains unverified. The earlier
+`return_fastboot_from_alpine.py` accepted any argument as a live action;
+after an accidental `--help` invocation returned the unchanged V50 boot to
+Fastboot, it was corrected to require `--execute`.
+
 Use the [Lynx code map](../../docs/noobs/LYNX.md) and
 [hardware tool contract](../linux-port/docs/LYNX-HARDWARE-TOOLS.md) for current
 paths. `lynx_noob_runtime.py` runs the Iris-compatible NRP/1 server;

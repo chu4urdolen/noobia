@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Start V52 Bluetooth only after Alpine is healthy; never alter boot runlevels."""
+"""Start V52/V53 Bluetooth only after Alpine is healthy; never alter boot runlevels."""
 
 import argparse
 import hashlib
@@ -14,6 +14,8 @@ from lynx_wifi_v19_contact import ssh_command
 
 ROOT = Path(__file__).resolve().parent.parent
 V52_SHA = "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf"
+V53_SHA = "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e"
+BOOT_SHAS = {"v52": V52_SHA, "v53": V53_SHA}
 ADDRESS_RECEIPT = ROOT / "logs/v52-bt-factory-address-1793365780727214907.json"
 
 
@@ -26,6 +28,7 @@ def phone(command, timeout=12):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--start", action="store_true", help="run a bounded live trial")
+    parser.add_argument("--candidate", choices=BOOT_SHAS, default="v52")
     parser.add_argument("--minutes", type=int, default=5)
     parser.add_argument("--leave-running", action="store_true",
                         help="keep radio on after a successful live trial")
@@ -33,7 +36,7 @@ def main():
     if not 1 <= args.minutes <= 15 or args.leave_running and not args.start:
         parser.error("minutes must be 1..15; --leave-running requires --start")
     os.umask(0o077)
-    receipt = ROOT / "logs" / f"v52-bt-after-alpine-{time.time_ns()}"
+    receipt = ROOT / "logs" / f"{args.candidate}-bt-after-alpine-{time.time_ns()}"
     receipt.mkdir(mode=0o700)
     report = {"state": "preflight", "partition_writes": False,
               "runlevel_writes": False, "radio_started": False, "steps": []}
@@ -62,7 +65,7 @@ def main():
                 status["uptime_seconds"] < 240:
             raise RuntimeError("Alpine, battery, thermal, or uptime gate failed")
         step("identity", "set -eu; test \"$(sha256sum /dev/sdc39 | cut -c1-64)\" = "
-             + V52_SHA + "; test -S /run/lynx/noobd.sock; "
+             + BOOT_SHAS[args.candidate] + "; test -S /run/lynx/noobd.sock; "
              "test ! -e /etc/lynx/bt-firstboot-trial; "
              "! rc-update show default | grep -q lynx-bluetooth; "
              "! rc-service lynx-bluetooth status >/dev/null 2>&1; "

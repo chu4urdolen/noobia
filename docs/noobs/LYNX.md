@@ -1,13 +1,15 @@
 # Lynx code map
 
 Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the latest 2026-11-01
-checkpoint, she is running verified V50 Alpine with Wi-Fi and SSH. V52
+checkpoint, she is running trial V53 Alpine with Wi-Fi, SSH, and a Bluetooth
+service started after boot. V53 waits for shared-radio calibration before
+requesting Wi-Fi. Its first monitored boot and authenticated BLE trial passed;
+warm-reboot reliability and automatic Bluetooth startup remain unverified. V52
 Bluetooth passes authenticated RAM-only start/stop trials after a healthy
 boot, but long-uptime warm reboots have returned to Fastboot before rescue
 SSH even after an explicit radio power-off and 60-second wait. V52 is not yet
-a dependable reboot image.
-BusyBox rescue and exact V50
-rollback remain available. Her observed Noobia address is
+a dependable reboot image. BusyBox rescue and the exact V50 rollback remain
+available. Her observed Noobia address is
 `192.168.100.107`. Check live identity and health before a hardware trial.
 The persistent Alpine root uses `Europe/Sofia`; its local time was verified
 after the latest V50 restoration.
@@ -15,7 +17,7 @@ after the latest V50 restoration.
 | Need | Source and notes |
 | --- | --- |
 | Current hardware evidence | [`LYNX-HARDWARE-STATUS.md`](../../lynx/linux-port/docs/LYNX-HARDWARE-STATUS.md) |
-| Shared Bluetooth/GNSS calibration and V52 trial | [`LYNX-CONNECTIVITY-PRECAL.md`](../../lynx/linux-port/docs/LYNX-CONNECTIVITY-PRECAL.md) |
+| Shared Bluetooth/GNSS calibration and V52/V53 trials | [`LYNX-CONNECTIVITY-PRECAL.md`](../../lynx/linux-port/docs/LYNX-CONNECTIVITY-PRECAL.md) |
 | Bluetooth NRP/1 service boundary | [`LYNX-BLUETOOTH-NRP.md`](../../lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md) |
 | Trial sequence and known hazards | [`LYNX-REMAINING-HARDWARE-TRIALS.md`](../../lynx/linux-port/docs/LYNX-REMAINING-HARDWARE-TRIALS.md) |
 | NRP/1 server and native calls | `lynx/tools/lynx_noob_runtime.py`; [`LYNX-NOOB-RUNTIME.md`](../../lynx/linux-port/docs/LYNX-NOOB-RUNTIME.md) |

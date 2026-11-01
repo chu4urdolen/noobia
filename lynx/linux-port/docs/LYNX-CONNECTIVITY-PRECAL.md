@@ -154,6 +154,43 @@ position and time; no position has yet been measured on Lynx. For Bluetooth,
 the stock driver needs a persistent native `/dev/stpbt` bridge or a separately
 validated BlueZ-oriented rebuild before Noobian protocol traffic.
 
+## V53 calibration settle trial, 2026-11-01
+
+The V52 rescue script requested Wi-Fi power-on at uptime 17.98 seconds, about
+0.06 seconds after loading `bt_drv_6983.ko`. The retained successful V52
+kernel trace shows shared pre-calibration completed at about 30.40 seconds;
+the Wi-Fi request therefore overlapped calibration. This is a plausible
+timing issue, not proof of the intermittent Fastboot return.
+
+`tools/build_v53_precal_settle.py` made one controlled change to V52's rescue
+supplement: a 30-second wait between radio module registration/configuration
+and Wi-Fi station power-on. It preserved the exact kernel, `/init`, radio
+modules, calibration configuration, Alpine root, and image tail. Round-trip
+checks confirmed that only `etc/lynx/wifi-runtime.sh` changed. Offline image:
+`linux-port/artifacts/bt-precal-settle-v53-offline/nord3-bt-precal-settle-v53-untested.img`,
+SHA-256 `c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e`.
+The exact V50 rollback image remained available. `tools/lynx_boot_a_v53_trial.py`
+checked identity and partition layout and wrote only `boot_a`.
+
+The first V53 boot reached rescue SSH at 73 seconds and healthy Alpine at
+232 seconds. The kernel stream recorded calibration completion at uptime
+20.72 seconds, followed by Wi-Fi station power-on at 48.00 seconds. The
+monitor then verified Alpine for another 30 seconds. Receipt:
+`logs/v53-live-boot-stream-1793561719804848814/result.json`.
+
+The persistent Bluetooth service was updated to accept only the exact V52
+or V53 boot SHA. Its previous on-phone program was retained as
+`/usr/local/bin/lynx-bluetoothd.before-v53`. On V53, a guarded one-minute
+trial passed BLE discovery, signed `PING` and `INFO`, fresh challenge after
+reconnect, stale-session rejection, and VM preservation. The service remains
+running on that boot; the default OpenRC runlevel still excludes it. Wi-Fi,
+SSH, battery, and thermal health passed afterward. Receipt:
+`logs/v53-bt-after-alpine-1793562040322835446/result.json`.
+
+V53's cold boot and same-boot Bluetooth work. Warm-reboot reliability and
+automatic Bluetooth startup are unverified. Do not infer a durable fix from
+this single boot; preserve V50 as the known rollback.
+
 ## Prepared native Bluetooth transport probe
 
 `tools/lynx_bluetooth_hci_probe.py` sends complete H4 HCI packets through the

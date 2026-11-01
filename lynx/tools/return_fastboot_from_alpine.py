@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """One guarded V50 Alpine to Fastboot RESTART2 request; no partition write."""
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -26,6 +27,11 @@ def phone(command, payload=None, timeout=15):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--execute", action="store_true", help="request live Fastboot reboot")
+    args = parser.parse_args()
+    if not args.execute:
+        parser.error("live reboot requires --execute")
     receipt = ROOT / "logs" / f"v50-alpine-fastboot-return-{time.time_ns()}"
     receipt.mkdir(mode=0o700)
     report = {"state": "preflight", "partition_writes": False, "steps": []}

@@ -76,6 +76,9 @@ Fastboot despite confirmed Bluetooth power-off and a 60-second wait.
 failed experiment and is no longer installed on Lynx.
 `install_lynx_sofia_timezone.py` installed the host's TZif file on the
 persistent Alpine root; Sofia time survived V50 rollback.
+`stage_v50_bt_ram.py` pins the live V50 identity and copies the matching
+stock BT modules into `/run/lynx-bt-ram/` without loading them. V50 still
+needs shared radio calibration before BT can open.
 `trial_v52_bluetooth_reboot.py` stages an integrated first-boot guard and
 uses OpenRC shutdown and passive Fastboot detection. Its 2026-10-31 trial
 returned to Fastboot before Alpine SSH. `recover_v52_bluetooth_reboot.py`

@@ -43,6 +43,12 @@ verified module and firmware hashes, local logs, and a tested V50 reboot
 fallback are prerequisites. Merely writing `0`/`1` or inserting BT on the
 current V50 boot is not a validated Bluetooth fix.
 
+On the recovered V50 boot of 2026-11-01, `tools/stage_v50_bt_ram.py` copied
+the two SHA-pinned stock modules to `/run/lynx-bt-ram/` and verified them.
+It loaded neither module, changed no Wi-Fi or boot partition state, and left
+Alpine healthy. The RAM stage disappears at reboot. Receipt:
+`logs/v50-bt-ram-stage-1793544002038306524/result.json`.
+
 The Bluetooth probe restored the original firmware path and canceled its
 reboot watchdog after a healthy SSH check. The still-blocked kernel process
 was later cleared by a normal Linux reboot. Lynx returned to V50 Alpine with

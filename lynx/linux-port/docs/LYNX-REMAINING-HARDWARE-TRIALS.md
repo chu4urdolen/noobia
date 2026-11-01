@@ -190,6 +190,18 @@ source. Treat unloading the stock core as unsafe until the callback lifetime
 and remove path are resolved. This is a source-level concern, not a confirmed
 cause of Lynx's contact loss.
 
+**2026-11-01 source finding:** `lm3642_parse_dt()` registers its per-LED
+`lm3642_flash_ops` callbacks with the flashlight core, but `lm3642_remove()`
+only unregisters V4L2 subdevices and controls; it does not unregister those
+flashlight callbacks. The failed trial unloaded `lm3642_22823` *before*
+`flashlight`, so the core could have retained callbacks pointing into the
+unloaded module. Its later `fl_uninit()` calls those callbacks. This is a
+plausible stale-callback path, though no kernel trace proves it caused the
+contact loss. Never unload these stock modules in that order again. A future
+guarded trial must leave both resident until a controlled reboot or use a
+reviewed driver fix that unregisters callbacks correctly. The active V53
+device tree has one `flash@0` child under `lm3642@63`.
+
 ## 3. GNSS
 
 **Known:** The stock Android init files `init.gps_scp.rc`, `init.gps_pwr.rc`,
@@ -259,6 +271,15 @@ clock requirements, EEPROM/calibration data, and the stock module load order.
 Review the vendor userspace/HAL boundary and identify a native V4L2 or
 libcamera path. The matching `lib3a.ccu` firmware files are present, but
 their presence alone does not establish a usable native camera pipeline.
+
+**2026-11-01 inventory:** The `imgsensor`/`mtk_ccu`/`v4l2-fwnode` ELF
+dependency closure has 18 modules in the matching August package, with no
+missing dependency names and matching kernel version strings. This checks
+ELF dependencies only. The active V53 tree exposes EEPROM nodes at I²C
+`11d01000:0x51`, `11d06000:0x54/0x52`, and `11d05000:0x74`, plus three
+autofocus nodes on `11d05000`; it does not identify installed sensors. The
+stock `camerahalserver.rc` expects Android's vendor camera service and
+persist calibration files. No V4L2/media node exists on this Alpine boot.
 
 **Trial:** Bring up the minimum sensor/CCU stack in RAM with one module probe
 at a time. Confirm sensor identity and read-only media topology before any

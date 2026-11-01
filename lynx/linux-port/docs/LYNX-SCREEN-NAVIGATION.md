@@ -1,5 +1,24 @@
 # Lynx screen navigation
 
+## Hardware readiness rows, 2026-11-01
+
+The Status page now checks GPS, camera, and flashlight interfaces on each
+refresh. `RECEIVER READY` means the GNSS driver and receiver node exist; it
+does not mean a position fix. Camera `DRIVER LOADED` and `INTERFACE READY`
+mean the module or both video and media nodes are present, respectively;
+neither claims capture works. Flashlight `CHIP PRESENT` reports only the
+detected LM3642 I²C device, while `DRIVER READY` requires a bound driver and
+`/dev/flashlight`. Current V53 shows the chip without an active flashlight
+driver, and camera remains unavailable.
+
+The renderer compiled on Lynx with `-Wall -Wextra -Werror`, passed touch and
+console key self-tests, and rendered a status preview before atomic install.
+The display service restarted and Alpine health passed. Receipt:
+`logs/status-hardware-1793565465984028397/result.json`. The rollback binary
+is `/usr/local/bin/lynx-portrait-display.before-hardware-readiness`; install
+tool: `tools/install_status_hardware_readiness.py`. No boot partition or
+kernel module changed.
+
 ## Current Status page, 2026-11-01
 
 The Bluetooth row now reads live local state: `NRP READY` requires the

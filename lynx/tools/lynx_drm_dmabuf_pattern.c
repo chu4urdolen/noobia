@@ -18,6 +18,7 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <glob.h>
 #include <ifaddrs.h>
 #include <inttypes.h>
 #include <linux/dma-buf.h>
@@ -763,6 +764,15 @@ static bool file_contains(const char *path, const char *needle)
 	return found;
 }
 
+static bool path_matches(const char *pattern)
+{
+	glob_t matches = { 0 };
+	int result = glob(pattern, 0, NULL, &matches);
+	bool found = result == 0 && matches.gl_pathc > 0;
+	globfree(&matches);
+	return found;
+}
+
 static bool pid_matches(const char *pidfile, const char *needle)
 {
 	int pid = read_integer(pidfile);
@@ -932,7 +942,11 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 		    file_contains("/proc/hf_manager", "tcs3701 ps") ? "REGISTERED" : "UNAVAILABLE");
 	status_item(pixels, 1, 4, "LIGHT",
 		    file_contains("/proc/hf_manager", "tcs3408 als") ? "REGISTERED" : "UNAVAILABLE");
-	status_item(pixels, 1, 5, "GPS", "UNAVAILABLE");
+	status_item(pixels, 1, 5, "GPS",
+		    access("/sys/module/gps_drv_dl_v050", F_OK) == 0 &&
+		    (access("/dev/stpgps", R_OK) == 0 ||
+		     path_matches("/dev/gps_nd*")) ?
+		    "RECEIVER READY" : "UNAVAILABLE");
 	const bool bt_service = pid_matches("/run/lynx/bluetoothd.pid",
 					  "lynx-bluetoothd");
 	const bool bt_controller = access("/sys/class/bluetooth/hci0", F_OK) == 0;
@@ -941,8 +955,16 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 		    bt_service && bt_controller && bt_ready ? "NRP READY" :
 		    bt_service ? "STARTING" :
 		    access("/dev/stpbt", R_OK) == 0 ? "STANDBY" : "UNAVAILABLE");
-	status_item(pixels, 1, 7, "CAMERA", "UNAVAILABLE");
-	status_item(pixels, 1, 8, "FLASHLIGHT", "UNAVAILABLE");
+	status_item(pixels, 1, 7, "CAMERA",
+		    path_matches("/dev/video*") && path_matches("/dev/media*") ?
+		    "INTERFACE READY" :
+		    access("/sys/module/imgsensor", F_OK) == 0 ?
+		    "DRIVER LOADED" : "UNAVAILABLE");
+	status_item(pixels, 1, 8, "FLASHLIGHT",
+		    access("/sys/bus/i2c/devices/6-0063/driver", F_OK) == 0 &&
+		    access("/dev/flashlight", R_OK) == 0 ? "DRIVER READY" :
+		    access("/sys/bus/i2c/devices/6-0063", F_OK) == 0 ?
+		    "CHIP PRESENT" : "UNAVAILABLE");
 	status_item(pixels, 1, 9, "NOOB NRP",
 		    pid_matches("/run/lynx/noobd.pid", "lynx-noobd") ?
 		    "RUNNING" : "UNAVAILABLE");

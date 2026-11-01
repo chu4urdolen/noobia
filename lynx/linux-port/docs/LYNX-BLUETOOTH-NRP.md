@@ -331,6 +331,51 @@ Alpine service evidence. Investigate V52's early BT module effects and add
 provenance for that boundary before another image trial. V50 remains the
 working system and exact rollback.
 
+`tools/capture_v52_boot_stream.py` is the read-only collector for a diagnostic boot.
+Start `--capture` **after** a guarded V52 flash and **before** its Fastboot
+reboot. It waits for pinned rescue SSH on port 22, verifies the exact V52
+boot hash and BusyBox PID 1, then streams `/dev/kmsg` to Nexus while taking
+bounded rescue boot-log snapshots. It observes Alpine SSH and USB Fastboot,
+caps the stream at 32 MiB, and never writes to Lynx. Its live test result is
+recorded below. Any further V52 boot trial should use this collector and the
+verified V50 rollback, with a fresh battery reading, so failures leave a
+host-side kernel trace.
+
+### Live stream and delayed Bluetooth pass, 2026-11-01
+
+With V50 healthy at 34%, one diagnostic V52 boot was made through the
+verified RAM-only Fastboot return and `boot_a`-only flash. The collector
+verified V52 BusyBox rescue at 62 seconds, streamed 1,841,851 bytes of live
+kernel messages, and saved rescue boot-log snapshots. This boot recorded
+`PERSISTENT_OPENRC_PID1_HANDOFF_BEGIN` at uptime 221.51 seconds, reached
+healthy V52 Alpine/SSH at about 249 seconds, and remained healthy for the
+collector's additional 30 seconds. Bluetooth was still boot-disabled.
+Receipts:
+`lynx/logs/v50-alpine-fastboot-return-1793529309517134430/result.json`,
+`lynx/logs/v52-boot-a-trial-1793529319461397746/result.json`,
+`lynx/logs/v52-boot-a-trial-1793529331256500549/result.json`, and
+`lynx/logs/v52-live-boot-stream-1793529324948481541/result.json`.
+
+The delayed trial's read-only preflight then passed. Only after Alpine was
+healthy did it start `lynx-bluetooth`, without adding a default-runlevel
+link. Nexus completed authenticated BLE PING/INFO and reconnect, rejected an
+unsigned command and an old session, and verified VM state across reconnect.
+Ten health samples across five minutes reported no issues; battery remained
+at 34%, with maximum sampled thermal reading about 37°C. The watchdog was
+canceled, and the service was deliberately left running on this V52 boot.
+The final read-only check verified the exact V52 boot hash, the same boot ID,
+`hci0`, Bluetooth ready, healthy Alpine/Wi-Fi/SSH, no trial marker, and no
+Bluetooth startup link. Receipts:
+`lynx/logs/v52-bt-after-alpine-1793529607956660475/result.json` and
+`lynx/logs/v52-bt-after-alpine-1793529612974351999/result.json`.
+
+**Current live state at this checkpoint:** V52 Alpine with Bluetooth running
+and V50 preserved as the exact Fastboot rollback. The V52 image has also
+returned to Fastboot on a boot with Bluetooth autostart disabled. Therefore
+the running service is a working session, while autonomous restart remains
+unproven. Keep Bluetooth out of the boot runlevel. Do not infer that every
+V52 boot will succeed from this one pass.
+
 Do not enable Bluetooth at boot for normal operation until a guarded reboot
 trial verifies Alpine, Wi-Fi, SSH, battery current, and Bluetooth together.
 Same-boot Bluetooth, reconnect, and child-crash recovery are proven; automatic

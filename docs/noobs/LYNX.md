@@ -1,10 +1,10 @@
 # Lynx code map
 
-Lynx is the OnePlus Nord 3 CPH2493 / MT6983. The current native OS is Alpine
-on the restored V50 boot image. A 2026-11-01 V52 boot returned to Fastboot
-with Bluetooth autostart disabled; a retained trace reached the Alpine PID 1
-handoff, but its provenance is not certain. V52 remains a saved candidate,
-not a dependable boot. BusyBox rescue and exact V50
+Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the 2026-11-01 checkpoint,
+she is running V52 Alpine with Bluetooth started **after** a healthy boot;
+Wi-Fi and SSH remain up. A separate V52 boot returned to Fastboot with
+Bluetooth autostart disabled, so V52 is not yet a dependable reboot image.
+BusyBox rescue and exact V50
 rollback remain available. Her observed Noobia address is
 `192.168.100.107`. Check live identity and health before a hardware trial.
 

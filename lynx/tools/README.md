@@ -55,6 +55,10 @@ healthy Alpine and passed the delayed trial. `return_fastboot_from_alpine.py`
 proved a one-shot RAM-only, hash-pinned V50 return to USB Fastboot after a
 fresh battery check. `capture_v50_expdb_prefix.py` reads and privately
 compares retained boot logs without a partition write.
+`compare_retained_boot_trace.py` compares retained expdb stage lines with a
+hash-pinned V50 read of a persistent boot log. Its 2026-11-01 receipt shows
+the retained V52-style handoff trace belongs to an older successful boot;
+the raw boot log stays in local `logs/`.
 `capture_v52_boot_stream.py` is the read-only collector for a
 V52 diagnostic boot; it pins rescue SSH, streams kernel messages across the
 Alpine handoff, and records a Fastboot return or healthy Alpine result.

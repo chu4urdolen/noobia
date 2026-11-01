@@ -317,19 +317,24 @@ merely to test delayed radio startup.
 A read-only capture of the first 0xF0000 bytes of `expdb` on recovered V50
 found a changed retained pstore region. It contains a trace with V52's two
 early Bluetooth module loads, rescue Wi-Fi/SSH readiness, and
-`PERSISTENT_OPENRC_PID1_HANDOFF_BEGIN` at uptime 207.46 seconds. The saved
-successful V52 boot log from 2026-10-31 recorded that handoff at 211.53
-seconds, so this is a different trace. The retained record has no literal
-kernel panic or later Alpine event. The static session token and retention
-format do **not** prove that it belongs to the immediately preceding failed
-boot. Capture and region hashes are in
-`lynx/logs/v50-expdb-after-v52-1793528962511434915/result.json`; the raw
-capture stays local and private. `/sys/fs/pstore` was empty after recovery.
+`PERSISTENT_OPENRC_PID1_HANDOFF_BEGIN` at uptime 207.46 seconds. A later
+comparison against persistent boot files found that all 227 `LYNX_WIFI`
+stage lines match the **older successful V52 boot**
+`boot-bb2e5d70-a774-452e-9ddc-eaa61a878575.log` exactly (normalized
+line SHA-256 `5436dc80357c528b4babb8bf0d339fe05c6ce9987498deb3adf88970ba72d50d`).
+This retained trace must not be assigned to the failed 2026-11-01 boot.
+It has no literal kernel panic or later Alpine event. The machine-readable
+comparison receipt is in
+`lynx/logs/retained-boot-match-1793532876176141303/result.json`; capture
+and region hashes are in
+`lynx/logs/v50-expdb-after-v52-1793528962511434915/result.json`. Raw logs
+stay local and private. `/sys/fs/pstore` was empty after recovery.
 
-The current boundary is between rescue's recorded PID 1 handoff and durable
-Alpine service evidence. Investigate V52's early BT module effects and add
-provenance for that boundary before another image trial. V50 remains the
-working system and exact rollback.
+The failed boot's boundary is only known from Nexus: no Alpine SSH and a
+Fastboot return. No boot file or fresh retained trace assigns it a rescue
+stage. Investigate V52's early BT module effects and establish diagnostics
+that can survive a failure before rescue SSH, before another image trial.
+V50 remains the working exact rollback.
 
 `tools/capture_v52_boot_stream.py` is the read-only collector for a diagnostic boot.
 Start `--capture` **after** a guarded V52 flash and **before** its Fastboot
@@ -337,9 +342,10 @@ reboot. It waits for pinned rescue SSH on port 22, verifies the exact V52
 boot hash and BusyBox PID 1, then streams `/dev/kmsg` to Nexus while taking
 bounded rescue boot-log snapshots. It observes Alpine SSH and USB Fastboot,
 caps the stream at 32 MiB, and never writes to Lynx. Its live test result is
-recorded below. Any further V52 boot trial should use this collector and the
-verified V50 rollback, with a fresh battery reading, so failures leave a
-host-side kernel trace.
+recorded below. It cannot capture a boot that fails before rescue SSH; that
+limitation occurred in the monitored warm reboot. Any further V52 trial
+should use this collector and the verified V50 rollback, with a fresh
+battery reading, while an earlier diagnostic channel is investigated.
 
 ### Live stream and delayed Bluetooth pass, 2026-11-01
 
@@ -382,9 +388,9 @@ After roughly 45 minutes of healthy V52 Alpine with Bluetooth running,
 `openrc-shutdown -r now` was issued with a read-only rescue SSH/kernel stream
 collector already listening. Bluetooth remained absent from the boot
 runlevel. Lynx returned to USB Fastboot without the collector ever reaching
-rescue SSH on port 22. No kernel stream was captured on this boot. This is an
-earlier **observable** failure boundary than the retained trace discussed
-above; lack of rescue SSH does not prove that Linux PID 1 never executed.
+rescue SSH on port 22. No kernel stream was captured on this boot. Lack of
+rescue SSH does not prove that Linux PID 1 never executed; the retained trace
+discussed above belongs to a different, successful boot.
 Receipts:
 `lynx/logs/v52-monitored-reboot-1793532084119118630/result.json` and
 `lynx/logs/v52-live-boot-stream-1793532076594415580/result.json`.
@@ -396,6 +402,16 @@ no new trace for this warm reboot. Receipts:
 `lynx/logs/v52-boot-a-trial-1793532335520376012/result.json`,
 `lynx/logs/v52-bt-fastboot-recovery-1793532340726488244/result.json`, and
 `lynx/logs/v50-expdb-after-v52-1793532587861599649/result.json`.
+
+The persistent Bluetooth service log records `stopping` and then `stopped`
+about a second apart during that shutdown. Its supervisor terminates the
+HCI bridge, which should close `/dev/stpbt`; the stock BTIF close path calls
+`btmtk_set_power_off()`, and that path normally calls
+`conninfra_pwr_off(CONNDRV_TYPE_BT)`. The source also has reset/coredump
+branches that can skip the ordinary power-off path. The userspace log proves
+the supervisor completed; it does not prove the radio hardware finished
+powering off. A later diagnostic should check the kernel's BT power-off
+messages before requesting a warm reboot.
 
 **Current live state after this trial:** verified V50 Alpine/Wi-Fi/SSH;
 Bluetooth off. The prior five-minute delayed Bluetooth pass is valid for

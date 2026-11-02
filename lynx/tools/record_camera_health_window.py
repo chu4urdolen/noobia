@@ -109,6 +109,10 @@ def main():
                            "cpu0_delta": delta[0], "total_delta": sum(delta)})
         report["top_irq_growth"] = sorted(growth, key=lambda row: row["total_delta"],
                                            reverse=True)[:12]
+        report["camera_irq_growth"] = sorted(
+            (row for row in growth if any(name in row["description"]
+             for name in ("seninf_top", "cam_raw_", "cam_yuv_", "camsv", "mraw"))),
+            key=lambda row: row["total_delta"], reverse=True)
     report["state"] = ("captured" if any(
         item.get("ssh_exit") == 0 and item.get("boot_id")
         for item in report["samples"]) else "no-valid-samples")

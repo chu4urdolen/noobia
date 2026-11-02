@@ -1,9 +1,8 @@
 # Lynx four-camera native Linux plan
 
-Prepared offline on 2026-11-02. This plan does not change Lynx's running
-system. No camera module should be loaded again until the ISP stall is
-understood. Keep V53 boot, Alpine SSH, the portrait, and the V50/BusyBox
-recovery path intact.
+Prepared on 2026-11-02. Keep V53 boot, Alpine SSH, the portrait, and the
+V50/BusyBox recovery path intact. Do not load the stock ISP module again:
+the monitored trial found a severe YUV-B interrupt storm before any capture.
 
 ## Hardware map to verify
 
@@ -25,6 +24,32 @@ and `logs/camera-dt-1793566429579083902.json`. The physical role of each
 sensor must be checked by covering one lens at a time once capture works.
 
 ## Gate 1: explain the ISP stall
+
+**Gate failed with a concrete cause on 2026-11-02.** The targeted stock ISP
+trial at `logs/camera-isp-irq-trial-1793638524269566924/result.json` loaded
+successfully, but Linux IRQ 247 (`1a090000.cam_yuv_b`, GIC SPI 495) fired on
+CPU 0 without a camera stream. The 80-second IRQ monitor recorded 7,427,727
+at sample 5, 32,768,812 at sample 20, and a final live snapshot reached
+68,127,138. Other camera IRQs remained at zero. SSH became intermittent; a
+brief battery-reserve and Wi-Fi service health error appeared, then cleared.
+The kernel stream through the monitor window contained no RCU stall, so the
+earlier RCU warnings may have followed this sustained IRQ load. That causal
+relationship remains a hypothesis, while the IRQ storm itself is measured.
+The final snapshot is `logs/camera-isp-irq-trial-1793638524269566924/irq-final.stdout`;
+the full time series is
+`logs/camera-health-window-1793638530148096643/`. A forced reboot request
+lost SSH, then Noob brought Lynx to Fastboot. Nexus verified product
+`k6983v1_64`, slot A, unlocked, and issued `fastboot reboot` to unchanged V53.
+
+The matching OnePlus source `cam/mtk_cam-raw.c` registers YUV IRQs in
+`mtk_yuv_of_probe()` with `devm_request_irq()` and does not disable them at
+probe. `mtk_irq_yuv()` reads four YUV interrupt status registers and returns
+`IRQ_HANDLED`. A powered-off or uncleared YUV-B line could repeatedly invoke
+that handler. This is an inference from source and the observed IRQ count;
+the actual register state is not captured. Repair requires understanding
+YUV-B power/reset/IRQ acknowledgement and either a reviewed driver fix or a
+safe early IRQ disable before another live ISP load. The targeted trial
+launcher now refuses execution until that repair is reviewed.
 
 The stock clock, regulator, CCU, EEPROM, four sensors, and image-processing
 modules have loaded in RAM. `mtk-cam-isp` binds and creates capture-class
@@ -49,10 +74,9 @@ firmware paths there before another live trial. Do not hide the stall by
 loosening health assertions or repeating the same load.
 
 In that source, RAW IRQs are requested and then disabled at probe. The
-seninf and YUV IRQ request paths do not show an immediate disable. A future
-monitored trial should prioritize their runtime interrupt counts on each
-CPU, especially seninf SPI 476 and YUV SPIs 461/463/465. This is a probe
-path observation, not evidence of an interrupt storm.
+seninf and YUV IRQ request paths do not show an immediate disable. The new
+trial measured the storm specifically on YUV-B; seninf and other camera
+IRQs remained at zero.
 
 Lynx's live seninf tree has no `mtk_csi_phy_ver` property, so the matching
 source selects its CSI PHY 3.0 handler by default. Its core starts with
@@ -60,21 +84,10 @@ source selects its CSI PHY 3.0 handler by default. Its core starts with
 requested at probe; the handler only reads and clears the corresponding
 status registers when those flags are set. If the hardware IRQ were
 asserted before streaming, that path could repeatedly return without
-clearing it. **This is an untested hypothesis.** The old trial did not save
-`/proc/interrupts`, so the captured CPU 0 RCU trace cannot confirm it.
-The next trial must record the camera IRQ counts and CPU distribution from
-the first second of module load, preserve the kernel stream, and retain an
-independent timed reboot through at least a 30-second observation window.
-No other camera variable should be changed in that trial.
-The reviewed one-module trial launcher is
-`tools/trial_camera_isp_irq.py --execute`. It requires the already loaded
-camera prefix, the exact V53 boot hash, healthy battery and thermals, and the
-exact stock ISP module checksum. Before loading it starts both the bounded
-kernel-log recorder and the IRQ/health sampler, plus a 115-second reboot
-fallback. It observes 65 seconds for RCU warnings and Alpine service health.
-The earlier broad pipeline loader refuses to cross into `mtk-cam-isp`; use
-only the targeted launcher for the next ISP test. It has been syntax-checked
-and its no-argument execution gate tested locally, but not yet run on Lynx.
+clearing it. **This hypothesis was not supported by the measured trial:**
+seninf IRQ remained at zero. The old trial did not save `/proc/interrupts`.
+The targeted launcher recorded the new trial, then was disabled after the
+YUV-B result. The broad pipeline loader also refuses to cross into ISP.
 
 `tools/analyze_camera_kernel_trace.py` extracts the saved init and RCU
 timeline. `tools/record_camera_health_window.py` is a read-only Nexus-side
@@ -82,17 +95,16 @@ collector for boot identity, module state, `/proc/interrupts`,
 `/proc/softirqs`, and Alpine health. Its five-second baseline trial on the
 healthy recovered boot recorded two samples and no health issues at
 `logs/camera-health-window-1793636233918336343/result.json`. It also writes
-the largest IRQ-count changes, which can be compared with a future bounded
-ISP trial. It does not load modules or change Lynx.
+the largest IRQ-count changes and a complete camera IRQ subset. It does not
+load modules or change Lynx.
 
 The read-only device-tree IRQ inventory at
 `logs/camera-dt-irq-inventory-20261102.json` records seven camera-related
 interrupt specifiers: seninf SPI 476, RAW A/B/C SPIs 460/462/464, and YUV
 A/B/C SPIs 461/463/465. Those nodes have no explicit
 `interrupt-affinity` property in Lynx's live tree. The numbers are device
-tree SPI specifiers, not Linux IRQ numbers. A future monitored trial can
-compare their runtime `/proc/interrupts` counts and CPU distribution with
-the healthy baseline; the inventory alone does not show an IRQ storm.
+tree SPI specifiers, not Linux IRQ numbers. The measured YUV-B line is Linux
+IRQ 247, corresponding to GIC SPI 495 as printed by `/proc/interrupts`.
 
 Gate 1 passes only after a bounded RAM trial loads the ISP, captures kernel
 messages continuously on Nexus, and remains healthy through the probe and a

@@ -60,10 +60,12 @@ On a later V53 trial boot the flashlight driver bound and accepted a bounded
 100 ms command, with OFF verified and rear LED flash visually confirmed by Noob.
 `FLASH_STATUS` now reports `validated=1` while the driver is loaded. Four camera
 sensors also bound after their clock and regulator providers were loaded.
-Camera capture remains unverified; loading `mtk-cam-isp` coincided with an RCU
-stall and a failed service-health check. The current boot has neither RAM-only
-stack loaded. See the camera and flashlight checkpoint above before another
-trial. The V50 boot image and recovery path must stay available during driver work.
+Camera capture remains unverified. A monitored V53 trial found the stock
+`mtk-cam-isp` causes YUV-B Linux IRQ 247 to fire tens of millions of times on
+CPU 0 without streaming. SSH became intermittent; Noob then brought Lynx to
+Fastboot and Nexus rebooted unchanged V53. Do not load ISP again until the
+YUV-B IRQ path is repaired. See the camera and flashlight checkpoints before
+another trial. The V50 boot image and recovery path must stay available.
 The Status page now reports live Bluetooth service readiness; see
 [`LYNX-SCREEN-NAVIGATION.md`](../../lynx/linux-port/docs/LYNX-SCREEN-NAVIGATION.md).
 It also distinguishes a detected flashlight chip from an active driver and

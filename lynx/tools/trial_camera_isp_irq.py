@@ -26,6 +26,8 @@ def main():
     args = parser.parse_args()
     if not args.execute:
         parser.error("explicit --execute required; Noob must be present for recovery")
+    parser.error("ISP trial paused: YUV-B IRQ 247 stormed on CPU 0 during the "
+                 "2026-11-02 trial; repair and review the driver before another load")
     os.umask(0o077)
     out = ROOT / "logs" / f"camera-isp-irq-trial-{time.time_ns()}"
     out.mkdir(mode=0o700)

@@ -54,6 +54,19 @@ monitored trial should prioritize their runtime interrupt counts on each
 CPU, especially seninf SPI 476 and YUV SPIs 461/463/465. This is a probe
 path observation, not evidence of an interrupt storm.
 
+Lynx's live seninf tree has no `mtk_csi_phy_ver` property, so the matching
+source selects its CSI PHY 3.0 handler by default. Its core starts with
+`csi_irq_en_flag` and `vsync_irq_en_flag` both zero. The seninf IRQ is
+requested at probe; the handler only reads and clears the corresponding
+status registers when those flags are set. If the hardware IRQ were
+asserted before streaming, that path could repeatedly return without
+clearing it. **This is an untested hypothesis.** The old trial did not save
+`/proc/interrupts`, so the captured CPU 0 RCU trace cannot confirm it.
+The next trial must record the camera IRQ counts and CPU distribution from
+the first second of module load, preserve the kernel stream, and retain an
+independent timed reboot through at least a 30-second observation window.
+No other camera variable should be changed in that trial.
+
 `tools/analyze_camera_kernel_trace.py` extracts the saved init and RCU
 timeline. `tools/record_camera_health_window.py` is a read-only Nexus-side
 collector for boot identity, module state, `/proc/interrupts`,

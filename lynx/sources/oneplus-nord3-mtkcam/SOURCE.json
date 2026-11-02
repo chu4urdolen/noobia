@@ -40,6 +40,12 @@
       "local": "remoteproc/mtk_ccd.c",
       "sha256": "e14268391c6b3e47d5287c2a3ee2beced08a882efb943207ecfc21a673d3898b",
       "bytes": 11751
+    },
+    {
+      "path": "drivers/media/platform/mtk-isp/camsys/isp7_1/cam/mtk_csi_phy_3_0/mtk_cam-seninf-hw_phy_3_0.c",
+      "local": "cam/mtk_csi_phy_3_0/mtk_cam-seninf-hw_phy_3_0.c",
+      "sha256": "f6f1f798d8dc46a802a156bd23c0294ed10ae23057dd02550a7e5e0fbd966689",
+      "bytes": 125351
     }
   ]
 }

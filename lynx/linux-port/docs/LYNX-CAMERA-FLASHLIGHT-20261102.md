@@ -130,3 +130,8 @@ RCU warnings; its result is
 `logs/kernel-trial-1793604146750082321/result.json`. At the 2026-11-02
 09:32 Sofia check, Lynx had not returned on Wi-Fi or Bluetooth and was not
 visible on Nexus USB. Her physical screen state is pending confirmation.
+She later appeared on Nexus USB in Fastboot as product `k6983v1_64`.
+`fastboot reboot` returned OK without a partition write.
+As of 09:37 Sofia, neither Alpine SSH nor NRP/1 had returned and USB Fastboot
+was no longer enumerated. The screen state still requires a physical report;
+do not issue another reboot or attempt a camera load without one.

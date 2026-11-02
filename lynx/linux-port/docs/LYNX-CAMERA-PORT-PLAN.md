@@ -88,7 +88,7 @@ cold boot and recovery trial.
 
 Lynx is back on V53 Alpine with her portrait, SSH, and Noob service healthy.
 The camera stack is not loaded on this boot. Noob visually confirmed the
-flashlight with a bounded 100 ms pulse; its current Noob status still has a
-hardcoded `validated=0` until an update is deployed. The staged flashlight
-boot service remains disabled. Leave both states as they are while this
-offline plan is reviewed.
+flashlight with a bounded 100 ms pulse; its Noob status now reports
+`validated=1` while the driver is bound. The staged flashlight boot service
+remains disabled. The two pale rear circles are documented separately in
+[LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md](LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md).

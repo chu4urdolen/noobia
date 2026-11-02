@@ -184,3 +184,12 @@ module's successful return and the later stalls are both established; their
 causal path is not. The exact ISP module reported the matching
 `5.10.149-android12-9-o-g311738fbb5a8` vermagic and the expected camera,
 CCU, memory, and V4L2 dependencies.
+
+Further read-only review of the same kernel stream found CSI efuse read
+errors (`cell -1`) for seninf ports 0–3 during ISP registration. They may
+matter for signal tuning, but the log does not tie them to the later RCU
+stall. A separate PMIC low-battery IRQ probe returned `-517` repeatedly;
+that message first appeared before the ISP load, so it is not a new ISP
+symptom. The captured CPU 0 trace shows idle and RCU scheduler frames,
+not a camera function. These observations narrow the next inspection but
+do not justify another live load yet.

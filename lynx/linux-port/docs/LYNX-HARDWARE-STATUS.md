@@ -33,7 +33,7 @@ the camera stack is absent now and capture is not validated.
 | SoC thermal | `soc_max` thermal zone | Read-only call 354 |
 | Accelerometer | `hf_manager` and `sensorhub` register Bosch `bmi2xy acc`; 16 bounded live events recorded | Raw vector and axis calls 360–364 |
 | Gyroscope | Bosch `bmi2xy gyro`; 16 bounded live events recorded | Raw vector and axis calls 365–369 |
-| Proximity and rear light | AMS `tcs3701 ps` and `tcs3408 als` return bounded events; stationary raw values need a physical response test | Status and raw calls 370–373 |
+| Proximity and rear optical sensor | AMS `tcs3701 ps` and `tcs3408 als` return bounded events; optical response needs a physical cover/uncover test | Status and raw calls 370–373; the rear optical sensor is distinct from the flash |
 | Magnetometer | AKM09918 returns 16 bounded live events | Raw vector and axis calls 374–378 |
 | Sensor fusion | MediaTek gravity, linear acceleration, rotation vector, and orientation each returned bounded events | Generic `FUSION_STATUS`, axis, and vector calls 382–386 with sensor type 9, 10, 11, or 3 |
 | Charging | MT6375 charger and battery reserve service | Monitored locally; remote charging controls are not exposed |

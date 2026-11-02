@@ -28,7 +28,7 @@ save("camera_status", call(0, 394) + b"\x00",
      "# Read-only camera inventory; r0 is 0 until capture is validated.\n"
      "SYS r0, CAMERA_STATUS\nHALT")
 save("flashlight_status", call(0, 391) + b"\x00",
-     "# Read-only flashlight inventory; r0 is 0 until visual validation.\n"
+     "# Read-only flashlight inventory; r0 is 1 while the visually validated driver is bound.\n"
      "SYS r0, FLASH_STATUS\nHALT")
 save("flashlight_stop", call(0, 397) + b"\x00",
      "# Request OFF; the native call reports driver_present and off_verified.\n"

@@ -235,3 +235,14 @@ The loader now saves health output and per-step timestamps, retains a
 separate disarm error, and rejects `mtk-cam-isp` or any later prefix before
 contacting Lynx. This fixes the diagnostic tool; it does not identify the
 kernel stall or authorize a new ISP load.
+
+Another review of the same trace found that `mtk_ccd_remoteproc` requested
+`remoteproc_scp` and got `-2` (file absent) **before** the ISP was loaded.
+Lynx has no file of that name in her firmware search paths. The exact August
+stock package contains `vendor/firmware/remoteproc_scp`, SHA-256
+`66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925`,
+but it is only 32 zero bytes. It must not be presented as a working camera
+firmware image. The CCD module exposes `ccd_load` and `ccd_start` symbols;
+whether the zero-byte-pattern placeholder is an expected remoteproc token or
+the absent file affects ISP probe remains unverified. No firmware was staged
+on Lynx during this investigation.

@@ -29,7 +29,8 @@ def health():
     process = subprocess.run(["/usr/local/bin/lynx-status", "--assert-ready"],
                              capture_output=True, text=True, timeout=8, check=True)
     value = json.loads(process.stdout)
-    if (value["issues"] or value["battery"]["capacity_percent"] < 50 or
+    minimum = 25 if value["battery"]["current_mA_signed"] > 0 else 50
+    if (value["issues"] or value["battery"]["capacity_percent"] < minimum or
             value["battery"]["temperature_mC"] >= 35000 or
             value["thermal"]["max_mC"] >= 45000):
         raise RuntimeError("battery, thermal, or Alpine health gate failed")

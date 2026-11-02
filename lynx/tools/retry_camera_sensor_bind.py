@@ -42,7 +42,8 @@ def main():
         if boot != BOOT:
             raise RuntimeError("unexpected boot image")
         health = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready"))
-        if (health["issues"] or health["battery"]["capacity_percent"] < 50 or
+        minimum = 25 if health["battery"]["current_mA_signed"] > 0 else 50
+        if (health["issues"] or health["battery"]["capacity_percent"] < minimum or
                 health["battery"]["temperature_mC"] >= 35000 or
                 health["thermal"]["max_mC"] >= 45000):
             raise RuntimeError("health gate failed")

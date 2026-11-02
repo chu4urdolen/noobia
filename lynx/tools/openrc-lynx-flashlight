@@ -1,0 +1,24 @@
+#!/sbin/openrc-run
+description="Lynx bounded flashlight driver"
+
+depend() {
+    need lynx-health
+    after lynx-wifi
+}
+
+start() {
+    ebegin "Starting Lynx flashlight driver"
+    /usr/local/bin/lynx-flashlight-bootstrap >>/var/log/lynx-flashlight.log 2>&1
+    eend $?
+}
+
+stop() {
+    ebegin "Turning Lynx flashlight off"
+    /usr/local/bin/lynx-flashlight-pulse --off >>/var/log/lynx-flashlight.log 2>&1
+    eend $?
+}
+
+status() {
+    test -L /sys/bus/i2c/devices/6-0063/driver &&
+        test -c /dev/flashlight
+}

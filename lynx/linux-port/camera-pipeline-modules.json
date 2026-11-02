@@ -1,0 +1,598 @@
+{
+  "kernel": "5.10.149-android12-9-o-g311738fbb5a8",
+  "modules": {
+    "aee_aed": {
+      "depends": [
+        "mrdump"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/aee_aed.ko",
+      "sha256": "721de0eefe2dc5cb4d706e01a74af4d8c7c3d3a04ca40a82a1f9d322663a439d",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "buildvariant": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/buildvariant.ko",
+      "sha256": "f0ca2e1fd4ae9ad7e28be23ab459986f302a10816eb3a8688e91a23206f0783e",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "camera_eeprom": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/camera_eeprom.ko",
+      "sha256": "e463b6b53173d4b79296ee507072d73b5ec826a4659a39fb40c471aa54055985",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "ccd_rpmsg": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/ccd_rpmsg.ko",
+      "sha256": "30dc5953c25c0036182d398abb5847286c07e542f046a1062b7585163aab3468",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "cmdq-sec-drv": {
+      "depends": [
+        "mtk-cmdq-drv-ext",
+        "mmprofile",
+        "aee_aed",
+        "gz_tz_system"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/cmdq-sec-drv.ko",
+      "sha256": "96f9d5880be06257a743ce2c054c93f5384e2beff42a7236656d7a1d8f44d5ac",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "device-apc-common": {
+      "depends": [
+        "aee_aed"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/device-apc-common.ko",
+      "sha256": "54c64bcafdcf83d421a442ce5c6e627ba066bab372f358830ff7c20aaf649676",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "emi": {
+      "depends": [
+        "emi-mpu"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/emi.ko",
+      "sha256": "09caa385d7169419af98b40dda67d8d42a0b50792200ce604bde8b7719c70447",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "emi-mpu": {
+      "depends": [
+        "aee_aed"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/emi-mpu.ko",
+      "sha256": "cd21e3bea38707b64904a61963cddb61ddc388dfee1a66be989b336b40972e78",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "gz_ipc_mod": {
+      "depends": [
+        "gz_trusty_mod"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/gz_ipc_mod.ko",
+      "sha256": "0dea8ac02cbea3a32e84a1e00a0325487744a5a0640547c18f95456ea37184f3",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "gz_trusty_mod": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/gz_trusty_mod.ko",
+      "sha256": "f0eb32ce7e5fb19fceaa7bd34df13ea4fdc5297184c890df4eeaa5d2398ac776",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "gz_tz_system": {
+      "depends": [
+        "gz_ipc_mod",
+        "gz_trusty_mod",
+        "mcDrvModule"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/gz_tz_system.ko",
+      "sha256": "f72540bab51fc72b534ee723b2d647b894d4983a650ea72e53a758f9bab61089",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "imgsensor": {
+      "depends": [
+        "oplus_project",
+        "imgsensor-glue",
+        "mtk_ccu",
+        "kernel_fb",
+        "olc",
+        "oplus_cam_event_report",
+        "v4l2-fwnode"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/imgsensor.ko",
+      "sha256": "4d26ef01b7b1a3be5a597005aa88cd3d1494bcb6fd7c483fd0da9949e50461a1",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "imgsensor-glue": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/imgsensor-glue.ko",
+      "sha256": "c42aa1009f5dda1735c98a10e5884a7fc6036b2014fba25cecfe482c22f5b1be",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "iommu_debug": {
+      "depends": [
+        "iommu_secure",
+        "aee_aed"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/iommu_debug.ko",
+      "sha256": "7b67046b29c9a2d28430f2f7a26d5d8cdff89f16b06638fb79b2a89b7b377590",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "iommu_gz": {
+      "depends": [
+        "gz_tz_system",
+        "mtk-smi"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/iommu_gz.ko",
+      "sha256": "8e9db2ccc6ce29b9fa5e50914adff5b0f1356e48adb2ae2c95dc80074d21dc6a",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "iommu_secure": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/iommu_secure.ko",
+      "sha256": "f886f5ab3dc9efd774bea7a2ae4447beddfad22b228d2041df2901153fba572a",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "irq-dbg": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/irq-dbg.ko",
+      "sha256": "c0a0ebf7a6b9b53e3380edf6a2c8bd1147b52a9994edb12bde48261f2fa819bc",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "kernel_fb": {
+      "depends": [
+        "mtk_boot_common"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/kernel_fb.ko",
+      "sha256": "d9c0e2546e6af4716e76c539bfe3339c9b52cbc4f88aa7c4c33717ad6201fade",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mcDrvModule": {
+      "depends": [
+        "oplus_phoenix"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mcDrvModule.ko",
+      "sha256": "91ea17b2d26d72e9d74c2c08268a46ee834121cb3b051c534444aaf21674960a",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mmprofile": {
+      "depends": [
+        "aee_aed"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mmprofile.ko",
+      "sha256": "5abd6c12ac19d1ec5f76a73a4b5fcbec1d4b9d96ad60931b8c48ea2a97881d04",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mmqos-common": {
+      "depends": [
+        "mtk-mmdvfs-debug",
+        "mtk-smi",
+        "mtk-mmdvfs",
+        "mtk-icc-core",
+        "mtk_dramc"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mmqos-common.ko",
+      "sha256": "ff956a15087c2dfbbf0995789671ca119a00ad006f85c1f189e87cb326bc0676",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mrdump": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mrdump.ko",
+      "sha256": "2315df3f97aa8ffc8049f7c50c8f2a5725e7138cd5741bf9edfaa6fed88161e0",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-cam-isp": {
+      "depends": [
+        "mtk_ccu",
+        "mtk_sec_heap",
+        "gz_tz_system",
+        "mtk-cam-plat-util",
+        "mtk-icc-core",
+        "mmqos-common",
+        "v4l2-fwnode",
+        "imgsensor",
+        "mtk_ccd_remoteproc",
+        "system_heap",
+        "mtk_printk_ctrl",
+        "mtk-smi",
+        "mtk-smi-dbg",
+        "iommu_debug",
+        "ccd_rpmsg",
+        "aee_aed"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk-cam-isp.ko",
+      "sha256": "684d75bbec0b98f3fc33c9e4481c2d0119d0c7399158645e4fa5ff24d0655e15",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-cam-plat-mt6983": {
+      "depends": [
+        "mtk-cam-plat-util"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk-cam-plat-mt6983.ko",
+      "sha256": "51a786cec66039084bd691d5831485abfe73937d96df48552c23031f09a88d32",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-cam-plat-util": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk-cam-plat-util.ko",
+      "sha256": "317e3d214609ca8cd1c0b86340a1a0955e4bd90399f9b0c439781a9524dab6ac",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-cmdq-drv-ext": {
+      "depends": [
+        "device-apc-common",
+        "mtk-smi-dbg",
+        "vcp_status",
+        "emi",
+        "aee_aed",
+        "oplus_mm_kevent_fb",
+        "mmprofile",
+        "iommu_debug",
+        "irq-dbg"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk-cmdq-drv-ext.ko",
+      "sha256": "9b13c16b5988201ca190222c67752ec410375272b9adf0d896e95b3ac96e598e",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-composite": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk-composite.ko",
+      "sha256": "cde929cd662e9ede921e826c8c5e022a68693bee71abe71c9a10dfbe68a461e2",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-icc-core": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk-icc-core.ko",
+      "sha256": "69e42f3b3a5452286bf4d7344d0c3b9e73e5af406cc6e59aeb08316c14c53db1",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-ipesys-me": {
+      "depends": [
+        "iommu_debug"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk-ipesys-me.ko",
+      "sha256": "49354434d0e656fe0bb107170cf64042b16495d7934cc4dfef9a789532819f94",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-mmdvfs": {
+      "depends": [
+        "mtk-smi-dbg",
+        "mmprofile"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk-mmdvfs.ko",
+      "sha256": "2d70ac9f64b9cb842f968bd283f3f12867e3d46d5e4fa3c1b4f69ef2c3eac744",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-mmdvfs-debug": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk-mmdvfs-debug.ko",
+      "sha256": "2c9c988f352f3b0c384c32fb2fb70c37ad1acbb3a473df1d1dffd34185f6b337",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-smi": {
+      "depends": [
+        "aee_aed"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk-smi.ko",
+      "sha256": "f33286c27c8435ea00bc91bbe515841c539090e9079c6ce1bedfe955b292b427",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-smi-dbg": {
+      "depends": [
+        "mtk-smi",
+        "emi"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk-smi-dbg.ko",
+      "sha256": "5acf4c41444a6816d0e164566c7408850799173a1794d5429778339df84a506a",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk-vmm-regulator": {
+      "depends": [
+        "mtk_ccu"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk-vmm-regulator.ko",
+      "sha256": "e177531bf5c41ba088896724c0ce392a48d38c2506a5cdcb9772ec2557ef767b",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk_boot_common": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk_boot_common.ko",
+      "sha256": "962410943afcda4624c20033eae53fca9ed52b9480c7ff9bb6c55b944522f71a",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk_ccd_remoteproc": {
+      "depends": [
+        "ccd_rpmsg"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk_ccd_remoteproc.ko",
+      "sha256": "bb92545969e745841154a02e94331b393aae60f5af8b27fa409bb3b0bc1567fc",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk_ccu": {
+      "depends": [
+        "aee_aed",
+        "mtk-icc-core",
+        "mrdump",
+        "mtk-smi",
+        "mtk-smi-dbg"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk_ccu.ko",
+      "sha256": "f5c986197ebf232e2abc9aafdc5cc8c48a245ea279760d2f65773350df75b991",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk_dramc": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk_dramc.ko",
+      "sha256": "99d13291b05efe7a8da34023b7bf087ee25a0413ca4f35db84436f09b6c74467",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk_hcp": {
+      "depends": [
+        "system_heap",
+        "mtk_slbc"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk_hcp.ko",
+      "sha256": "586a464216ee32291e22e280c8b4a7abfe31477ca3c0a733514505fbadea8623",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk_imgsys_v4l2": {
+      "depends": [
+        "mtk-smi-dbg",
+        "iommu_debug",
+        "mtk-smi",
+        "mtk-cmdq-drv-ext",
+        "mtk-icc-core",
+        "cmdq-sec-drv",
+        "mtk_hcp",
+        "mtk-ipesys-me"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk_imgsys_v4l2.ko",
+      "sha256": "692e32d5e789db58104c2e016aa19b016e687185c80732fe25da1be0a3601d15",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk_iommu": {
+      "depends": [
+        "iommu_secure",
+        "iommu_debug",
+        "mtk-smi-dbg"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk_iommu.ko",
+      "sha256": "f2f2d31ec2dcb769311dfab3621622a7deff7ba83d14c2f5137d94f38c44b332",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk_printk_ctrl": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk_printk_ctrl.ko",
+      "sha256": "69fc4a7fec5d3d8ede42f9bb7658420f19ce8932ce69ba1403674f56dc0af5ee",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk_sec_heap": {
+      "depends": [
+        "trusted_mem",
+        "mtk_iommu",
+        "iommu_gz"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/mtk_sec_heap.ko",
+      "sha256": "8befa675e45282f2589b9237f19a1f91941a1c03b1baf130152d47ec02ae119a",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "mtk_slbc": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/mtk_slbc.ko",
+      "sha256": "8417e02c451419060925d0408ed96b0bae1c2577cd30b8aab56e4935dfa5e1be",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "olc": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/olc.ko",
+      "sha256": "2f08e1db185eed2ff9d688f1379f031de4fa6f521b27bd780478b13d0154fb3b",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "oplus_boost_pool_mtk": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/oplus_boost_pool_mtk.ko",
+      "sha256": "6036dde15aabdc011ff8f50a9b8cd875e62484ee2e6c80c0df53a9e26dc64538",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "oplus_bsp_mm_osvelte": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/oplus_bsp_mm_osvelte.ko",
+      "sha256": "706687532ddda323536d89155a52d94642e27c03b79619845d2321b3dcd6146f",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "oplus_cam_event_report": {
+      "depends": [
+        "kernel_fb"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/oplus_cam_event_report.ko",
+      "sha256": "cbb5325fc2cb77b1a68807a2648f4443321c701a67ca81032aa4407368ffd860",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "oplus_mm_kevent": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/oplus_mm_kevent.ko",
+      "sha256": "c8854aab00bddfbf4c8a072ad4f4522f6c35ea6ffc1379d39f65de859ba9af58",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "oplus_mm_kevent_fb": {
+      "depends": [
+        "oplus_mm_kevent"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/oplus_mm_kevent_fb.ko",
+      "sha256": "a30ebd184ffd6066833a45deab0448b94b65b81c8c0d7d4de66f299af6120d79",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "oplus_phoenix": {
+      "depends": [
+        "oplus_project",
+        "mtk_boot_common"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/oplus_phoenix.ko",
+      "sha256": "cc44c3d17f97ecfc94b6920d0e6b6192313c8414b52d4a94a84fa1507fb1bb09",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "oplus_project": {
+      "depends": [
+        "oplusboot",
+        "buildvariant"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/oplus_project.ko",
+      "sha256": "7ed6097961a89d2207c6f74ae8e1233c08fdbcaead18c589f9c2012cee22d489",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "oplusboot": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/oplusboot.ko",
+      "sha256": "72724f08575bd2c8d94373d86a4337d367c13b16a8ab2d6389aed2f8df16157f",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "system_heap": {
+      "depends": [
+        "oplus_boost_pool_mtk",
+        "oplus_bsp_mm_osvelte"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/system_heap.ko",
+      "sha256": "e2e0f0d0220648276d7bcf23aa036616a59c2bc02af3a0a2f9712394790f3d10",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "trusted_mem": {
+      "depends": [
+        "gz_tz_system",
+        "mcDrvModule",
+        "iommu_gz",
+        "oplus_project"
+      ],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/trusted_mem.ko",
+      "sha256": "3dfa2a0f60f6a023b7d103b607f54329db8bda0f6085e380bc5cc6bb449b96b0",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "v4l2-fwnode": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/wifi-reference/vendor-dlkm-unpacked/lib/modules/v4l2-fwnode.ko",
+      "sha256": "777631db73fc129294eaf339ecbb13b5a61884ee55ffc377a59945828119ea07",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    },
+    "vcp_status": {
+      "depends": [],
+      "kernel_matches": true,
+      "path": "linux-port/artifacts/stock-cph2493-August-eu-ota/vendor-ramdisk-unpacked/lib/modules/vcp_status.ko",
+      "sha256": "6ff1b556eb096b98d40969da49073a71a5eb33cd048f2836652d0397667cc095",
+      "vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64"
+    }
+  },
+  "order": [
+    "mrdump",
+    "aee_aed",
+    "mtk-icc-core",
+    "mtk-smi",
+    "emi-mpu",
+    "emi",
+    "mtk-smi-dbg",
+    "mtk_ccu",
+    "v4l2-fwnode",
+    "oplusboot",
+    "buildvariant",
+    "oplus_project",
+    "imgsensor-glue",
+    "mtk_boot_common",
+    "kernel_fb",
+    "olc",
+    "oplus_cam_event_report",
+    "imgsensor",
+    "oplus_boost_pool_mtk",
+    "oplus_bsp_mm_osvelte",
+    "system_heap",
+    "mtk_slbc",
+    "mtk_hcp",
+    "iommu_secure",
+    "iommu_debug",
+    "mtk-ipesys-me",
+    "device-apc-common",
+    "vcp_status",
+    "oplus_mm_kevent",
+    "oplus_mm_kevent_fb",
+    "mmprofile",
+    "irq-dbg",
+    "mtk-cmdq-drv-ext",
+    "gz_trusty_mod",
+    "gz_ipc_mod",
+    "oplus_phoenix",
+    "mcDrvModule",
+    "gz_tz_system",
+    "cmdq-sec-drv",
+    "mtk_imgsys_v4l2",
+    "ccd_rpmsg",
+    "mtk_ccd_remoteproc",
+    "mtk-vmm-regulator",
+    "camera_eeprom",
+    "mtk-cam-plat-util",
+    "mtk-cam-plat-mt6983",
+    "iommu_gz",
+    "trusted_mem",
+    "mtk_iommu",
+    "mtk_sec_heap",
+    "mtk-mmdvfs-debug",
+    "mtk-mmdvfs",
+    "mtk_dramc",
+    "mmqos-common",
+    "mtk_printk_ctrl",
+    "mtk-cam-isp",
+    "mtk-composite"
+  ],
+  "purpose": "RAM-only, one-at-a-time camera pipeline investigation; no flash or capture authorization",
+  "schema": 1,
+  "source": "linux-port/artifacts/stock-cph2493-August-eu-ota"
+}

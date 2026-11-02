@@ -42,7 +42,7 @@ def main():
     digest = hashlib.sha256(source).hexdigest()
     temporary = "/var/lib/lynx-devroot/tmp/lynx-status-hardware.c"
     candidate = "/var/lib/lynx-devroot/tmp/lynx-status-hardware"
-    backup = TARGET + ".before-hardware-readiness"
+    backup = TARGET + ".before-camera-media-correction"
     installed = False
     try:
         identity = step("identity", "uname -r; cat /proc/sys/kernel/random/boot_id").splitlines()

@@ -773,6 +773,24 @@ static bool path_matches(const char *pattern)
 	return found;
 }
 
+static bool camera_capture_node_present(void)
+{
+	glob_t matches = { 0 };
+	bool found = false;
+	if (glob("/sys/class/video4linux/video*/name", 0, NULL, &matches) == 0) {
+		for (size_t i = 0; i < matches.gl_pathc; i++) {
+			if (file_contains(matches.gl_pathv[i], "MTK-CAM") ||
+			    file_contains(matches.gl_pathv[i], "mtk-cam") ||
+			    file_contains(matches.gl_pathv[i], "Camera")) {
+				found = true;
+				break;
+			}
+		}
+	}
+	globfree(&matches);
+	return found;
+}
+
 static bool pid_matches(const char *pidfile, const char *needle)
 {
 	int pid = read_integer(pidfile);
@@ -956,8 +974,10 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 		    bt_service ? "STARTING" :
 		    access("/dev/stpbt", R_OK) == 0 ? "STANDBY" : "UNAVAILABLE");
 	status_item(pixels, 1, 7, "CAMERA",
+		    camera_capture_node_present() && path_matches("/dev/media*") ?
+		    "CAPTURE NODES" :
 		    path_matches("/dev/video*") && path_matches("/dev/media*") ?
-		    "INTERFACE READY" :
+		    "ISP NODES" :
 		    access("/sys/module/imgsensor", F_OK) == 0 ?
 		    "DRIVER LOADED" : "UNAVAILABLE");
 	status_item(pixels, 1, 8, "FLASHLIGHT",

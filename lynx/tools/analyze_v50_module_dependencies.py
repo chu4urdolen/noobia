@@ -19,7 +19,10 @@ ROOTS = {
     "gnss": ("connscp", "gps_scp", "gps_pwr", "gps_drv_dl_v050"),
     "bluetooth": ("btif_drv", "bt_drv_6983"),
     "flashlight": ("mtk_battery_oc_throttling", "flashlight", "lm3642_22823"),
-    "camera": ("mtk_ccu", "v4l2-fwnode", "imgsensor"),
+    "camera": ("mtk_ccu", "v4l2-fwnode", "imgsensor", "mtk_hcp",
+               "mtk-ipesys-me", "mtk_imgsys_v4l2", "mtk_ccd_remoteproc",
+               "mtk-vmm-regulator", "ccd_rpmsg", "camera_eeprom",
+               "mtk-cam-plat-mt6983", "mtk-cam-isp", "mtk-composite"),
 }
 KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
 

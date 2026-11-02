@@ -55,6 +55,12 @@ with no VM running and no thread or sequence active.
 | 386 | `FUSION_VECTOR` | sensor type | One full raw X/Y/Z sample with gain metadata |
 | 390–394 | `MIC_STATUS`, `FLASH_STATUS`, `GNSS_STATUS`, `BT_STATUS`, `CAMERA_STATUS` | none | Shared read-only hardware inventory; `value=0` until functional validation |
 | 395 | `MIC_LEVEL` | none | One-second level-only capture; integer value is late RMS × 100, external acoustic response unverified |
+| 396 | `FLASH_PULSE` | `duration_ms` | Bounded 20–100 ms torch request with health gate, cooldown, and OFF verification; visual light unconfirmed |
+| 397 | `FLASH_STOP` | none | Request OFF and report if the loaded driver verified it |
+
+`CAMERA_STATUS` is inventory only: bound sensors and ISP processing nodes do
+not establish a capture stream. The flashlight boot service is staged but
+disabled. See [LYNX-CAMERA-FLASHLIGHT-20261102.md](LYNX-CAMERA-FLASHLIGHT-20261102.md).
 
 Images and sounds resolve through the already installed `lynx-media`
 service. Pose names and animations come from its current display manifest.

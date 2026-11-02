@@ -13,6 +13,17 @@ native calls from Nexus:
 | 393 | `BT_STATUS` | `lynx_bluetooth.sh` |
 | 394 | `CAMERA_STATUS` | `lynx_camera.sh` |
 | 395 | `MIC_LEVEL` | `lynx_microphone_level.sh` |
+| 396 | `FLASH_PULSE` | `lynx_flashlight_pulse.sh` |
+| 397 | `FLASH_STOP` | `lynx_flashlight_stop.sh` |
+
+The camera and flashlight trial evidence and current boot boundary are in
+[LYNX-CAMERA-FLASHLIGHT-20261102.md](LYNX-CAMERA-FLASHLIGHT-20261102.md).
+`FLASH_PULSE` is a 20–100 ms request with health and cooldown checks and
+verified OFF afterward. `FLASH_STOP` requests OFF if the driver is present.
+Both are available remotely through NRP/1 and locally through JSON wrappers.
+Neither provides unbounded light. `CAMERA_STATUS` distinguishes bound sensors,
+ISP processing nodes, and a capture interface; there is no camera capture
+action yet.
 
 The local wrappers and adjacent `.json` schemas live in
 `/usr/local/share/lynx-tools/calls/` on Lynx; source is in
@@ -34,7 +45,8 @@ account and local authorization boundary still need to be defined. NRP/1
 remains restricted to Nexus. A level value alone does not prove that an external
 sound reached the microphone; the separate clap trial below does.
 
-The inventory reports a microphone ALSA capture interface. An external clap
+The historical inventory below records earlier boots; consult the checkpoint
+above for the current camera and flashlight state. The inventory reports a microphone ALSA capture interface. An external clap
 validated acoustic response on the tested boot. The flashlight I²C chip is present but no driver
 is bound; the earlier core unload hang still blocks another trial. GNSS now
 has receiver nodes after the RAM-only module trial below, but no measured fix.

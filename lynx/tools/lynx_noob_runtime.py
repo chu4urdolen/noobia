@@ -712,6 +712,8 @@ class Runtime:
         reg(393, "BT_STATUS", lambda a, t: self.hardware_status(a, t, "bluetooth"))
         reg(394, "CAMERA_STATUS", lambda a, t: self.hardware_status(a, t, "camera"))
         reg(395, "MIC_LEVEL", self.mic_level)
+        reg(396, "FLASH_PULSE", self.flash_pulse)
+        reg(397, "FLASH_STOP", self.flash_stop)
 
     @staticmethod
     def hardware_status(args, text, device):
@@ -719,7 +721,12 @@ class Runtime:
         state = hardware_inventory()[device]
         ready = int(state["interface_ready"])
         validated = int(state["validated"])
-        return validated, f"interface_ready={ready} validated={validated}"
+        detail = f"interface_ready={ready} validated={validated}"
+        if device == "camera":
+            detail += f" sensors_bound={state['evidence']['sensor_count']}"
+        elif device == "flashlight":
+            detail += f" driver_bound={int(state['evidence']['driver_bound'])}"
+        return validated, detail
 
     @staticmethod
     def mic_level(args, text):
@@ -740,6 +747,41 @@ class Runtime:
             raise NativeError("microphone level unavailable") from exc
         return rms100, (f"rms_x100={rms100} peak={sample['late_peak']} "
                         "duration_ms=1000 external_validated=0")
+
+    @staticmethod
+    def flash_pulse(args, text):
+        if text or len(args) != 1 or not 20 <= args[0] <= 100:
+            raise NativeError("usage: duration_ms(20..100)")
+        try:
+            result = subprocess.run(["/usr/bin/python3",
+                                     "/usr/local/bin/lynx-flashlight-pulse",
+                                     "--duration-ms", str(args[0])],
+                                    capture_output=True, text=True, timeout=8,
+                                    check=False)
+            pulse = json.loads(result.stdout)
+            if (result.returncode or pulse.get("commanded") is not True or
+                    pulse.get("off_verified") is not True or
+                    pulse.get("duration_ms") != args[0]):
+                raise NativeError("flashlight pulse failed")
+        except (OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:
+            raise NativeError("flashlight pulse unavailable") from exc
+        return 1, f"duration_ms={args[0]} off_verified=1 visual_confirmed=0"
+
+    @staticmethod
+    def flash_stop(args, text):
+        no_args(args, text)
+        try:
+            result = subprocess.run(["/usr/bin/python3",
+                                     "/usr/local/bin/lynx-flashlight-pulse", "--off"],
+                                    capture_output=True, text=True, timeout=5,
+                                    check=False)
+            state = json.loads(result.stdout)
+            if result.returncode:
+                raise NativeError("flashlight stop failed")
+        except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+            raise NativeError("flashlight stop unavailable") from exc
+        return 0, (f"driver_present={int(state['driver_present'])} "
+                   f"off_verified={int(state['off_verified'])}")
 
     @staticmethod
     def fusion_type(args, text):

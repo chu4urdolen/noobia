@@ -31,6 +31,12 @@ def inventory(root=Path("/")):
     capture = exists("/dev/snd/pcmC0D11c")
     flash_chip = exists("/sys/bus/i2c/devices/6-0063")
     flash_bound = exists("/sys/bus/i2c/devices/6-0063/driver")
+    camera_sensors = {
+        "2-001a": "imx355", "8-0036": "imx890",
+        "9-0010": "s5k3p9sp", "9-003d": "gc02m1",
+    }
+    bound_sensors = {name: model for name, model in camera_sensors.items()
+                     if exists(f"/sys/bus/i2c/devices/{name}/driver")}
     # ccci_c2k_agps is a modem assistance node, not a usable GNSS receiver.
     gps_nodes = ([name for name in ("stpgps", "gps", "gps0")
                   if exists("/dev/" + name)] +
@@ -43,6 +49,17 @@ def inventory(root=Path("/")):
     stpbt = exists("/dev/stpbt")
     video = names("/dev", "video*")
     media = names("/dev", "media*")
+    processing_video = []
+    capture_video = []
+    for node in video:
+        try:
+            label = at(f"/sys/class/video4linux/{node}/name").read_text().strip()
+        except OSError:
+            label = ""
+        if label.startswith("MTK-ISP-DIP-V4L2"):
+            processing_video.append(node)
+        elif "cam" in label.lower():
+            capture_video.append(node)
     observations = {
         "microphone": {
             "interface_ready": has_card and capture,
@@ -55,7 +72,7 @@ def inventory(root=Path("/")):
             "validated": False,
             "evidence": {"chip_present": flash_chip, "driver_bound": flash_bound,
                          "device_node": exists("/dev/flashlight")},
-            "next": "resolve flashlight core unload hang before another driver trial",
+            "next": "confirm the bounded pulse visually; keep stock modules loaded until reboot",
         },
         "gnss": {
             "interface_ready": bool(gps_nodes) and module("gps_drv_dl_v050"),
@@ -77,11 +94,17 @@ def inventory(root=Path("/")):
             "next": "bridge vendor HCI to a bounded BlueZ or direct ATT transport",
         },
         "camera": {
-            "interface_ready": bool(video and media),
+            "interface_ready": bool(capture_video and media),
             "validated": False,
             "evidence": {"video_nodes": video, "media_nodes": media,
-                         "driver_loaded": module("imgsensor")},
-            "next": "map active sensor and CCU dependencies before streaming",
+                         "processing_video_count": len(processing_video),
+                         "capture_video_nodes": capture_video,
+                         "driver_loaded": module("imgsensor"),
+                         "ccu_bound": exists("/sys/bus/platform/devices/1b080000.ccu_rproc/driver"),
+                         "regulator_bound": exists("/sys/bus/i2c/devices/3-002f/driver"),
+                         "sensors_bound": bound_sensors,
+                         "sensor_count": len(bound_sensors)},
+            "next": "review the ISP, secure-memory, and TEE stack before a frame capture",
         },
     }
     return observations

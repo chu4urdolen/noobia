@@ -24,6 +24,7 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | Need | Source and notes |
 | --- | --- |
 | Current hardware evidence | [`LYNX-HARDWARE-STATUS.md`](../../lynx/linux-port/docs/LYNX-HARDWARE-STATUS.md) |
+| Camera and flashlight trial checkpoint | [`LYNX-CAMERA-FLASHLIGHT-20261102.md`](../../lynx/linux-port/docs/LYNX-CAMERA-FLASHLIGHT-20261102.md) |
 | Shared Bluetooth/GNSS calibration and V52/V53 trials | [`LYNX-CONNECTIVITY-PRECAL.md`](../../lynx/linux-port/docs/LYNX-CONNECTIVITY-PRECAL.md) |
 | Bluetooth NRP/1 service boundary | [`LYNX-BLUETOOTH-NRP.md`](../../lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md) |
 | Trial sequence and known hazards | [`LYNX-REMAINING-HARDWARE-TRIALS.md`](../../lynx/linux-port/docs/LYNX-REMAINING-HARDWARE-TRIALS.md) |
@@ -34,7 +35,7 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | Display, keyboard, scrolling | `lynx/tools/lynx_drm_dmabuf_pattern.c`; [`LYNX-CONSOLE.md`](../../lynx/linux-port/docs/LYNX-CONSOLE.md) |
 | Media control | `lynx/tools/lynx_media.py`; [`LYNX-MEDIA-CONTROL.md`](../../lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md) |
 | Microphone capture experiment | `lynx/tools/trial_v50_microphone.py`; external clap validated on V50 |
-| Flashlight probe incident | `lynx/tools/trial_v50_flashlight_probe.py`; core unload hung, further trial paused |
+| Flashlight control and safe OFF | `lynx/tools/lynx_flashlight_pulse.py`, `lynx/tools/local_calls/`; boot service is staged but disabled |
 | Boot restoration | [`RECOVERY-AND-FIRST-BOOT.md`](../../lynx/linux-port/docs/RECOVERY-AND-FIRST-BOOT.md) and `lynx/tools/lynx_boot_a_v50_trial.py` |
 | V50 Alpine to Fastboot and retained logs | `lynx/tools/return_fastboot_from_alpine.py`, `lynx/tools/capture_v50_expdb_prefix.py`; [Bluetooth boot evidence](../../lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md) |
 | Deferred cleanup after a stable build | [`LYNX-CLEANUP-WHEN-STABLE.md`](../../lynx/linux-port/docs/LYNX-CLEANUP-WHEN-STABLE.md) |
@@ -53,7 +54,13 @@ level capture works locally and over NRP/1 for one second; an external clap
 validated its acoustic response. Flashlight driver binding
 was observed, then unloading
 the core lost SSH; do not repeat that sequence until its failure is resolved.
-The V50 boot image and recovery path must stay available during driver work.
+On a later V53 trial boot the flashlight driver bound and accepted a bounded
+100 ms command, with OFF verified but no visual confirmation. Four camera
+sensors also bound after their clock and regulator providers were loaded.
+Camera capture remains unverified; loading `mtk-cam-isp` coincided with an RCU
+stall and a failed service-health check. The current boot has neither RAM-only
+stack loaded. See the camera and flashlight checkpoint above before another
+trial. The V50 boot image and recovery path must stay available during driver work.
 The Status page now reports live Bluetooth service readiness; see
 [`LYNX-SCREEN-NAVIGATION.md`](../../lynx/linux-port/docs/LYNX-SCREEN-NAVIGATION.md).
 It also distinguishes a detected flashlight chip from an active driver and

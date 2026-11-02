@@ -11,6 +11,11 @@ The exact V50 rollback `boot_a` image has SHA-256
 `6168cd6288679a321a4d8bc41c7d3dde64a49d3cfe855b8e44542f3307fd5a59`.
 See [LYNX-HARDWARE-STATUS.md](LYNX-HARDWARE-STATUS.md) for working hardware and
 [LYNX-NOOB-RUNTIME.md](LYNX-NOOB-RUNTIME.md) for the existing NRP/1 interface.
+For the newer 2026-11-02 camera and flashlight results, use
+[LYNX-CAMERA-FLASHLIGHT-20261102.md](LYNX-CAMERA-FLASHLIGHT-20261102.md).
+The historical trial order below predates those results. A read-only
+Nexus-side kernel ring recorder is `tools/record_kernel_trial.py`; its five
+second proof receipt is `logs/kernel-trial-1793602702051990742/result.json`.
 
 ## Trial order and shared rules
 

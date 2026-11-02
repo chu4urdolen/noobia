@@ -153,3 +153,16 @@ exact binary for this trial, while its matching source is not in that
 checkout. Do not treat another device's camera driver source as an exact
 match. The next camera step is source matching and analysis of the CPU 0
 stall before any further live ISP load.
+Read-only CPU 0 inspection on the recovered boot found `psci_idle`: WFI is
+enabled, while `clusteroff_l`, `mcusysoff`, `system_mem`, `system_pll`,
+`system_bus`, and `s2idle` are already disabled. The RCU trace's
+`cpuidle_enter_state` frame therefore does not identify a deeper idle state
+that can simply be turned off. This is an observation, not a diagnosis.
+In the captured stream, `mtk_cam_master_bind success` precedes an `init_module`
+return after 6,018,312 microseconds. The first CPU 0 RCU stall report follows
+about 15 seconds later, with a grace-period thread reportedly starved for
+4,922 jiffies. Another stall report follows roughly 63 seconds later. The
+module's successful return and the later stalls are both established; their
+causal path is not. The exact ISP module reported the matching
+`5.10.149-android12-9-o-g311738fbb5a8` vermagic and the expected camera,
+CCU, memory, and V4L2 dependencies.

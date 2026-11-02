@@ -99,7 +99,7 @@ cooldown, the finite `flashlight_pulse_100ms` VM program halted with
 `regs=100,1,0,...`. A later `FLASH_STOP` returned `driver_present=1
 off_verified=1`, and the sysfs torch state was `0 0 0 0`. Battery was 44%,
 pack 25.2°C, maximum SoC zone 32.6°C, and Alpine health had no issues.
-Visual confirmation from Noob is still pending. The gate update rollback is
+Noob later visually confirmed a separate 100 ms pulse. The gate update rollback is
 `/usr/local/bin/lynx-flashlight-pulse.before-charging-aware-gate`; receipt:
 `logs/flashlight-gate-1793604034550050199/result.json`. Module receipt:
 `logs/flashlight-ram-1793604042763421283/result.json`.
@@ -142,9 +142,14 @@ modules had cleared. At 51% and normal temperature, the exact flashlight
 modules were loaded in RAM again. A direct 100 ms NRP/1 pulse returned
 `off_verified=1`; after cooldown the finite VM pulse halted with
 `regs=100,1,0,...`. `FLASH_STOP` and the sysfs channel verified OFF, Alpine
-health had no issues, and the VM was reset to `EMPTY`. Noob's visual report
-of these two newly announced pulses is pending. No camera module was loaded
+health had no issues, and the VM was reset to `EMPTY`. Noob was not present
+for these two newly announced pulses. No camera module was loaded
 on this recovered boot.
+Noob then watched a further 100 ms NRP/1 pulse and confirmed seeing the rear
+LED flash. The command returned `off_verified=1`. This validates the
+flashlight's physical response, although `FLASH_STATUS` still returns
+`validated=0` until its backend is updated and deployed. Lynx has not been
+changed since Noob requested offline-only camera planning.
 
 Source boundary: the checked-out OnePlusOSS MT6983 modules branch in
 `sources/oneplus-mt6983-modules/` contains connectivity, GPU, and related

@@ -25,6 +25,7 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | --- | --- |
 | Current hardware evidence | [`LYNX-HARDWARE-STATUS.md`](../../lynx/linux-port/docs/LYNX-HARDWARE-STATUS.md) |
 | Camera and flashlight trial checkpoint | [`LYNX-CAMERA-FLASHLIGHT-20261102.md`](../../lynx/linux-port/docs/LYNX-CAMERA-FLASHLIGHT-20261102.md) |
+| Four-camera native Linux plan | [`LYNX-CAMERA-PORT-PLAN.md`](../../lynx/linux-port/docs/LYNX-CAMERA-PORT-PLAN.md) |
 | Shared Bluetooth/GNSS calibration and V52/V53 trials | [`LYNX-CONNECTIVITY-PRECAL.md`](../../lynx/linux-port/docs/LYNX-CONNECTIVITY-PRECAL.md) |
 | Bluetooth NRP/1 service boundary | [`LYNX-BLUETOOTH-NRP.md`](../../lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md) |
 | Trial sequence and known hazards | [`LYNX-REMAINING-HARDWARE-TRIALS.md`](../../lynx/linux-port/docs/LYNX-REMAINING-HARDWARE-TRIALS.md) |

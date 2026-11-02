@@ -19,8 +19,9 @@ the receipt and service boundary; this endpoint is still transient.
 The current camera and flashlight findings are in
 [LYNX-CAMERA-FLASHLIGHT-20261102.md](LYNX-CAMERA-FLASHLIGHT-20261102.md).
 That checkpoint supersedes the older flashlight and camera inventory below:
-the driver and four camera sensors bound in RAM on a trial boot, but this
-boot has neither stack loaded, and camera capture is not validated.
+the flashlight driver is loaded in RAM and its bounded pulse has a physical
+visual confirmation. Four camera sensors bound on a prior trial boot, but
+the camera stack is absent now and capture is not validated.
 
 | Hardware | Current Linux evidence | Noob interface |
 | --- | --- | --- |
@@ -36,7 +37,7 @@ boot has neither stack loaded, and camera capture is not validated.
 | Magnetometer | AKM09918 returns 16 bounded live events | Raw vector and axis calls 374–378 |
 | Sensor fusion | MediaTek gravity, linear acceleration, rotation vector, and orientation each returned bounded events | Generic `FUSION_STATUS`, axis, and vector calls 382–386 with sensor type 9, 10, 11, or 3 |
 | Charging | MT6375 charger and battery reserve service | Monitored locally; remote charging controls are not exposed |
-| Flashlight | LM3642 bound on one RAM-only trial; bounded 100 ms command returned OFF, visual light unconfirmed | `FLASH_STATUS`, bounded `FLASH_PULSE` 396, `FLASH_STOP` 397; staged boot service disabled |
+| Flashlight | LM3642 bound on this boot; bounded 100 ms command returned OFF and Noob saw the rear LED flash | `FLASH_STATUS` now reports validated while bound; bounded `FLASH_PULSE` 396, `FLASH_STOP` 397; staged boot service disabled |
 | Camera | Four stock sensors bound on trial; ISP processing nodes appeared; full ISP load failed health check and emitted RCU warning | `CAMERA_STATUS` 394 is inventory only; no capture action |
 
 The new numeric calls return one value per NRP/1 `CALL`, so they work from

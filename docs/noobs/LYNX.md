@@ -36,7 +36,7 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | Display, keyboard, scrolling | `lynx/tools/lynx_drm_dmabuf_pattern.c`; [`LYNX-CONSOLE.md`](../../lynx/linux-port/docs/LYNX-CONSOLE.md) |
 | Media control | `lynx/tools/lynx_media.py`; [`LYNX-MEDIA-CONTROL.md`](../../lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md) |
 | Microphone capture experiment | `lynx/tools/trial_v50_microphone.py`; external clap validated on V50 |
-| Flashlight control and safe OFF | `lynx/tools/lynx_flashlight_pulse.py`, `lynx/tools/local_calls/`; boot service is staged but disabled |
+| Flashlight control and safe OFF | `lynx/tools/lynx_flashlight_pulse.py`, `lynx/tools/local_calls/`; visual response validated, boot service staged but disabled |
 | Boot restoration | [`RECOVERY-AND-FIRST-BOOT.md`](../../lynx/linux-port/docs/RECOVERY-AND-FIRST-BOOT.md) and `lynx/tools/lynx_boot_a_v50_trial.py` |
 | V50 Alpine to Fastboot and retained logs | `lynx/tools/return_fastboot_from_alpine.py`, `lynx/tools/capture_v50_expdb_prefix.py`; [Bluetooth boot evidence](../../lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md) |
 | Deferred cleanup after a stable build | [`LYNX-CLEANUP-WHEN-STABLE.md`](../../lynx/linux-port/docs/LYNX-CLEANUP-WHEN-STABLE.md) |
@@ -56,7 +56,8 @@ validated its acoustic response. Flashlight driver binding
 was observed, then unloading
 the core lost SSH; do not repeat that sequence until its failure is resolved.
 On a later V53 trial boot the flashlight driver bound and accepted a bounded
-100 ms command, with OFF verified but no visual confirmation. Four camera
+100 ms command, with OFF verified and rear LED flash visually confirmed by Noob.
+`FLASH_STATUS` now reports `validated=1` while the driver is loaded. Four camera
 sensors also bound after their clock and regulator providers were loaded.
 Camera capture remains unverified; loading `mtk-cam-isp` coincided with an RCU
 stall and a failed service-health check. The current boot has neither RAM-only

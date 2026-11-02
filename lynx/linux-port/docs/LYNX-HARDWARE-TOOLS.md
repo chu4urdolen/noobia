@@ -25,6 +25,13 @@ Neither provides unbounded light. `CAMERA_STATUS` distinguishes bound sensors,
 ISP processing nodes, and a capture interface; there is no camera capture
 action yet.
 
+Noob visually confirmed the rear LED during a bounded 100 ms pulse on
+2026-11-02. The local inventory and `FLASH_STATUS` now return `validated=1`
+only while the exact LM3642 module is loaded, its driver is bound, the device
+node exists, and the confirmation record matches the stock module hash.
+Installation receipt:
+`logs/flashlight-visual-install-1793635454301342988/result.json`.
+
 The local wrappers and adjacent `.json` schemas live in
 `/usr/local/share/lynx-tools/calls/` on Lynx; source is in
 `lynx/tools/local_calls/`. Each accepts `{}` on stdin and returns JSON. This

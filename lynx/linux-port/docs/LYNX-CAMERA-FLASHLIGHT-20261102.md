@@ -24,7 +24,7 @@ requires the bound LM3642 and exact device-tree channel, limits repeated
 pulses to one per ten seconds, and has a separate delayed OFF child. Neither
 interface offers continuous ON. A remote pulse returned `off_verified=1`.
 The stop call explicitly reports `off_verified=0` when no driver is present.
-The current V53 boot has **no flashlight modules loaded**.
+At this early checkpoint, the V53 boot had **no flashlight modules loaded**.
 
 The hash-checked `lynx-flashlight` OpenRC boot service and matching modules
 are staged on Alpine but **disabled and not started**. Stage receipt:
@@ -58,7 +58,7 @@ was no longer running. The kernel also emitted an RCU stall warning. The
 trial stopped without requesting a frame or unloading any modules. Lynx
 subsequently rebooted and recovered her normal services. The reboot cause
 is unknown. Evidence: `logs/camera-pipeline-1793566914812741706/result.json`
-and `logs/camera-recovery-*-20261102.txt`. The current boot has **none of
+and `logs/camera-recovery-*-20261102.txt`. The recovered boot has **none of
 these RAM-only camera modules loaded**. There is no validated camera capture,
 image, or camera action in the Noob interface. `CAMERA_STATUS` (394) and the
 local `lynx_camera.sh` report readiness and bound sensors without claiming
@@ -150,6 +150,19 @@ LED flash. The command returned `off_verified=1`. This validates the
 flashlight's physical response, although `FLASH_STATUS` still returns
 `validated=0` until its backend is updated and deployed. Lynx has not been
 changed since Noob requested offline-only camera planning.
+
+After offline planning, the local hardware backend was updated with the
+visual confirmation record and deployed to Alpine userspace. The first
+installation attempt rolled back because NRP/1 was queried before its daemon
+had restarted; receipt:
+`logs/flashlight-visual-install-1793635410402565320/result.json`.
+The retry waited for readiness and passed local inventory, NRP/1
+`CALL FLASH_STATUS` (`value=1`, `validated=1`, `driver_bound=1`), and the
+Alpine health assertion on the same boot. Receipt:
+`logs/flashlight-visual-install-1793635454301342988/result.json`.
+This change loaded no module, actuated no LED, and wrote no boot partition.
+The staged flashlight boot service remains disabled pending a monitored
+cold boot, because the driver should not be unloaded to reset a trial.
 
 Source boundary: the checked-out OnePlusOSS MT6983 modules branch in
 `sources/oneplus-mt6983-modules/` contains connectivity, GPU, and related

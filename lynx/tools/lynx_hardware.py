@@ -31,6 +31,16 @@ def inventory(root=Path("/")):
     capture = exists("/dev/snd/pcmC0D11c")
     flash_chip = exists("/sys/bus/i2c/devices/6-0063")
     flash_bound = exists("/sys/bus/i2c/devices/6-0063/driver")
+    flash_ready = flash_bound and module("lm3642_22823") and exists("/dev/flashlight")
+    try:
+        confirmation = json.loads(at("/var/lib/lynx-hardware/flashlight-visual.json").read_text())
+        flash_visual = (confirmation.get("confirmed") is True and
+                        confirmation.get("device") == "CPH2493" and
+                        confirmation.get("chip") == "lm3642_22823" and
+                        confirmation.get("module_sha256") ==
+                        "96dc429c39453dbd0ba469069655bfafc43e329cc3216d912bb080e87b7bef67")
+    except (OSError, ValueError, AttributeError):
+        flash_visual = False
     camera_sensors = {
         "2-001a": "imx355", "8-0036": "imx890",
         "9-0010": "s5k3p9sp", "9-003d": "gc02m1",
@@ -68,11 +78,12 @@ def inventory(root=Path("/")):
             "next": "external clap validated V50 capture; keep the ALSA route guarded",
         },
         "flashlight": {
-            "interface_ready": flash_bound and exists("/dev/flashlight"),
-            "validated": False,
+            "interface_ready": flash_ready,
+            "validated": flash_ready and flash_visual,
             "evidence": {"chip_present": flash_chip, "driver_bound": flash_bound,
-                         "device_node": exists("/dev/flashlight")},
-            "next": "confirm the bounded pulse visually; keep stock modules loaded until reboot",
+                         "device_node": exists("/dev/flashlight"),
+                         "visual_confirmation_recorded": flash_visual},
+            "next": "use bounded pulse and OFF; keep stock modules loaded until reboot",
         },
         "gnss": {
             "interface_ready": bool(gps_nodes) and module("gps_drv_dl_v050"),

@@ -135,3 +135,21 @@ She later appeared on Nexus USB in Fastboot as product `k6983v1_64`.
 As of 09:37 Sofia, neither Alpine SSH nor NRP/1 had returned and USB Fastboot
 was no longer enumerated. The screen state still requires a physical report;
 do not issue another reboot or attempt a camera load without one.
+Noob later reported Lynx's normal portrait. Nexus then verified Alpine 3.24.2,
+NRP/1 `PING`, healthy Wi-Fi and SSH, and boot ID
+`232927fb-06d8-4cda-a7ac-5000a67856d9`. The camera and flashlight RAM
+modules had cleared. At 51% and normal temperature, the exact flashlight
+modules were loaded in RAM again. A direct 100 ms NRP/1 pulse returned
+`off_verified=1`; after cooldown the finite VM pulse halted with
+`regs=100,1,0,...`. `FLASH_STOP` and the sysfs channel verified OFF, Alpine
+health had no issues, and the VM was reset to `EMPTY`. Noob's visual report
+of these two newly announced pulses is pending. No camera module was loaded
+on this recovered boot.
+
+Source boundary: the checked-out OnePlusOSS MT6983 modules branch in
+`sources/oneplus-mt6983-modules/` contains connectivity, GPU, and related
+modules but no `mtkcam` tree. The stock `mtk-cam-isp.ko` is therefore the
+exact binary for this trial, while its matching source is not in that
+checkout. Do not treat another device's camera driver source as an exact
+match. The next camera step is source matching and analysis of the CPU 0
+stall before any further live ISP load.

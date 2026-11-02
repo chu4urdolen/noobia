@@ -34,3 +34,13 @@ value ranged from 0 to 1,333 and rose sharply only near the end. Noob had
 to turn on a lamp during the recording, so this run cannot identify a
 cover/uncover response. Repeat with the lamp already aimed at the lower
 circle, taking separate lit, covered, and uncovered readings at Noob's pace.
+
+The later stepwise NRP/1 check used Noob's cues. With the lamp aimed at the
+uncovered lower circle, `LIGHT_RAW` returned 62. When Noob reported it
+covered, the value was 7. After Noob reported it uncovered, two reads both
+returned 0. The lamp position/intensity was not verified at that last step,
+so the sequence is **inconclusive** for physical identification. It does
+show that the `tcs3408 als` numeric channel can vary; the earlier 30-second
+recording reached 1,333 near the end after the lamp was turned on. Do not
+mark the rear optical sensor as physically validated until a repeatable
+lit–covered–lit sequence is captured with the lamp held steady.

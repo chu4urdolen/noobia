@@ -213,6 +213,12 @@ system does register `mtk-devinfo0` and `mt6338-efuse0` NVMEM devices.
 This makes the port efuse read failure unsurprising, but it still does not
 show whether those values are optional or related to the RCU stall. No
 efuse contents were read.
+For comparison, MediaTek's later upstream ISP7.x seninf patch calls the same
+`nvmem_cell_get(..., "rg_csi")`, logs a failed efuse read, then continues to
+register the subdevice. This is **not** the exact CPH2493 driver source, but
+it supports treating the efuse warning as a possibly nonfatal probe issue
+rather than an explanation for the later CPU 0 stall:
+https://lists.openwall.net/linux-kernel/2025/07/07/32 .
 
 On the recovered V53 boot, with no ISP module loaded, a read-only `dmesg`
 search found no retained RCU stall or seninf messages after more than 31,000

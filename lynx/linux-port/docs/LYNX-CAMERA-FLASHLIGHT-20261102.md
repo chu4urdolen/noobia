@@ -164,16 +164,16 @@ This change loaded no module, actuated no LED, and wrote no boot partition.
 The staged flashlight boot service remains disabled pending a monitored
 cold boot, because the driver should not be unloaded to reset a trial.
 
-Source boundary: the checked-out OnePlusOSS MT6983 modules branch in
-`sources/oneplus-mt6983-modules/` contains connectivity, GPU, and related
-modules but no `mtkcam` tree. The stock `mtk-cam-isp.ko` is therefore the
-exact binary for this trial, while its matching source is not in that
-checkout. Do not treat another device's camera driver source as an exact
-match. The next camera step is source matching and analysis of the CPU 0
-stall before any further live ISP load.
-The separately checked Nord 3 13.1 branch of that official modules repository
-(`b7485501b2c4e0abae154e44c3861bd0fc6d605a`) also has no path containing
-`mtkcam`, `cam-isp`, `camsys`, or `seninf` in its full 10,300-entry Git tree.
+Source correction: the official **modules** repository lacks `mtkcam`, but
+the exact Nord 3 13.1 **kernel** repository has
+`drivers/media/platform/mtk-isp/camsys/isp7_1/cam/` and
+`drivers/remoteproc/mtk_ccd.c`. The kernel tree at commit
+`81ec42ad5e803be0cba619f9f7bb298db7d33d7b` is preserved as a small
+source subset under `sources/oneplus-nord3-mtkcam/`, with file hashes in
+`SOURCE.json`. The `mtk_cam_master_bind success` and CSI efuse diagnostic
+strings match the stock binary and captured log. The source and binary have
+not been rebuilt and compared byte for byte, so treat this as matching
+branch source rather than proven identical object code.
 Read-only CPU 0 inspection on the recovered boot found `psci_idle`: WFI is
 enabled, while `clusteroff_l`, `mcusysoff`, `system_mem`, `system_pll`,
 `system_bus`, and `s2idle` are already disabled. The RCU trace's
@@ -210,15 +210,13 @@ A read-only check of Lynx's live device tree showed four
 `seninf_csi_port_*` nodes with `compatible`, `csi-port`, `name`, `phandle`,
 and `port` properties, but no `nvmem-cells` property on those nodes. The
 system does register `mtk-devinfo0` and `mt6338-efuse0` NVMEM devices.
-This makes the port efuse read failure unsurprising, but it still does not
-show whether those values are optional or related to the RCU stall. No
-efuse contents were read.
-For comparison, MediaTek's later upstream ISP7.x seninf patch calls the same
-`nvmem_cell_get(..., "rg_csi")`, logs a failed efuse read, then continues to
-register the subdevice. This is **not** the exact CPH2493 driver source, but
-it supports treating the efuse warning as a possibly nonfatal probe issue
-rather than an explanation for the later CPU 0 stall:
-https://lists.openwall.net/linux-kernel/2025/07/07/32 .
+The matching branch source's `dev_read_csi_efuse()` asks for NVMEM cell
+`rg_csi`; its seninf probe logs a failed read and then continues to register
+the V4L2 subdevice. The successful `mtk_cam_master_bind` in the captured
+log confirms these warnings did not stop media registration. This makes
+the efuse warning a weak explanation for the later CPU 0 stall, although
+optical signal tuning without efuse remains unverified. No efuse contents
+were read.
 
 On the recovered V53 boot, with no ISP module loaded, a read-only `dmesg`
 search found no retained RCU stall or seninf messages after more than 31,000
@@ -241,8 +239,11 @@ Another review of the same trace found that `mtk_ccd_remoteproc` requested
 Lynx has no file of that name in her firmware search paths. The exact August
 stock package contains `vendor/firmware/remoteproc_scp`, SHA-256
 `66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925`,
-but it is only 32 zero bytes. It must not be presented as a working camera
-firmware image. The CCD module exposes `ccd_load` and `ccd_start` symbols;
-whether the zero-byte-pattern placeholder is an expected remoteproc token or
-the absent file affects ISP probe remains unverified. No firmware was staged
-on Lynx during this investigation.
+but it is only 32 zero bytes. The matching `mtk_ccd.c` source declares an
+all-zero built-in `remoteproc_scp` buffer, and both `ccd_load()` and
+`ccd_start()` are no-op success routines. The camera source calls
+`rproc_boot()` when opening its first stream context. This supports treating
+the stock file as a remoteproc token rather than executable camera firmware.
+Its absence could obstruct future streaming, but the ISP bound before any
+stream was requested, so it does not yet explain the later idle RCU stall.
+No firmware was staged on Lynx during this investigation.

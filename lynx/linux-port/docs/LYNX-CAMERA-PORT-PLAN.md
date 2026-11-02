@@ -36,14 +36,23 @@ successful return is followed about 15 seconds later by the first stall.
 CPU 0 has only WFI enabled; its deeper idle states are already disabled.
 This is an association, not yet a proven kernel cause.
 
-Review the exact module's probe and clock/interrupt paths against matching
-MT6983 source and the stock device tree. The checked-out OnePlusOSS modules
-branch and the official Nord 3 13.1 modules branch have no `mtkcam` source
-tree, so other OEM camera source can guide
-questions but cannot be treated as a drop-in match. Check the module's
-dependencies, IRQ affinity, media registration, and firmware requests
-offline. Do not try to hide the stall by loosening health assertions or
-repeating the same load.
+The official Nord 3 13.1 kernel tree at
+`OnePlusOSS/android_kernel_5.10_oneplus_mt6983`, commit
+`81ec42ad5e803be0cba619f9f7bb298db7d33d7b`, contains the ISP7.1 camera
+source under `drivers/media/platform/mtk-isp/camsys/isp7_1/cam/` and the CCD
+remoteproc driver under `drivers/remoteproc/mtk_ccd.c`. A checksum manifest
+and fetch/verify tool live in `sources/oneplus-nord3-mtkcam/SOURCE.json` and
+`tools/fetch_nord3_camera_source.py`. These source files match the stock
+module's diagnostic strings and Kbuild module name; bit-for-bit binary
+identity has not been established. Review probe, IRQ, clock, media, and
+firmware paths there before another live trial. Do not hide the stall by
+loosening health assertions or repeating the same load.
+
+In that source, RAW IRQs are requested and then disabled at probe. The
+seninf and YUV IRQ request paths do not show an immediate disable. A future
+monitored trial should prioritize their runtime interrupt counts on each
+CPU, especially seninf SPI 476 and YUV SPIs 461/463/465. This is a probe
+path observation, not evidence of an interrupt storm.
 
 `tools/analyze_camera_kernel_trace.py` extracts the saved init and RCU
 timeline. `tools/record_camera_health_window.py` is a read-only Nexus-side

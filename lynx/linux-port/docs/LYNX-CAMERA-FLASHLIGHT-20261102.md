@@ -227,3 +227,11 @@ cannot prove causation; the kernel ring buffer may have overwritten older
 messages. At that check Alpine health had no issues, battery was 81%, and
 the same boot ID remained active.
 Read-only receipt: `logs/camera-recovered-baseline-20261102.json`.
+
+Review of the old pipeline loader's receipt found an evidence gap: it
+discarded the `lynx-status` JSON during each post-module check, and the
+failed watchdog-disarm SSH command masked the earlier health-check error.
+The loader now saves health output and per-step timestamps, retains a
+separate disarm error, and rejects `mtk-cam-isp` or any later prefix before
+contacting Lynx. This fixes the diagnostic tool; it does not identify the
+kernel stall or authorize a new ISP load.

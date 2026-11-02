@@ -54,6 +54,15 @@ healthy recovered boot recorded two samples and no health issues at
 the largest IRQ-count changes, which can be compared with a future bounded
 ISP trial. It does not load modules or change Lynx.
 
+The read-only device-tree IRQ inventory at
+`logs/camera-dt-irq-inventory-20261102.json` records seven camera-related
+interrupt specifiers: seninf SPI 476, RAW A/B/C SPIs 460/462/464, and YUV
+A/B/C SPIs 461/463/465. Those nodes have no explicit
+`interrupt-affinity` property in Lynx's live tree. The numbers are device
+tree SPI specifiers, not Linux IRQ numbers. A future monitored trial can
+compare their runtime `/proc/interrupts` counts and CPU distribution with
+the healthy baseline; the inventory alone does not show an IRQ storm.
+
 Gate 1 passes only after a bounded RAM trial loads the ISP, captures kernel
 messages continuously on Nexus, and remains healthy through the probe and a
 later observation window. Verify Wi-Fi, SSH, the battery reserve service,

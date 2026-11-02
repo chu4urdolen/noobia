@@ -39,10 +39,14 @@ def main():
     def step(name, command, data=None, timeout=20):
         argv = ssh_command("192.168.100.107", command)
         argv[-2:-2] = ["-p", "2222"]
+        started = time.time_ns()
         result = subprocess.run(argv, input=data, capture_output=True, timeout=timeout)
+        finished = time.time_ns()
         (out / (name + ".stdout")).write_bytes(result.stdout)
         (out / (name + ".stderr")).write_bytes(result.stderr)
-        report["steps"].append({"name": name, "exit": result.returncode})
+        report["steps"].append({"name": name, "exit": result.returncode,
+                                "started_unix_ns": started,
+                                "finished_unix_ns": finished})
         save()
         if result.returncode:
             raise RuntimeError(f"{name} failed; see receipt")
@@ -94,6 +98,7 @@ def main():
                 report["attempting"] = name
                 report["watchdog_pid"] = pid
                 save()
+                module_error = None
                 try:
                     step("load_" + name,
                          f"/bin/busybox timeout 20 /sbin/insmod {remote}", timeout=28)
@@ -101,10 +106,18 @@ def main():
                     save()
                     step("health_" + name,
                          f"set -eu; grep -q '^{kernel_name} ' /proc/modules; "
-                         "/usr/local/bin/lynx-status --assert-ready >/dev/null", timeout=15)
-                finally:
+                         "/usr/local/bin/lynx-status --assert-ready", timeout=15)
+                except Exception as exc:
+                    module_error = exc
+                try:
                     step("disarm_" + name, f"kill {pid} 2>/dev/null || true")
                     report.pop("watchdog_pid", None)
+                except Exception as exc:
+                    report["disarm_error"] = str(exc)
+                    if module_error is None:
+                        module_error = exc
+                if module_error is not None:
+                    raise module_error
             if name == args.through:
                 break
         report["nodes"] = step("nodes", "find /dev -maxdepth 1 "

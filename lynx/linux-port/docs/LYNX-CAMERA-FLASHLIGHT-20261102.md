@@ -171,6 +171,9 @@ exact binary for this trial, while its matching source is not in that
 checkout. Do not treat another device's camera driver source as an exact
 match. The next camera step is source matching and analysis of the CPU 0
 stall before any further live ISP load.
+The separately checked Nord 3 13.1 branch of that official modules repository
+(`b7485501b2c4e0abae154e44c3861bd0fc6d605a`) also has no path containing
+`mtkcam`, `cam-isp`, `camsys`, or `seninf` in its full 10,300-entry Git tree.
 Read-only CPU 0 inspection on the recovered boot found `psci_idle`: WFI is
 enabled, while `clusteroff_l`, `mcusysoff`, `system_mem`, `system_pll`,
 `system_bus`, and `s2idle` are already disabled. The RCU trace's
@@ -193,3 +196,28 @@ that message first appeared before the ISP load, so it is not a new ISP
 symptom. The captured CPU 0 trace shows idle and RCU scheduler frames,
 not a camera function. These observations narrow the next inspection but
 do not justify another live load yet.
+
+The repeatable offline parser `tools/analyze_camera_kernel_trace.py` summarizes
+the raw `/dev/kmsg` capture into
+`logs/kernel-trial-1793604146750082321/camera-timeline.json`. It counted
+three ordinary RCU stall reports, four CSI efuse read failures, and 55 PMIC
+IRQ probe deferrals. The first PMIC deferral predates the ISP load. The ISP
+initcall's own reported work took 6.018 seconds; the first ordinary RCU stall
+was 14.932 seconds after its return. The parser extracts observations only;
+it does not assign a cause.
+
+A read-only check of Lynx's live device tree showed four
+`seninf_csi_port_*` nodes with `compatible`, `csi-port`, `name`, `phandle`,
+and `port` properties, but no `nvmem-cells` property on those nodes. The
+system does register `mtk-devinfo0` and `mt6338-efuse0` NVMEM devices.
+This makes the port efuse read failure unsurprising, but it still does not
+show whether those values are optional or related to the RCU stall. No
+efuse contents were read.
+
+On the recovered V53 boot, with no ISP module loaded, a read-only `dmesg`
+search found no retained RCU stall or seninf messages after more than 31,000
+seconds of uptime. This supports an association with the camera load but
+cannot prove causation; the kernel ring buffer may have overwritten older
+messages. At that check Alpine health had no issues, battery was 81%, and
+the same boot ID remained active.
+Read-only receipt: `logs/camera-recovered-baseline-20261102.json`.

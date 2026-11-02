@@ -23,6 +23,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--through", choices=order, required=True)
     args = parser.parse_args()
+    if order.index(args.through) >= order.index("mtk-cam-isp"):
+        parser.error("ISP and later modules are paused after repeated CPU 0 RCU stalls; "
+                     "review the captured trace before making a new bounded trial tool")
     os.umask(0o077)
     out = ROOT / "logs" / f"camera-pipeline-{time.time_ns()}"
     out.mkdir(mode=0o700)

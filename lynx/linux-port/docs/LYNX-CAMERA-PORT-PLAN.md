@@ -38,7 +38,8 @@ This is an association, not yet a proven kernel cause.
 
 Review the exact module's probe and clock/interrupt paths against matching
 MT6983 source and the stock device tree. The checked-out OnePlusOSS modules
-branch has no `mtkcam` source tree, so other OEM camera source can guide
+branch and the official Nord 3 13.1 modules branch have no `mtkcam` source
+tree, so other OEM camera source can guide
 questions but cannot be treated as a drop-in match. Check the module's
 dependencies, IRQ affinity, media registration, and firmware requests
 offline. Do not try to hide the stall by loosening health assertions or

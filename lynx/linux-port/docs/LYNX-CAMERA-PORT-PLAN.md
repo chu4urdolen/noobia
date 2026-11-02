@@ -45,6 +45,15 @@ dependencies, IRQ affinity, media registration, and firmware requests
 offline. Do not try to hide the stall by loosening health assertions or
 repeating the same load.
 
+`tools/analyze_camera_kernel_trace.py` extracts the saved init and RCU
+timeline. `tools/record_camera_health_window.py` is a read-only Nexus-side
+collector for boot identity, module state, `/proc/interrupts`,
+`/proc/softirqs`, and Alpine health. Its five-second baseline trial on the
+healthy recovered boot recorded two samples and no health issues at
+`logs/camera-health-window-1793636233918336343/result.json`. It also writes
+the largest IRQ-count changes, which can be compared with a future bounded
+ISP trial. It does not load modules or change Lynx.
+
 Gate 1 passes only after a bounded RAM trial loads the ISP, captures kernel
 messages continuously on Nexus, and remains healthy through the probe and a
 later observation window. Verify Wi-Fi, SSH, the battery reserve service,

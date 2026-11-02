@@ -66,6 +66,15 @@ The next trial must record the camera IRQ counts and CPU distribution from
 the first second of module load, preserve the kernel stream, and retain an
 independent timed reboot through at least a 30-second observation window.
 No other camera variable should be changed in that trial.
+The reviewed one-module trial launcher is
+`tools/trial_camera_isp_irq.py --execute`. It requires the already loaded
+camera prefix, the exact V53 boot hash, healthy battery and thermals, and the
+exact stock ISP module checksum. Before loading it starts both the bounded
+kernel-log recorder and the IRQ/health sampler, plus a 115-second reboot
+fallback. It observes 65 seconds for RCU warnings and Alpine service health.
+The earlier broad pipeline loader refuses to cross into `mtk-cam-isp`; use
+only the targeted launcher for the next ISP test. It has been syntax-checked
+and its no-argument execution gate tested locally, but not yet run on Lynx.
 
 `tools/analyze_camera_kernel_trace.py` extracts the saved init and RCU
 timeline. `tools/record_camera_health_window.py` is a read-only Nexus-side

@@ -26,3 +26,11 @@ read-only NRP/1 calls `LIGHT_STATUS` (372) and `LIGHT_RAW` (373) returned
 sample in an unknown lighting condition does not validate the optical
 response or identify which rear circle covers the sensor. When Noob is at
 Lynx, compare uncovered and covered readings under steady ambient light.
+
+The read-only recorder `tools/record_rear_light_response.py` captured 26
+samples over 30 seconds at
+`logs/rear-light-response-1793637128297070135/result.json`. The reported
+value ranged from 0 to 1,333 and rose sharply only near the end. Noob had
+to turn on a lamp during the recording, so this run cannot identify a
+cover/uncover response. Repeat with the lamp already aimed at the lower
+circle, taking separate lit, covered, and uncovered readings at Noob's pace.

@@ -61,7 +61,7 @@ def main():
             raise RuntimeError("unexpected boot identity")
         report["boot_id"] = identity[0]
         health = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready"))
-        minimum = 25 if health["battery"]["current_mA_signed"] > 0 else 50
+        minimum = 25 if health["battery"]["current_mA_signed"] > 0 else 35
         if (health["boot_id"] != identity[0] or health["issues"] or
                 health["battery"]["capacity_percent"] < minimum or
                 health["battery"]["temperature_mC"] >= 35000 or

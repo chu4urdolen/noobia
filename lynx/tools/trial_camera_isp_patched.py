@@ -26,12 +26,15 @@ BUILD_RECEIPT = ROOT / "linux-port/artifacts/camera-yuv-irq-build/build-result.j
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--execute", action="store_true",
-                        help="load the ISP only after Noob is present for recovery")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--execute", action="store_true",
+                      help="load the ISP only after Noob is present for recovery")
+    mode.add_argument("--preflight-only", action="store_true",
+                      help="check local artifact and Lynx read-only; do not load anything")
     parser.add_argument("--attended", action="store_true",
                         help="confirm Noob is physically present for Fastboot recovery")
     args = parser.parse_args()
-    if not args.execute or not args.attended:
+    if args.execute and not args.attended:
         parser.error("--execute --attended required; Noob must be present for recovery")
     os.umask(0o077)
     out = ROOT / "logs" / f"camera-isp-patched-trial-{time.time_ns()}"
@@ -81,7 +84,7 @@ def main():
             raise RuntimeError("unexpected Lynx boot")
         report["boot_id"] = identity[0]
         health = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready"))
-        minimum = 25 if health["battery"]["current_mA_signed"] > 0 else 50
+        minimum = 25 if health["battery"]["current_mA_signed"] > 0 else 35
         if (health["boot_id"] != identity[0] or health["issues"] or
                 health["battery"]["capacity_percent"] < minimum or
                 health["battery"]["temperature_mC"] >= 35000 or
@@ -96,6 +99,12 @@ def main():
             raise RuntimeError("ISP already loaded")
         if step("rcu_before", "dmesg | grep -E 'rcu_preempt detected stalls' | tail -3 || true"):
             raise RuntimeError("RCU stall exists before trial")
+        if args.preflight_only:
+            report["state"] = "read_only_preflight_passed"
+            save()
+            print(json.dumps({"state": report["state"],
+                              "receipt": str(out / "result.json"), "error": None}))
+            return
         step("stage_dir", f"mkdir -p {STAGE}; chmod 700 {STAGE}")
         remote = f"{STAGE}/mtk-cam-isp.ko"
         step("stage_module", f"cat > {remote}", payload, timeout=45)

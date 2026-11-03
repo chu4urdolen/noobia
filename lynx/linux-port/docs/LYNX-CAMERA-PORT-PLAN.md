@@ -140,10 +140,15 @@ Record the graph and hashes in a machine-readable manifest. The 73
 a camera path. `CAMERA_STATUS` may show `interface_ready=1` after the ISP
 binds but must retain `validated=0` until a real frame is inspected.
 `tools/inventory_camera_runtime.py` now saves the read-only boot identity,
-loaded camera modules, video/media sysfs nodes, camera IRQs, and recent kernel
-messages. A healthy V53 baseline with ISP absent produced zero video/media
-nodes at `logs/camera-runtime-inventory-1793693390881286702.json`. Run it
-again after a stable patched ISP trial before attempting any frame.
+loaded camera modules, video/media device nodes, camera IRQs, and recent kernel
+messages. A healthy V53 baseline with ISP absent produced 74 video nodes and
+`/dev/media0`; `media-ctl` identified this as the image-processing
+`MTK-ISP-DIP-V4L2` graph, not a sensor capture path. The baseline with the
+topology is `logs/camera-runtime-inventory-1793710550075741704.json`. Run
+the tool with `--media-graph --expect-isp` after a stable patched ISP trial,
+then identify a separate camera capture graph before attempting any frame.
+Alpine `v4l-utils` 1.32.0-r1 was installed for these read-only topology
+queries; the root partition had 456 MiB free afterward.
 
 ## Gate 3: one frame per lens
 

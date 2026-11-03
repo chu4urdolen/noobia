@@ -39,6 +39,10 @@ same vermagic, 322 import CRC, and 16 provider checks at
 Its file SHA differs from the pinned trial candidate because Kbuild embeds
 build-path information; the trial tool still pins the earlier reviewed file.
 
+`tools/trial_camera_isp_patched.py --preflight-only` checks the module,
+dependencies, V53 image, battery, thermals, and RCU state without loading
+anything. It passed on the current boot at
+`logs/camera-isp-patched-trial-1793710616638473045/result.json`.
 `tools/trial_camera_isp_patched.py --execute --attended` is the bounded RAM trial. It
 checks the exact V53 boot hash, module checksum, prerequisites, battery, and
 thermals; starts kernel and IRQ recorders; arms a reboot fallback; and stops

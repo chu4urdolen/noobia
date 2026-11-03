@@ -22,6 +22,11 @@ not prove that YUV-B's IRQ line clears correctly when powered.
 The build output is
 `artifacts/camera-yuv-irq-build/cam/mtk-cam-isp.ko`, SHA256
 `ade3ba24ff56d3b96f3f37842f878880d5e38a4da211e88768b4ebbd8d0cb5eb`.
+The guarded trial uses its debug-stripped copy
+`artifacts/camera-yuv-irq-build/cam/mtk-cam-isp-stripped.ko`, SHA256
+`b0072fce10d91202cf02586bb21cea7ccb61d36988828fc86c696e8f9c838b64`.
+It is 2.7 MB instead of 17.2 MB. `.text`, `__versions`, and `.modinfo`
+are byte-identical to the unstripped build.
 `artifacts/camera-yuv-irq-build/build-result.json` records the source,
 compiler, module checksums, and limits. The pinned Android Clang 12 toolchain
 and copied stock-header Kbuild basis were used. The candidate has the same
@@ -42,7 +47,8 @@ build-path information; the trial tool still pins the earlier reviewed file.
 `tools/trial_camera_isp_patched.py --preflight-only` checks the module,
 dependencies, V53 image, battery, thermals, and RCU state without loading
 anything. It passed on the current boot at
-`logs/camera-isp-patched-trial-1793710616638473045/result.json`.
+`logs/camera-isp-patched-trial-1793710768646260577/result.json` using the
+debug-stripped trial file.
 `tools/trial_camera_isp_patched.py --execute --attended` is the bounded RAM trial. It
 checks the exact V53 boot hash, module checksum, prerequisites, battery, and
 thermals; starts kernel and IRQ recorders; arms a reboot fallback; and stops

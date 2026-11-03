@@ -17,8 +17,8 @@ MANIFEST = ROOT / "linux-port/camera-pipeline-modules.json"
 KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
 BOOT = "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e"
 STAGE = "/run/lynx/camera-isp-irq-trial"
-PATCHED_ISP = ROOT / "linux-port/artifacts/camera-yuv-irq-build/cam/mtk-cam-isp.ko"
-PATCHED_SHA = "ade3ba24ff56d3b96f3f37842f878880d5e38a4da211e88768b4ebbd8d0cb5eb"
+PATCHED_ISP = ROOT / "linux-port/artifacts/camera-yuv-irq-build/cam/mtk-cam-isp-stripped.ko"
+PATCHED_SHA = "b0072fce10d91202cf02586bb21cea7ccb61d36988828fc86c696e8f9c838b64"
 PATCH = ROOT / "linux-port/patches/camera-yuv-irq/0001-gate-yuv-irq-on-runtime-power.patch"
 PATCH_SHA = "31f6176bdb69951552c4a6b09653415217f1312d4981574d2d80d735f67fb7cb"
 BUILD_RECEIPT = ROOT / "linux-port/artifacts/camera-yuv-irq-build/build-result.json"
@@ -75,7 +75,7 @@ def main():
             raise RuntimeError("source patch changed since module build")
         build = json.loads(BUILD_RECEIPT.read_text())
         if (build.get("state") != "offline-module-built-not-tested-on-lynx" or
-                build.get("candidate_module_sha256") != PATCHED_SHA or
+                build.get("stripped_trial_module_sha256") != PATCHED_SHA or
                 not build.get("import_crcs_equal") or not build.get("depends_equal")):
             raise RuntimeError("patched ISP build receipt incomplete")
         identity = step("identity", "cat /proc/sys/kernel/random/boot_id; uname -r; "

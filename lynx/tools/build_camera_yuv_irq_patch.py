@@ -146,9 +146,21 @@ def main():
         if (candidate_imports != stock_imports or candidate_depends != stock_depends or
                 candidate_vermagic != stock_vermagic or not candidate_vermagic.startswith(KERNEL)):
             raise RuntimeError("candidate module ABI checks failed")
+        stripped = source_copy / "mtk-cam-isp-stripped.ko"
+        run([str(COMPILER / "llvm-strip"), "--strip-debug", "-o", str(stripped),
+             str(candidate)])
+        if (versions(stripped, llvm_objcopy, output / "stripped-versions.bin") != candidate_imports or
+                run(["modinfo", "-F", "depends", str(stripped)], text=True).stdout.strip().split(",")
+                != candidate_depends or
+                run(["modinfo", "-F", "vermagic", str(stripped)], text=True).stdout.strip()
+                != candidate_vermagic):
+            raise RuntimeError("debug stripping changed module ABI")
         report.update(state="offline-module-built-not-tested-on-lynx",
                       candidate_module_sha256=digest(candidate),
                       candidate_module=str(candidate), module_bytes=candidate.stat().st_size,
+                      stripped_trial_module_sha256=digest(stripped),
+                      stripped_trial_module=str(stripped),
+                      stripped_bytes=stripped.stat().st_size,
                       import_count=len(candidate_imports), provider_import_count=len(providers),
                       depends=candidate_depends, vermagic=candidate_vermagic)
     except Exception as exc:

@@ -13,6 +13,11 @@ runtime clock suspend, and enables it after runtime clock resume. It reads
 the same four status registers as the stock handler before enabling. The
 patch has not been proven on Lynx; in particular, runtime PM state and IRQ
 acknowledgement semantics still require a guarded trial.
+The source also links each RAW device to its matching YUV device with
+`DL_FLAG_PM_RUNTIME` in `mtk_raw_setup_dependencies()`. The stream path calls
+`pm_runtime_get_sync()` on RAW devices, which should power their YUV suppliers
+before RAW. This supports the proposed runtime resume gate, though it does
+not prove that YUV-B's IRQ line clears correctly when powered.
 
 The build output is
 `artifacts/camera-yuv-irq-build/cam/mtk-cam-isp.ko`, SHA256

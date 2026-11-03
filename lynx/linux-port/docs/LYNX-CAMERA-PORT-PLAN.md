@@ -179,9 +179,12 @@ cold boot and recovery trial.
 On 2026-11-03, Lynx returned from Fastboot to unchanged V53 Alpine. The
 presence service reports `alpine_wifi`; SSH and `lynx-status --assert-ready`
 passed on boot ID `f649a319-dcbb-47b9-9a54-7e482ee7eef2`. The camera stack
-is not loaded on this boot. Battery was 23% with about 97 mA signed charging
-current, so the patched ISP trial is held until charge and an attended
-Fastboot recovery window are available. The offline patch build is complete
+was initially absent. Battery later reached 46%. The four sensor drivers and
+the known camera prefix loaded in RAM without error; the patched ISP remains
+unloaded. Read-only preflight passed at
+`logs/camera-isp-patched-trial-1793710768646260577/result.json`.
+The ISP trial is held until an attended Fastboot recovery window is confirmed.
+The offline patch build is complete
 and reproducible with `tools/build_camera_yuv_irq_patch.py`; the live launcher
 requires `--execute --attended` and an exact healthy V53 boot. Noob visually
 confirmed the flashlight with a bounded 100 ms pulse; its Noob status reports

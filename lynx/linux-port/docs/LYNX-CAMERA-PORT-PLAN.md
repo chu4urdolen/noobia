@@ -40,6 +40,11 @@ the full time series is
 `logs/camera-health-window-1793638530148096643/`. A forced reboot request
 lost SSH, then Noob brought Lynx to Fastboot. Nexus verified product
 `k6983v1_64`, slot A, unlocked, and issued `fastboot reboot` to unchanged V53.
+The first reboot stayed black; a second Fastboot reboot reached BusyBox SSH
+at uptime 52 seconds and completed its delayed Alpine PID 1 handoff after
+uptime 219 seconds. Alpine SSH and health then passed on boot ID
+`83967af8-f818-4472-87df-6fa04eb0af78`, with the ISP absent. This was
+a slow V53 boot, not a failed Alpine image.
 
 The matching OnePlus source `cam/mtk_cam-raw.c` registers YUV IRQs in
 `mtk_yuv_of_probe()` with `devm_request_irq()` and does not disable them at
@@ -50,6 +55,19 @@ the actual register state is not captured. Repair requires understanding
 YUV-B power/reset/IRQ acknowledgement and either a reviewed driver fix or a
 safe early IRQ disable before another live ISP load. The targeted trial
 launcher now refuses execution until that repair is reviewed.
+
+An experimental repair patch now exists at
+`linux-port/patches/camera-yuv-irq/0001-gate-yuv-irq-on-runtime-power.patch`.
+It disables the YUV IRQ after request, disables it during runtime suspend,
+and enables it after runtime resume clocks are prepared and status registers
+are read. The matching source compiled with the pinned Android Clang 12
+toolchain into `artifacts/camera-yuv-irq-build/cam/mtk-cam-isp.ko`.
+Its vermagic matches the stock module; all 322 imported symbol CRCs match
+the stock ISP exactly. It has **not been loaded on Lynx**. The first guarded
+trial refused because its pinned output hash was stale after a rebuild; the
+second stopped at the SSH boot identity check. There is no evidence yet that
+the patch fixes YUV-B or allows capture. Review the runtime PM state and
+record exact IRQ counts before any further load or image packaging.
 
 The stock clock, regulator, CCU, EEPROM, four sensors, and image-processing
 modules have loaded in RAM. `mtk-cam-isp` binds and creates capture-class

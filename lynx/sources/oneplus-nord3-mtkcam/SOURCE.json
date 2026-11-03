@@ -32,6 +32,11 @@
       "file": "mtk_cam-dvfs_qos.c",
       "sha256": "18cf01ee3637caf0d6d5dc99e2dbf662cf4c33b53e1a0a351809a736c81f3551",
       "bytes": 39866
+    },
+    {
+      "file": "mtk_cam-raw.h",
+      "sha256": "fb431e9aeb6883fd6b2e19d5f139c1639a2bfec61b4b00e1942ef962aee4629b",
+      "bytes": 12776
     }
   ],
   "extra_files": [

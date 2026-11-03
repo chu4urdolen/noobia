@@ -18,16 +18,18 @@ KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
 BOOT = "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e"
 STAGE = "/run/lynx/camera-isp-irq-trial"
 PATCHED_ISP = ROOT / "linux-port/artifacts/camera-yuv-irq-build/cam/mtk-cam-isp.ko"
-PATCHED_SHA = "5b73c62a4d6ad768a44f09ce48231229ca9d1ee7aa7d88eb018b61e54e56fa40"
+PATCHED_SHA = "ade3ba24ff56d3b96f3f37842f878880d5e38a4da211e88768b4ebbd8d0cb5eb"
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute", action="store_true",
                         help="load the ISP only after Noob is present for recovery")
+    parser.add_argument("--attended", action="store_true",
+                        help="confirm Noob is physically present for Fastboot recovery")
     args = parser.parse_args()
-    if not args.execute:
-        parser.error("explicit --execute required; Noob must be present for recovery")
+    if not args.execute or not args.attended:
+        parser.error("--execute --attended required; Noob must be present for recovery")
     os.umask(0o077)
     out = ROOT / "logs" / f"camera-isp-patched-trial-{time.time_ns()}"
     out.mkdir(mode=0o700)

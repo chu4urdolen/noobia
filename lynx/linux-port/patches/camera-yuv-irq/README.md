@@ -16,17 +16,25 @@ acknowledgement semantics still require a guarded trial.
 
 The build output is
 `artifacts/camera-yuv-irq-build/cam/mtk-cam-isp.ko`, SHA256
-`5b73c62a4d6ad768a44f09ce48231229ca9d1ee7aa7d88eb018b61e54e56fa40`.
+`ade3ba24ff56d3b96f3f37842f878880d5e38a4da211e88768b4ebbd8d0cb5eb`.
 `artifacts/camera-yuv-irq-build/build-result.json` records the source,
 compiler, module checksums, and limits. The pinned Android Clang 12 toolchain
 and copied stock-header Kbuild basis were used. The candidate has the same
-vermagic and all 322 imported symbol CRCs as the stock ISP module. Its
-`depends` metadata is incomplete because the partial symbol table records
-unknown providers as `vmlinux`; load the known provider prefix manually in a
-guarded RAM trial. The candidate must not be installed at boot or flashed
+vermagic, all 322 imported symbol CRCs, and the same 16 `depends` providers
+as the stock ISP module. The partial symbol table maps the 34 imports from
+those providers using the stock modules' `__ksymtab` exports; the remaining
+imports are recorded as `vmlinux`. Load the known provider prefix manually
+in a guarded RAM trial. The candidate must not be installed at boot or flashed
 until the YUV-B IRQ remains quiet and a real camera frame is captured.
 
-`tools/trial_camera_isp_patched.py --execute` is the bounded RAM trial. It
+`tools/build_camera_yuv_irq_patch.py` reproduces the build in a new timestamped
+artifact directory without contacting Lynx. One clean rebuild passed the
+same vermagic, 322 import CRC, and 16 provider checks at
+`artifacts/camera-yuv-irq-rebuild-1793693137162767366/build-result.json`.
+Its file SHA differs from the pinned trial candidate because Kbuild embeds
+build-path information; the trial tool still pins the earlier reviewed file.
+
+`tools/trial_camera_isp_patched.py --execute --attended` is the bounded RAM trial. It
 checks the exact V53 boot hash, module checksum, prerequisites, battery, and
 thermals; starts kernel and IRQ recorders; arms a reboot fallback; and stops
 if YUV-B exceeds 10,000 interrupts. The trial has not loaded the candidate:

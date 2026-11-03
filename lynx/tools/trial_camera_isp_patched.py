@@ -19,6 +19,9 @@ BOOT = "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e"
 STAGE = "/run/lynx/camera-isp-irq-trial"
 PATCHED_ISP = ROOT / "linux-port/artifacts/camera-yuv-irq-build/cam/mtk-cam-isp.ko"
 PATCHED_SHA = "ade3ba24ff56d3b96f3f37842f878880d5e38a4da211e88768b4ebbd8d0cb5eb"
+PATCH = ROOT / "linux-port/patches/camera-yuv-irq/0001-gate-yuv-irq-on-runtime-power.patch"
+PATCH_SHA = "31f6176bdb69951552c4a6b09653415217f1312d4981574d2d80d735f67fb7cb"
+BUILD_RECEIPT = ROOT / "linux-port/artifacts/camera-yuv-irq-build/build-result.json"
 
 
 def main():
@@ -35,6 +38,7 @@ def main():
     out.mkdir(mode=0o700)
     report = {"schema": 1, "state": "preflight", "boot_partition_writes": False,
               "camera_capture_requested": False, "modules_unloaded": False,
+              "candidate_sha256": PATCHED_SHA, "patch_sha256": PATCH_SHA,
               "steps": []}
 
     def save():
@@ -64,6 +68,13 @@ def main():
         payload = source.read_bytes()
         if manifest["kernel"] != KERNEL or hashlib.sha256(payload).hexdigest() != PATCHED_SHA:
             raise RuntimeError("patched ISP module incompatible")
+        if hashlib.sha256(PATCH.read_bytes()).hexdigest() != PATCH_SHA:
+            raise RuntimeError("source patch changed since module build")
+        build = json.loads(BUILD_RECEIPT.read_text())
+        if (build.get("state") != "offline-module-built-not-tested-on-lynx" or
+                build.get("candidate_module_sha256") != PATCHED_SHA or
+                not build.get("import_crcs_equal") or not build.get("depends_equal")):
+            raise RuntimeError("patched ISP build receipt incomplete")
         identity = step("identity", "cat /proc/sys/kernel/random/boot_id; uname -r; "
                         "sha256sum /dev/sdc39 | cut -c1-64", timeout=30).splitlines()
         if len(identity) != 3 or identity[1:] != [KERNEL, BOOT]:
@@ -127,8 +138,9 @@ def main():
                             timeout=10)
             irq_line, health_json = snapshot.split("__HEALTH__", 1)
             irq_parts = irq_line.split()
-            if (len(irq_parts) < 9 or irq_parts[0] != "247:" or
-                    sum(int(value) for value in irq_parts[1:9]) > 10000):
+            if len(irq_parts) < 9 or irq_parts[0] != "247:":
+                raise RuntimeError("YUV-B IRQ line missing")
+            if sum(int(value) for value in irq_parts[1:9]) > 10000:
                 raise RuntimeError("YUV-B IRQ count exceeded safe bound")
             after = json.loads(health_json.strip())
             if after["boot_id"] != identity[0] or after["issues"]:

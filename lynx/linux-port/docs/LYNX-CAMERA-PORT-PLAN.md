@@ -139,6 +139,11 @@ Record the graph and hashes in a machine-readable manifest. The 73
 `MTK-ISP-DIP-V4L2` nodes seen earlier are processing nodes and do not prove
 a camera path. `CAMERA_STATUS` may show `interface_ready=1` after the ISP
 binds but must retain `validated=0` until a real frame is inspected.
+`tools/inventory_camera_runtime.py` now saves the read-only boot identity,
+loaded camera modules, video/media sysfs nodes, camera IRQs, and recent kernel
+messages. A healthy V53 baseline with ISP absent produced zero video/media
+nodes at `logs/camera-runtime-inventory-1793693390881286702.json`. Run it
+again after a stable patched ISP trial before attempting any frame.
 
 ## Gate 3: one frame per lens
 
@@ -166,9 +171,15 @@ cold boot and recovery trial.
 
 ## Current stopping point
 
-Lynx is back on V53 Alpine with her portrait, SSH, and Noob service healthy.
-The camera stack is not loaded on this boot. Noob visually confirmed the
-flashlight with a bounded 100 ms pulse; its Noob status now reports
+On 2026-11-03, Lynx returned from Fastboot to unchanged V53 Alpine. The
+presence service reports `alpine_wifi`; SSH and `lynx-status --assert-ready`
+passed on boot ID `f649a319-dcbb-47b9-9a54-7e482ee7eef2`. The camera stack
+is not loaded on this boot. Battery was 23% with about 97 mA signed charging
+current, so the patched ISP trial is held until charge and an attended
+Fastboot recovery window are available. The offline patch build is complete
+and reproducible with `tools/build_camera_yuv_irq_patch.py`; the live launcher
+requires `--execute --attended` and an exact healthy V53 boot. Noob visually
+confirmed the flashlight with a bounded 100 ms pulse; its Noob status reports
 `validated=1` while the driver is bound. The staged flashlight boot service
 remains disabled. The two pale rear circles are documented separately in
 [LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md](LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md).

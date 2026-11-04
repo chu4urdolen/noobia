@@ -1,45 +1,54 @@
-"""Unit tests for the :mod:`idea_spark` CLI.
+"""Unit tests for :mod:`idea_spark`.
 
-The tests check that the ``generate_prompt`` function and the command line
-interface produce the same deterministic output for a given seed.  The
-``--seed`` flag is required; the CLI should exit with status 0.
+The tests exercise the command line interface and the :func:`generate_prompt`
+function from :mod:`projects.idea_spark.idea_spark`.
+
+All tests are self‑contained and work regardless of the current working
+directory thanks to :data:`sys.executable` and ``__file__``.
 """
 
+import importlib
+import os
 import subprocess
 import sys
 import unittest
 
 
-def run_cli(seed: int) -> str:
-    """Invoke the CLI and return its stdout as a string.
+# Import the implementation.
+from projects.idea_spark.idea_spark import generate_prompt
 
-    The function uses ``subprocess.check_output`` so that a non‑zero exit code
-    raises ``CalledProcessError`` – the tests will fail if the CLI exits
-    unexpectedly.
+
+def run_cli(seed: int) -> tuple[str, str, int]:
+    """Run the CLI with ``--seed`` and return stdout, stderr, exit code.
+
+    The script path is resolved relative to this test file so the test works
+    from any working directory.
     """
-    cmd = ["python3", "projects/idea_spark/idea_spark.py", "--seed", str(seed)]
-    out = subprocess.check_output(cmd, text=True)
-    return out.strip()
+    script = os.path.join(os.path.dirname(__file__), "idea_spark.py")
+    cmd = [sys.executable, script, "--seed", str(seed)]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.stdout.rstrip("\n"), result.stderr, result.returncode
 
 
 class TestIdeaSpark(unittest.TestCase):
-    def test_seed_7(self):
-        # The output must match generate_prompt(7) without hardcoding the exact
-        # sentence, because the internal implementation could change.
-        expected = run_cli(7)
-        self.assertEqual(expected, run_cli(7))
+    def test_cli_matches_generator(self):
+        stdout, stderr, rc = run_cli(7)
+        self.assertEqual(rc, 0, "CLI should exit with code 0")
+        self.assertEqual(stderr, "", "CLI should emit no stderr")
+        self.assertEqual(stdout, generate_prompt(7), "Output must match generator")
 
-    def test_consistency(self):
-        # Same seed, different invocations give identical output.
-        out1 = run_cli(42)
-        out2 = run_cli(42)
+    def test_reproducibility(self):
+        out1, _, rc1 = run_cli(42)
+        out2, _, rc2 = run_cli(42)
+        self.assertEqual(rc1, 0)
+        self.assertEqual(rc2, 0)
         self.assertEqual(out1, out2)
 
-    def test_cli_exit(self):
-        # The CLI should exit with code 0 when called correctly.
-        cmd = ["python3", "projects/idea_spark/idea_spark.py", "--seed", "7"]
-        result = subprocess.run(cmd, capture_output=True)
-        self.assertEqual(result.returncode, 0)
+    def test_invalid_seed(self):
+        # Passing a non‑integer should trigger argparse error.
+        stdout, stderr, rc = run_cli("not_an_int")
+        self.assertNotEqual(rc, 0, "CLI should fail with non‑int seed")
+        self.assertIn("argument --seed", stderr, "stderr should mention the option")
 
 
 if __name__ == "__main__":

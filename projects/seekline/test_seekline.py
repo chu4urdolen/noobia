@@ -161,6 +161,26 @@ class TestSeekline(unittest.TestCase):
             self.assertEqual(json.loads(res.stdout), [])
             self.assertEqual(res.stderr, "")
 
+    def test_json_utf8_match(self):
+        """Verify that JSON output correctly handles UTF‑8 text.
+
+        The test creates a file containing a Greek word, runs ``--json`` with a
+        pattern that matches that word, and checks that the returned JSON
+        record contains the exact Unicode string and that no error is
+        reported.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            fpath = os.path.join(td, "utf8.txt")
+            greek = "κόσμε"  # Greek for "world"
+            with open(fpath, "w", encoding="utf-8") as f:
+                f.write(f"{greek}\n")
+            res = self.run_seekline("--json", greek, fpath)
+            self.assertEqual(res.returncode, 0)
+            data = json.loads(res.stdout)
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0]["text"], greek)
+            self.assertEqual(res.stderr, "")
+
     def test_missing_file(self):
         with tempfile.TemporaryDirectory() as td:
             fpath = os.path.join(td, "nonexistent.txt")

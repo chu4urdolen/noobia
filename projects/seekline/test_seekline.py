@@ -146,6 +146,21 @@ class TestSeekline(unittest.TestCase):
             self.assertNotEqual(res.returncode, 0)
             self.assertIn("cannot open file", res.stderr)
 
+    def test_json_empty_file(self):
+        """Run ``--json`` on an empty file.
+
+        The command should exit with code 0, produce an empty JSON list, and
+        emit no error output.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            fpath = os.path.join(td, "empty.txt")
+            # create an empty file
+            open(fpath, "w", encoding="utf-8").close()
+            res = self.run_seekline("--json", "foo", fpath)
+            self.assertEqual(res.returncode, 0)
+            self.assertEqual(json.loads(res.stdout), [])
+            self.assertEqual(res.stderr, "")
+
     def test_missing_file(self):
         with tempfile.TemporaryDirectory() as td:
             fpath = os.path.join(td, "nonexistent.txt")

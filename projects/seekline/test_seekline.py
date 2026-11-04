@@ -134,6 +134,21 @@ class TestSeekline(unittest.TestCase):
             self.assertEqual(res.stdout, "")
             self.assertEqual(res.stderr, "")
 
+    def test_json_no_matches(self):
+        """Ensure ``--json`` correctly returns an empty list when no matches
+        are found.  The command should still exit with code 0 and emit no
+        error output.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            fpath = os.path.join(td, "file.txt")
+            with open(fpath, "w", encoding="utf-8") as f:
+                f.write("bar\nbaz\n")
+            res = self.run_seekline("--json", "xyz", fpath)
+            self.assertEqual(res.returncode, 0)
+            # JSON output is a list; for no matches it should be empty.
+            self.assertEqual(json.loads(res.stdout), [])
+            self.assertEqual(res.stderr, "")
+
     def test_multiple_files(self):
         with tempfile.TemporaryDirectory() as td:
             f1 = os.path.join(td, "a.txt")

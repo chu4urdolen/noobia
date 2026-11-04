@@ -132,6 +132,20 @@ class TestSeekline(unittest.TestCase):
             self.assertNotEqual(res.returncode, 0)
             self.assertIn("invalid regex", res.stderr)
 
+    def test_json_missing_file(self):
+        """Run ``--json`` with a missing file and verify an error.
+
+        The seekline tool should report a non‑zero exit code and a
+        ``cannot open file`` message when a requested file does not exist.
+        The JSON flag does not change this behaviour.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            # File path that will not be created
+            fpath = os.path.join(td, "nonexistent.txt")
+            res = self.run_seekline("--json", "foo", fpath)
+            self.assertNotEqual(res.returncode, 0)
+            self.assertIn("cannot open file", res.stderr)
+
     def test_missing_file(self):
         with tempfile.TemporaryDirectory() as td:
             fpath = os.path.join(td, "nonexistent.txt")

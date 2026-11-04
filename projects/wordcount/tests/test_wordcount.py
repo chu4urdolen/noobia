@@ -1,4 +1,8 @@
-import subprocess, json, os, sys
+import subprocess
+import json
+import os
+import sys
+import tempfile
 import unittest
 
 class TestWordCount(unittest.TestCase):
@@ -12,29 +16,44 @@ class TestWordCount(unittest.TestCase):
 
     def test_normal_counting(self):
         txt = "Hello world\nHello again"
-        with open('sample.txt', 'w', encoding='utf-8') as f:
-            f.write(txt)
-        res = self.run_wordcount('sample.txt')
-        os.remove('sample.txt')
+        with tempfile.TemporaryDirectory() as tmp:
+            file_path = os.path.join(tmp, 'sample.txt')
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(txt)
+            res = self.run_wordcount(file_path)
         self.assertEqual(res.returncode, 0)
         counts = json.loads(res.stdout)
         self.assertEqual(counts, {"again":1, "hello":2, "world":1})
 
     def test_case_folding(self):
         txt = "Apple apple APPLE"
-        with open('sample.txt', 'w', encoding='utf-8') as f:
-            f.write(txt)
-        res = self.run_wordcount('sample.txt')
-        os.remove('sample.txt')
+        with tempfile.TemporaryDirectory() as tmp:
+            file_path = os.path.join(tmp, 'sample.txt')
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(txt)
+            res = self.run_wordcount(file_path)
         self.assertEqual(res.returncode, 0)
         counts = json.loads(res.stdout)
         self.assertEqual(counts, {"apple":3})
 
     def test_missing_file(self):
-        missing = 'does_not_exist.txt'
+        missing = os.path.join('does_not_exist.txt')
         res = self.run_wordcount(missing)
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("not found", res.stderr)
+
+    def test_german_casefolding(self):
+        # German "ß" should fold to "ss"; both variations count together.
+        txt = "Straße STRASSE"
+        with tempfile.TemporaryDirectory() as tmp:
+            file_path = os.path.join(tmp, 'sample.txt')
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(txt)
+            res = self.run_wordcount(file_path)
+            self.assertEqual(res.returncode, 0)
+            counts = json.loads(res.stdout)
+            # Both should be counted as "strasse"
+            self.assertEqual(counts, {"strasse":2})
 
 if __name__ == "__main__":
     unittest.main()

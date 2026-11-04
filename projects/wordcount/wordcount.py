@@ -12,8 +12,11 @@ def read_words(path):
     except FileNotFoundError:
         sys.stderr.write(f"Error: file {path} not found\n")
         sys.exit(1)
+    # Use casefold to perform a more aggressive, locale-independent
+    # case-insensitive comparison. This handles characters like German
+    # "ß" which normal lower() does not fold to "ss".
     words = text.split()
-    words = [w.lower() for w in words]
+    words = [w.casefold() for w in words]
     return Counter(words)
 
 

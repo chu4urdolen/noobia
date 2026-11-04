@@ -178,6 +178,33 @@ class TestSeekline(unittest.TestCase):
                 self.assertEqual(entry, expected[entry["path"]])
             self.assertEqual(res.stderr, "")
 
+    def test_json_ignore_case(self):
+        """Verify JSON output when using ``--ignore-case``.
+
+        The test file contains the words ``Foo`` and ``foo`` on
+        separate lines.  The pattern ``FOO`` should match both lines when
+        ``--ignore-case`` is specified.  The output should be a JSON
+        array with two objects, each containing the correct ``path``,
+        ``line_number`` and ``text`` values.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            fpath = os.path.join(td, "case.txt")
+            with open(fpath, "w", encoding="utf-8") as f:
+                f.write("Foo\nfoo\n")
+            res = self.run_seekline("--json", "--ignore-case", "FOO", fpath)
+            self.assertEqual(res.returncode, 0)
+            data = json.loads(res.stdout)
+            self.assertEqual(len(data), 2)
+            # Verify that both entries are present and correct.
+            expected = {
+                1: {"path": fpath, "line_number": 1, "text": "Foo"},
+                2: {"path": fpath, "line_number": 2, "text": "foo"},
+            }
+            for entry in data:
+                self.assertIn(entry["line_number"], expected)
+                self.assertEqual(entry, expected[entry["line_number"]])
+            self.assertEqual(res.stderr, "")
+
     def test_multiple_files(self):
         with tempfile.TemporaryDirectory() as td:
             f1 = os.path.join(td, "a.txt")

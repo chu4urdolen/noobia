@@ -3,9 +3,10 @@ import unittest
 
 class TestWordCount(unittest.TestCase):
     def run_wordcount(self, file_path):
+        script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'wordcount.py'))
         return subprocess.run([
             sys.executable,
-            os.path.join(os.path.dirname(__file__), '..', 'wordcount.py'),
+            script_path,
             file_path
         ], capture_output=True, text=True)
 

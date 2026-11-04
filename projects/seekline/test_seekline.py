@@ -117,6 +117,21 @@ class TestSeekline(unittest.TestCase):
             self.assertNotEqual(res.returncode, 0)
             self.assertIn("invalid regex", res.stderr)
 
+    def test_invalid_regex_json(self):
+        """Verify that an invalid regex with ``--json`` still errors.
+
+        The seekline tool should return a non‑zero exit code and emit an
+        ``invalid regex`` message even when JSON output is requested.  The
+        command line order ``--json [ pattern file`` is respected.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            fpath = os.path.join(td, "file.txt")
+            with open(fpath, "w", encoding="utf-8") as f:
+                f.write("foo\n")
+            res = self.run_seekline("--json", "[", fpath)
+            self.assertNotEqual(res.returncode, 0)
+            self.assertIn("invalid regex", res.stderr)
+
     def test_missing_file(self):
         with tempfile.TemporaryDirectory() as td:
             fpath = os.path.join(td, "nonexistent.txt")

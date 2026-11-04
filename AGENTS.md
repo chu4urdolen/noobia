@@ -13,5 +13,7 @@ running privileged operations. Never switch to a cloud inference model.
 
 For each task, report what changed, the exact tests run and their results, and
 anything still uncertain. Preserve project notes so future sessions can resume.
+Never claim that a command ran or a commit exists unless its tool output confirms
+it. Before reporting a commit, inspect `git status` and `git log -1 --oneline`.
 When delegated work eventually joins the Council, send Argus the same concise
 report; Council and Argus access are not configured yet.

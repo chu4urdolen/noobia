@@ -35,7 +35,8 @@ def generate_prompt(seed: int) -> str:
     subject = rng.choice(SUBJECTS)
     action = rng.choice(ACTIONS)
     constraint = rng.choice(CONSTRAINTS)
-    return f"A device that {action} {subject} {constraint}."
+    # Use a clearer template that encourages actionability.
+    return f"Build a device that can {action} {subject} {constraint}."
 
 
 def main(argv: list[str] | None = None) -> int:

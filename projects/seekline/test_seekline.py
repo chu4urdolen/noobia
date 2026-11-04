@@ -198,6 +198,33 @@ class TestSeekline(unittest.TestCase):
             self.assertEqual(res.stdout, "")
             self.assertEqual(res.stderr, "")
 
+    def test_json_two_files(self):
+        """Verify that JSON output aggregates matches from multiple files.
+
+        The seekline CLI accepts one or more files.  When ``--json`` is
+        supplied the implementation should return a list containing results
+        from all files.  This regression test ensures that the results are
+        collected in the order the files were passed on the command line.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            fpath1 = os.path.join(td, "file1.txt")
+            fpath2 = os.path.join(td, "file2.txt")
+            # File 1 contains one match on line 1.
+            with open(fpath1, "w", encoding="utf-8") as f:
+                f.write("foo bar\n")
+            # File 2 contains two matches on lines 1 and 2.
+            with open(fpath2, "w", encoding="utf-8") as f:
+                f.write("foo baz\nfoo qux\n")
+            res = self.run_seekline("--json", "foo", fpath1, fpath2)
+            self.assertEqual(res.returncode, 0)
+            data = json.loads(res.stdout)
+            # Expect a list of 3 records in the order: file1 line1, file2 line1, file2 line2
+            self.assertEqual(len(data), 3)
+            self.assertEqual(data[0], {"path": fpath1, "line_number": 1, "text": "foo bar"})
+            self.assertEqual(data[1], {"path": fpath2, "line_number": 1, "text": "foo baz"})
+            self.assertEqual(data[2], {"path": fpath2, "line_number": 2, "text": "foo qux"})
+            self.assertEqual(res.stderr, "")
+
     def test_json_no_matches(self):
         """Ensure ``--json`` correctly returns an empty list when no matches
         are found.  The command should still exit with code 0 and emit no

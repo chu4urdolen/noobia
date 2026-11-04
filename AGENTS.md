@@ -15,5 +15,9 @@ For each task, report what changed, the exact tests run and their results, and
 anything still uncertain. Preserve project notes so future sessions can resume.
 Never claim that a command ran or a commit exists unless its tool output confirms
 it. Before reporting a commit, inspect `git status` and `git log -1 --oneline`.
+For implementation tasks, create or edit real files with tools. A proposed code
+block in your reply is not a file. Before saying a project exists, list its
+files and run its tests through the terminal. If no tool call succeeded, say
+the task is unfinished.
 When delegated work eventually joins the Council, send Argus the same concise
 report; Council and Argus access are not configured yet.

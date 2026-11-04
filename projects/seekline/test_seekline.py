@@ -149,6 +149,35 @@ class TestSeekline(unittest.TestCase):
             self.assertEqual(json.loads(res.stdout), [])
             self.assertEqual(res.stderr, "")
 
+    def test_json_multiple_files(self):
+        """Verify JSON output when searching multiple files.
+
+        Two temporary files each contain a single matching line.  The
+        command should output a JSON array with two objects, each
+        containing the correct ``path``, ``line_number``, and ``text``.
+        ``stderr`` must be empty and the exit code should be ``0``.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            f1 = os.path.join(td, "a.txt")
+            f2 = os.path.join(td, "b.txt")
+            # Write a single matching line in each file.
+            for fp in (f1, f2):
+                with open(fp, "w", encoding="utf-8") as f:
+                    f.write("foo\n")
+            res = self.run_seekline("--json", "foo", f1, f2)
+            self.assertEqual(res.returncode, 0)
+            data = json.loads(res.stdout)
+            self.assertEqual(len(data), 2)
+            # Verify that each entry matches the expected values.
+            expected = {
+                f1: {"path": f1, "line_number": 1, "text": "foo"},
+                f2: {"path": f2, "line_number": 1, "text": "foo"},
+            }
+            for entry in data:
+                self.assertIn(entry["path"], expected)
+                self.assertEqual(entry, expected[entry["path"]])
+            self.assertEqual(res.stderr, "")
+
     def test_multiple_files(self):
         with tempfile.TemporaryDirectory() as td:
             f1 = os.path.join(td, "a.txt")

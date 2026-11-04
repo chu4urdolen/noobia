@@ -1,5 +1,6 @@
 import unittest
-from projects.lynx_gain.gain_analysis import gain_mapper
+from projects.lynx_gain.gain_analysis import gain_mapper, pack_stagger_ae
+import struct
 
 class TestGainMapper(unittest.TestCase):
     def test_endpoints(self):
@@ -27,6 +28,36 @@ class TestGainMapper(unittest.TestCase):
             if prev is not None:
                 self.assertGreater(cur, prev, f"Non‑monotonic at {val}")
             prev = cur
+
+
+class TestPackStaggerAE(unittest.TestCase):
+    def test_valid_values(self):
+        # Use the lower bound values for exposure and gain
+        data = pack_stagger_ae(1005, 1024)
+        self.assertEqual(len(data), 52)
+        # Unpack and verify first 13 values
+        values = struct.unpack("<13I", data)
+        self.assertEqual(values[0], 1005)  # exposure
+        self.assertEqual(values[5], 1024)  # gain
+        # all other values should be zero
+        for i in range(1, 5):
+            self.assertEqual(values[i], 0)
+        for i in range(6, 13):
+            self.assertEqual(values[i], 0)
+
+    def test_invalid_exposure(self):
+        with self.assertRaises(ValueError):
+            pack_stagger_ae(1004, 1024)
+
+    def test_invalid_gain(self):
+        with self.assertRaises(ValueError):
+            pack_stagger_ae(1005, 1023)
+
+    def test_non_int(self):
+        with self.assertRaises(ValueError):
+            pack_stagger_ae("1005", 1024)
+        with self.assertRaises(ValueError):
+            pack_stagger_ae(1005, 1024.0)
 
 if __name__ == "__main__":
     unittest.main()

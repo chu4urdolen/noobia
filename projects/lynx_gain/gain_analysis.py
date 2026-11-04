@@ -11,8 +11,11 @@ the conversion and validates the input range.
 """
 
 from __future__ import annotations
+import struct
 
-__all__ = ["gain_mapper"]
+# Public API of this module.  ``pack_stagger_ae`` is added alongside
+# ``gain_mapper``.
+__all__ = ["gain_mapper", "pack_stagger_ae"]
 
 # Constants for the allowed ranges
 V4L2_MIN = 64
@@ -51,4 +54,72 @@ def gain_mapper(v4l2_gain: int) -> int:
             f"V4L2 gain {v4l2_gain} out of range [{V4L2_MIN}, {V4L2_MAX}]"
         )
     return v4l2_gain * 16
+
+
+def _validate_int(value: int, name: str, lo: int, hi: int) -> None:
+    """Internal helper to validate an integer range.
+
+    Parameters
+    ----------
+    value:
+        The value to validate.
+    name:
+        Human‑readable name for the error message.
+    lo, hi:
+        Inclusive lower and upper bounds.
+    """
+    # ``bool`` is a subclass of ``int`` so we need to reject it explicitly.
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(f"{name} must be an integer, got {type(value).__name__}")
+    if not (lo <= value <= hi):
+        raise ValueError(
+            f"{name} {value} out of range [{lo}, {hi}]"
+        )
+
+
+def pack_stagger_ae(exposure_lines: int, raw_gain: int) -> bytes:
+    """Return a 52‑byte representation of the ``mtk_hdr_ae`` struct.
+
+    The struct layout is defined as 13 little‑endian 32‑bit words:
+
+    * Five words for exposure: ``le_exposure`` followed by four zeros.
+    * Five words for gain: ``le_gain`` followed by four zeros.
+    * One word for actions (zero).
+    * One word for subsample_tags (zero).
+    * One signed 32‑bit word for ``req_id`` (zero).
+
+    Parameters
+    ----------
+    exposure_lines:
+        Exposure value, must be an integer in the inclusive range
+        ``1005``‑``3000``.
+    raw_gain:
+        Raw gain value, must be an integer in the inclusive range
+        ``1024``‑``12288``.
+
+    Returns
+    -------
+    bytes
+        A 52‑byte sequence representing the struct.
+
+    Raises
+    ------
+    ValueError
+        If either argument is not an integer or is out of range.
+    """
+    _validate_int(exposure_lines, "exposure_lines", 1005, 3000)
+    _validate_int(raw_gain, "raw_gain", 1024, 12288)
+
+    # Build the list of 13 unsigned 32‑bit values.  ``struct.pack`` with the
+    # ``<`` little‑endian format will produce the exact byte order required.
+    values = [
+        exposure_lines, 0, 0, 0, 0,  # exposure union
+        raw_gain, 0, 0, 0, 0,  # gain union
+        0,  # actions
+        0,  # subsample_tags
+        0,  # req_id signed i32 zero
+    ]
+    # ``I`` is unsigned 32‑bit; the value is zero for the last field, so
+    # using unsigned is fine.
+    return struct.pack("<13I", *values)
 

@@ -55,5 +55,17 @@ class TestWordCount(unittest.TestCase):
             # Both should be counted as "strasse"
             self.assertEqual(counts, {"strasse":2})
 
+    def test_tokenization_punctuation(self):
+        # Words adjacent to punctuation should be tokenized correctly.
+        txt = "Hello, hello!"
+        with tempfile.TemporaryDirectory() as tmp:
+            file_path = os.path.join(tmp, 'sample.txt')
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(txt)
+            res = self.run_wordcount(file_path)
+        self.assertEqual(res.returncode, 0)
+        counts = json.loads(res.stdout)
+        self.assertEqual(counts, {"hello": 2})
+
 if __name__ == "__main__":
     unittest.main()

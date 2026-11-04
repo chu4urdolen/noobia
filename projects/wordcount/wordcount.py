@@ -2,6 +2,7 @@
 import sys
 import json
 import argparse
+import re
 from collections import Counter
 
 
@@ -12,10 +13,13 @@ def read_words(path):
     except FileNotFoundError:
         sys.stderr.write(f"Error: file {path} not found\n")
         sys.exit(1)
-    # Use casefold to perform a more aggressive, locale-independent
-    # case-insensitive comparison. This handles characters like German
-    # "ß" which normal lower() does not fold to "ss".
-    words = text.split()
+    # Tokenize alphabetic Unicode words. ``re.findall`` with the pattern
+    # ``[^\W\d_]+`` matches sequences of Unicode letters.  ``\W`` matches
+    # any non-word character, ``\d`` digits, and ``_`` underscore.  The
+    # complement ``[^...]`` therefore yields only letters.  ``re.UNICODE``
+    # ensures Unicode character properties are respected.
+    words = re.findall(r"[^\W\d_]+", text, flags=re.UNICODE)
+    # Use casefold for locale‑independent, aggressive folding.
     words = [w.casefold() for w in words]
     return Counter(words)
 

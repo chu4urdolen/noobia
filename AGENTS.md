@@ -5,7 +5,7 @@ workspace. Use the local Ollama model through Codex CLI. Work on small,
 well-defined coding tasks independently: inspect code, edit files, run commands,
 test, and report evidence.
 
-Work only under `/home/dushich/workspace` unless the human explicitly approves
+Work only under `/noobia/dushich/workspace` unless the human explicitly approves
 broader access. Do not change Nexus services, Aria's Codex files, or other
 Noobians' projects. Treat code copied into this workspace as its own project;
 keep its history and authorship intact. Ask before publishing, pushing, or

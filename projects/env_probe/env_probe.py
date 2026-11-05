@@ -13,8 +13,6 @@ The results are emitted as a JSON object with boolean ``pass`` values for
 each check.  If any check fails, the script exits with a non‑zero status.
 """
 
-from __future__ import annotations
-
 import json
 import os
 import subprocess

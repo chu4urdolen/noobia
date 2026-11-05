@@ -46,8 +46,13 @@ class _ChannelStat:
         return self.sum / self.count if self.count else 0.0
 
 
-def bggr_channel_stats(frame: bytes, width: int, height: int) -> Dict[str, Dict[str, float]]:
-    """Return statistics for each channel in a BGGR Bayer frame.
+def bggr_channel_stats(
+    frame: bytes,
+    width: int,
+    height: int,
+    phase: str = "bggr",
+) -> Dict[str, Dict[str, float]]:
+    """Return statistics for each channel in a Bayer frame.
 
     Parameters
     ----------
@@ -72,6 +77,11 @@ def bggr_channel_stats(frame: bytes, width: int, height: int) -> Dict[str, Dict[
     if len(frame) != expected_len:
         raise ValueError(f"frame size {len(frame)} does not match width*height {expected_len}")
 
+    # Validate phase
+    phase = phase.lower()
+    if phase not in ("bggr", "rggb"):
+        raise ValueError("phase must be 'bggr' or 'rggb'")
+
     stats: Dict[str, _ChannelStat] = {
         "B": _ChannelStat(),
         "G1": _ChannelStat(),
@@ -83,16 +93,30 @@ def bggr_channel_stats(frame: bytes, width: int, height: int) -> Dict[str, Dict[
     for y in range(height):
         for x in range(width):
             pixel = frame[idx]
-            if y % 2 == 0:  # top row of a 2x2 tile
-                if x % 2 == 0:
-                    stats["B"].add(pixel)
-                else:
-                    stats["G1"].add(pixel)
-            else:  # bottom row
-                if x % 2 == 0:
-                    stats["G2"].add(pixel)
-                else:
-                    stats["R"].add(pixel)
+            if phase == "bggr":
+                # BGGR pattern: B G1 on top row, G2 R on bottom row
+                if y % 2 == 0:  # top row
+                    if x % 2 == 0:
+                        stats["B"].add(pixel)
+                    else:
+                        stats["G1"].add(pixel)
+                else:  # bottom row
+                    if x % 2 == 0:
+                        stats["G2"].add(pixel)
+                    else:
+                        stats["R"].add(pixel)
+            else:  # rggb
+                # RGGB pattern: R G1 on top row, G2 B on bottom row
+                if y % 2 == 0:  # top row
+                    if x % 2 == 0:
+                        stats["R"].add(pixel)
+                    else:
+                        stats["G1"].add(pixel)
+                else:  # bottom row
+                    if x % 2 == 0:
+                        stats["G2"].add(pixel)
+                    else:
+                        stats["B"].add(pixel)
             idx += 1
 
     result: Dict[str, Dict[str, float]] = {}

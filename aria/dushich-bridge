@@ -185,10 +185,108 @@ def read_dushich_events(run_id: str, report: str | None) -> str:
     return result.stdout if result.returncode == 0 else ""
 
 
-def latest_job() -> str | None:
-    candidates = sorted((p.name for p in ROOT.iterdir() if p.is_dir() and ID.fullmatch(p.name)),
-                        reverse=True)
-    return candidates[0] if candidates else None
+def jobs_for_session(session_id: str | None = None) -> list[str]:
+    candidates = sorted((p for p in ROOT.iterdir() if p.is_dir() and ID.fullmatch(p.name)))
+    result = []
+    for path in candidates:
+        if session_id is None:
+            result.append(path.name)
+            continue
+        try:
+            state = json.loads((path / "state.json").read_text(encoding="utf-8"))
+            if state.get("aria_session_id") == session_id:
+                result.append(path.name)
+        except (OSError, ValueError):
+            continue
+    return result
+
+
+def latest_job(session_id: str | None = None) -> str | None:
+    jobs = jobs_for_session(session_id)
+    return jobs[-1] if jobs else None
+
+
+def session_after(started: float) -> str | None:
+    """Find the newly launched /noobia Codex TUI session; refuse ambiguity."""
+    matches = []
+    for path in SESSIONS.rglob("*.jsonl"):
+        try:
+            with path.open(encoding="utf-8") as stream:
+                first = json.loads(stream.readline())
+            meta = first.get("payload", {})
+            created = datetime.fromisoformat(meta["timestamp"].replace("Z", "+00:00")).timestamp()
+            if (first.get("type") == "session_meta" and meta.get("cwd") == "/noobia"
+                    and meta.get("originator") == "codex-tui"
+                    and started - 1 <= created <= time.time() + 2
+                    and SESSION.fullmatch(meta.get("id", ""))):
+                matches.append(meta["id"])
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return matches[0] if len(matches) == 1 else None
+
+
+def full_event(event: dict) -> str:
+    kind = event.get("type")
+    item = event.get("item") or {}
+    if kind == "thread.started":
+        return f"Dushich thread: {event.get('thread_id', '?')}"
+    if kind == "item.started" and item.get("type") == "command_execution":
+        return "$ " + str(item.get("command", ""))
+    if kind == "item.completed":
+        item_type = item.get("type")
+        if item_type == "command_execution":
+            output = excerpt(item.get("aggregated_output", ""), 10_000_000)
+            return (output.rstrip("\n") + "\n" if output else "") + f"[exit {item.get('exit_code', '?')}]"
+        if item_type == "file_change":
+            return "Files changed: " + ", ".join(
+                f"{change.get('kind', '?')} {change.get('path', '?')}"
+                for change in item.get("changes", []))
+        if item_type == "agent_message":
+            return "Dushich: " + excerpt(item.get("text", ""), 10_000_000)
+    if kind == "turn.completed":
+        return "Codex turn completed; independent checks running."
+    if kind == "error":
+        return "Error: " + str(event.get("message", ""))
+    return ""
+
+
+def monitor_full(session_id: str | None, run_id: str | None, once: bool) -> int:
+    seen: dict[str, int] = {}
+    reported: set[str] = set()
+    print("DUSHICH • complete tool output (scroll up for history)", flush=True)
+    print(f"Aria session: {session_id or 'all sessions'}", flush=True)
+    while True:
+        selected_jobs = [run_id] if run_id else jobs_for_session(session_id)
+        if not selected_jobs and once:
+            print("No Dushich handoff in this Aria conversation.", flush=True)
+        for selected in selected_jobs:
+            if selected not in seen:
+                seen[selected] = 0
+                path, state = load(selected)
+                print(f"\n=== Handoff {selected} [{state['status']}] ===", flush=True)
+                print((path / "brief.txt").read_text(encoding="utf-8").split("\n\n", 1)[0], flush=True)
+            if selected in reported:
+                continue
+            path, state = load(selected)
+            raw = read_dushich_events(selected, state.get("report"))
+            lines = raw.splitlines()
+            for line in lines[seen[selected]:]:
+                try:
+                    rendered = full_event(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+                if rendered:
+                    print(rendered, flush=True)
+            seen[selected] = len(lines)
+            if state["status"] in {"done", "needs_aria"}:
+                result = path / "result.txt"
+                if result.exists():
+                    print("\n=== Independent verification ===", flush=True)
+                    print(result.read_text(encoding="utf-8"), flush=True)
+                    reported.add(selected)
+        if once:
+            return 0
+        time.sleep(1)
 
 
 def one_line(value: object, width: int) -> str:
@@ -270,6 +368,11 @@ def main() -> int:
     context_status.add_argument("--session-id", help="Aria Codex session ID")
     monitor = subs.add_parser("monitor", help="Show Dushich's live activity in a separate pane")
     monitor.add_argument("--id", metavar="HANDOFF_ID", help="Follow one handoff; default is latest")
+    monitor.add_argument("--session-id", help="Show only handoffs from this Aria session")
+    monitor.add_argument("--session-after", type=float, metavar="EPOCH",
+                         help="Find a new Aria Codex TUI session launched at this time")
+    monitor.add_argument("--tmux-session", help="Rename the fresh tmux session after binding")
+    monitor.add_argument("--full", action="store_true", help="Stream complete command output")
     monitor.add_argument("--once", action="store_true", help="Render once for testing")
     args = parser.parse_args()
     ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -281,7 +384,12 @@ def main() -> int:
         session_id = args.session_id or os.environ.get("CODEX_SESSION_ID")
         if not session_id:
             parser.error("no Aria session ID found; pass --session-id for a context-rich handoff")
-        prior = load(args.continue_from)[1] if args.continue_from else {}
+        prior_id = args.continue_from or latest_job(session_id)
+        prior = load(prior_id)[1] if prior_id else {}
+        if prior_id and prior.get("aria_session_id") != session_id:
+            parser.error("Dushich thread belongs to another Aria conversation")
+        if prior_id and prior.get("status") != "done":
+            parser.error("previous Dushich handoff in this conversation needs resolution")
         same_session = prior.get("aria_session_id") == session_id
         since = prior.get("context_message_count", 0) if same_session else 0
         since_tools = prior.get("context_tool_count", 0) if same_session else 0
@@ -310,7 +418,7 @@ def main() -> int:
             context += f"\n\nSelected file {source}:\n" + source.read_text(encoding="utf-8")
         if len(context.encode("utf-8")) > 100_000:
             parser.error("combined context exceeds 100 KB; select shorter additional text")
-        thread_id = previous_thread(args.continue_from) if args.continue_from else None
+        thread_id = previous_thread(prior_id) if prior_id else None
         run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:8]
         path = ROOT / run_id
         path.mkdir(mode=0o700)
@@ -325,7 +433,7 @@ def main() -> int:
                                              aria_session_id=session_id, context_bytes=len(context.encode("utf-8")),
                                              context_message_count=message_count,
                                              context_tool_count=tool_count,
-                                             continue_from=args.continue_from, thread_id=thread_id,
+                                             continue_from=prior_id, thread_id=thread_id,
                                              created=datetime.now(timezone.utc).isoformat()))
         subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "_worker", run_id],
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
@@ -352,9 +460,29 @@ def main() -> int:
         return 0
     if args.action == "monitor":
         try:
+            session_id = args.session_id
+            if args.session_after is not None and not session_id:
+                print("DUSHICH • waiting for this Aria conversation to start...", flush=True)
+                while not session_id:
+                    session_id = session_after(args.session_after)
+                    if not session_id:
+                        if args.once:
+                            print("Waiting for the new Aria Codex session...")
+                            return 0
+                        time.sleep(1)
+            if session_id and not SESSION.fullmatch(session_id):
+                parser.error("invalid Aria session ID")
+            if session_id and args.tmux_session:
+                if not re.fullmatch(r"noobia-aria-[A-Za-z0-9-]+", args.tmux_session):
+                    parser.error("invalid tmux session name")
+                subprocess.run(["tmux", "rename-session", "-t", args.tmux_session,
+                                f"noobia-aria-{session_id}"], check=False,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if args.full:
+                return monitor_full(session_id, args.id, args.once)
             while True:
                 size = shutil.get_terminal_size((72, 25))
-                display = monitor_text(args.id or latest_job(), size.columns, size.lines)
+                display = monitor_text(args.id or latest_job(session_id), size.columns, size.lines)
                 if args.once:
                     print(display)
                     return 0

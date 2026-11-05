@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-session="noobia-aria-dushich"
 detached=false
 resume_id=""
 while [[ "$#" -gt 0 ]]; do
@@ -33,6 +32,14 @@ if ! command -v tmux >/dev/null 2>&1; then
     echo "tmux is required for the two-pane interface" >&2
     exit 1
 fi
+launch_epoch="$(date -u +%s)"
+if [[ -n "$resume_id" ]]; then
+    session="noobia-aria-$resume_id"
+    monitor_command="exec /noobia/aria/dushich-bridge monitor --full --session-id $resume_id"
+else
+    session="noobia-aria-$(date -u +%Y%m%dT%H%M%S)-$$"
+    monitor_command="exec /noobia/aria/dushich-bridge monitor --full --session-after $launch_epoch --tmux-session $session"
+fi
 aria_command='exec /home/aria/.local/bin/codex'
 if [[ -n "$resume_id" ]]; then
     aria_command="exec /home/aria/.local/bin/codex -c 'mcp_servers.dushich.args=[\"--session-id\",\"$resume_id\"]' resume $resume_id"
@@ -41,19 +48,18 @@ if ! tmux has-session -t "$session" 2>/dev/null; then
     tmux new-session -d -s "$session" -n workshop -c /noobia \
         "$aria_command"
     tmux split-window -h -p 50 -t "$session":0 -c /noobia \
-        'exec /noobia/aria/dushich-bridge monitor'
+        "$monitor_command"
     tmux set-window-option -t "$session":0 pane-border-status top
     tmux set-window-option -t "$session":0 pane-border-format ' #{pane_title} '
+    tmux set-option -t "$session" history-limit 50000
     tmux select-pane -t "$session":0.0 -T 'Aria + Noob • Codex'
     tmux select-pane -t "$session":0.1 -T 'Dushich • live activity'
     tmux select-pane -t "$session":0.0
     tmux set-option -t "$session" mouse on
-elif [[ -n "$resume_id" ]]; then
-    tmux respawn-pane -k -t "$session":0.0 "$aria_command"
 fi
 
 if "$detached"; then
-    echo "Two-pane session ready. Run: noobia-codex"
+    echo "Two-pane session ready: $session"
 elif [[ -n "${TMUX:-}" ]]; then
     exec tmux switch-client -t "$session"
 else

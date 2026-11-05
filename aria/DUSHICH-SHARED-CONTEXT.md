@@ -35,6 +35,7 @@ This document records decisions that should survive such trimming.
 - Keep Dushich's working steps and event stream in his private task log. Return
   a concise final report or a concrete blocker.
 - Continue a Dushich Codex thread for related follow-up tasks so local context
-  and debugging history remain available.
+  and debugging history remain available. The bridge does this automatically
+  within each Aria conversation; a new Aria conversation starts a new thread.
 - Send relevant source and design files explicitly when they are outside his
   workspace or central to the task.

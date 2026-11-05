@@ -4,16 +4,18 @@
 
 Run `noobia-codex` in a terminal on Nexus. It opens a tmux session with Aria's
 normal Codex chat on the left and a live, read-only Dushich activity monitor on
-the right. The monitor automatically follows the newest handoff. It shows
-status, recent commands, and final verification while Dushich works. When no
-task is running it shows the last handoff as history, labeled accordingly. The raw
-event stream remains available with `dushich-bridge events HANDOFF_ID`.
+the right. Each new launch creates a new Aria conversation and a matching,
+initially empty Dushich monitor. The right pane shows only handoffs from that
+Aria conversation. It streams complete command text and output, file change
+paths, Dushich's messages, and independent verification. Scroll up for earlier
+calls; use `Ctrl-b z` to zoom the pane. Private reasoning is not displayed.
+The raw event stream is available with `dushich-bridge events HANDOFF_ID`.
 Use `noobia-codex --resume SESSION_ID` to put a saved Aria Codex conversation in
-the left pane. This explicitly replaces the current left pane's CLI process;
-omit it to keep an already running pane or start a fresh conversation.
+the left pane and its own Dushich handoffs on the right. `codex-noobia` is an
+alias. Omit `--resume` to start a fresh conversation.
 
 Use `Ctrl-b` then an arrow key to switch panes, `Ctrl-b z` to zoom a pane, and
-`Ctrl-b d` to detach without stopping the session. Run `noobia-codex` again to
+`Ctrl-b d` to detach without stopping the session. Resume by session ID to
 reattach. The right pane is for observation; send tasks from Aria's left pane
 through the `dushich` MCP tools. This is a terminal interface on Nexus, not a
 split view inside the current ChatGPT page.
@@ -37,10 +39,12 @@ The same interface is available in a terminal:
 /noobia/aria/dushich-bridge events HANDOFF_ID
 ```
 
-Add `--continue-from HANDOFF_ID` to `start` to keep Dushich's prior Codex
-thread. The previous handoff must have passed verification. The MCP tool uses
-the equivalent `continue_from` field. Each new task still gets a fresh
-independent check and Git commit.
+The first handoff in an Aria conversation starts a new Dushich Codex thread.
+Later handoffs in that conversation automatically continue that thread after
+the previous task passed verification. A blocked handoff must be resolved
+before the next task. `--continue-from HANDOFF_ID` can select a prior verified
+handoff from the same Aria conversation; the MCP tool uses `continue_from`.
+Each task still gets a fresh independent check and Git commit.
 
 `start` automatically sends recent visible Aria/Noob dialogue from the current
 Codex session plus the current project `AGENTS.md`, code map, and

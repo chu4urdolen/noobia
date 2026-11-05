@@ -14,10 +14,10 @@ stream for delegation.
 Aria can invoke the same local runner through `/noobia/aria/delegate-dushich`,
 which reads the private verification report and prints Dushich's final reply.
 For quiet background work, `/noobia/aria/dushich-bridge start` returns a task
-ID; `status`, `report`, and `events` expose progress and audit data. A later
-task can use `--continue-from HANDOFF_ID` to resume the prior Dushich Codex
-thread. The bridge is also available as a local MCP server in Aria's default
-Codex CLI.
+ID; `status`, `report`, and `events` expose progress and audit data. Handoffs
+from the same Aria conversation continue one Dushich Codex thread by default;
+new Aria conversations start separate Dushich threads. The bridge is also
+available as a local MCP server in Aria's default Codex CLI.
 
 For a bounded delegated implementation task, use `dushich task` with explicit
 evidence to check:

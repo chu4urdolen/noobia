@@ -51,8 +51,10 @@ def infer_session_id() -> str | None:
 TOOLS = [
     {
         "name": "dushich_context_status",
-        "description": "Check whether this Aria Codex CLI session has readable context for a Dushich handoff.",
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "description": "Check Aria session context; supply session_id when a resumed Codex session cannot be inferred.",
+        "inputSchema": {"type": "object", "properties": {
+            "session_id": {"type": "string", "description": "Aria Codex session ID from /status"}
+        }, "additionalProperties": False},
     },
     {
         "name": "dushich_start",
@@ -93,8 +95,14 @@ def bridge(*args: str) -> tuple[bool, str]:
 
 
 def call(name: str, args: dict) -> tuple[bool, str]:
+    global CURRENT_SESSION
+    explicit = args.get("session_id")
+    if explicit is not None:
+        if not isinstance(explicit, str) or not UUID.fullmatch(explicit):
+            return False, "Invalid Aria session_id"
+        CURRENT_SESSION = explicit
     if name == "dushich_context_status":
-        session = args.get("session_id") or CURRENT_SESSION or infer_session_id()
+        session = CURRENT_SESSION or infer_session_id()
         if not session:
             return False, "Aria session ID unavailable; supply session_id explicitly."
         return bridge("context-status", "--session-id", str(session))
@@ -106,7 +114,7 @@ def call(name: str, args: dict) -> tuple[bool, str]:
             command += ["--expect", str(item)]
         for item in args["test"]:
             command += ["--test", str(item)]
-        session = args.get("session_id") or CURRENT_SESSION or infer_session_id()
+        session = CURRENT_SESSION or infer_session_id()
         if session:
             command += ["--session-id", str(session)]
         for selected in args.get("files", []):

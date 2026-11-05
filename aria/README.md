@@ -28,6 +28,9 @@ Aria's default Codex CLI has a local `dushich` MCP server with `dushich_start`,
 `dushich_status`, `dushich_wait`, and `dushich_report` tools. `dushich_start`
 returns an ID immediately. Dushich works quietly in his own workspace; the
 final report appears when queried. A failed handoff is marked `needs_aria`.
+This MCP flow works from normal Codex as well as `noobia-codex`. If a resumed
+normal Codex session cannot be identified automatically, pass its `/status`
+session ID in the `session_id` field of `dushich_start`.
 The same interface is available in a terminal:
 
 ```sh
@@ -68,7 +71,7 @@ by newly started Aria Codex CLI sessions; this already-running session can use
 the terminal bridge directly. The MCP registration is in
 `/home/aria/.codex/config.toml`; Dushich's configuration is separate.
 
-On Nexus, `/noobia/aria/delegate-dushich` sends a bounded coding task through
+The bridge uses `/noobia/aria/delegate-dushich` internally to send a bounded coding task through
 Dushich's separate Codex CLI and local Ollama model. Give a concrete expected
 file and test command so the handoff can verify actual work:
 

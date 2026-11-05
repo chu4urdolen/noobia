@@ -10,6 +10,8 @@ Aria conversation. It streams complete command text and output, file change
 paths, Dushich's messages, and independent verification. Scroll up for earlier
 calls; use `Ctrl-b z` to zoom the pane. Private reasoning is not displayed.
 The raw event stream is available with `dushich-bridge events HANDOFF_ID`.
+On a fresh launch, the terminal reads Codex's local `/status` screen to bind
+the exact session ID; this does not send a model prompt.
 Use `noobia-codex --resume SESSION_ID` to put a saved Aria Codex conversation in
 the left pane and its own Dushich handoffs on the right. `codex-noobia` is an
 alias. Omit `--resume` to start a fresh conversation.

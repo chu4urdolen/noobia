@@ -32,13 +32,10 @@ if ! command -v tmux >/dev/null 2>&1; then
     echo "tmux is required for the two-pane interface" >&2
     exit 1
 fi
-launch_epoch="$(date -u +%s)"
 if [[ -n "$resume_id" ]]; then
     session="noobia-aria-$resume_id"
-    monitor_command="exec /noobia/aria/dushich-bridge monitor --full --session-id $resume_id"
 else
     session="noobia-aria-$(date -u +%Y%m%dT%H%M%S)-$$"
-    monitor_command="exec /noobia/aria/dushich-bridge monitor --full --session-after $launch_epoch --tmux-session $session"
 fi
 aria_command='exec /home/aria/.local/bin/codex'
 if [[ -n "$resume_id" ]]; then
@@ -47,6 +44,15 @@ fi
 if ! tmux has-session -t "$session" 2>/dev/null; then
     tmux new-session -d -s "$session" -n workshop -c /noobia \
         "$aria_command"
+    if [[ -z "$resume_id" ]]; then
+        if ! resume_id="$(/noobia/aria/codex-pane-session.py "$session")"; then
+            tmux kill-session -t "$session"
+            exit 1
+        fi
+        tmux rename-session -t "$session" "noobia-aria-$resume_id"
+        session="noobia-aria-$resume_id"
+    fi
+    monitor_command="exec /noobia/aria/dushich-bridge monitor --full --session-id $resume_id"
     tmux split-window -h -p 50 -t "$session":0 -c /noobia \
         "$monitor_command"
     tmux set-window-option -t "$session":0 pane-border-status top

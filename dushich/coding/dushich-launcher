@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+codex=/opt/noobia/dushich-codex/node_modules/.bin/codex
+
+if [[ ! -x "$codex" ]]; then
+    echo "Dushich's Codex CLI is missing: $codex" >&2
+    exit 1
+fi
+if ! /usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1:11434/api/version >/dev/null; then
+    echo "Local Ollama is unavailable at 127.0.0.1:11434; refusing to start." >&2
+    exit 1
+fi
+
+# These options would defeat the local model or the workspace boundary.
+for arg in "$@"; do
+    case "$arg" in
+        --dangerously-*|--full-auto|--yolo|--remote*|--model*|--local-provider*|--profile*|--config*|--sandbox*|--permission-profile*|--ignore-user-config|--worktree|--search|--enable*|--disable*|--cd*|--add-dir*|--oss|-m*|-p*|-c*|-s*|-C*|-a*|-P*|--ask-for-approval*|--approve-for-me|cloud|mcp|plugin|login|logout|app-server|exec-server)
+            echo "Unsupported Dushich option: $arg" >&2
+            exit 2
+            ;;
+    esac
+done
+
+args=("$codex" --oss --local-provider ollama --model gpt-oss:20b)
+if [[ "${1:-}" == task ]]; then
+    shift
+    args=(/usr/bin/python3 /usr/local/libexec/dushich-task.py)
+elif [[ "${1:-}" == exec ]]; then
+    shift
+    args+=(exec)
+fi
+exec /usr/bin/sudo -u dushich -H -- /usr/bin/env -i \
+    HOME=/home/dushich USER=dushich LOGNAME=dushich \
+    CODEX_HOME=/home/dushich/.codex \
+    GIT_DIR=/noobia/dushich/workspace/.dushich-git \
+    GIT_WORK_TREE=/noobia/dushich/workspace \
+    OLLAMA_HOST=http://127.0.0.1:11434 \
+    PATH=/opt/noobia/dushich-codex/node_modules/.bin:/usr/local/bin:/usr/bin:/bin \
+    TERM="${TERM:-xterm}" LANG="${LANG:-C.UTF-8}" \
+    /bin/bash -c 'cd /noobia/dushich/workspace && exec "$@"' \
+    dushich-launcher "${args[@]}" "$@"

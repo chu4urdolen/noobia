@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+session="noobia-aria-dushich"
+detached=false
+resume_id=""
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        --detached)
+            detached=true
+            shift
+            ;;
+        --resume)
+            if [[ "$#" -lt 2 ]]; then
+                echo "--resume needs a Codex session ID" >&2
+                exit 2
+            fi
+            resume_id="$2"
+            shift 2
+            ;;
+        *)
+            echo "Usage: noobia-codex [--detached] [--resume SESSION_ID]" >&2
+            exit 2
+            ;;
+    esac
+done
+if [[ -n "$resume_id" && ! "$resume_id" =~ ^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$ ]]; then
+    echo "Invalid Codex session ID" >&2
+    exit 2
+fi
+
+if ! command -v tmux >/dev/null 2>&1; then
+    echo "tmux is required for the two-pane interface" >&2
+    exit 1
+fi
+aria_command='exec /home/aria/.local/bin/codex'
+if [[ -n "$resume_id" ]]; then
+    aria_command="exec /home/aria/.local/bin/codex -c 'mcp_servers.dushich.args=[\"--session-id\",\"$resume_id\"]' resume $resume_id"
+fi
+if ! tmux has-session -t "$session" 2>/dev/null; then
+    tmux new-session -d -s "$session" -n workshop -c /noobia \
+        "$aria_command"
+    tmux split-window -h -p 50 -t "$session":0 -c /noobia \
+        'exec /noobia/aria/dushich-bridge monitor'
+    tmux set-window-option -t "$session":0 pane-border-status top
+    tmux set-window-option -t "$session":0 pane-border-format ' #{pane_title} '
+    tmux select-pane -t "$session":0.0 -T 'Aria + Noob • Codex'
+    tmux select-pane -t "$session":0.1 -T 'Dushich • live activity'
+    tmux select-pane -t "$session":0.0
+    tmux set-option -t "$session" mouse on
+elif [[ -n "$resume_id" ]]; then
+    tmux respawn-pane -k -t "$session":0.0 "$aria_command"
+fi
+
+if "$detached"; then
+    echo "Two-pane session ready. Run: noobia-codex"
+elif [[ -n "${TMUX:-}" ]]; then
+    exec tmux switch-client -t "$session"
+else
+    exec tmux attach-session -t "$session"
+fi

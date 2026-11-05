@@ -16,6 +16,15 @@ do not blur together.
   programs, diagnostics, and Nexus control tools.
 - [`rose_tools/`](rose_tools/) — Rose-specific camera, projector, lighting, and
   voice utilities; these remain independent from the Council service.
+- [`dushich/coding/`](dushich/coding/README.md) — Dushich's local Ollama and
+  Codex coding environment, launcher, and verified task runner.
+- [`dushich/workspace/`](dushich/workspace/) — Dushich's coding projects and
+  persistent project instructions. His private Git metadata and Codex sessions
+  stay on Nexus.
+
+Run [`./noobia-codex`](noobia-codex) for Aria's two-pane terminal with Dushich's
+read-only activity monitor. `./noobia-codex --resume SESSION_ID` resumes an Aria
+Codex session; `./codex-noobia` is an alias.
 
 Build products, device backups, credentials, runtime logs, and captured media
 belong on their respective machines and are deliberately excluded from Git.

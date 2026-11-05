@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Aria's local, verified handoff to Dushich's Codex CLI."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+
+
+DUSHICH = "/usr/local/bin/dushich"
+REPORT_PATTERN = re.compile(
+    r"^/home/dushich/\.codex/task-runs/\d{8}T\d{6}Z-[0-9a-f]{8}\.json$"
+)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Delegate a bounded coding task to local Dushich and read its verified report."
+    )
+    parser.add_argument("--expect", action="append", default=[], metavar="PATH")
+    parser.add_argument("--test", action="append", default=[], metavar="COMMAND")
+    parser.add_argument("--timeout", type=int, default=120, metavar="SECONDS")
+    parser.add_argument("--attempts", type=int, choices=(1, 2), default=2)
+    parser.add_argument("--no-commit", action="store_true", help="Accept reviewed working-tree edits")
+    parser.add_argument("--thread-id", help="Resume a Dushich Codex thread")
+    parser.add_argument("--run-id", help="Bridge handoff ID for live event monitoring")
+    parser.add_argument("task", help="The specific coding task to hand to Dushich")
+    args = parser.parse_args()
+    if not args.expect or not args.test:
+        parser.error("specify both --expect PATH and --test COMMAND for independent verification")
+
+    command = [DUSHICH, "task", "--timeout", str(args.timeout),
+               "--attempts", str(args.attempts)]
+    for path in args.expect:
+        command += ["--expect", path]
+    for test in args.test:
+        command += ["--test", test]
+    if not args.no_commit:
+        command.append("--require-commit")
+    if args.thread_id:
+        command += ["--thread-id", args.thread_id]
+    if args.run_id:
+        command += ["--run-id", args.run_id]
+    command.append(args.task)
+
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    except OSError as exc:
+        print(f"Cannot contact Dushich: {exc}", file=sys.stderr)
+        return 2
+    if completed.stdout:
+        print(completed.stdout, end="")
+    if completed.stderr:
+        print(completed.stderr, end="", file=sys.stderr)
+
+    report_lines = [
+        line.removeprefix("Report: ")
+        for line in completed.stdout.splitlines()
+        if line.startswith("Report: ")
+    ]
+    if not report_lines or not REPORT_PATTERN.fullmatch(report_lines[-1]):
+        print("Dushich did not provide a valid verification report path.", file=sys.stderr)
+        return completed.returncode or 1
+
+    report_path = report_lines[-1]
+    report_read = subprocess.run(
+        ["/usr/bin/sudo", "-n", "-u", "dushich", "/usr/bin/cat", report_path],
+        capture_output=True, text=True, check=False,
+    )
+    if report_read.returncode:
+        print("Cannot read Dushich's private verification report:", file=sys.stderr)
+        print(report_read.stderr.strip(), file=sys.stderr)
+        return completed.returncode or 1
+    try:
+        report = json.loads(report_read.stdout)
+    except json.JSONDecodeError:
+        print("Dushich's verification report is invalid JSON.", file=sys.stderr)
+        return completed.returncode or 1
+    if bool(report.get("passed")) != (completed.returncode == 0):
+        print("Dushich's exit status and report disagree.", file=sys.stderr)
+        return 1
+
+    attempts = report.get("attempts")
+    last_turn = attempts[-1].get("turn", {}) if isinstance(attempts, list) and attempts else {}
+    message = last_turn.get("final_message", "").strip()
+    if message:
+        print("\nDushich's report (verify against the checks above):")
+        print(message[:2500] + ("\n[truncated]" if len(message) > 2500 else ""))
+    print(f"Thread: {last_turn.get('thread_id', 'unknown')}")
+    return completed.returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main())

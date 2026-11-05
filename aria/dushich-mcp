@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+"""Small stdio MCP adapter for Aria's local Dushich bridge."""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+import time
+
+
+BRIDGE = "/noobia/aria/dushich-bridge"
+SESSIONS = Path("/home/aria/.codex/sessions")
+UUID = re.compile(r"^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$")
+CURRENT_SESSION: str | None = None
+
+
+def infer_session_id() -> str | None:
+    if len(sys.argv) == 3 and sys.argv[1] == "--session-id" and UUID.fullmatch(sys.argv[2]):
+        return sys.argv[2]
+    inherited = os.environ.get("CODEX_SESSION_ID", "")
+    if UUID.fullmatch(inherited):
+        return inherited
+    now = datetime.now(timezone.utc)
+    candidates: list[tuple[datetime, str]] = []
+    for path in SESSIONS.rglob("*.jsonl"):
+        try:
+            with path.open(encoding="utf-8") as stream:
+                first = json.loads(stream.readline())
+            meta = first.get("payload", {})
+            if first.get("type") != "session_meta" or meta.get("cwd") != "/noobia":
+                continue
+            created = datetime.fromisoformat(meta["timestamp"].replace("Z", "+00:00"))
+            age = (now - created).total_seconds()
+            if -2 <= age <= 30 and UUID.fullmatch(meta.get("id", "")):
+                candidates.append((created, meta["id"]))
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    candidates.sort(reverse=True)
+    if not candidates:
+        return None
+    if len(candidates) > 1 and (candidates[0][0] - candidates[1][0]).total_seconds() < 2:
+        return None
+    return candidates[0][1]
+
+TOOLS = [
+    {
+        "name": "dushich_context_status",
+        "description": "Check whether this Aria Codex CLI session has readable context for a Dushich handoff.",
+        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+    },
+    {
+        "name": "dushich_start",
+        "description": "Quietly delegate a bounded coding task to local Dushich. Returns only a task ID; progress remains in his separate log.",
+        "inputSchema": {
+            "type": "object", "properties": {
+                "task": {"type": "string"},
+                "expect": {"type": "array", "items": {"type": "string"}},
+                "test": {"type": "array", "items": {"type": "string"}},
+                "context": {"type": "string", "description": "Relevant user-visible conversation and project context, explicitly selected by Aria."},
+                "files": {"type": "array", "items": {"type": "string"}, "description": "Selected text files under /noobia to attach as context."},
+                "session_id": {"type": "string", "description": "Aria Codex session ID if the MCP process does not inherit CODEX_SESSION_ID."},
+                "continue_from": {"type": "string", "description": "Optional completed handoff ID whose Dushich Codex thread to resume."},
+            }, "required": ["task", "expect", "test"], "additionalProperties": False,
+        },
+    },
+    {
+        "name": "dushich_status",
+        "description": "Check whether a Dushich task is queued, running, done, or needs Aria.",
+        "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"]},
+    },
+    {
+        "name": "dushich_report",
+        "description": "Read Dushich's final message and independent verification once complete.",
+        "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"]},
+    },
+    {
+        "name": "dushich_wait",
+        "description": "Wait up to 50 seconds for completion, returning status and final report if ready.",
+        "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"]},
+    },
+]
+
+
+def bridge(*args: str) -> tuple[bool, str]:
+    result = subprocess.run([BRIDGE, *args], capture_output=True, text=True, check=False)
+    return result.returncode == 0, (result.stdout if result.returncode == 0 else result.stderr).strip()
+
+
+def call(name: str, args: dict) -> tuple[bool, str]:
+    if name == "dushich_context_status":
+        session = args.get("session_id") or CURRENT_SESSION or infer_session_id()
+        if not session:
+            return False, "Aria session ID unavailable; supply session_id explicitly."
+        return bridge("context-status", "--session-id", str(session))
+    if name == "dushich_start":
+        if not isinstance(args.get("task"), str) or not args.get("expect") or not args.get("test"):
+            return False, "task, expect, and test are required"
+        command = ["start"]
+        for item in args["expect"]:
+            command += ["--expect", str(item)]
+        for item in args["test"]:
+            command += ["--test", str(item)]
+        session = args.get("session_id") or CURRENT_SESSION or infer_session_id()
+        if session:
+            command += ["--session-id", str(session)]
+        for selected in args.get("files", []):
+            command += ["--include", str(selected)]
+        if args.get("continue_from"):
+            command += ["--continue-from", str(args["continue_from"])]
+        context = args.get("context", "")
+        if context:
+            if not isinstance(context, str):
+                return False, "context must be text"
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
+                file.write(context)
+                path = Path(file.name)
+            try:
+                return bridge(*(command + ["--context-file", str(path), args["task"]]))
+            finally:
+                path.unlink(missing_ok=True)
+        return bridge(*(command + [args["task"]]))
+    if name in {"dushich_status", "dushich_report"}:
+        return bridge("status" if name.endswith("status") else "report", str(args.get("id", "")))
+    if name == "dushich_wait":
+        run_id = str(args.get("id", ""))
+        for _ in range(50):
+            ok, value = bridge("status", run_id)
+            if not ok:
+                return False, value
+            state = json.loads(value)
+            if state.get("status") in {"done", "needs_aria"}:
+                return bridge("report", run_id)
+            time.sleep(1)
+        return True, "Still running; call dushich_wait again."
+    return False, "Unknown tool"
+
+
+def send(message: dict) -> None:
+    sys.stdout.write(json.dumps(message, separators=(",", ":")) + "\n")
+    sys.stdout.flush()
+
+
+def main() -> None:
+    global CURRENT_SESSION
+    for line in sys.stdin:
+        try:
+            message = json.loads(line)
+            if "id" not in message:
+                continue
+            method = message.get("method")
+            if method == "initialize":
+                CURRENT_SESSION = infer_session_id()
+                result = {"protocolVersion": "2025-06-18", "capabilities": {"tools": {}},
+                          "serverInfo": {"name": "noobia-dushich", "version": "1.0.0"}}
+            elif method == "tools/list":
+                result = {"tools": TOOLS}
+            elif method == "tools/call":
+                params = message.get("params", {})
+                ok, value = call(params.get("name", ""), params.get("arguments") or {})
+                result = {"content": [{"type": "text", "text": value}], "isError": not ok}
+            else:
+                send({"jsonrpc": "2.0", "id": message["id"], "error": {"code": -32601, "message": "Method not found"}})
+                continue
+            send({"jsonrpc": "2.0", "id": message["id"], "result": result})
+        except Exception as exc:
+            if "message" in locals() and isinstance(message, dict) and "id" in message:
+                send({"jsonrpc": "2.0", "id": message["id"], "error": {"code": -32603, "message": str(exc)}})
+
+
+if __name__ == "__main__":
+    main()

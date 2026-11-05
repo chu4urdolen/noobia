@@ -1,0 +1,2 @@
+FROM /usr/share/ollama/import/gpt-oss-20b-MXFP4.gguf
+PARAMETER num_ctx 65536

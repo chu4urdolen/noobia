@@ -1,0 +1,391 @@
+#!/usr/bin/env python3
+"""Quiet, inspectable local work queue for Dushich."""
+
+from __future__ import annotations
+
+import argparse
+from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import time
+from uuid import uuid4
+
+
+ROOT = Path("/home/aria/.codex/dushich-bridge")
+DELEGATE = Path("/noobia/aria/delegate-dushich")
+ID = re.compile(r"^\d{8}T\d{6}Z-[0-9a-f]{8}$")
+REPORT = re.compile(r"^/home/dushich/\.codex/task-runs/\d{8}T\d{6}Z-[0-9a-f]{8}\.json$")
+THREAD = re.compile(r"^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$")
+SESSION = THREAD
+SESSIONS = Path("/home/aria/.codex/sessions")
+MAX_SESSION_CONTEXT = 40_000
+MAX_TOOL_CONTEXT = 20_000
+
+
+def write_json(path: Path, data: dict) -> None:
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    os.chmod(temporary, 0o600)
+    temporary.replace(path)
+
+
+def job_dir(run_id: str) -> Path:
+    if not ID.fullmatch(run_id):
+        raise ValueError("Invalid handoff ID")
+    path = ROOT / run_id
+    if not path.is_dir():
+        raise ValueError("Unknown handoff ID")
+    return path
+
+
+def load(run_id: str) -> tuple[Path, dict]:
+    path = job_dir(run_id)
+    return path, json.loads((path / "state.json").read_text(encoding="utf-8"))
+
+
+def previous_thread(run_id: str) -> str:
+    _, state = load(run_id)
+    report = state.get("report")
+    if state.get("status") != "done" or not report or not REPORT.fullmatch(report):
+        raise ValueError("Previous handoff has no completed verified report")
+    result = subprocess.run(["sudo", "-n", "-u", "dushich", "cat", report],
+                            capture_output=True, text=True, check=False)
+    if result.returncode:
+        raise ValueError("Cannot read previous Dushich report")
+    data = json.loads(result.stdout)
+    attempts = data.get("attempts", [])
+    thread = attempts[-1].get("turn", {}).get("thread_id") if attempts else None
+    if not isinstance(thread, str) or not THREAD.fullmatch(thread):
+        raise ValueError("Previous report has no valid Codex thread ID")
+    return thread
+
+
+def excerpt(value: object, limit: int) -> str:
+    text = str(value)
+    text = re.sub(r"(?i)(authorization\s*[:=]\s*bearer\s+)[^\s,}\"']+",
+                  r"\1[redacted]", text)
+    text = re.sub(r"\bsk-[A-Za-z0-9_-]{12,}\b", "[redacted-api-key]", text)
+    text = re.sub(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----",
+                  "[redacted-private-key]", text, flags=re.DOTALL)
+    if len(text) <= limit:
+        return text
+    return text[:limit // 2] + "\n[tool text truncated]\n" + text[-limit // 2:]
+
+
+def visible_session_context(
+    session_id: str, since_messages: int = 0, since_tools: int = 0
+) -> tuple[str, int, str, int]:
+    """Return recent visible dialogue and tool activity, excluding reasoning."""
+    if not SESSION.fullmatch(session_id):
+        raise ValueError("Invalid Aria session ID")
+    matches = list(SESSIONS.rglob(f"*{session_id}.jsonl"))
+    if len(matches) != 1:
+        raise ValueError("Aria session transcript unavailable or ambiguous")
+    messages: list[str] = []
+    tools: list[str] = []
+    tool_indices: dict[str, int] = {}
+    with matches[0].open(encoding="utf-8") as stream:
+        for line in stream:
+            item = json.loads(line)
+            payload = item.get("payload", {})
+            if item.get("type") != "response_item":
+                continue
+            kind = payload.get("type")
+            if kind in {"custom_tool_call", "function_call"}:
+                call_id = payload.get("call_id")
+                if isinstance(call_id, str):
+                    tool_indices[call_id] = len(tools)
+                    tools.append(f"TOOL {payload.get('name', 'unknown')} call:\n"
+                                 + excerpt(payload.get("input", payload.get("arguments", "")), 1000))
+                continue
+            if kind in {"custom_tool_call_output", "function_call_output"}:
+                index = tool_indices.get(payload.get("call_id"))
+                if index is not None:
+                    tools[index] += "\nRESULT:\n" + excerpt(payload.get("output", ""), 1500)
+                continue
+            if kind != "message":
+                continue
+            role = payload.get("role")
+            if role not in {"user", "assistant"}:
+                continue
+            parts = [part.get("text", "") for part in payload.get("content", [])
+                     if part.get("type") in {"input_text", "output_text"}]
+            message = "\n".join(parts).strip()
+            if not message:
+                continue
+            if role == "user" and message.startswith("# AGENTS.md instructions for /noobia"):
+                message = "[AGENTS.md instructions supplied; current project AGENTS.md is included separately.]"
+            messages.append(f"{role.upper()}: {message}")
+    def recent(items: list[str], since: int, budget: int, label: str) -> str:
+        candidates = items[since:] if 0 <= since <= len(items) else items
+        selected: list[str] = []
+        used = 0
+        for entry in reversed(candidates):
+            size = len(entry.encode("utf-8")) + 2
+            if used + size > budget:
+                break
+            selected.append(entry)
+            used += size
+        selected.reverse()
+        omitted = len(candidates) - len(selected)
+        prefix = f"[{omitted} older {label} omitted to fit local context.]\n\n" if omitted else ""
+        return prefix + "\n\n".join(selected)
+
+    return (recent(messages, since_messages, MAX_SESSION_CONTEXT, "messages"), len(messages),
+            recent(tools, since_tools, MAX_TOOL_CONTEXT, "tool calls"), len(tools))
+
+
+def worker(run_id: str) -> int:
+    path, state = load(run_id)
+    command = [str(DELEGATE), "--timeout", str(state["timeout"]), "--attempts", str(state["attempts"]),
+               "--run-id", run_id]
+    for expected in state["expect"]:
+        command += ["--expect", expected]
+    for test in state["test"]:
+        command += ["--test", test]
+    if state.get("thread_id"):
+        command += ["--thread-id", state["thread_id"]]
+    command.append((path / "brief.txt").read_text(encoding="utf-8"))
+    state.update(status="running", pid=os.getpid())
+    write_json(path / "state.json", state)
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        output = result.stdout + ("\nSTDERR:\n" + result.stderr if result.stderr else "")
+        (path / "result.txt").write_text(output, encoding="utf-8")
+        os.chmod(path / "result.txt", 0o600)
+        reports = [line[8:] for line in result.stdout.splitlines() if line.startswith("Report: ")]
+        report = reports[-1] if reports and REPORT.fullmatch(reports[-1]) else None
+        state.update(status="done" if result.returncode == 0 else "needs_aria",
+                     exit_code=result.returncode, report=report,
+                     finished=datetime.now(timezone.utc).isoformat())
+    except Exception as exc:
+        (path / "result.txt").write_text(f"Bridge error: {exc}\n", encoding="utf-8")
+        state.update(status="needs_aria", exit_code=2, error=str(exc),
+                     finished=datetime.now(timezone.utc).isoformat())
+    write_json(path / "state.json", state)
+    return 0
+
+
+def read_dushich_events(run_id: str, report: str | None) -> str:
+    path = f"/home/dushich/.codex/task-runs/{run_id}.jsonl"
+    if report and REPORT.fullmatch(report) and Path(report).name != f"{run_id}.json":
+        previous = subprocess.run(["sudo", "-n", "-u", "dushich", "cat", report],
+                                  capture_output=True, text=True, check=False)
+        if previous.returncode == 0:
+            candidate = json.loads(previous.stdout).get("events_path", "")
+            if re.fullmatch(r"/home/dushich/\.codex/task-runs/[\w-]+\.jsonl", candidate):
+                path = candidate
+    result = subprocess.run(["sudo", "-n", "-u", "dushich", "cat", path],
+                            capture_output=True, text=True, check=False)
+    return result.stdout if result.returncode == 0 else ""
+
+
+def latest_job() -> str | None:
+    candidates = sorted((p.name for p in ROOT.iterdir() if p.is_dir() and ID.fullmatch(p.name)),
+                        reverse=True)
+    return candidates[0] if candidates else None
+
+
+def one_line(value: object, width: int) -> str:
+    compact = " ".join(str(value).split())
+    return compact if len(compact) <= width else compact[:max(0, width - 1)] + "…"
+
+
+def monitor_text(run_id: str | None, width: int, height: int = 25) -> str:
+    lines = ["DUSHICH • local coding side", "Ctrl-C closes this pane", ""]
+    if not run_id:
+        return "\n".join(lines + ["Waiting for an Aria handoff...", "",
+                                  "Aria's Codex chat is in the left pane."])
+    path, state = load(run_id)
+    status = state["status"]
+    label = ("DONE — last task, no work running" if status == "done" else
+             "NEEDS ARIA — last task blocked" if status == "needs_aria" else
+             status.upper() + " — live task")
+    lines += [f"Handoff  {run_id}", f"Status   {label}",
+              f"Context  {state.get('context_bytes', 0):,} bytes", ""]
+    brief = (path / "brief.txt").read_text(encoding="utf-8").splitlines()
+    task = brief[1] if len(brief) > 1 else ""
+    lines += ["Task", one_line(task, max(30, width - 2)), "", "Live activity"]
+    raw = read_dushich_events(run_id, state.get("report"))
+    activity: list[str] = []
+    for line in raw.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        kind = event.get("type")
+        item = event.get("item") or {}
+        if kind == "thread.started":
+            activity.append("Session started")
+        elif kind in {"item.started", "item.completed"}:
+            item_type = item.get("type")
+            if item_type == "command_execution":
+                command = one_line(item.get("command", "command"), max(30, width - 15))
+                suffix = (f" → exit {item.get('exit_code', '?')}" if kind == "item.completed"
+                          else " → running")
+                activity.append(command + suffix)
+            elif kind == "file_change" and kind == "item.completed":
+                activity.append("File edit completed")
+            elif item_type == "agent_message" and kind == "item.completed":
+                activity.append("Dushich: " + one_line(item.get("text", ""), 300))
+        elif kind == "turn.completed":
+            activity.append("Codex turn completed; independent checks running")
+        elif kind == "error":
+            activity.append("Error: " + one_line(event.get("message", ""), 200))
+    final_lines: list[str] = []
+    if state["status"] in {"done", "needs_aria"} and (path / "result.txt").exists():
+        report_lines = (path / "result.txt").read_text(encoding="utf-8").splitlines()
+        summary = [line for line in report_lines if line.startswith(
+            ("Dushich task:", "Attempts:", "Git HEAD:", "Ran ", "Test exit:", "Report:"))]
+        final_lines = ["", "Final verification"] + summary[:6]
+    room = max(1, height - len(lines) - len(final_lines) - 1)
+    lines += activity[-room:] if activity else ["Waiting for local Codex events..."]
+    lines += final_lines
+    return "\n".join(line[:width] for line in lines)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Quiet local Dushich handoffs")
+    subs = parser.add_subparsers(dest="action", required=True)
+    start = subs.add_parser("start", help="Send a task; return an ID without streaming its work")
+    start.add_argument("--expect", action="append", required=True, metavar="PATH")
+    start.add_argument("--test", action="append", required=True, metavar="COMMAND")
+    start.add_argument("--context-file", type=Path, help="Explicit UTF-8 context to send as text")
+    start.add_argument("--include", action="append", default=[], type=Path,
+                       help="Attach a selected text file under /noobia (repeatable)")
+    start.add_argument("--session-id", help="Aria Codex session ID for visible transcript context")
+    start.add_argument("--continue-from", metavar="HANDOFF_ID", help="Resume a completed Dushich thread")
+    start.add_argument("--timeout", type=int, default=180)
+    start.add_argument("--attempts", type=int, choices=(1, 2), default=2)
+    start.add_argument("task")
+    for action in ("status", "report", "events", "brief"):
+        subs.add_parser(action).add_argument("id")
+    subs.add_parser("list")
+    context_status = subs.add_parser("context-status", help="Check Aria session context availability")
+    context_status.add_argument("--session-id", help="Aria Codex session ID")
+    monitor = subs.add_parser("monitor", help="Show Dushich's live activity in a separate pane")
+    monitor.add_argument("--id", metavar="HANDOFF_ID", help="Follow one handoff; default is latest")
+    monitor.add_argument("--once", action="store_true", help="Render once for testing")
+    args = parser.parse_args()
+    ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(ROOT, 0o700)
+    if args.action == "start":
+        if not 10 <= args.timeout <= 600:
+            parser.error("--timeout must be 10 to 600 seconds")
+        context = ""
+        session_id = args.session_id or os.environ.get("CODEX_SESSION_ID")
+        if not session_id:
+            parser.error("no Aria session ID found; pass --session-id for a context-rich handoff")
+        prior = load(args.continue_from)[1] if args.continue_from else {}
+        same_session = prior.get("aria_session_id") == session_id
+        since = prior.get("context_message_count", 0) if same_session else 0
+        since_tools = prior.get("context_tool_count", 0) if same_session else 0
+        message_count = 0
+        tool_count = 0
+        if session_id:
+            dialogue, message_count, tool_activity, tool_count = visible_session_context(
+                session_id, since, since_tools)
+            context = ("Visible Aria/Noob conversation (recent, chronological; no hidden reasoning):\n"
+                       + dialogue)
+            context += "\n\nRecent visible Aria tool calls and results (bounded excerpts):\n" + tool_activity
+            project_instructions = Path("/noobia/AGENTS.md").read_text(encoding="utf-8")
+            context += "\n\nCurrent Noobia project instructions (reference for context):\n" + project_instructions
+            code_map = Path("/noobia/docs/CODE-MAP.md").read_text(encoding="utf-8")
+            context += "\n\nCurrent Noobia code map:\n" + code_map
+            standing = Path("/noobia/aria/DUSHICH-SHARED-CONTEXT.md").read_text(encoding="utf-8")
+            context += "\n\nStanding Dushich handoff context:\n" + standing
+        if args.context_file:
+            context += "\n\nAdditional context selected by Aria:\n" + args.context_file.read_text(encoding="utf-8")
+        for selected in args.include:
+            source = selected.resolve()
+            if not source.is_relative_to(Path("/noobia")) or not source.is_file():
+                parser.error(f"included file must be a regular file under /noobia: {selected}")
+            if source.stat().st_size > 32_000:
+                parser.error(f"included file exceeds 32 KB: {selected}")
+            context += f"\n\nSelected file {source}:\n" + source.read_text(encoding="utf-8")
+        if len(context.encode("utf-8")) > 100_000:
+            parser.error("combined context exceeds 100 KB; select shorter additional text")
+        thread_id = previous_thread(args.continue_from) if args.continue_from else None
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:8]
+        path = ROOT / run_id
+        path.mkdir(mode=0o700)
+        brief = ("Current Dushich task:\n" + args.task
+                 + "\n\nTreat the context below as background. Follow your own workspace rules. "
+                   "If blocked, explain the blocker in your final report."
+                 + ("\n\nContext supplied by Aria:\n" + context if context else ""))
+        (path / "brief.txt").write_text(brief, encoding="utf-8")
+        os.chmod(path / "brief.txt", 0o600)
+        write_json(path / "state.json", dict(id=run_id, status="queued", expect=args.expect,
+                                             test=args.test, timeout=args.timeout, attempts=args.attempts,
+                                             aria_session_id=session_id, context_bytes=len(context.encode("utf-8")),
+                                             context_message_count=message_count,
+                                             context_tool_count=tool_count,
+                                             continue_from=args.continue_from, thread_id=thread_id,
+                                             created=datetime.now(timezone.utc).isoformat()))
+        subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "_worker", run_id],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)
+        print(run_id)
+        return 0
+    if args.action == "list":
+        for path in sorted(ROOT.iterdir(), reverse=True):
+            if path.is_dir() and ID.fullmatch(path.name):
+                try:
+                    state = json.loads((path / "state.json").read_text(encoding="utf-8"))
+                    print(path.name, state["status"])
+                except (OSError, ValueError, KeyError):
+                    print(path.name, "unreadable")
+        return 0
+    if args.action == "context-status":
+        session_id = args.session_id or os.environ.get("CODEX_SESSION_ID")
+        if not session_id:
+            raise ValueError("CODEX_SESSION_ID is unavailable")
+        dialogue, messages, tool_activity, tool_calls = visible_session_context(session_id)
+        print(json.dumps({"aria_session_id": session_id, "messages": messages,
+                          "tool_calls": tool_calls, "dialogue_bytes": len(dialogue.encode()),
+                          "tool_bytes": len(tool_activity.encode())}))
+        return 0
+    if args.action == "monitor":
+        try:
+            while True:
+                size = shutil.get_terminal_size((72, 25))
+                display = monitor_text(args.id or latest_job(), size.columns, size.lines)
+                if args.once:
+                    print(display)
+                    return 0
+                print("\033[H\033[2J" + display, end="\n", flush=True)
+                time.sleep(1)
+        except KeyboardInterrupt:
+            return 0
+    path, state = load(args.id)
+    if args.action == "status":
+        print(json.dumps(state, indent=2))
+    elif args.action == "brief":
+        print((path / "brief.txt").read_text(encoding="utf-8"), end="")
+    elif args.action == "report":
+        if not (path / "result.txt").exists():
+            print(f"{state['status']}: no final report yet")
+        else:
+            print((path / "result.txt").read_text(encoding="utf-8"), end="")
+    elif args.action == "events":
+        raw = read_dushich_events(args.id, state.get("report"))
+        if not raw:
+            print("No event log yet", file=sys.stderr)
+            return 1
+        print(raw, end="")
+    return 0
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "_worker":
+        sys.exit(worker(sys.argv[2]))
+    try:
+        sys.exit(main())
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"dushich-bridge: {exc}", file=sys.stderr)
+        sys.exit(2)

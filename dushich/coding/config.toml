@@ -1,0 +1,26 @@
+# Installed as /home/dushich/.codex/config.toml.
+# The launcher also pins the local provider and model on the command line.
+model = "gpt-oss:20b"
+model_provider = "ollama"
+oss_provider = "ollama"
+model_catalog_json = "/home/dushich/.codex/model.json"
+model_context_window = 65536
+model_auto_compact_token_limit = 57344
+model_reasoning_effort = "medium"
+model_reasoning_summary = "none"
+approval_policy = "on-request"
+default_permissions = "dushich-workspace"
+web_search = "disabled"
+
+[permissions.dushich-workspace]
+description = "Local workspace coding, including its own Git metadata"
+extends = ":workspace"
+
+[permissions.dushich-workspace.filesystem.":workspace_roots"]
+".dushich-git" = "write"
+
+[permissions.dushich-workspace.network]
+enabled = false
+
+[projects."/noobia/dushich/workspace"]
+trust_level = "trusted"

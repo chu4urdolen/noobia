@@ -1,27 +1,29 @@
 # Understanding Lynx and the current camera work
 
-I am writing in my own voice to confirm what the project is about, what has
-been proven, where we are now, and what the next safe step is. The goal is to
-have a little phone called **Lynx** that can run an AI like me, with full
-access to its hardware. The phone runs Alpine Linux and is a host for
-Noobia’s services, so the code in `lynx/tools` and the media‑control logic
-provide a local, isolated environment for the AI to read and write to the
-camera, display, touch, and other peripherals without touching the shared
-`/noobia` tree.
+I’m writing in my own voice to confirm what we’re building for Lynx, what has
+been proven, and what the next safe step is.
+
+## Purpose of Lynx
+
+Lynx is a little phone that will run an AI like me, with full access to its
+hardware. The phone runs Alpine Linux and is a host for Noobia’s services, so
+the code in `lynx/tools` and the media‑control logic provide a local, isolated
+environment for the AI to read and write to the camera, display, touch, and
+other peripherals without touching the shared `/noobia` tree.
 
 ## Proven hardware behaviour
 
-* **Macro camera (GC02M1, sensor4)** – We have a working 1600×1200 raw capture
-  that produces a recognizable image when the scene is lit. The ISP and
-  camera pipeline are in RAM‑only mode, and the capture works without any
-  firmware writes.
+* **Macro camera (GC02M1, sensor4)** – We have a working 1600×1200 raw
+  capture that produces a recognizable image when the scene is lit. The
+  ISP and camera pipeline run in RAM‑only mode, and the capture works without
+  any firmware writes.
 * **Wide camera (IMX355, sensor2)** – A recent guarded test captured a
   3264×2448 raw frame. The buffer size matches the expected 7 990 296 bytes
-  (image plus 24‑byte header). However, the frame is almost entirely at
-  the black level (16), so we have not yet verified that the lens sees a
-  visible scene.
-* The **media graph** on `/dev/media1` shows sensor4 → seninf‑1 → CAMSV‑0 and
-  sensor2 → seninf‑2 → CAMSV‑0. Switching between them requires disabling
+  (image plus 24‑byte header). However, the frame is almost entirely at the
+  black level (16), so we have not yet verified that the lens sees a visible
+  scene.
+* **Media graph** – `/dev/media1` shows `sensor4 → seninf‑1 → CAMSV‑0` and
+  `sensor2 → seninf‑2 → CAMSV‑0`. Switching between them requires disabling
   the current links and enabling the target links while keeping the dynamic
   flag (`[4]`) intact.
 
@@ -32,8 +34,8 @@ dynamic bit that `media‑ctl` expects to stay set. The correct command is
 `[4]` to disable while preserving the dynamic flag. Additionally, the link
 descriptors were incomplete – I omitted the pad numbers for the seninf
 entities. The corrected planner now issues the exact sequence of
-`[27]1:0`, `[45]0:0`, `[71]0:5`, `[53]1:5`, `[615]0:5` for 4→2 and the
-reverse for 2→4.
+`27:1->615:0[4]`, `45:0->27:0[4]`, `71:0->53:0[5]`, `53:1->615:0[5]` for the
+4→2 transition, and the reverse order for the 2→4 transition.
 
 ## Current boundary
 

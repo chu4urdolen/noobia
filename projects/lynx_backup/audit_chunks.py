@@ -172,6 +172,9 @@ def verify_directory(dir_path: str | pathlib.Path) -> AuditResult:
     for device, segs in device_map.items():
         segs.sort(key=lambda x: x[0])
         seen_offsets = set()
+        # First chunk must start at offset 0 for a complete backup
+        if segs and segs[0][0] != 0:
+            result.add_error(f"First chunk for device {device} starts at {segs[0][0]}, expected 0")
         for offset, size in segs:
             if offset in seen_offsets:
                 result.add_error(f"Duplicate offset {offset} for device {device}")

@@ -48,11 +48,23 @@ def copy_sparse(src: Path, dst: Path) -> None:
     if src.resolve() == dst.resolve():
         raise ValueError("Source and destination refer to the same file; aborting to protect data.")
 
+    # Reject if destination already exists (including symlink or hard‑link alias)
+    if dst.exists() or dst.is_symlink() or dst.is_file():
+        # also check for hard‑link alias
+        try:
+            if src.samefile(dst):
+                raise FileExistsError("Source and destination are hard‑link aliases; aborting.")
+        except OSError:
+            # samefile may fail if file missing; ignore
+            pass
+        raise FileExistsError("Destination already exists; aborting to protect data.")
+
     # Ensure destination directory exists
     dst.parent.mkdir(parents=True, exist_ok=True)
 
-    written_bytes = 0
-    with src.open("rb") as fsrc, dst.open("wb") as fdst:
+    bytes_written = 0
+    # Open destination exclusively to ensure no race condition
+    with src.open("rb") as fsrc, dst.open("xb") as fdst:
         while True:
             chunk = fsrc.read(CHUNK_SIZE)
             if not chunk:
@@ -62,7 +74,8 @@ def copy_sparse(src: Path, dst: Path) -> None:
                 fdst.seek(len(chunk), os.SEEK_CUR)
             else:
                 fdst.write(chunk)
-                written_bytes += len(chunk)
+                # Count bytes passed to write(), including zeros in mixed chunks.
+                bytes_written += len(chunk)
 
     # Ensure the destination file size matches the source
     src_size = src.stat().st_size
@@ -74,7 +87,7 @@ def copy_sparse(src: Path, dst: Path) -> None:
             fdst.truncate(src_size)
 
     # Print a short success report
-    print(f"Sparse copy succeeded: source size={src_size} bytes, physically written={written_bytes} bytes")
+    print(f"Sparse copy succeeded: source size={src_size} bytes, bytes_written={bytes_written} bytes")
 
 
 def main(argv: list[str] | None = None) -> int:

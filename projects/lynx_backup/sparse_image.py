@@ -44,9 +44,14 @@ def copy_sparse(src: Path, dst: Path) -> None:
     if not src.is_file():
         raise FileNotFoundError(f"Source file does not exist: {src}")
 
+    # Reject copy if source and destination are the same path to avoid destructive overwrite
+    if src.resolve() == dst.resolve():
+        raise ValueError("Source and destination refer to the same file; aborting to protect data.")
+
     # Ensure destination directory exists
     dst.parent.mkdir(parents=True, exist_ok=True)
 
+    written_bytes = 0
     with src.open("rb") as fsrc, dst.open("wb") as fdst:
         while True:
             chunk = fsrc.read(CHUNK_SIZE)
@@ -57,13 +62,19 @@ def copy_sparse(src: Path, dst: Path) -> None:
                 fdst.seek(len(chunk), os.SEEK_CUR)
             else:
                 fdst.write(chunk)
+                written_bytes += len(chunk)
 
     # Ensure the destination file size matches the source
     src_size = src.stat().st_size
     dst_size = dst.stat().st_size
     if src_size != dst_size:
         # Adjust size if the sparse hole logic skipped beyond the expected size
-        dst.truncate(src_size)
+        # Use an open file handle for truncate
+        with dst.open("r+b") as fdst:
+            fdst.truncate(src_size)
+
+    # Print a short success report
+    print(f"Sparse copy succeeded: source size={src_size} bytes, physically written={written_bytes} bytes")
 
 
 def main(argv: list[str] | None = None) -> int:

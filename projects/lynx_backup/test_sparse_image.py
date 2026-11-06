@@ -16,6 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 import unittest
+import tempfile
 
 SCRIPT = Path("projects/lynx_backup/sparse_image.py")
 SRC = Path("projects/lynx_backup/tmp_src.bin")
@@ -38,30 +39,31 @@ class TestSparseImage(unittest.TestCase):
                 p.unlink()
 
     def test_sparse_copy(self):
-        # Write source file
-        SRC.write_bytes(make_source())
-        # Run script via subprocess
-        result = subprocess.run(
-            [sys.executable, str(SCRIPT), str(SRC), str(DST)],
-            capture_output=True,
-            check=False,
-        )
-        self.assertEqual(result.returncode, 0, msg=result.stderr.decode())
-        # Compare content and size
-        dst_bytes = DST.read_bytes()
-        self.assertEqual(dst_bytes, make_source())
-        self.assertEqual(DST.stat().st_size, SRC.stat().st_size)
+        # Use a temporary directory to avoid cross‑test contamination
+        with tempfile.TemporaryDirectory() as tmp:
+            src_path = Path(tmp) / "src.bin"
+            dst_path = Path(tmp) / "dst.bin"
+            src_path.write_bytes(make_source())
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(src_path), str(dst_path)],
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stderr.decode())
+            dst_bytes = dst_path.read_bytes()
+            self.assertEqual(dst_bytes, make_source())
+            self.assertEqual(dst_path.stat().st_size, src_path.stat().st_size)
 
     def test_missing_source(self):
-        # Ensure source does not exist
-        if SRC.exists():
-            SRC.unlink()
-        result = subprocess.run(
-            [sys.executable, str(SCRIPT), str(SRC), str(DST)],
-            capture_output=True,
-            check=False,
-        )
-        self.assertNotEqual(result.returncode, 0)
+        with tempfile.TemporaryDirectory() as tmp:
+            src_path = Path(tmp) / "missing.bin"
+            dst_path = Path(tmp) / "dst.bin"
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(src_path), str(dst_path)],
+                capture_output=True,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
 
 
 if __name__ == "__main__":  # pragma: no cover

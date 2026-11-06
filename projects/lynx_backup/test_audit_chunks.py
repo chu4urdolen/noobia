@@ -51,8 +51,9 @@ class TestAuditChunks(unittest.TestCase):
         shutil.rmtree(self.dir)
 
     def test_valid_chunks(self):
+        # Contiguous chunks – no gap, no overlap
         _make_chunk(self.dir, "sda", 0, b"a" * 1024)
-        _make_chunk(self.dir, "sda", 2048, b"b" * 512)
+        _make_chunk(self.dir, "sda", 1024, b"b" * 512)
         result = verify_directory(self.dir)
         self.assertTrue(result.valid)
         self.assertEqual(result.total_chunks, 2)
@@ -99,6 +100,40 @@ class TestAuditChunks(unittest.TestCase):
         result = verify_directory(self.dir)
         self.assertFalse(result.valid)
         self.assertTrue(any("Overlapping chunks" in e for e in result.errors))
+
+    def test_plan_file_ignored(self):
+        """Plan JSON files should be ignored and not counted as receipts."""
+        (self.dir / "sda-plan.json").write_text("{\"plan\":true}")
+        _make_chunk(self.dir, "sda", 0, b"a" * 1024)
+        result = verify_directory(self.dir)
+        self.assertTrue(result.valid)
+        self.assertEqual(result.total_chunks, 1)
+        self.assertEqual(result.total_raw_bytes, 1024)
+
+    def test_unmatched_gzip(self):
+        """A gzip file without a receipt should trigger an error."""
+        gz_path = self.dir / "orphan.gz"
+        with gz_path.open("wb") as f:
+            with gzip.GzipFile(fileobj=f, mode="wb") as gz:
+                gz.write(b"x" * 512)
+        result = verify_directory(self.dir)
+        self.assertFalse(result.valid)
+        self.assertTrue(any("Unmatched gzip file" in e for e in result.errors))
+
+    def test_same_device_no_gap(self):
+        """Chunks of the same device that touch but do not overlap are OK."""
+        _make_chunk(self.dir, "sda", 0, b"a" * 1024)
+        _make_chunk(self.dir, "sda", 1024, b"b" * 512)
+        result = verify_directory(self.dir)
+        self.assertTrue(result.valid)
+
+    def test_gap_between_chunks(self):
+        """A gap between chunks of the same device should raise an error."""
+        _make_chunk(self.dir, "sda", 0, b"a" * 1024)
+        _make_chunk(self.dir, "sda", 2048, b"b" * 512)
+        result = verify_directory(self.dir)
+        self.assertFalse(result.valid)
+        self.assertTrue(any("Gap between chunks" in e for e in result.errors))
 
 
 if __name__ == "__main__":

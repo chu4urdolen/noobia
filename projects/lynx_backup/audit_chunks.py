@@ -142,6 +142,9 @@ def verify_directory(dir_path: str | pathlib.Path) -> AuditResult:
 
     # Find all receipts.
     for receipt_path in base.glob("*.json"):
+        # Skip plan metadata files like sda-plan.json
+        if receipt_path.stem.endswith("-plan"):
+            continue
         try:
             receipt = _load_receipt(receipt_path)
         except ValueError as exc:  # pragma: no cover - defensive
@@ -161,27 +164,35 @@ def verify_directory(dir_path: str | pathlib.Path) -> AuditResult:
         result.total_chunks += 1
         result.total_raw_bytes += raw_size
 
-    # Detect duplicate or overlapping offsets.
-    # Sort by offset.
-    offsets.sort(key=lambda x: x[0])
-    seen_offsets = set()
+    # Detect duplicate or overlapping offsets per device.
+    offsets.sort(key=lambda x: (x[2], x[0]))  # sort by device then offset
+    device_map: Dict[str, List[Tuple[int, int]]] = {}
     for offset, size, device in offsets:
-        if offset in seen_offsets:
-            result.add_error(f"Duplicate offset {offset} for device {device}")
-        else:
-            seen_offsets.add(offset)
-        # Check overlap with previous chunk.
-    for i in range(1, len(offsets)):
-        prev_offset, prev_size, prev_dev = offsets[i - 1]
-        cur_offset, cur_size, cur_dev = offsets[i]
-        if cur_offset < prev_offset + prev_size:
-            result.add_error(
-                f"Overlapping chunks: {prev_dev}@{prev_offset}..{prev_offset+prev_size} overlaps {cur_dev}@{cur_offset}"
-            )
+        device_map.setdefault(device, []).append((offset, size))
+    for device, segs in device_map.items():
+        segs.sort(key=lambda x: x[0])
+        seen_offsets = set()
+        for offset, size in segs:
+            if offset in seen_offsets:
+                result.add_error(f"Duplicate offset {offset} for device {device}")
+            else:
+                seen_offsets.add(offset)
+        # Check gaps and overlaps within the same device.
+        for i in range(1, len(segs)):
+            prev_offset, prev_size = segs[i - 1]
+            cur_offset, cur_size = segs[i]
+            if cur_offset < prev_offset + prev_size:
+                result.add_error(
+                    f"Overlapping chunks: {device}@{prev_offset}..{prev_offset+prev_size} overlaps {device}@{cur_offset}"
+                )
+            elif cur_offset > prev_offset + prev_size:
+                result.add_error(
+                    f"Gap between chunks for {device}: {prev_offset+prev_size}..{cur_offset}"
+                )
 
     # Detect stray .gz files without receipts.
     for gz_path in base.glob("*.gz"):
-        if not base.glob(f"{gz_path.stem}.json"):
+        if not (base / f"{gz_path.stem}.json").is_file():
             result.add_error(f"Unmatched gzip file {gz_path.name} has no receipt")
 
     # Print concise summary

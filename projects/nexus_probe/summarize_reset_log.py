@@ -53,24 +53,57 @@ def summarize_reset_log(path: str | Path) -> Dict[str, Dict[str, float | int]]:
     The returned dictionary maps boot identifiers to a dictionary with
     ``sample_count`` and ``peak_power`` keys.
     """
-    summary: Dict[str, Dict[str, float | int]] = {}
+    # Store intermediate per‑boot aggregates
+    summary: Dict[str, Dict[str, object]] = {}
     counts: Dict[str, int] = defaultdict(int)
     peaks: Dict[str, float] = defaultdict(float)
+    temps: Dict[str, float] = defaultdict(float)
+    over_380: Dict[str, int] = defaultdict(int)
+    powers: Dict[str, list[float]] = defaultdict(list)
+    first_ts: Dict[str, float] = {}
+    last_ts: Dict[str, float] = {}
 
     # Open the file using a context manager to avoid ResourceWarnings.
     with Path(path).open("r", encoding="utf-8") as f:
         for line in f:
-            parsed = _parse_line(line)
-            if parsed is None:
+            try:
+                record = json.loads(line)
+            except Exception:
                 continue
-            boot_id, power = parsed
+            boot_id = record.get("boot_id")
+            t = record.get("time")
+            gpu = record.get("gpu")
+            if not isinstance(boot_id, str) or not isinstance(gpu, list) or len(gpu) < 2:
+                continue
+            try:
+                temp = float(gpu[0])
+                power = float(gpu[1])
+            except Exception:
+                continue
+            # Track timestamps if present
+            if isinstance(t, (int, float)):
+                if boot_id not in first_ts:
+                    first_ts[boot_id] = t
+                last_ts[boot_id] = t
+            # Update counts and aggregates
             counts[boot_id] += 1
             peaks[boot_id] = max(peaks[boot_id], power)
+            temps[boot_id] = max(temps[boot_id], temp)
+            if power >= 380:
+                over_380[boot_id] += 1
+            powers[boot_id].append(power)
+            # Missing timestamps remain unknown rather than becoming None by assignment.
 
     for boot_id in counts:
         summary[boot_id] = {
             "sample_count": counts[boot_id],
             "peak_power": peaks[boot_id],
+            "last_power": powers[boot_id][-1] if powers[boot_id] else None,
+            "max_temperature": temps[boot_id],
+            "samples_over_380": over_380[boot_id],
+            "last_six_powers": powers[boot_id][-6:] if len(powers[boot_id]) >= 6 else powers[boot_id],
+            "first_time": first_ts.get(boot_id),
+            "last_time": last_ts.get(boot_id),
         }
     return summary
 

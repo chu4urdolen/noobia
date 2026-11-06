@@ -32,6 +32,25 @@ class TestSummarizeResetLog(unittest.TestCase):
         self.assertEqual((summary["bootA"]["sample_count"], summary["bootA"]["peak_power"]), (2, 80.0))
         self.assertEqual((summary["bootB"]["sample_count"], summary["bootB"]["peak_power"]), (1, 60.5))
 
+    def test_extended_summary(self):
+        """Verify that additional aggregate fields are present.
+        The synthetic data only covers a few samples, so many fields will be
+        trivial, but the keys must exist and be of the expected type.
+        """
+        summary = summarize_reset_log(self.path)
+        for bid in ("bootA", "bootB"):
+            data = summary[bid]
+            self.assertIn("last_power", data)
+            self.assertIn("max_temperature", data)
+            self.assertIn("samples_over_380", data)
+            self.assertIn("last_six_powers", data)
+            self.assertIn("first_time", data)
+            self.assertIn("last_time", data)
+        self.assertEqual(summary["bootA"]["last_power"], 80.0)
+        self.assertEqual(summary["bootA"]["max_temperature"], 52.0)
+        self.assertEqual(summary["bootA"]["samples_over_380"], 0)
+        self.assertIsNone(summary["bootA"]["first_time"])
+
     def test_parse_line(self):
         # Valid line
         line = json.dumps({"boot_id": "X", "gpu": [0, 42.3, 0, 0]})

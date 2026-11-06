@@ -54,18 +54,18 @@ Each task still gets a fresh independent check and Git commit.
 `start` automatically sends recent visible Aria/Noob dialogue from the current
 Codex session plus the current project `AGENTS.md`, code map, and
 [`DUSHICH-SHARED-CONTEXT.md`](DUSHICH-SHARED-CONTEXT.md). It caps the dialogue at
-40 KB, recent visible tool activity at 20 KB, and the whole packet at 100 KB;
+160 KB, recent visible tool activity at 80 KB, and the whole packet at 320 KB;
 older material is labeled as omitted. The command
 fails if it cannot identify the Aria session; supply `--session-id` if needed.
 `--context-file` adds selected project notes; repeat
 `--include /noobia/path/to/file` to attach selected text files. A continued
 thread receives only dialogue and tool activity added since the previous handoff.
 Recent visible Aria tool calls and their results are included as excerpts,
-bounded to 20 KB. Long individual calls are truncated and recognizable key
+bounded to 80 KB. Long individual calls are truncated and recognizable key
 material is redacted. Private reasoning and nonvisible context are excluded.
 `brief` shows the task and context handed to Dushich's runner; `events` prints
 his full private Codex event stream for debugging. The Ollama model has its own
-64K context limit, so very long histories still need a maintained project
+131K context limit, so very long histories still need a maintained project
 brief. This MCP server is loaded
 by newly started Aria Codex CLI sessions; this already-running session can use
 the terminal bridge directly. The MCP registration is in

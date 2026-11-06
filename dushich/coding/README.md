@@ -60,8 +60,12 @@ work must be performed by an authorized human outside this launcher. The
 launcher removes inherited API credentials, pins Ollama and `gpt-oss:20b`, and
 refuses to run when local Ollama is down.
 
-The 64K context is requested in both Ollama and Codex. Confirm actual allocation
+The 131K context is requested in both Ollama and Codex. Confirm actual allocation
 with `ollama ps` after the model loads. Ollama runs only on `127.0.0.1:11434`.
+The authenticated Noobia LAN endpoint on port 8080 forwards inference to this
+same Ollama runner, so Dushich and LAN clients share one GPU model copy. The
+proxy warms the model at boot and keeps it loaded. See
+`docs/NEXUS-INFERENCE.md` for measured VRAM use and service controls.
 The Ollama service override source is `ollama-override.conf` in this directory.
 The `gpt-oss:20b` tag is built from the already verified local GGUF conversion
 of OpenAI's weights, avoiding a second large network download. The model source

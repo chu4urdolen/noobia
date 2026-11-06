@@ -40,6 +40,29 @@ import gzip
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
+def _load_receipt(path: pathlib.Path) -> Dict:
+    """Parse and validate a receipt JSON.
+
+    Raises :class:`ValueError` if the file cannot be parsed or required
+    fields are missing or malformed.
+    """
+    try:
+        data = json.loads(path.read_text())
+    except Exception as exc:  # pragma: no cover - defensive
+        raise ValueError(f"Failed to parse receipt {path}: {exc}")
+    required = {"device", "offset", "raw_size", "raw_sha256"}
+    if not required <= data.keys():  # pragma: no cover - defensive
+        missing = required - data.keys()
+        raise ValueError(f"Receipt {path} missing fields: {missing}")
+    if (type(data["offset"]) is not int or data["offset"] < 0
+            or type(data["raw_size"]) is not int or data["raw_size"] <= 0):
+        raise ValueError(f"Receipt {path} has invalid offset or raw_size")
+    if not isinstance(data["device"], str) or not data["device"]:
+        raise ValueError(f"Receipt {path} has invalid device")
+    if not isinstance(data["raw_sha256"], str):
+        raise ValueError(f"Receipt {path} has invalid raw_sha256")
+    return data
+
 __all__ = ["verify_directory", "AuditResult"]
 
 
@@ -63,10 +86,13 @@ class AuditResult:
     total_raw_bytes: int = 0
     errors: List[str] = None
     valid: bool = True
+    device_progress: Dict[str, Dict[str, int]] = None
 
     def __post_init__(self):
         if self.errors is None:
             self.errors = []
+        if self.device_progress is None:
+            self.device_progress = {}
 
     def add_error(self, msg: str) -> None:
         self.errors.append(msg)
@@ -74,6 +100,9 @@ class AuditResult:
 
     def __str__(self) -> str:
         lines = [f"Audit summary: {self.total_chunks} chunks, {self.total_raw_bytes} raw bytes"]
+        for device, progress in sorted(self.device_progress.items()):
+            state = "complete" if progress["complete"] else "partial"
+            lines.append(f"{device}: {progress['saved_bytes']}/{progress['total_bytes']} bytes ({state})")
         if self.errors:
             lines.append("Errors:")
             lines.extend(f"  - {e}" for e in self.errors)
@@ -82,16 +111,8 @@ class AuditResult:
         return "\n".join(lines)
 
 
-def _load_receipt(path: pathlib.Path) -> Dict:
-    try:
-        data = json.loads(path.read_text())
-    except Exception as exc:  # pragma: no cover - defensive
-        raise ValueError(f"Failed to parse receipt {path}: {exc}")
-    required = {"device", "offset", "raw_size", "raw_sha256"}
-    if not required <= data.keys():  # pragma: no cover - defensive
-        missing = required - data.keys()
-        raise ValueError(f"Receipt {path} missing fields: {missing}")
-    return data
+    # The following helper was mistakenly nested in the dataclass.
+    # It is now defined at module level for correct access.
 
 
 def _verify_chunk(gzip_path: pathlib.Path, receipt: Dict) -> Tuple[int, str]:
@@ -197,6 +218,49 @@ def verify_directory(dir_path: str | pathlib.Path) -> AuditResult:
     for gz_path in base.glob("*.gz"):
         if not (base / f"{gz_path.stem}.json").is_file():
             result.add_error(f"Unmatched gzip file {gz_path.name} has no receipt")
+
+    # ---- Plan‑aware progress calculation ----
+    # Load plan files and compute progress for each device.
+    plan_info: Dict[str, Dict] = {}
+    for plan_path in base.glob("*-plan.json"):
+        try:
+            plan_data = json.loads(plan_path.read_text())
+        except (OSError, ValueError) as exc:
+            result.add_error(f"Invalid plan {plan_path.name}: {exc}")
+            continue
+        if not isinstance(plan_data, dict):
+            result.add_error(f"Invalid plan {plan_path.name}: expected object")
+            continue
+        size = plan_data.get("size")
+        chunk_size = plan_data.get("chunk_size")
+        device_name = plan_path.stem.rsplit("-", 1)[0]
+        if (type(size) is not int or size <= 0 or type(chunk_size) is not int
+                or chunk_size <= 0 or plan_data.get("device", device_name) != device_name):
+            result.add_error(f"Invalid plan {plan_path.name}: size, chunk_size or device")
+            continue
+        plan_info[device_name] = plan_data
+
+    for device, plan in plan_info.items():
+        segs = device_map.get(device, [])
+        segs.sort(key=lambda x: x[0])
+        saved = 0
+        expected = plan.get("size", 0)
+        # Accumulate contiguous bytes starting from offset 0
+        if segs and segs[0][0] == 0:
+            saved += segs[0][1]
+            for i in range(1, len(segs)):
+                prev_offset, prev_size = segs[i - 1]
+                cur_offset, cur_size = segs[i]
+                if cur_offset != prev_offset + prev_size:
+                    break
+                saved += cur_size
+        if saved > expected:
+            result.add_error(f"Chunks for {device} exceed plan size {expected}")
+        result.device_progress[device] = {
+            "saved_bytes": saved,
+            "total_bytes": expected,
+            "complete": saved == expected,
+        }
 
     # Print concise summary
     print(result, file=sys.stdout)

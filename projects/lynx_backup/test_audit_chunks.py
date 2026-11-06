@@ -103,7 +103,7 @@ class TestAuditChunks(unittest.TestCase):
 
     def test_plan_file_ignored(self):
         """Plan JSON files should be ignored and not counted as receipts."""
-        (self.dir / "sda-plan.json").write_text("{\"plan\":true}")
+        (self.dir / "sda-plan.json").write_text(json.dumps({"device": "sda", "size": 1024, "chunk_size": 1024}))
         _make_chunk(self.dir, "sda", 0, b"a" * 1024)
         result = verify_directory(self.dir)
         self.assertTrue(result.valid)
@@ -134,6 +134,61 @@ class TestAuditChunks(unittest.TestCase):
         result = verify_directory(self.dir)
         self.assertFalse(result.valid)
         self.assertTrue(any("Gap between chunks" in e for e in result.errors))
+
+    # New plan‑aware tests -------------------------------------------------
+    def _write_plan(self, device: str, size: int, chunk_size: int):
+        plan_path = self.dir / f"{device}-plan.json"
+        plan_path.write_text(json.dumps({"size": size, "chunk_size": chunk_size}))
+
+    def test_plan_complete_two_chunks(self):
+        """Two contiguous chunks cover the plan size – progress shows complete."""
+        self._write_plan("sda", 1536, 1024)
+        _make_chunk(self.dir, "sda", 0, b"a" * 1024)
+        _make_chunk(self.dir, "sda", 1024, b"b" * 512)
+        result = verify_directory(self.dir)
+        self.assertTrue(result.valid)
+        self.assertIn("sda", result.device_progress)
+        self.assertTrue(result.device_progress["sda"]["complete"])
+        self.assertEqual(result.device_progress["sda"]["saved_bytes"], 1536)
+        self.assertEqual(result.device_progress["sda"]["total_bytes"], 1536)
+
+    def test_plan_partial_single_chunk(self):
+        """Single chunk less than plan size – progress incomplete."""
+        self._write_plan("sda", 2048, 1024)
+        _make_chunk(self.dir, "sda", 0, b"a" * 1024)
+        result = verify_directory(self.dir)
+        self.assertTrue(result.valid)
+        self.assertFalse(result.device_progress["sda"]["complete"])
+        self.assertEqual(result.device_progress["sda"]["saved_bytes"], 1024)
+        self.assertEqual(result.device_progress["sda"]["total_bytes"], 2048)
+
+    def test_nonzero_first_offset(self):
+        """Plan present but first chunk does not start at zero – error reported."""
+        self._write_plan("sda", 2048, 1024)
+        _make_chunk(self.dir, "sda", 512, b"a" * 1024)
+        result = verify_directory(self.dir)
+        self.assertFalse(result.valid)
+        self.assertTrue(any("First chunk" in e for e in result.errors))
+
+    def test_malformed_plan_is_error(self):
+        (self.dir / "sda-plan.json").write_text(json.dumps({"device": "sda", "size": -1, "chunk_size": 1024}))
+        result = verify_directory(self.dir)
+        self.assertFalse(result.valid)
+        self.assertTrue(any("Invalid plan" in e for e in result.errors))
+
+    def test_malformed_receipt_offset(self):
+        """Receipt contains non‑int offset – error reported."""
+        self._write_plan("sda", 1024, 1024)
+        # Write a valid chunk
+        _make_chunk(self.dir, "sda", 0, b"a" * 1024)
+        # Corrupt the receipt offset to a string
+        receipt_path = self.dir / "chunk-0.json"
+        data = json.loads(receipt_path.read_text())
+        data["offset"] = "zero"
+        receipt_path.write_text(json.dumps(data))
+        result = verify_directory(self.dir)
+        self.assertFalse(result.valid)
+        self.assertTrue(any("invalid offset or raw_size" in e for e in result.errors))
 
 
 if __name__ == "__main__":

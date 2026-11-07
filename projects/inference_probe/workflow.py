@@ -169,21 +169,25 @@ def schedule(tasks: List[Task], workers: int, resources: Dict[str, int]) -> Dict
     while remaining:
         # Try to start as many ready tasks as possible
         started = False
+        # Determine tasks that can start now based on deps completion
+        startable = []
         for tid in list(ready):
             task = next(t for t in tasks if t.id == tid)
-            # Check worker slot and resources
-            if len(busy) >= workers:
-                break
+            dep_ends = [schedule[d]["end"] for d in task.deps]
+            earliest = max(dep_ends) if dep_ends else 0
+            if earliest <= current_time and len(busy) < workers and all(avail.get(r, 0) >= amt for r, amt in task.resources.items()):
+                startable.append((tid, earliest))
+        for tid, _ in startable:
+            task = next(t for t in tasks if t.id == tid)
+            # re-evaluate resources after previous allocations in this round
             if all(avail.get(r, 0) >= amt for r, amt in task.resources.items()):
-                # start task
                 start = current_time
                 end = start + task.duration
                 schedule[tid] = {"start": start, "end": end}
-                # allocate resources
                 for r, amt in task.resources.items():
                     avail[r] -= amt
                 busy.append((end, tid))
-                busy.sort()  # keep by end time
+                busy.sort()
                 ready.remove(tid)
                 remaining.remove(tid)
                 started = True
@@ -200,20 +204,36 @@ def schedule(tasks: List[Task], workers: int, resources: Dict[str, int]) -> Dict
                 raise SchedulerError("Deadlock: no tasks can be scheduled")
     makespan = max(v["end"] for v in schedule.values()) if schedule else 0
     # Compute critical path: longest path in DAG using DP
+    # First, obtain a true topological order via Kahn's algorithm
+    indeg = {t.id: 0 for t in tasks}
+    for t in tasks:
+        for d in t.deps:
+            indeg[t.id] += 1
+    topo = []
+    queue = deque([tid for tid, d in indeg.items() if d == 0])
+    while queue:
+        cur = queue.popleft()
+        topo.append(cur)
+        for nxt in rev_map[cur]:
+            indeg[nxt] -= 1
+            if indeg[nxt] == 0:
+                queue.append(nxt)
+    if len(topo) != len(tasks):
+        raise SchedulerError("Cycle detected during critical path calculation")
+
     longest: Dict[str, int] = {t.id: 0 for t in tasks}
     prev: Dict[str, str | None] = {t.id: None for t in tasks}
-    for t in sorted_tasks:
+    for tid in topo:
+        task = next(t for t in tasks if t.id == tid)
         max_dep = 0
         best_prev = None
-        for d in t.deps:
+        for d in task.deps:
             if longest[d] > max_dep:
                 max_dep = longest[d]
                 best_prev = d
-        longest[t.id] = max_dep + t.duration
-        prev[t.id] = best_prev
+        longest[tid] = max_dep + task.duration
+        prev[tid] = best_prev
     max_end = max(longest.values()) if longest else 0
-    # backtrack one longest path
-    # pick a task with longest == max_end
     end_task = max(longest, key=lambda k: longest[k])
     crit_path_rev = []
     cur = end_task

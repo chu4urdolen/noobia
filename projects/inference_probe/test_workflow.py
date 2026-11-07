@@ -82,6 +82,38 @@ class TestWorkflow(unittest.TestCase):
         self.assertEqual(out["makespan"], 3)
         self.assertEqual(out["critical_path"], ["A", "B", "C"])
 
+    def test_topological_critical_path_order(self):
+        # A depends on Z; Z should come first in critical path
+        dag = {
+            "tasks": [
+                {"id": "A", "duration": 2, "resources": {"cpu": 1}, "deps": ["Z"]},
+                {"id": "Z", "duration": 3, "resources": {"cpu": 1}, "deps": []},
+            ],
+            "workers": 1,
+            "resources": {"cpu": 1},
+        }
+        res = self.run_dag(dag, workers=1)
+        out = json.loads(res.stdout)
+        self.assertEqual(out["makespan"], 5)
+        self.assertEqual(out["critical_path"], ["Z", "A"])
+
+    def test_dependency_completion(self):
+        # C depends on A; C cannot start until A finishes
+        dag = {
+            "tasks": [
+                {"id": "A", "duration": 10, "resources": {"cpu": 1}, "deps": []},
+                {"id": "B", "duration": 1, "resources": {"cpu": 1}, "deps": []},
+                {"id": "C", "duration": 1, "resources": {"cpu": 1}, "deps": ["A"]},
+            ],
+            "workers": 2,
+            "resources": {"cpu": 2},
+        }
+        res = self.run_dag(dag, workers=2)
+        out = json.loads(res.stdout)
+        self.assertEqual(out["makespan"], 11)
+        # C starts after A finishes at 10
+        self.assertEqual(out["schedule"]["C"]["start"], 10)
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

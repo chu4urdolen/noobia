@@ -1,0 +1,88 @@
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+
+
+SCRIPT = os.path.join("projects", "inference_probe", "workflow.py")
+
+
+class TestWorkflow(unittest.TestCase):
+    def run_dag(self, dag: dict, workers: int = 1) -> subprocess.CompletedProcess:
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as f:
+            json.dump(dag, f)
+            f_path = f.name
+        args = [sys.executable, SCRIPT, f_path, "--workers", str(workers)]
+        result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        os.unlink(f_path)
+        return result
+
+    def test_cycle(self):
+        dag = {
+            "tasks": [
+                {"id": "A", "duration": 1, "deps": ["B"]},
+                {"id": "B", "duration": 1, "deps": ["A"]},
+            ],
+            "workers": 1,
+            "resources": {"cpu": 1},
+        }
+        res = self.run_dag(dag)
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("Cycle detected", res.stderr)
+
+    def test_resource_conflict(self):
+        dag = {
+            "tasks": [
+                {"id": "A", "duration": 2, "resources": {"cpu": 2}, "deps": []},
+                {"id": "B", "duration": 1, "resources": {"cpu": 2}, "deps": []},
+            ],
+            "workers": 2,
+            "resources": {"cpu": 2},
+        }
+        res = self.run_dag(dag, workers=2)
+        self.assertEqual(res.returncode, 0)
+        out = json.loads(res.stdout)
+        self.assertEqual(out["makespan"], 3)
+        # A must finish before B starts (or vice versa)
+        a_end = out["schedule"]["A"]["end"]
+        b_start = out["schedule"]["B"]["start"]
+        b_end = out["schedule"]["B"]["end"]
+        a_start = out["schedule"]["A"]["start"]
+        self.assertTrue(a_end <= b_start or b_end <= a_start)
+
+    def test_tie_breaking(self):
+        dag = {
+            "tasks": [
+                {"id": "A", "duration": 1, "resources": {"cpu": 1}, "deps": []},
+                {"id": "B", "duration": 1, "resources": {"cpu": 1}, "deps": []},
+            ],
+            "workers": 2,
+            "resources": {"cpu": 2},
+        }
+        res = self.run_dag(dag, workers=2)
+        out = json.loads(res.stdout)
+        # both start at 0 because workers allow
+        self.assertEqual(out["schedule"]["A"]["start"], 0)
+        self.assertEqual(out["schedule"]["B"]["start"], 0)
+
+    def test_critical_path(self):
+        dag = {
+            "tasks": [
+                {"id": "A", "duration": 1, "resources": {"cpu": 1}, "deps": []},
+                {"id": "B", "duration": 1, "resources": {"cpu": 1}, "deps": ["A"]},
+                {"id": "C", "duration": 1, "resources": {"cpu": 1}, "deps": ["B"]},
+            ],
+            "workers": 2,
+            "resources": {"cpu": 2},
+        }
+        res = self.run_dag(dag, workers=2)
+        out = json.loads(res.stdout)
+        self.assertEqual(out["makespan"], 3)
+        self.assertEqual(out["critical_path"], ["A", "B", "C"])
+
+
+if __name__ == "__main__":  # pragma: no cover
+    unittest.main()
+

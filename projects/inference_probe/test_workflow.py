@@ -114,6 +114,23 @@ class TestWorkflow(unittest.TestCase):
         # C starts after A finishes at 10
         self.assertEqual(out["schedule"]["C"]["start"], 10)
 
+    def test_worker_capacity(self):
+        # three independent tasks with 1 worker
+        dag = {
+            "tasks": [
+                {"id": "T1", "duration": 1, "resources": {"cpu": 1}, "deps": []},
+                {"id": "T2", "duration": 1, "resources": {"cpu": 1}, "deps": []},
+                {"id": "T3", "duration": 1, "resources": {"cpu": 1}, "deps": []},
+            ],
+            "workers": 1,
+            "resources": {"cpu": 1},
+        }
+        res = self.run_dag(dag, workers=1)
+        out = json.loads(res.stdout)
+        self.assertEqual(out["makespan"], 3)
+        starts = [out["schedule"][t]["start"] for t in ["T1","T2","T3"]]
+        self.assertEqual(sorted(starts), [0,1,2])
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

@@ -179,7 +179,6 @@ def schedule(tasks: List[Task], workers: int, resources: Dict[str, int]) -> Dict
                 startable.append((tid, earliest))
         for tid, _ in startable:
             task = next(t for t in tasks if t.id == tid)
-            # re-evaluate resources after previous allocations in this round
             if all(avail.get(r, 0) >= amt for r, amt in task.resources.items()):
                 start = current_time
                 end = start + task.duration
@@ -191,6 +190,9 @@ def schedule(tasks: List[Task], workers: int, resources: Dict[str, int]) -> Dict
                 ready.remove(tid)
                 remaining.remove(tid)
                 started = True
+                # Respect worker limit after each allocation
+                if len(busy) >= workers:
+                    break
         if not started:
             if busy:
                 next_end = busy[0][0]

@@ -131,6 +131,23 @@ class TestWorkflow(unittest.TestCase):
         starts = [out["schedule"][t]["start"] for t in ["T1","T2","T3"]]
         self.assertEqual(sorted(starts), [0,1,2])
 
+    def test_empty_dag_cli(self):
+        """CLI invocation with an empty DAG should succeed and return zero.
+
+        The workflow script is expected to handle an empty task list
+        gracefully.  This test writes an empty ``tasks`` array to a temp
+        file, runs the script, and verifies that the JSON output contains
+        ``makespan`` of ``0``, an empty ``critical_path`` list, and an
+        empty ``schedule`` mapping.
+        """
+        dag = {"tasks": [], "workers": 1, "resources": {"cpu": 1}}
+        result = self.run_dag(dag)
+        self.assertEqual(result.returncode, 0)
+        out = json.loads(result.stdout)
+        self.assertEqual(out["makespan"], 0)
+        self.assertEqual(out["critical_path"], [])
+        self.assertEqual(out["schedule"], {})
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

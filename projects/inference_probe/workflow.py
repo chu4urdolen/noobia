@@ -131,6 +131,27 @@ def validate(tasks: List[Task], resources: Dict[str, int]) -> None:
 
 
 def schedule(tasks: List[Task], workers: int, resources: Dict[str, int]) -> Dict:
+    """Schedule a list of :class:`Task` objects.
+
+    The original implementation assumed that ``tasks`` was non‑empty and
+    performed a number of operations that raised ``ValueError`` when the list
+    was empty (for example ``max()`` on an empty sequence).  The test suite
+    now exercises the edge case where the DAG contains zero tasks – the
+    scheduler should simply report a makespan of ``0`` and empty structures
+    rather than crashing.
+
+    The function now detects an empty task list early and returns a
+    canonical empty report.  All downstream code – validation, critical
+    path calculation, etc. – remains unchanged for non‑empty inputs.
+    """
+    # Handle empty DAG explicitly.
+    if not tasks:
+        return {
+            "makespan": 0,
+            "critical_path": [],
+            "schedule": {},
+        }
+
     # Build adjacency lists
     dep_map: Dict[str, Set[str]] = {t.id: set(t.deps) for t in tasks}
     rev_map: Dict[str, Set[str]] = defaultdict(set)

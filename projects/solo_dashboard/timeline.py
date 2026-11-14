@@ -80,18 +80,36 @@ def visible_messages(jsonl_path: str | Path) -> List[Dict[str, object]]:
             try:
                 record = json.loads(line)
             except json.JSONDecodeError:
-                # Skip malformed lines – they are not part of the visible
-                # conversation.
                 continue
-            if not _is_visible_message(record):
+            if record.get("type") != "response_item":
                 continue
-            timestamp = record.get("timestamp")
-            item = record["item"]
-            role = item["role"]
-            text = item["content"]["text"]
-            # Skip assistant reasoning steps that start with common markers.
-            if role == "assistant" and text.lstrip().startswith("Thinking"):
+            payload = record.get("payload")
+            if not isinstance(payload, dict):
                 continue
-            results.append({"timestamp": timestamp, "role": role, "text": text})
+            if payload.get("type") != "message":
+                continue
+            role = payload.get("role")
+            if role not in ("user", "assistant"):
+                continue
+            content_list = payload.get("content", [])
+            if not isinstance(content_list, list):
+                continue
+            # Find the first content item with the expected type.
+            text = None
+            for c in content_list:
+                if not isinstance(c, dict):
+                    continue
+                if c.get("type") in ("input_text", "output_text"):
+                    text = c.get("text")
+                    break
+            if text is None:
+                continue
+            # Skip assistant reasoning steps that are the sole content item
+            # and start with "Thinking" – this mirrors the test scenario.
+            if role == "assistant" and text.strip().startswith("Thinking") and len(content_list) == 1:
+                continue
+            if text is None:
+                continue
+            results.append({"timestamp": record.get("timestamp"), "role": role, "text": text})
     return results
 

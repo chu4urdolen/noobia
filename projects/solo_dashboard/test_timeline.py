@@ -38,19 +38,19 @@ class TestVisibleMessages(unittest.TestCase):
             {
                 "type": "response_item",
                 "timestamp": 1,
-                "item": {
+                "payload": {
                     "type": "message",
                     "role": "user",
-                    "content": {"type": "input_text", "text": "Hi"},
+                    "content": [{"type": "input_text", "text": "Hi"}],
                 },
             },
             {
                 "type": "response_item",
                 "timestamp": 2,
-                "item": {
+                "payload": {
                     "type": "message",
                     "role": "assistant",
-                    "content": {"type": "output_text", "text": "Hello"},
+                    "content": [{"type": "output_text", "text": "Hello"}],
                 },
             },
         ]
@@ -71,30 +71,28 @@ class TestVisibleMessages(unittest.TestCase):
             {
                 "type": "response_item",
                 "timestamp": 1,
-                "item": {
+                "payload": {
                     "type": "message",
                     "role": "assistant",
-                    "content": {"type": "output_text", "text": "Step 1"},
+                    "content": [{"type": "output_text", "text": "Step 1"}],
                 },
             },
             {
-                # A tool call – should be ignored
                 "type": "response_item",
                 "timestamp": 2,
-                "item": {
+                "payload": {
                     "type": "tool_call",
                     "role": "assistant",
-                    "content": {"type": "output_text", "text": "Calling"},
+                    "content": [{"type": "output_text", "text": "Calling"}],
                 },
             },
             {
-                # A reasoning step – should be ignored
                 "type": "response_item",
                 "timestamp": 3,
-                "item": {
+                "payload": {
                     "type": "message",
                     "role": "assistant",
-                    "content": {"type": "output_text", "text": "Thinking"},
+                    "content": [{"type": "output_text", "text": "Thinking"}],
                 },
             },
         ]
@@ -114,25 +112,28 @@ class TestVisibleMessages(unittest.TestCase):
             {
                 "type": "response_item",
                 "timestamp": 1,
-                "item": {
+                "payload": {
                     "type": "message",
                     "role": "user",
-                    "content": {"type": "input_text", "text": "First"},
+                    "content": [{"type": "input_text", "text": "First"}],
                 },
             },
             {
                 "type": "response_item",
                 "timestamp": 2,
-                # Non‑public – ignored
-                "item": {"type": "tool_call", "role": "assistant", "content": {"type": "output_text", "text": "Tool"}},
+                "payload": {
+                    "type": "tool_call",
+                    "role": "assistant",
+                    "content": [{"type": "output_text", "text": "Tool"}],
+                },
             },
             {
                 "type": "response_item",
                 "timestamp": 3,
-                "item": {
+                "payload": {
                     "type": "message",
                     "role": "assistant",
-                    "content": {"type": "output_text", "text": "Second"},
+                    "content": [{"type": "output_text", "text": "Second"}],
                 },
             },
         ]

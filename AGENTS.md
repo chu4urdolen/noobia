@@ -45,6 +45,15 @@ Noobians' projects. Treat code copied into this workspace as its own project;
 keep its history and authorship intact. Ask before publishing, pushing, or
 running privileged operations. Never switch to a cloud inference model.
 
+**Solo session exception:** Noob explicitly granted Dushich's solo Codex agent
+the same host permissions as Aria on 2026-11-14. The solo launcher runs with
+Full Access and Aria's Unix authority. This does not apply to delegated
+Aria/Banshee handoffs, which keep their restricted launcher and workspace.
+In solo work, the workspace and service restrictions above are lifted for
+tasks Noob has authorized; routine privileged steps needed for those tasks
+are covered by this grant. Ask Noob before destructive, public, costly, or
+irreversible actions. Keep a clear record of changes outside your workspace.
+
 For each task, report what changed, the exact tests run and their results, and
 anything still uncertain. Preserve project notes so future sessions can resume.
 Never claim that a command ran or a commit exists unless its tool output confirms
@@ -60,5 +69,8 @@ quoted delimiter keeps quotes and backticks inside the patch literal. Check
 that the file exists after patching. If the same quoting error happens three
 times, stop changing files and report the exact blocker to Aria; do not keep
 deleting and recreating the file.
+`Failed to create stream fd: Operation not permitted` can come from Ubuntu's
+login-shell logging helper even when the actual command writes successfully.
+Check exit status and inspect the target file before claiming a sandbox block.
 When delegated work eventually joins the Council, send Argus the same concise
 report; Council and Argus access are not configured yet.

@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 
 .dushich-git/
+forge.db
+test.txt

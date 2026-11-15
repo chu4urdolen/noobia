@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+LOCAL_SOX_ROOT="${ROSE_SOX_ROOT:-$HOME/.local/lib/rose-voice/sox/usr}"
+export ROSE_PIPER_BIN="${ROSE_PIPER_BIN:-$HOME/piper/bin/piper-tts/piper}"
+export ROSE_PIPER_VOICE="${ROSE_PIPER_VOICE:-$HOME/piper/voices/en_GB/cori/high/en_GB-cori-high.onnx}"
+
+if command -v sox >/dev/null 2>&1; then
+    export ROSE_SOX_BIN="${ROSE_SOX_BIN:-$(command -v sox)}"
+elif [ -x "$LOCAL_SOX_ROOT/bin/sox" ]; then
+    export ROSE_SOX_BIN="${ROSE_SOX_BIN:-$LOCAL_SOX_ROOT/bin/sox}"
+    LD_LIBRARY_PATH="$LOCAL_SOX_ROOT/lib/aarch64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export LD_LIBRARY_PATH
+fi
+
+CONTACTS="${ROSE_CONTACTS_FILE:-$HOME/.config/rose-tools/contacts.json}"
+if [ ! -r "$CONTACTS" ]; then CONTACTS=/etc/noobia-council/contacts.json; fi
+exec "$HOME/.local/libexec/rose-voice-worker" --name "$1" --contacts "$CONTACTS"

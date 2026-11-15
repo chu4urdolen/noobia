@@ -1,0 +1,2 @@
+The Council can carry artifacts as well as words.
+This file is used to verify authenticated, checksummed, atomic delivery.

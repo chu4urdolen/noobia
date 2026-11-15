@@ -1,0 +1,28 @@
+# Iris diagnostics
+
+Diagnostics are kept as source and scripts. Generated binaries and result logs
+stay local. The current attached-hardware smoke test is:
+
+```sh
+./current_hardware_ble.sh [CONFIG]
+```
+
+It exercises BLE, both external LEDs, DHT11, the photoresistor ADC, IR
+loopback, and ultrasonic ranging. Defaults come from
+`../tools/iris-tools.conf`; individual commands also accept their values from
+that file.
+`uart_raw_console.c` is a minimal Linux serial panic/log capture utility used
+when BLE transport failures need an independent trace. Build locally with:
+
+```sh
+cc -O2 -Wall -Wextra -o uart_raw_console uart_raw_console.c
+```
+
+Do not commit the generated binary.
+See `MIC_RISE_20260923.md` for the rolling microphone detector hardware test.
+See `VM_AUTORESTORE_20260925.md` for the RUN/STOP/RESET persistence test.
+
+## Boot self-test
+
+See [BOOT_SELF_TEST.md](BOOT_SELF_TEST.md) for the common runner, Iris test
+policies, recovery limits and the `irisctl self-test` command.

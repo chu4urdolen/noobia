@@ -1,0 +1,5 @@
+[
+  {"name":"Noob","role":"human","host":"127.0.0.1","port":48300,"shared_key":"test-noob-key"},
+  {"name":"Aria","role":"ai","host":"127.0.0.1","port":48301,"shared_key":"test-nexus-key","arbiter_priority":10},
+  {"name":"Argus","role":"ai","host":"127.0.0.1","port":48401,"shared_key":"test-argus-key","arbiter_priority":20}
+]

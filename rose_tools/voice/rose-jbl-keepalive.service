@@ -1,0 +1,18 @@
+[Unit]
+Description=Keep the JBL Bluetooth audio transport awake
+After=pipewire.service wireplumber.service bluetooth.target
+Wants=pipewire.service wireplumber.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/libexec/rose-jbl-keepalive
+Restart=always
+RestartSec=3s
+Environment=ROSE_JBL_TARGET=bluez_output.54_15_89_73_C2_95.1
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=default.target

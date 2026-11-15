@@ -1,0 +1,4 @@
+[
+  {"name":"Noob","role":"human","host":"127.0.0.1","port":48100,"shared_key":"test-noob-key"},
+  {"name":"Argus","role":"ai","host":"127.0.0.1","port":48201,"shared_key":"test-argus-key"}
+]

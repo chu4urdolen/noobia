@@ -1,0 +1,2 @@
+# Start the reconnect loop at boot, including before a user logs in.
+@reboot /home/noob/neo-reverse-ssh.sh

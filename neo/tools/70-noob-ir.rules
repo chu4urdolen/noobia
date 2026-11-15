@@ -1,0 +1,2 @@
+# Configure decoders when the CIR driver creates its receiver.
+ACTION=="add", SUBSYSTEM=="rc", KERNEL=="rc0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="noob-ir-protocols.service"

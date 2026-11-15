@@ -1,0 +1,4 @@
+# Linux USB host: CDC-ECM network interface plus CDC control console.
+CONFIG_TINYUSB_NET_MODE_ECM=y
+CONFIG_TINYUSB_CDC_ENABLED=y
+# CONFIG_TINYUSB_BTH_ENABLED is not set

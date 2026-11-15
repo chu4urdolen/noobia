@@ -1,0 +1,108 @@
+#if defined(ESP32)
+#include "services/Esp32CameraService.h"
+
+#include <Preferences.h>
+#include "services/Esp32SdMmcService.h"
+
+namespace {
+bool cameraReady = false;
+esp_err_t cameraInitError = ESP_OK;
+Preferences captureState;
+
+NativeResult writeCapture(const String &path, int32_t value) {
+  camera_fb_t *frame = esp_camera_fb_get();
+  if (!frame) return {false, 0, "frame acquisition failed"};
+  fs::FS &storage = Esp32SdMmcService::fs();
+  File output = storage.open(path, FILE_WRITE);
+  const size_t expected = frame->len;
+  const size_t written = output ? output.write(frame->buf, frame->len) : 0;
+  if (output) output.close();
+  esp_camera_fb_return(frame);
+  if (written != expected) {
+    storage.remove(path);
+    return {false, 0, "SD write failed"};
+  }
+  return {true, value, path};
+}
+}
+
+namespace Esp32CameraService {
+bool begin(const camera_config_t &config, const char *preferenceNamespace) {
+  cameraInitError = esp_camera_init(&config);
+  cameraReady = cameraInitError == ESP_OK;
+  captureState.begin(preferenceNamespace, false);
+  return cameraReady;
+}
+
+NativeResult capture(const int32_t *, uint8_t) {
+  if (!cameraReady)
+    return {false, int32_t(cameraInitError),
+            "camera init=" + String(esp_err_to_name(cameraInitError))};
+  if (!Esp32SdMmcService::ready()) return {false, 0, "SD unavailable"};
+  uint32_t sequence = captureState.getUInt("sequence", 0);
+  String path;
+  do {
+    path = Esp32SdMmcService::capturePath(++sequence);
+  } while (Esp32SdMmcService::fs().exists(path));
+
+  NativeResult result = writeCapture(path, static_cast<int32_t>(sequence));
+  if (!result.ok) return result;
+  captureState.putUInt("sequence", sequence);
+  return result;
+}
+
+NativeResult captureNamed(const char *prefix, uint32_t token) {
+  if (!cameraReady)
+    return {false, int32_t(cameraInitError),
+            "camera init=" + String(esp_err_to_name(cameraInitError))};
+  if (!Esp32SdMmcService::ready()) return {false, 0, "SD unavailable"};
+  if (!prefix || !prefix[0] || strlen(prefix) > 24)
+    return {false, 0, "invalid capture prefix"};
+  for (const char *value = prefix; *value; ++value)
+    if (!isAlphaNumeric(*value) && *value != '_' && *value != '-')
+      return {false, 0, "invalid capture prefix"};
+  const String path = String(Esp32SdMmcService::captureDirectory()) + "/" +
+                      prefix + String(token) + ".jpg";
+  if (Esp32SdMmcService::fs().exists(path))
+    return {false, int32_t(token), "capture exists"};
+  return writeCapture(path, static_cast<int32_t>(token));
+}
+
+NativeResult recordMjpeg(const int32_t *arguments, uint8_t count) {
+  if (!cameraReady)
+    return {false, int32_t(cameraInitError),
+            "camera init=" + String(esp_err_to_name(cameraInitError))};
+  if (!Esp32SdMmcService::ready()) return {false, 0, "SD unavailable"};
+  const int32_t seconds = count ? arguments[0] : 3;
+  const int32_t fps = count > 1 ? arguments[1] : 5;
+  if (seconds < 1 || seconds > 15 || fps < 1 || fps > 10)
+    return {false, 0, "usage: seconds(1..15) fps(1..10)"};
+  fs::FS &storage = Esp32SdMmcService::fs();
+  storage.mkdir("/video");
+  const String path = "/video/video_" + String(millis()) + ".mjpeg";
+  File output = storage.open(path, FILE_WRITE);
+  if (!output) return {false, 0, "cannot create MJPEG"};
+  const uint32_t interval = 1000 / fps;
+  const uint32_t wantedFrames = seconds * fps;
+  uint32_t frames = 0;
+  uint32_t nextFrame = millis();
+  while (frames < wantedFrames) {
+    const int32_t remaining = int32_t(nextFrame - millis());
+    if (remaining > 0) delay(remaining);
+    camera_fb_t *frame = esp_camera_fb_get();
+    if (!frame) break;
+    const size_t written = output.write(frame->buf, frame->len);
+    const size_t expected = frame->len;
+    esp_camera_fb_return(frame);
+    if (written != expected) break;
+    ++frames;
+    nextFrame += interval;
+  }
+  output.close();
+  if (frames != wantedFrames)
+    return {false, int32_t(frames), "incomplete MJPEG=" + path};
+  return {true, int32_t(frames), "path=" + path + " fps=" + String(fps)};
+}
+}
+
+#endif  // ESP32

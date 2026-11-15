@@ -1,0 +1,6 @@
+#include "contact_book.h"
+#include "network.h"
+#include "protocol.h"
+#include <stdio.h>
+#include <string.h>
+int main(int argc,char**argv){contact hub;network_socket socket;char line[512];const char*mode;if(argc!=2)return 2;mode=argv[1];memset(&hub,0,sizeof(hub));snprintf(hub.host,sizeof(hub.host),"127.0.0.1");hub.port=48500;snprintf(hub.shared_key,sizeof(hub.shared_key),"test-noob-key");if(network_start()||protocol_connect_identity(&hub,"Noob",&socket))return 1;if(!strcmp(mode,"digest"))snprintf(line,sizeof(line),"FILE Argus bad.bin 3 %064d\n",0);else if(!strcmp(mode,"interrupt"))snprintf(line,sizeof(line),"FILE Argus cut.bin 100 %064d\n",0);else if(!strcmp(mode,"unsafe"))snprintf(line,sizeof(line),"FILE Argus ../escape 0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n");else if(!strcmp(mode,"oversize"))snprintf(line,sizeof(line),"FILE Argus huge.bin 1048577 %064d\n",0);else return 2;if(network_send(socket,line)||network_read_line(socket,line,sizeof(line))<0)return 1;puts(line);if(strcmp(line,"READY")){network_close(socket);return 0;}if(!strcmp(mode,"interrupt")){network_send_bytes(socket,"cut",3);network_close(socket);return 0;}if(!strcmp(mode,"digest"))network_send_bytes(socket,"abc",3);if(network_read_line(socket,line,sizeof(line))>=0)puts(line);network_close(socket);return 0;}

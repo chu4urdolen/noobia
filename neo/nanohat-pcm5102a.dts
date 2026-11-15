@@ -1,0 +1,35 @@
+/dts-v1/;
+/plugin/;
+
+/* FriendlyElec NanoHat PCM5102A on the original H3 NanoPi NEO. */
+&i2s0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2s0_pins>;
+};
+
+&{/} {
+	pcm5102a: pcm5102a {
+		compatible = "ti,pcm5102a";
+		#sound-dai-cells = <0>;
+		status = "okay";
+	};
+
+	sound_pcm5102a: sound-pcm5102a {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "NanoHat PCM5102A";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,mclk-fs = <256>;
+		simple-audio-card,bitclock-master = <&cpu_dai>;
+		simple-audio-card,frame-master = <&cpu_dai>;
+		status = "okay";
+
+		cpu_dai: simple-audio-card,cpu {
+			sound-dai = <&i2s0>;
+		};
+
+		simple-audio-card,codec {
+			sound-dai = <&pcm5102a>;
+		};
+	};
+};

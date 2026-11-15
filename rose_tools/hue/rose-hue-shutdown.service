@@ -1,0 +1,12 @@
+[Unit]
+Description=Darken Rose's Hue lights during shutdown
+
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+RemainAfterExit=yes
+ExecStop=/home/rose/.local/bin/rose-hue-off
+TimeoutStopSec=10s
+
+[Install]
+WantedBy=default.target

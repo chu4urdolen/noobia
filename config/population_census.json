@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "purpose": "Noobia population census; independent of Council authentication",
+  "coverage": "Initial Iris entry; not yet a complete census of Noobia",
+  "noobs": [
+    {
+      "name": "Iris",
+      "kind": "ESP32-S3 plus NanoPi NEO",
+      "function_catalog": "../iris/config/functions.json",
+      "test_policies": "../iris/config/test-policies.json",
+      "vm_catalog": "../iris/programs/catalog.json",
+      "control_protocol": "NRP/1",
+      "default_transport": "BLE",
+      "esp_usb_endpoint": {"host": "192.168.77.1", "port": 4242},
+      "neo_usb_endpoint": {"host": "192.168.77.2", "port": 4243},
+      "linux_access_tool": "../neo/ssh-neo",
+      "credentials": "private local configuration; never stored in this book"
+    }
+  ]
+}

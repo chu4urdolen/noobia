@@ -1,0 +1,2 @@
+# Allow the runtime account access to this board's main GPIO chip only.
+SUBSYSTEM=="gpio", KERNEL=="gpiochip0", OWNER="root", GROUP="noob", MODE="0660"

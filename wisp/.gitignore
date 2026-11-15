@@ -1,0 +1,6 @@
+/wisp-web
+*.o
+*.env
+.codex/
+*.key
+*.pem

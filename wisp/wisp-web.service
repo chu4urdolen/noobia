@@ -1,0 +1,23 @@
+[Unit]
+Description=Wisp web console
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi
+EnvironmentFile=/etc/wisp-web.env
+ExecStart=/usr/local/bin/wisp-web --host 0.0.0.0 --port 8080 --web-dir /usr/local/share/wisp-web
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+ProtectSystem=strict
+# The shell account intentionally retains write access only to its home.
+ProtectHome=false
+ReadWritePaths=/home/pi
+
+[Install]
+WantedBy=multi-user.target

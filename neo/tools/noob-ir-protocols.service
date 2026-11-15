@@ -1,0 +1,14 @@
+[Unit]
+Description=Enable supported kernel IR decoders for Noob
+ConditionPathExists=/sys/class/rc/rc0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ir-keytable -s rc0 -p lirc -p rc-5 -p rc-5-sz -p jvc -p sony -p nec -p sanyo -p mce_kbd -p rc-6 -p sharp -p xmp -p imon -p rc-mm
+RemainAfterExit=true
+NoNewPrivileges=true
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

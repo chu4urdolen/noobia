@@ -1,0 +1,16 @@
+NOOB_IMG_DIR=/img
+NOOB_FORMAT_TOOL=/usr/local/bin/iris-photo-gif
+NOOB_OLED_TOOL=/usr/local/bin/iris-gif-oled
+NOOB_ESP_CTL=/usr/local/bin/irisctl-usb
+NOOB_DISPLAY_TOOL=/usr/local/bin/noob-display
+NOOB_DISPLAY_THREAD_TOOL=/usr/local/bin/thread_display
+NOOB_OLED_DEVICE=/dev/i2c-0
+NOOB_OLED_ADDRESS=0x3c
+NOOB_OVERLAY_COLOR=black
+NOOB_OVERLAY_X=4
+NOOB_OVERLAY_Y=4
+NOOB_OVERLAY_STATUS=1
+NOOB_STATUS_MASCOT_SIZE=80
+NOOB_VM_CATALOG_DIR=/usr/local/share/noobia/vm
+# Optional thumbnail converted from the original at the final display size.
+# NOOB_STATUS_IMAGE=Iris_80_formatted.gif

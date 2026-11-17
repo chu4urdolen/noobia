@@ -20,6 +20,12 @@ with compatibility links until their services and devices have been migrated
 and verified. Do not create another top-level home for new work. Protect
 unrelated changes and private data.
 
+At the end of each task, remove temporary files and generated output you
+created once they are no longer needed. Keep any artifact that must persist in
+the owning inhabitant's ignored private area, with a clear purpose. Check Git
+status for leftover task files before committing and before handing off; do
+not sweep away another agent's active work.
+
 ## Agent-facing tools
 
 Put an inhabitant's agent tools in `/noobia/<Noob>/tools/`. Each command must

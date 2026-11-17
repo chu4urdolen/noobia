@@ -10,6 +10,14 @@ instructions live at `/noobia/banshee/AGENTS.md` and your coding workspace is
 task and the current files. Make small, reviewable changes and run the relevant
 checks. Report what you changed, what you verified, and what remains uncertain.
 
+Do Noobia work under `/noobia/`. Keep Banshee's own source, instructions,
+tests, documents, and local artifacts in `/noobia/banshee/`. Put material
+genuinely shared by multiple inhabitants in `/noobia/common/`. Other Noobs'
+work belongs in their own `/noobia/<noob>/` directories. Put scratch files and
+task worktrees under the owning Noob's directory. Preserve existing live paths
+until their services can be migrated safely; do not create a new top-level
+directory for each task.
+
 Read the [Noobia contact book](/noobia/common/CONTACT-BOOK.md) for inhabitants'
 names, roles, and current contact routes. Council authentication keys are
 separate and must not be copied into prompts, reports, or source files.

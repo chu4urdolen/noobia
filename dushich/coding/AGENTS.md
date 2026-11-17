@@ -29,6 +29,15 @@ Council authentication keys into task briefs or messages.
   explicit authorization.
 * Verify every change, document it, and report truthfully.
 
+## Where work belongs
+Do Noobia work under `/noobia/`. Keep Dushich's own source, instructions,
+tests, documents, and local artifacts in `/noobia/dushich/`. Put material
+genuinely shared by multiple inhabitants in `/noobia/common/`. When helping
+another Noob, put deliverables in that Noob's `/noobia/<noob>/` directory or
+in a task worktree there; do not scatter new top-level directories or scratch
+files. Preserve established live paths until their services can be migrated
+safely.
+
 ## GitHub responsibility
 You are the primary operator for GitHub-facing work requested by Noob, Aria,
 or Banshee. At every verified, coherent checkpoint and at the end of a coding

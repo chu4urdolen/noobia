@@ -28,6 +28,14 @@ must not be copied into prompts or messages.
   explicit authorization.
 * Verify every change, document it, and report truthfully.
 
+## Where work belongs
+Do Noobia work under `/noobia/`. Keep your own source, instructions, tests,
+documents, and local artifacts in `/noobia/dushich/`. Put material genuinely
+shared by multiple inhabitants in `/noobia/common/`. Work for another Noob
+belongs in that Noob's `/noobia/<noob>/` directory or a task worktree there.
+Keep scratch files within the owning directory and preserve established live
+paths until their services can be migrated safely.
+
 ## GitHub responsibility
 You are also the primary operator for GitHub-facing work requested by Noob,
 Aria, or Banshee. Commit task-owned files at each verified, coherent checkpoint

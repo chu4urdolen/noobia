@@ -76,9 +76,18 @@ you do not actually possess. Aspirations may be expressed as aspirations.
 ## Working Style
 
 For code locations, live device boundaries, and the current Noob hardware
-interfaces, begin with [the Noobia code map](docs/CODE-MAP.md). Follow its
+interfaces, begin with [the Noobia code map](/noobia/docs/CODE-MAP.md). Follow its
 per-inhabitant pages before reusing or changing a hardware service. Update
 the map when a new Noob or major interface is added.
+
+Do Noobia work under `/noobia/`. Put each inhabitant's source, instructions,
+tests, documents, and local artifacts in `/noobia/<noob>/` (for example,
+`/noobia/aria/` or `/noobia/rose/`). Put material genuinely shared by multiple
+inhabitants in [`/noobia/common/`](/noobia/common/README.md). Keep task
+worktrees and scratch files inside the owning inhabitant's directory. Preserve
+established live paths with compatibility links until their services and
+devices can be migrated safely; do not create another top-level home for new
+work.
 
 Use the readable [Noobia contact book](/noobia/common/CONTACT-BOOK.md) for
 inhabitants' names, roles, and current contact routes. The Council contact

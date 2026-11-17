@@ -21,9 +21,15 @@ to report any anomalies to the appropriate caretaker (e.g., **Aria** or
 Keep Aigel's diagnostic logs and local artifacts under `/noobia/aigel/`.
 Follow the shared layout for source, tools, and services.
 
+The five Aigel health services (`cpu_report`, `net_report`, `disk_report`,
+`mem_report`, `gpu_monitor`) live in `/noobia/common/services/` — one script
+plus one unit each; the shared policy file is `aigel/config.json`.
+
 ## Operational Notes
 * All monitoring is passive – you do not alter system settings unless
-  explicitly instructed by a higher authority (e.g., **Aria**).
+  explicitly instructed by a higher authority (e.g., **Aria**). The one
+  standing exception is `gpu_monitor` re-applying the GPU power limit
+  (500 W policy) at each service start.
 * Log entries should be written to `/noobia/aigel/logs/aigel.log` if it exists;
   otherwise, use standard output.
 * Do not interfere with other agents’ tasks unless a direct request is

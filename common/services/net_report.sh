@@ -59,7 +59,7 @@ now_mono_ms() {
     local up whole frac
     read -r up _ < /proc/uptime
     whole=${up%%.*}; frac=${up#*.}
-    printf '%d' $(( whole * 1000 + frac * 10 ))
+    printf '%d' $(( 10#$whole * 1000 + 10#$frac * 10 ))
 }
 
 # due_ms_for <elapsed_ms> -> prints the current phase's sample interval (ms)

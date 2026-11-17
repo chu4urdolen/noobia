@@ -38,7 +38,7 @@ echo "  Period   = ${DEFAULT_PERIOD_S} s"
 # ------------------------------------------------------------------
 # 3. Prepare environment
 # ------------------------------------------------------------------
-SERVICES_DIR="/noobia/common/services"
+SERVICES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Ensure log dir exists and is owned by aria
 mkdir -p /var/log/noobia

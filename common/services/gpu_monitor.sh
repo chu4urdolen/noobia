@@ -9,6 +9,12 @@
 # CSV columns:
 #   timestamp,power_w,util_pct,temp_c,vram_used_mb,power_limit_w,event
 #
+# Power limit:
+#   * At startup the service sets the GPU power limit to 500 W by default
+#     (the RTX 5090 default is 575 W and the setting does not survive reboots).
+#     Override with AIGEL_GPU_POWER_LIMIT_W or "power_limit_w" in the policy
+#     file.  Never aborts startup if the GPU/driver is unavailable.
+#
 # Shutdown handling:
 #   * While running, a D-Bus listener watches logind's PrepareForShutdown
 #     signal, writes a SHUTDOWN row and exits the monitor.
@@ -77,7 +83,7 @@ now_mono_ms() {
     local up whole frac
     read -r up _ < /proc/uptime
     whole=${up%%.*}; frac=${up#*.}
-    printf '%d' $(( whole * 1000 + frac * 10 ))
+    printf '%d' $(( 10#$whole * 1000 + 10#$frac * 10 ))
 }
 
 # due_ms_for <elapsed_ms> -> prints the current phase's sample interval (ms)
@@ -128,6 +134,44 @@ fi
 if [[ ! -s "$FILE" ]]; then
     printf 'timestamp,power_w,util_pct,temp_c,vram_used_mb,power_limit_w,event\n' > "$FILE"
 fi
+
+# ---------------------------------------------------------------------------
+# Startup: enforce the GPU power budget.
+#
+# The RTX 5090 ships with a 575 W default limit (allowed 400-600 W) and the
+# limit does not survive reboots, so the service pins it on every start.
+# Precedence: AIGEL_GPU_POWER_LIMIT_W > "power_limit_w" in the policy file
+#             > built-in default (500 W).
+# ---------------------------------------------------------------------------
+GPU_POWER_LIMIT_W="${AIGEL_GPU_POWER_LIMIT_W:-}"
+if [[ -z "$GPU_POWER_LIMIT_W" ]] && command -v jq >/dev/null 2>&1 && [[ -f "$CONFIG_FILE" ]]; then
+    GPU_POWER_LIMIT_W="$(jq -r '.power_limit_w // empty' "$CONFIG_FILE" 2>/dev/null || true)"
+fi
+GPU_POWER_LIMIT_W="${GPU_POWER_LIMIT_W:-500}"
+
+set_power_limit() {
+    local attempt=0
+    if ! command -v nvidia-smi >/dev/null 2>&1; then
+        echo "warn: nvidia-smi not found; GPU power limit not set" >&2
+        return 0
+    fi
+    while (( attempt < 10 )); do
+        if nvidia-smi -L >/dev/null 2>&1; then
+            if nvidia-smi -pl "$GPU_POWER_LIMIT_W" >/dev/null 2>&1; then
+                echo "gpu power limit set to ${GPU_POWER_LIMIT_W} W" >&2
+            else
+                echo "warn: nvidia-smi -pl ${GPU_POWER_LIMIT_W} failed" >&2
+            fi
+            return 0
+        fi
+        attempt=$(( attempt + 1 ))
+        sleep 1
+    done
+    echo "warn: GPU not ready after 10 s; power limit not set" >&2
+    return 0
+}
+
+set_power_limit
 
 # ---------------------------------------------------------------------------
 # D-Bus listener: record SHUTDOWN and stop the monitor on PrepareForShutdown.

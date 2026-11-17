@@ -17,7 +17,7 @@ all running on one shared sampling engine:
 | `net_report`   | `net_report.sh`   | `units/net_report.service`| interface stats, active TCP, DNS latency (ping 8.8.8.8)    | `/var/log/noobia/aigel/net_report.log`    |
 | `disk_report`  | `disk_report.sh`  | `units/disk_report.service`| usage of every real mount point                           | `/var/log/noobia/aigel/disk_report.log`   |
 | `mem_report`   | `mem_report.sh`   | `units/mem_report.service`| RAM usage (and VRAM)                                       | `/var/log/noobia/aigel/mem_report.log`    |
-| `gpu_monitor`  | `gpu_monitor.sh`  | `units/gpu_monitor.service`| GPU power, utilization, temp, VRAM, power limit           | `/var/log/noobia_gpu/YYYY-MM-DD_HH.csv`   |
+| `gpu_monitor`  | `gpu_monitor.sh`  | `units/gpu_monitor.service`| sets GPU power limit (500 W default), then samples power, utilization, temp, VRAM | `/var/log/noobia_gpu/YYYY-MM-DD_HH.csv`   |
 
 > `noobia_wifi_guard` (script + unit) is a separate, unrelated watchdog and is
 > not part of these five.
@@ -56,9 +56,15 @@ Precedence: **CLI arguments > policy file > built-in defaults.**
 ### Environment / test knobs
 
 - `AIGEL_CONFIG` — policy file (default `/noobia/aigel/config.json`), JSON keys
-  `sample_interval_ms` and `sample_period_s` (read with `jq` when present).
+  `sample_interval_ms`, `sample_period_s` and `power_limit_w` (read with `jq` when
+  present).
 - `AIGEL_LOG_DIR` — report store dir (default `/var/log/noobia/aigel`).
 - `AIGEL_GPU_LOG_DIR` — GPU store dir (default `/var/log/noobia_gpu`).
+- `AIGEL_GPU_POWER_LIMIT_W` — GPU power limit enforced by `gpu_monitor` at
+  startup (default `500`; RTX 5090 allowed range 400–600 W, factory default
+  575 W).  Precedence: this variable > `power_limit_w` in the policy file >
+  `500`.  The setting does not survive reboots, so the service re-applies it
+  on every start; it never aborts startup if the GPU/driver is unavailable.
 - `AIGEL_MED_MS` / `AIGEL_HOUR_MS` / `AIGEL_HOURDUE_MS` — override the phase
   thresholds for testing (defaults `60000` / `3600000` / `3600000` ms).
 
@@ -68,6 +74,17 @@ store and accelerated phases, then inspect the cadence):
 ```bash
 AIGEL_LOG_DIR=$(mktemp -d) AIGEL_MED_MS=300 AIGEL_HOUR_MS=5000 AIGEL_HOURDUE_MS=700 \
   timeout 8 ./cpu_report.sh --interval 100 --period 2
+```
+
+## Running all five by hand
+
+[`run_all.sh`](run_all.sh) starts every service script in the foreground with
+the same `--interval`/`--period` arguments, optional `--real-time` name
+prefixing and `--duration <s>` auto-stop — useful for smoke tests and
+side-by-side inspection.  It is a manual tool, not a unit.
+
+```bash
+sudo -n ./run_all.sh --interval 500 --period 10 --duration 30
 ```
 
 ## Store format

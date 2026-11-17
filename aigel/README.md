@@ -1,27 +1,33 @@
-# Aigel — draft Nexus nurse project
+# Aigel — Nexus Nurse & Diagnostics
 
-Noob describes Aigel as a planned local nurse for Nexus. Her full plan has not
-been found in the current `/noobia` tree or visible Aria conversation records.
-This is a planning record, not an active service or a grant of host authority.
+Aigel is the local nurse for Nexus: she passively monitors the health of the
+hardware, software, and network, stores background samples, and reports
+anomalies to the appropriate caretaker (Aria or Dushich).
 
-## Verified starting point
+## Layout
 
-The existing [Council health monitor](../council/services/health/README.md) is
-a C program. It reports root filesystem use, available memory, load, thermal
-zones, and local AI contact endpoints. Normal operation writes to syslog;
-`--once` writes text to stdout and stderr. A normal `--once` run reads live
-Nexus state and may make TCP connection attempts, so it is not an offline unit
-test. The monitor parses its configuration before invoking those checks.
+| Path            | What lives here                                                        |
+|-----------------|------------------------------------------------------------------------|
+| `config.json`   | Aigel's shared policy file (sampling cadence, GPU power limit)         |
+| `tools/`        | Diagnostic/security tools (`nexus_net_guard.py`, `noob_lighthouse.py` + tests) |
+| `AGENTS.md`     | Aigel's identity and working rules                                     |
 
-## First candidate test
+The five Aigel health services (`cpu_report`, `net_report`, `disk_report`,
+`mem_report`, `gpu_monitor`) are **not** in this directory: each has exactly
+one script and one systemd unit in [`/noobia/common/services`](../common/services/)
+with its unit sources in `common/services/units/`. See
+[common/services/README.md](../common/services/README.md) for the sampling
+schedule, arguments, stores, and install instructions.
 
-Build the C program in a temporary directory without installing it. Run the
-temporary binary with `--once` and an invalid `HEALTH_INTERVAL_SECONDS` or
-warning threshold. Assert a nonzero exit and the expected diagnostic. The
-invalid setting makes the program return before probing live metrics or contact
-endpoints. Keep the test isolated from installed units and configuration.
+## Monitoring model
 
-This is a small safety check for existing code. It does not define Aigel's
-architecture, tools, permission boundaries, recovery behavior, or escalation
-rules. Noob's existing Aigel plan should be added here before implementation
-or executor assignment is treated as settled.
+* All monitoring is **passive** — Aigel never alters system settings unless
+  explicitly instructed (the one deliberate exception is `gpu_monitor` pinning
+  the GPU power limit to its 500 W policy at startup).
+* Every service keeps a background store (see the common/services README),
+  sampled 1 s for the first 5 min, then every minute until 1 h, then hourly
+  until the next boot.
+* Log entries should be written to `/noobia/aigel/logs/aigel.log` if it
+  exists; otherwise, use standard output.
+* Do not interfere with other agents' tasks unless a direct request is
+  received.

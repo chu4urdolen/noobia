@@ -20,6 +20,12 @@
 /archives/
 /rose/artifacts/
 /common/private/
+**/private/
+/aria/logs/
+/lynx/logs/
+/dushich/workspace/
+/banshee/workspace/
+/gwyn-app-nub/workspace/
 /dushich/3dprint/
 **/__pycache__/
 *.pyc

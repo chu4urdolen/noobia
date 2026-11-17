@@ -1,0 +1,15 @@
+[Unit]
+Description=Nexus Network Defense & Noobia Wi-Fi Stability Watchdog
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/noobia/common/services/noobia_wifi_guard.sh
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

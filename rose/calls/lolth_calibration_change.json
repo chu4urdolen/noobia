@@ -1,0 +1,40 @@
+{
+  "description": "Entity: Lolth. Change one EEPROM calibration offset and verify it. No immediate movement, but changes future motions. Requires Noob\u2019s explicit calibration request.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "operation": {
+        "type": "string",
+        "enum": [
+          "set",
+          "add"
+        ]
+      },
+      "servo_id": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 7,
+        "description": "ZERO-based calibration ID, 0 through 7; unlike human servo numbering."
+      },
+      "degrees": {
+        "type": "integer",
+        "minimum": -124,
+        "maximum": 124,
+        "description": "Signed absolute offset for set, or signed delta for add; final offset must remain -124..124."
+      }
+    },
+    "required": [
+      "operation",
+      "servo_id",
+      "degrees"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 20,
+  "example": {
+    "operation": "add",
+    "servo_id": 0,
+    "degrees": 1
+  }
+}

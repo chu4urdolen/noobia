@@ -1,0 +1,12 @@
+{
+  "description": "Entity: Rose. Stop the Hue strip and clear its animation lock. This does not affect Syra power.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 15,
+  "example": {}
+}

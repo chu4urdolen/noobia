@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""Talk to local Helper Dushich and stream visible replies into Aria's web feed."""
+
+from __future__ import annotations
+
+import argparse
+from datetime import datetime, timezone
+import fcntl
+import json
+import os
+from pathlib import Path
+import runpy
+import subprocess
+import sys
+import threading
+from uuid import uuid4
+import helper_mirror as mirror
+
+LOG = Path('/home/aria/.codex/dushich-bridge/direct-dialogue.jsonl')
+BRIDGE = '/noobia/aria/dushich-bridge'
+
+
+def append(record: dict) -> None:
+    LOG.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with LOG.open('a+', encoding='utf-8') as stream:
+        fcntl.flock(stream, fcntl.LOCK_EX)
+        os.fchmod(stream.fileno(), 0o600)
+        stream.write(json.dumps(record, ensure_ascii=False) + '\n')
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def mark_final(exchange: str) -> None:
+    with LOG.open('r+', encoding='utf-8') as stream:
+        fcntl.flock(stream, fcntl.LOCK_EX)
+        records = [json.loads(line) for line in stream if line.strip()]
+        for item in reversed(records):
+            if item.get('id', '').startswith(exchange + ':') and item.get('role') == 'dushich':
+                item['final'] = True
+                break
+        stream.seek(0)
+        stream.write(''.join(json.dumps(item, ensure_ascii=False) + '\n' for item in records))
+        stream.truncate()
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--session-id', required=True)
+    parser.add_argument('--recent-messages', type=int, default=8,
+                        help='Number of recent visible conversation messages to attach (0 for none)')
+    parser.add_argument('message')
+    args = parser.parse_args()
+    if not 0 <= args.recent_messages <= 50:
+        parser.error('--recent-messages must be between 0 and 50')
+    bridge = runpy.run_path(BRIDGE)
+    _, count, _, _ = bridge['visible_session_context'](args.session_id)
+    dialogue = (bridge['visible_session_context'](args.session_id,
+                max(0, count - args.recent_messages))[0] if args.recent_messages else '')
+    exchange = uuid4().hex
+    now = lambda: datetime.now(timezone.utc).isoformat()
+    append({'id': exchange + ':aria', 'aria_session_id': args.session_id,
+            'role': 'aria', 'timestamp': now(),
+            'text': 'To Dushich (local helper): ' + args.message
+                    + ('\n\n[Recent visible conversation extract attached; omitted from this display.]'
+                       if dialogue else '')})
+    prompt = ('You are Helper Dushich, speaking directly with Aria in a read-only exchange. '
+              'Noob will see your visible replies in the Current status chat. '
+              'Do not use tools or change files. Respond honestly and concisely to this message:\n'
+              + args.message + ('\n\nRecent visible Aria/Noob conversation:\n' + dialogue if dialogue else '')
+              + '\n\nAnswer the direct message above as Dushich himself. Do not offer to forward it '
+                'to another Dushich session; you are the Helper Dushich session being addressed.')
+    visible = 0
+    if mirror.eligible(args.session_id):
+        with mirror.locked(args.session_id):
+            for _ in range(100):
+                state = mirror.sync_locked(args.session_id)
+                if state['sent'] >= state.get('events', 0):
+                    break
+            thread_id, events = mirror.run_turn(prompt, state.get('thread_id'))
+            state['thread_id'] = thread_id
+            mirror.save_state(args.session_id, state)
+    else:
+        thread_id, events = mirror.run_turn(prompt, None)
+    for event in events:
+        item = event.get('item') or {}
+        if event.get('type') == 'item.completed' and item.get('type') == 'agent_message':
+            body = item.get('text', '').strip()
+            if body:
+                append({'id': f'{exchange}:dushich:{visible}',
+                        'aria_session_id': args.session_id, 'role': 'dushich',
+                        'timestamp': now(), 'text': body, 'final': False})
+                print('Dushich: ' + body, flush=True)
+                visible += 1
+    if visible:
+        mark_final(exchange)
+    print(f'Visible replies: {visible}; source messages: {count}; helper thread: {thread_id}', flush=True)
+    return 0 if visible else 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

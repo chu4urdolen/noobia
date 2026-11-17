@@ -1,0 +1,25 @@
+{
+  "description": "Entity: Syra. Read the Tuya plug or ensure it is ON. Local key may still be missing. Power OFF is prohibited.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "status",
+          "on"
+        ],
+        "description": "Read relay status or turn the plug on. Off/toggle are absent because it powers Syra."
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 20,
+  "example": {
+    "action": "status"
+  }
+}

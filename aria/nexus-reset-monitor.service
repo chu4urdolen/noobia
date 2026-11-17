@@ -1,0 +1,12 @@
+[Unit]
+Description=Record Nexus power and temperature before unexpected resets
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /noobia/aria/nexus-reset-monitor.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

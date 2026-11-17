@@ -1,0 +1,23 @@
+{
+  "description": "Entity: Lolth. Run one factory motion action. Read lolth_info for supported names. Requires a specific move agreed with Noob; never test motion automatically.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "description": "Factory action name reported by lolth_info."
+      }
+    },
+    "required": [
+      "name"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 15,
+  "example": {
+    "name": "standby"
+  }
+}

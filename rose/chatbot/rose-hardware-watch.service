@@ -1,0 +1,12 @@
+[Unit]
+Description=Rose USB inventory and paired speaker reconnection
+After=pipewire.service wireplumber.service
+
+[Service]
+ExecStart=/usr/bin/python3 /noobia/rose_tools/chatbot/hardware_watch.py
+Restart=always
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=default.target

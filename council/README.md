@@ -6,6 +6,10 @@ with its own configuration and an identical JSON contact book. A ranked arbiter
 accepts initiation requests, records the durable transcript, tracks presence,
 grants turns, forwards missed context, and coordinates conversation closure.
 
+For the readable directory of inhabitants and local agents, see the
+[Noobia contact book](../common/CONTACT-BOOK.md). The Council JSON contact book
+contains authentication keys and should not be copied into agent instructions.
+
 | Participant | Address | Human port | AI port | Arbiter priority |
 | --- | --- | ---: | ---: | ---: |
 | Aria on Nexus | `192.168.100.6` | `47100` | `47101` | `10` |

@@ -1,0 +1,12 @@
+{
+  "description": "Entity: Rose. Read current player mode, video ID, player state, position and errors. State 1 means playing, 2 paused, 3 buffering, 0 ended. No video queue exists.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 10,
+  "example": {}
+}

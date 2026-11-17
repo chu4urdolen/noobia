@@ -1,0 +1,16 @@
+[Unit]
+Description=Noobia GPU Restart Monitor – records power, usage, temperature, VRAM and shutdown events
+After=network.target
+Requires=network.target
+
+ [Service]
+ Type=simple
+ExecStartPre=/bin/bash -c 'mkdir -p /var/log/noobia_gpu || true'
+ExecStart=/noobia/aigel/start_gpu_monitor.sh
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

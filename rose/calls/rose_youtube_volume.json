@@ -1,0 +1,23 @@
+{
+  "description": "Entity: Rose. Entity: Rose. Set YouTube player volume only, without changing Rose\u2019s speech volume. Returns immediately.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "volume": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100,
+        "description": "YouTube player volume percentage, 0 through 100."
+      }
+    },
+    "required": [
+      "volume"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 10,
+  "example": {
+    "volume": 50
+  }
+}

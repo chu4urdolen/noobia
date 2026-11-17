@@ -1,0 +1,11 @@
+{
+  "song_id": "first-experiment",
+  "tracks": {"mix": "media/song.wav", "vocals": "media/vocals.wav", "drums": "media/drums.wav", "bass": "media/bass.wav"},
+  "grid": {"mode": "manual", "bpm": 120, "offset_s": 0, "subdivisions_per_beat": 4},
+  "analyses": {
+    "levels": {"enabled": true},
+    "panning": {"enabled": true},
+    "words_json": {"enabled": false, "path": "media/whisperx.json", "track": "vocals"},
+    "midi_notes": {"enabled": false, "files": {"bass": "media/bass.mid"}}
+  }
+}

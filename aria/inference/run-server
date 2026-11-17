@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+base=/home/aria/apps/llama.cpp-b12078/cuda
+runtime="$base/cudart-llama-b12078-bin-ubuntu-cuda-12.8-x64"
+binary="$base/llama-b12078"
+export LD_LIBRARY_PATH="$runtime:$binary${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+exec "$binary/llama-server" \
+  --model /home/aria/models/gpt-oss-20b/gpt-oss-20b-MXFP4.gguf \
+  --alias gpt-oss-20b \
+  --device CUDA0 \
+  --n-gpu-layers 99 \
+  --ctx-size 131072 \
+  --parallel 1 \
+  --host 127.0.0.1,192.168.100.106 \
+  --port 8080 \
+  --api-key-file /home/aria/.config/noobia/gpt-oss-20b.api-key \
+  --offline \
+  --no-ui

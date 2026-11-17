@@ -1,0 +1,21 @@
+{
+  "description": "Entity: Rose. Entity: Rose. Mute or unmute the embedded YouTube player. Returns immediately.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "muted": {
+        "type": "boolean",
+        "description": "True mutes; false unmutes."
+      }
+    },
+    "required": [
+      "muted"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 10,
+  "example": {
+    "muted": true
+  }
+}

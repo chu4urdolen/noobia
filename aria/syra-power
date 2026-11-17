@@ -1,0 +1,3 @@
+#!/bin/sh
+# Graceful delayed power control for Syra, run on Nexus.
+exec "$(dirname "$0")/.venv/bin/python" "$(dirname "$0")/syra_power.py" "$@"

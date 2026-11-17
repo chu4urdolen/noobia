@@ -1,0 +1,27 @@
+{
+  "description": "Run IMX500 object/pose detection; returns local artifact paths and results.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "model": {
+        "type": "string",
+        "enum": [
+          "object0",
+          "object1",
+          "object2",
+          "pose0"
+        ],
+        "description": "Detection model: object0/1/2 are object detectors, pose0 estimates human poses."
+      }
+    },
+    "required": [
+      "model"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 360,
+  "example": {
+    "model": "object0"
+  }
+}

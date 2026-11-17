@@ -1,0 +1,12 @@
+{
+  "description": "Read Ubertooth firmware version without radio capture or transmission.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 15,
+  "example": {}
+}

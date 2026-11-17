@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dushich</title>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/home.css">
+  <script src="/home.js" defer></script>
+</head>
+<body class="home">
+  <header class="site-header">
+    <a class="brand" href="/">DUSHICH<span class="brand-dot">●</span></a>
+    <a class="header-right" href="/status">Current status ↗</a>
+  </header>
+  <main class="home-main">
+    <div class="page-heading">
+      <div><p class="eyebrow">NEXUS / FOREMAN</p><h1>Projects and human help</h1></div>
+      <p>Read-only overview of agent projects and requests. Use the terminal agents for conversation and project work.</p>
+    </div>
+    <div class="home-grid">
+      <section class="home-card">
+        <div class="home-card-head"><h2>Foreman Dushich</h2></div>
+        <p id="foreman-state" class="muted">Disabled</p>
+        <div id="foreman-chat" class="home-chat" aria-live="polite"></div>
+      </section>
+      <div class="home-stack">
+        <section class="home-card">
+          <h2>Current projects</h2>
+          <p class="muted">Current project assignments are shown here; the terminal agents handle changes.</p>
+          <div id="projects" aria-live="polite"></div>
+        </section>
+        <section class="home-card">
+          <h2>Needs Noob</h2>
+          <p class="muted">The page watches Foreman’s help flags for physical steps only you can do.</p>
+          <div id="help-requests" aria-live="polite"></div>
+        </section>
+      </div>
+    </div>
+    <p id="home-notice" class="notice" role="status"></p>
+  </main>
+</body>
+</html>

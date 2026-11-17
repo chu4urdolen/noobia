@@ -1,0 +1,69 @@
+{
+  "description": "Play up to 120 seconds of RGB steps on the strip; darkens at the end.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "steps": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 60,
+        "items": {
+          "type": "object",
+          "properties": {
+            "red": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "green": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "blue": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "brightness": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "seconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            }
+          },
+          "required": [
+            "red",
+            "green",
+            "blue",
+            "brightness",
+            "seconds"
+          ],
+          "additionalProperties": false
+        },
+        "description": "Ordered RGB/brightness steps. Each seconds value is its transition/hold duration; total must be at most 120 seconds."
+      }
+    },
+    "required": [
+      "steps"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 160,
+  "example": {
+    "steps": [
+      {
+        "red": 255,
+        "green": 20,
+        "blue": 100,
+        "brightness": 100,
+        "seconds": 1
+      }
+    ]
+  }
+}

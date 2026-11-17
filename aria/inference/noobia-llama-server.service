@@ -1,0 +1,27 @@
+[Unit]
+Description=Noobia gpt-oss-20b inference server
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/home/aria/models/gpt-oss-20b /home/aria/apps/llama.cpp-b12078
+
+[Service]
+Type=simple
+User=aria
+Group=aria
+WorkingDirectory=/noobia/aria/inference
+ExecStartPre=/usr/bin/test -r /home/aria/models/gpt-oss-20b/gpt-oss-20b-MXFP4.gguf
+ExecStartPre=/usr/bin/test -r /home/aria/.config/noobia/gpt-oss-20b.api-key
+ExecStart=/noobia/aria/inference/run-server
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+LimitNOFILE=65536
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+CacheDirectory=noobia-llama
+Environment=CUDA_CACHE_PATH=/var/cache/noobia-llama
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+/* The sole Nexus login, aria, already has passwordless sudo.
+ * Let systemctl use the same authority when it calls systemd through polkit,
+ * including from an existing Dushich solo terminal. */
+polkit.addRule(function(action, subject) {
+    if (subject.user == "aria" && (
+        action.id == "org.freedesktop.systemd1.manage-units" ||
+        action.id == "org.freedesktop.systemd1.manage-unit-files" ||
+        action.id == "org.freedesktop.systemd1.reload-daemon")) {
+        return polkit.Result.YES;
+    }
+});

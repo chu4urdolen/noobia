@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Rose Display</title>
+<style>html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden}#player{width:100vw;height:100vh;border:0}</style>
+</head><body><div id="player"></div><script>
+let player, ready=false, generation=-1, revision=-1, seekRevision=-1, pending, autoplayUntil=0;
+async function report(value){try{await fetch('/api/player',{method:'POST',headers:{'Content-Type':'application/json','X-Rose-Session':'SESSION_TOKEN'},body:JSON.stringify({...value,generation})})}catch{}}
+function apply(load=true){if(!ready||!pending)return;const s=pending;generation=s.generation;revision=s.revision||0;
+ player.setVolume(s.volume===undefined?50:s.volume);
+ if(s.muted)player.mute();else player.unMute();
+ if(load){seekRevision=s.seek_revision||-1;
+  if(s.paused)player.cueVideoById({videoId:s.video_id,startSeconds:s.start_seconds||0});
+  else{autoplayUntil=Date.now()+10000;
+   player.loadVideoById({videoId:s.video_id,startSeconds:s.start_seconds||0});
+   player.playVideo();}}
+ else{if(s.seek_revision!==undefined&&s.seek_revision!==seekRevision){player.seekTo(s.seek_seconds,true);seekRevision=s.seek_revision;}
+  if(s.paused)player.pauseVideo();else player.playVideo();}}
+function onYouTubeIframeAPIReady(){player=new YT.Player('player',{width:'100%',height:'100%',playerVars:{autoplay:1,playsinline:1,origin:location.origin},events:{
+ onReady(){ready=true;apply()},onStateChange(e){report({playback_state:e.data})},
+ onError(e){report({player_error:e.data})}}});}
+async function poll(){try{const s=await(await fetch('/api/state',{cache:'no-store'})).json();
+ if(s.mode==='video'&&s.generation!==generation){pending=s;apply()}
+ else if(s.mode==='video'&&(s.revision||0)!==revision){pending=s;apply(false)}
+ if(ready&&player.getCurrentTime){const state=player.getPlayerState();
+  if(state===1)autoplayUntil=0;
+  else if(!s.paused&&Date.now()<autoplayUntil&&(state===2||state===5||state===-1))player.playVideo();
+  await report({position:player.getCurrentTime(),playback_state:state,video_id:player.getVideoData().video_id});}}catch{}
+ finally{setTimeout(poll,500)}}
+poll();
+</script><script src="https://www.youtube.com/iframe_api"></script></body></html>

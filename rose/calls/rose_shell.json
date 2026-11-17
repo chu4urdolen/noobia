@@ -1,0 +1,20 @@
+{
+  "description": "Entity: Rose on Syra. Execute /bin/sh commands as the rose Linux user. Returns stdout/stderr and exit status. Never cut Syra power or disclose credentials without an explicit request. Inspect before destructive actions.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "command": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8000,
+        "description": "Shell command text, including pipelines/redirections. Executes with existing account permissions; no added root privileges."
+      }
+    },
+    "required": [
+      "command"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "command-stdin",
+  "timeout": 120
+}

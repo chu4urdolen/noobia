@@ -1,0 +1,12 @@
+[Unit]
+Description=Mirror new Banshee conversations into local Helper Dushich threads
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /noobia/banshee/banshee_helper_mirror.py watch
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

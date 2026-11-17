@@ -9,6 +9,9 @@ installer on 2026-11-14. The CLI is `/home/aria/.local/bin/claude`.
 `CLAUDE_CONFIG_DIR=/noobia/gwyn-app-nub/private/claude`, so Gwyn's sessions,
 settings, and authentication are separate from Aria's home configuration.
 The private directory is mode 0700 and ignored by Noobia's Git repository.
+Gwyn's workspace `CLAUDE.md` points to the shared
+[coding instructions](/noobia/common/AGENTS.md) for directory, tool, service,
+and Git conventions.
 
 Authentication is pending. When Noob is ready, run
 `/noobia/gwyn-app-nub/auth` in a Nexus terminal. That invokes Claude Code's

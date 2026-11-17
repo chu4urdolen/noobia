@@ -1,7 +1,9 @@
 # Common Noobia resources
 
-The shared readable [contact book](CONTACT-BOOK.md) and [Nexus inference
-notes](NEXUS-INFERENCE.md) live here. Inhabitant-specific work belongs in the
+The shared [coding agent instructions](AGENTS.md), readable
+[contact book](CONTACT-BOOK.md), [Nexus inference notes](NEXUS-INFERENCE.md),
+and [Linux service sources](services/README.md) live here.
+Inhabitant-specific work belongs in the
 inhabitant's own top-level directory, such as `../rose/` or `../dushich/`.
 
 Shared services currently keep established paths because running units and

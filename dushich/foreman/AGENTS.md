@@ -27,13 +27,12 @@ must not be copied into project records, prompts, or messages.
   without explicit authorization.
 * Verify every change, document it, and report truthfully.
 
-## Where work belongs
-Coordinate Noobia work under `/noobia/`. Keep Dushich's project records,
-instructions, and local artifacts in `/noobia/dushich/`. Assign each project
-to its executor's `/noobia/<noob>/` directory; put material genuinely shared
-by multiple inhabitants in `/noobia/common/`. Keep task worktrees and scratch
-files inside the owning directory, and preserve established live paths until
-their services can be migrated safely.
+## Shared working rules
+
+Read [Noobia's shared coding instructions](/noobia/common/AGENTS.md) for the
+code map, directory layout, agent tools, Linux services, Git, and GitHub
+rules. Keep project records in `/noobia/dushich/` and assign project work to
+the executor's directory.
 
 ### Operational Notes
 * Keep the original operational instructions that remain relevant.

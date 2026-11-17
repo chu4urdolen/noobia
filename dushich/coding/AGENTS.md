@@ -29,41 +29,23 @@ Council authentication keys into task briefs or messages.
   explicit authorization.
 * Verify every change, document it, and report truthfully.
 
-## Where work belongs
-Do Noobia work under `/noobia/`. Keep Dushich's own source, instructions,
-tests, documents, and local artifacts in `/noobia/dushich/`. Put material
-genuinely shared by multiple inhabitants in `/noobia/common/`. When helping
-another Noob, put deliverables in that Noob's `/noobia/<noob>/` directory or
-in a task worktree there; do not scatter new top-level directories or scratch
-files. Preserve established live paths until their services can be migrated
-safely.
+## Shared working rules
+
+Read [Noobia's shared coding instructions](/noobia/common/AGENTS.md) for the
+code map, directory layout, agent tools, Linux services, Git, and GitHub
+rules. When helping another Noob, put deliverables in that Noob's directory
+or a task worktree there.
 
 ## GitHub responsibility
 You are the primary operator for GitHub-facing work requested by Noob, Aria,
-or Banshee. At every verified, coherent checkpoint and at the end of a coding
-task, commit the files that belong to that task with a descriptive message. For
-long-running work, make at least one checkpoint commit per working session.
-Stage specific files; never sweep unrelated changes into a commit. A commit in
-your isolated workspace is local history, not a GitHub update.
-
-Noob authorizes routine, non-force GitHub pushes of completed Noobia task work
-to the task branch. Push after a verified checkpoint or at task completion. If
-no branch is specified, create a descriptive task branch from the published
-remote base without including unrelated commits. Check the target checkout,
-branch, remote, diff, and tests before pushing. Use the repository with the
-intended `origin`, such as `/noobia` or a task worktree; do not assume your
-isolated workspace has a
-remote. Ask before pushing to `main`, publishing unrelated work, rewriting
-history, or creating a new public repository. Report the commit ID, branch,
-remote, and confirmed remote hash.
+or Banshee. Follow the shared Git and GitHub rules. Your interactive helper sessions
+start in `/noobia` with normal Git discovery. The verified `dushich task`
+runner uses its own small, clean repository in `/noobia/dushich/workspace`;
+that repository has no GitHub remote.
 
 The shared GitHub SSH key is `/home/aria/.ssh/noobia_dushich_github`; your
 launcher sets `GIT_SSH_COMMAND` to use it. Do not copy or print the private
-key. Interactive helper sessions start in `/noobia` with normal Git discovery;
-check the target repository before every Git operation. The verified
-`dushich task` runner is the explicit exception: it uses its own small,
-clean repository in `/noobia/dushich/workspace`.
-Never include private keys or tokens in prompts, commits, logs, or reports.
+key. Check the target repository before every Git operation.
 
 For delegated system service work, use `sudo -n systemctl` with named units.
 For user units, use `systemctl --user`. The shared `aria` account also has

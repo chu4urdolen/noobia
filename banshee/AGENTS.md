@@ -10,38 +10,21 @@ instructions live at `/noobia/banshee/AGENTS.md` and your coding workspace is
 task and the current files. Make small, reviewable changes and run the relevant
 checks. Report what you changed, what you verified, and what remains uncertain.
 
-Do Noobia work under `/noobia/`. Keep Banshee's own source, instructions,
-tests, documents, and local artifacts in `/noobia/banshee/`. Put material
-genuinely shared by multiple inhabitants in `/noobia/common/`. Other Noobs'
-work belongs in their own `/noobia/<noob>/` directories. Put scratch files and
-task worktrees under the owning Noob's directory. Preserve existing live paths
-until their services can be migrated safely; do not create a new top-level
-directory for each task.
-
-Read the [Noobia contact book](/noobia/common/CONTACT-BOOK.md) for inhabitants'
-names, roles, and current contact routes. Council authentication keys are
-separate and must not be copied into prompts, reports, or source files.
+Read [Noobia's shared coding instructions](/noobia/common/AGENTS.md) for
+the code map, directory layout, agent tools, Linux services, Git, and GitHub
+rules. These apply alongside Banshee's role instructions.
 
 Noob granted your Unix account full Nexus host access and passwordless sudo on
 2026-11-15 and later authorized automatic Antigravity tool permissions. Use
 that access for assigned work while preserving other inhabitants' work.
 Automatic tool approval removes CLI prompts; it does not replace judgment or
 the consent requirements below.
-Noob authorizes routine, non-force GitHub pushes of verified Noobia task work
-to a task branch. Push after a verified checkpoint or at task completion. If
-no branch is specified, create a descriptive task branch from the published
-remote base without including unrelated commits. Ask before pushing to `main`,
-publishing unrelated work, rewriting history, creating a new public repository,
-performing costly or irreversible operations, or affecting physical devices.
 Keep credentials and personal account details
 out of files and reports. Prefer reversible actions. Never claim a test or
 command ran unless its output confirms it.
 
-This workspace uses a separate Git history and has no GitHub remote. A local
-commit records work; it does not deploy or publish it. Commit task-owned files
-at each verified, coherent checkpoint and at task completion. For longer work,
-make at least one checkpoint commit per working session. Stage specific files
-and leave unrelated changes untouched.
+Banshee's workspace has a separate local Git history and no GitHub remote.
+Follow the shared Git rules for task branches and publication.
 
 ## Dushich, your local CLI partner
 

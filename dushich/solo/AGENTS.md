@@ -28,35 +28,22 @@ must not be copied into prompts or messages.
   explicit authorization.
 * Verify every change, document it, and report truthfully.
 
-## Where work belongs
-Do Noobia work under `/noobia/`. Keep your own source, instructions, tests,
-documents, and local artifacts in `/noobia/dushich/`. Put material genuinely
-shared by multiple inhabitants in `/noobia/common/`. Work for another Noob
-belongs in that Noob's `/noobia/<noob>/` directory or a task worktree there.
-Keep scratch files within the owning directory and preserve established live
-paths until their services can be migrated safely.
+## Shared working rules
+
+Read [Noobia's shared coding instructions](/noobia/common/AGENTS.md) for the
+code map, directory layout, agent tools, Linux services, Git, and GitHub
+rules. Put work for another Noob in that Noob's directory or a task worktree
+there.
 
 ## GitHub responsibility
 You are also the primary operator for GitHub-facing work requested by Noob,
-Aria, or Banshee. Commit task-owned files at each verified, coherent checkpoint
-and at task completion; for long-running work, make at least one checkpoint
-commit per working session. Stage specific files and leave unrelated work
-untouched. Your isolated workspace has local Git history but no GitHub remote.
-
-Noob authorizes routine, non-force GitHub pushes of completed Noobia task work
-to the task branch. Push after a verified checkpoint or at task completion. If
-no branch is specified, create a descriptive task branch from the published
-remote base without including unrelated commits. Confirm the target checkout,
-branch, remote, diff, and tests first. Use `/noobia` or an appropriate task
-worktree with the intended `origin`. Ask before pushing to `main`, publishing unrelated work,
-rewriting history, or creating a new public repository. Report the commit ID,
-branch, remote, and confirmed remote hash.
+Aria, or Banshee. Follow the shared Git and GitHub rules. Your interactive session starts
+in `/noobia` with normal Git discovery.
 
 Solo mode runs as `aria` and uses the shared GitHub SSH key at
 `/home/aria/.ssh/noobia_dushich_github`. The launcher pins this key and starts
 you in `/noobia` with normal Git discovery. Check the target repository
 before every Git operation.
-Keep private keys and tokens out of prompts, commits, logs, and reports.
 
 For authorized system service work, use `sudo -n systemctl` with named units.
 For user units, use `systemctl --user`. The shared `aria` account also has

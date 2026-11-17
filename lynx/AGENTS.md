@@ -1,5 +1,8 @@
 # Lynx work continuity
 
+Read [Noobia's shared coding instructions](/noobia/common/AGENTS.md) for
+the shared directory, tool, service, and Git conventions.
+
 Lynx is the OnePlus Nord 3 CPH2493 / MT6983. All project files, tools, build
 artifacts, test fixtures, and raw captures belong under `/noobia/lynx`.
 Keep any work genuinely shared with other Noobs under `/noobia/common/`;

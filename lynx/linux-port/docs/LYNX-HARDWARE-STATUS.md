@@ -43,10 +43,18 @@ the camera stack is absent now and capture is not validated.
 
 On 2026-11-15, authenticated `MAG_STATUS` returned `registered=1` and
 `MAG_VECTOR` returned raw `x=19380 y=659 z=-236700 gain=1000` on Lynx's
-current V53 boot. Dushich drafted an isolated local magnetometer reader in
-`dushich/workspace/projects/lynx_magnetometer/`; Aria corrected its event
-validation and five offline tests passed. It has not been installed on Lynx.
-These raw values do not establish a calibrated compass heading.
+V53 boot. Dushich drafted the local magnetometer reader; Aria corrected its
+event validation and five offline tests passed. On 2026-11-18, a new boot had
+audio and sensorhub stopped, so `/dev/hf_manager` was absent. The guarded
+installer stopped before writing. Aria started the existing audio and
+sensorhub services, then installed the local tool without a reboot or daemon
+restart. Its bounded sample returned raw `[31800, -76740, -271080]`, and
+authenticated `MAG_STATUS` and `MAG_VECTOR` succeeded. The boot ID remained
+`d629cc73-aa6d-4aec-808b-8a374740e203` and health reported no issues.
+Receipt: `logs/magnetometer-local-tool-1794954466351338091/result.json`.
+These raw values do not establish a calibrated compass heading. The service
+startup failure on this boot still needs diagnosis before claiming automatic
+sensor readiness.
 
 The new numeric calls return one value per NRP/1 `CALL`, so they work from
 the common Noob VM as well as a direct client. Units are explicit in the

@@ -21,6 +21,8 @@
 !/tools/local_calls/lynx_light_read.json
 !/tools/local_calls/lynx_proximity_read.sh
 !/tools/local_calls/lynx_proximity_read.json
+!/tools/local_calls/lynx_magnetometer_read.sh
+!/tools/local_calls/lynx_magnetometer_read.json
 !/tools/ram-log-reader/
 /tools/ram-log-reader/*
 !/tools/ram-log-reader/*.py

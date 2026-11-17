@@ -1,5 +1,5 @@
 [Unit]
-Description=Aigel GPU monitor – samples power, utilization, temperature, VRAM and records shutdown events
+Description=Aigel GPU monitor service – power, utilization, temperature, VRAM and shutdown events
 After=network.target
 
 [Service]
@@ -9,6 +9,8 @@ ExecStart=/noobia/common/services/gpu_monitor.sh
 Restart=always
 RestartSec=5
 TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

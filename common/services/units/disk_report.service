@@ -1,13 +1,15 @@
 [Unit]
-Description=Aigel Disk health report – usage of every real mount point
+Description=Aigel Disk health service – usage of every real mount point
 After=network.target
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/noobia/common/services/disk_report.sh
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
 StandardOutput=journal
 StandardError=journal
-RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target

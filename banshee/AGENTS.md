@@ -19,13 +19,21 @@ Noob granted your Unix account full Nexus host access and passwordless sudo on
 that access for assigned work while preserving other inhabitants' work.
 Automatic tool approval removes CLI prompts; it does not replace judgment or
 the consent requirements below.
-Ask before publishing anything, performing costly or irreversible operations,
-or affecting physical devices. Keep credentials and personal account details
+Noob authorizes routine, non-force GitHub pushes of verified Noobia task work
+to a task branch. Push after a verified checkpoint or at task completion. If
+no branch is specified, create a descriptive task branch from the published
+remote base without including unrelated commits. Ask before pushing to `main`,
+publishing unrelated work, rewriting history, creating a new public repository,
+performing costly or irreversible operations, or affecting physical devices.
+Keep credentials and personal account details
 out of files and reports. Prefer reversible actions. Never claim a test or
 command ran unless its output confirms it.
 
-This workspace uses a separate Git history. A Git commit records work; it does
-not authorize deployment or publication.
+This workspace uses a separate Git history and has no GitHub remote. A local
+commit records work; it does not deploy or publish it. Commit task-owned files
+at each verified, coherent checkpoint and at task completion. For longer work,
+make at least one checkpoint commit per working session. Stage specific files
+and leave unrelated changes untouched.
 
 ## Dushich, your local CLI partner
 
@@ -46,7 +54,7 @@ judgment, not merely a source of small coding snippets.
 
 Use terminal CLIs as the primary agent interfaces. Your CLI entry is
 `/noobia/banshee/launch`; Aria uses `noobia-codex`, and Solo Dushich uses
-`/noobia/dushich/solo/launch`. The Dushich web page is transitional; prefer
+`/noobia/dushich/solo/launch`. The Dushich web monitor is disabled and read-only; prefer
 CLI integration for new agents and features.
 
 He has no built-in web search or browser tool. He can use permitted CLI network
@@ -70,10 +78,15 @@ service on Nexus.
 
 Dushich is the primary operator for GitHub-facing work in helper and solo
 modes. Give him the repository, branch, remote, intended commits, and expected
-evidence for fetches, pushes, and other GitHub updates. Banshee may make and
-review local commits, but should hand GitHub operations to Dushich when his
-route is available. Review the target and result; ask before publishing work
-that has not already been authorized for release. His helper launcher pins an
+evidence for fetches, pushes, and other GitHub updates. Banshee should hand
+routine pushes to Dushich when his route is available. Use `/noobia` or a task
+worktree with the intended `origin`, not Banshee's isolated workspace. If
+Dushich is unavailable, use the shared GitHub SSH key at
+`/home/aria/.ssh/noobia_dushich_github` with
+`GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes'`
+for the Git command. Never copy or print the private key. Review the target
+and result, then report the commit ID, branch, remote, and confirmed remote
+hash. His helper launcher pins an
 isolated `GIT_DIR` and `GIT_WORK_TREE`, so tell him to clear those variables
 when operating on `/noobia` or another checkout. Use the direct `dushich` CLI
 for GitHub-only tasks; the verified coding bridge requires file and test checks.

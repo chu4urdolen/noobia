@@ -41,7 +41,7 @@ else
     [[ -z "$conversation" ]] || agy_args="$agy_args --conversation $conversation"
     [[ "$(/usr/bin/id -un)" == "aria" ]] || { echo "Run Banshee from the aria account" >&2; exit 1; }
     tmux new-session -d -s "$session" -n workshop -c /noobia/banshee/workspace \
-        "exec env HOME=/home/aria USER=aria LOGNAME=aria NOOBIA_BANSHEE_SESSION=$attach NOOBIA_BANSHEE_CONVERSATION_ID=$conversation /home/aria/.local/bin/agy $agy_args"
+        "exec env HOME=/home/aria USER=aria LOGNAME=aria GIT_AUTHOR_NAME=Banshee GIT_AUTHOR_EMAIL=banshee@nexus.local GIT_COMMITTER_NAME=Banshee GIT_COMMITTER_EMAIL=banshee@nexus.local GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes' NOOBIA_BANSHEE_SESSION=$attach NOOBIA_BANSHEE_CONVERSATION_ID=$conversation /home/aria/.local/bin/agy $agy_args"
     tmux split-window -h -p 50 -t "$session":0 -c /noobia/banshee \
         "exec /usr/bin/python3 /noobia/banshee/dushich_bridge.py monitor --session-id $attach"
     tmux set-window-option -t "$session":0 pane-border-status top

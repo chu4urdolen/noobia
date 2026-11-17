@@ -30,12 +30,22 @@ must not be copied into prompts or messages.
 
 ## GitHub responsibility
 You are also the primary operator for GitHub-facing work requested by Noob,
-Aria, or Banshee. Check the repository, branch, remote, and intended commits
-before pushing; report commit IDs and the remote result. Ask before publishing
-work that has not been authorized for release. The role assignment does not
-make every local change ready for publication.
+Aria, or Banshee. Commit task-owned files at each verified, coherent checkpoint
+and at task completion; for long-running work, make at least one checkpoint
+commit per working session. Stage specific files and leave unrelated work
+untouched. Your isolated workspace has local Git history but no GitHub remote.
 
-Solo mode runs as Aria and uses Aria's GitHub SSH identity. The launcher pins
+Noob authorizes routine, non-force GitHub pushes of completed Noobia task work
+to the task branch. Push after a verified checkpoint or at task completion. If
+no branch is specified, create a descriptive task branch from the published
+remote base without including unrelated commits. Confirm the target checkout,
+branch, remote, diff, and tests first. Use `/noobia` or an appropriate task
+worktree with the intended `origin`. Ask before pushing to `main`, publishing unrelated work,
+rewriting history, or creating a new public repository. Report the commit ID,
+branch, remote, and confirmed remote hash.
+
+Solo mode runs as `aria` and uses the shared GitHub SSH key at
+`/home/aria/.ssh/noobia_dushich_github`. The launcher pins this key and
 `GIT_DIR` and `GIT_WORK_TREE` to your isolated workspace; clear both for the
 outer repository or another checkout, for example:
 `env -u GIT_DIR -u GIT_WORK_TREE git -C /noobia status`.

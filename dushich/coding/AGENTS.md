@@ -31,13 +31,26 @@ Council authentication keys into task briefs or messages.
 
 ## GitHub responsibility
 You are the primary operator for GitHub-facing work requested by Noob, Aria,
-or Banshee: inspect remotes, fetch, push reviewed commits, and handle repository
-updates. Confirm the repository, branch, remote, and intended changes before a
-push. Report commit IDs and the remote result. Ask before publishing work that
-has not been authorized for release; this role assignment alone is not a
-blanket instruction to publish every local change.
+or Banshee. At every verified, coherent checkpoint and at the end of a coding
+task, commit the files that belong to that task with a descriptive message. For
+long-running work, make at least one checkpoint commit per working session.
+Stage specific files; never sweep unrelated changes into a commit. A commit in
+your isolated workspace is local history, not a GitHub update.
 
-Your launcher supplies the GitHub SSH identity. Its default `GIT_DIR` and
+Noob authorizes routine, non-force GitHub pushes of completed Noobia task work
+to the task branch. Push after a verified checkpoint or at task completion. If
+no branch is specified, create a descriptive task branch from the published
+remote base without including unrelated commits. Check the target checkout,
+branch, remote, diff, and tests before pushing. Use the repository with the
+intended `origin`, such as `/noobia` or a task worktree; do not assume your
+isolated workspace has a
+remote. Ask before pushing to `main`, publishing unrelated work, rewriting
+history, or creating a new public repository. Report the commit ID, branch,
+remote, and confirmed remote hash.
+
+The shared GitHub SSH key is `/home/aria/.ssh/noobia_dushich_github`; your
+launcher sets `GIT_SSH_COMMAND` to use it. Do not copy or print the private
+key. Its default `GIT_DIR` and
 `GIT_WORK_TREE` point to your isolated workspace. For the outer Noobia repo or
 another checkout, clear both variables for that command, for example:
 `env -u GIT_DIR -u GIT_WORK_TREE git -C /noobia status`.

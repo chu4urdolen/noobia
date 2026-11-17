@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Start or resume Dushich's own local Codex terminal in tmux."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import time
+from uuid import uuid4
+
+UUID = re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
+PREFIX = 'noobia-dushich-solo-'
+REGISTRY = Path('/noobia/dushich/solo/private/conversations.json')
+
+
+def registered() -> list[str]:
+    try:
+        value = json.loads(REGISTRY.read_text(encoding='utf-8'))
+    except FileNotFoundError:
+        return []
+    if not isinstance(value, list):
+        raise RuntimeError('Invalid solo Dushich registry')
+    return [item for item in value if isinstance(item, str) and UUID.fullmatch(item)]
+
+
+def register(ident: str) -> None:
+    REGISTRY.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(REGISTRY.parent, 0o700)
+    ids = registered()
+    if ident not in ids:
+        ids.append(ident)
+    temporary = REGISTRY.with_suffix('.tmp')
+    temporary.write_text(json.dumps(ids, indent=2) + '\n', encoding='utf-8')
+    os.chmod(temporary, 0o600)
+    temporary.replace(REGISTRY)
+
+
+def run(*args: str, check: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(args, capture_output=True, text=True, check=check)
+
+
+def capture(session: str) -> str:
+    return run('tmux', '-L', 'dushich-clean', 'capture-pane', '-p', '-J', '-S', '-100', '-t', session + ':0.0').stdout
+
+
+def screen_id(screen: str) -> str | None:
+    if 'Session:' not in screen:
+        return None
+    tail = screen.rsplit('Session:', 1)[1]
+    pieces = []
+    for line in tail.splitlines():
+        part = line.strip()
+        if not part:
+            continue
+        if not re.fullmatch(r'[0-9a-f-]+', part):
+            if pieces:
+                break
+            continue
+        pieces.append(part)
+        candidate = ''.join(pieces)
+        if UUID.fullmatch(candidate):
+            return candidate
+        if len(candidate) >= 36:
+            break
+    return None
+
+
+def wait_for_id(session: str) -> str:
+    deadline = time.monotonic() + 20
+    while time.monotonic() < deadline:
+        if 'Ask Codex to do anything' in capture(session):
+            break
+        time.sleep(.2)
+    else:
+        raise RuntimeError('Dushich prompt did not appear')
+    run('tmux', '-L', 'dushich-clean', 'send-keys', '-l', '-t', session + ':0.0', '--', '/status')
+    time.sleep(.2)
+    for _ in range(2):
+        run('tmux', '-L', 'dushich-clean', 'send-keys', '-t', session + ':0.0', 'Enter')
+        until = time.monotonic() + 3
+        while time.monotonic() < until:
+            found = screen_id(capture(session))
+            if found:
+                run('tmux', '-L', 'dushich-clean', 'send-keys', '-t', session + ':0.0', 'Escape')
+                return found
+            time.sleep(.2)
+    raise RuntimeError('Could not read Dushich session ID from /status')
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--detached', action='store_true')
+    parser.add_argument('--resume')
+    parser.add_argument('--attach')
+    args = parser.parse_args()
+    if args.resume and args.attach:
+        parser.error('--resume and --attach cannot be combined')
+    for ident in (args.resume, args.attach):
+        if ident and not UUID.fullmatch(ident):
+            parser.error('invalid Dushich conversation ID')
+    if args.attach:
+        session = PREFIX + args.attach
+        if run('tmux', '-L', 'dushich-clean', 'has-session', '-t', session, check=False).returncode:
+            parser.error('Dushich session is not running')
+    elif args.resume:
+        if args.resume not in registered():
+            parser.error('conversation is not registered as a solo Dushich session')
+        session = PREFIX + args.resume
+        if run('tmux', '-L', 'dushich-clean', 'has-session', '-t', session, check=False).returncode:
+            run('tmux', '-L', 'dushich-clean', 'new-session', '-d', '-s', session, '-n', 'workshop',
+                '-c', '/noobia/dushich/workspace',
+                f'exec /noobia/dushich/solo/codex-solo resume {args.resume}')
+    else:
+        session = PREFIX + uuid4().hex[:8]
+        run('tmux', '-L', 'dushich-clean', 'new-session', '-d', '-s', session, '-n', 'workshop',
+            '-c', '/noobia/dushich/workspace', 'exec /noobia/dushich/solo/codex-solo')
+        try:
+            ident = wait_for_id(session)
+            named = PREFIX + ident
+            run('tmux', '-L', 'dushich-clean', 'rename-session', '-t', session, named)
+            session = named
+            register(ident)
+        except Exception:
+            run('tmux', '-L', 'dushich-clean', 'kill-session', '-t', session, check=False)
+            raise
+    if args.detached:
+        print('Solo Dushich session ready: ' + session)
+        print('Reattach: /noobia/dushich/solo/launch --attach ' + session.removeprefix(PREFIX))
+    elif os.environ.get('TMUX'):
+        os.execvp('tmux', ['tmux', '-L', 'dushich-clean', 'switch-client', '-t', session])
+    else:
+        os.execvp('tmux', ['tmux', '-L', 'dushich-clean', 'attach-session', '-t', session])
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        raise SystemExit(main())
+    except (RuntimeError, subprocess.CalledProcessError) as exc:
+        print(f'Solo Dushich launcher: {exc}', file=sys.stderr)
+        raise SystemExit(1)

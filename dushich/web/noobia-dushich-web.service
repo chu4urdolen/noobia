@@ -1,0 +1,17 @@
+[Unit]
+Description=Noobia Dushich local conversation dashboard
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=/noobia/dushich/web
+ExecStart=/usr/bin/python3 /noobia/dushich/web/server.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=false
+# tmux servers launched by the dashboard keep agent conversations alive across
+# dashboard restarts. Stop only the HTTP server process, not its tmux children.
+KillMode=process
+
+[Install]
+WantedBy=default.target

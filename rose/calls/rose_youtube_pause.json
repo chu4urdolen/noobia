@@ -1,0 +1,12 @@
+{
+  "description": "Entity: Rose. Entity: Rose. Pause the embedded YouTube player. Queues the action and returns immediately.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 10,
+  "example": {}
+}

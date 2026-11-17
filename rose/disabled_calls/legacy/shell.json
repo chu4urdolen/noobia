@@ -1,0 +1,13 @@
+{
+  "description": "Execute a shell command on Syra as Rose's Linux user. Returns stdout/stderr and exit status. Commands can change files, run programs, and access the network. Never cut Syra's power. Do not read or disclose credentials unless explicitly requested. Prefer specific tools where available; inspect before destructive actions.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "command": {"type": "string", "minLength": 1, "maxLength": 8000, "description": "Command text interpreted by /bin/sh -c, including pipelines, redirects, and shell syntax. Runs as Rose, with existing account permissions. Stdout/stderr and exit status return to the agent."}
+    },
+    "required": ["command"],
+    "additionalProperties": false
+  },
+  "protocol": "command-stdin",
+  "timeout": 120
+}

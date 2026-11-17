@@ -1,0 +1,2 @@
+#!/bin/sh
+exec systemctl --user start rose-chat-gui.service

@@ -1,0 +1,36 @@
+{
+  "description": "Entity: Rose. Play a YouTube video immediately on the HDMI screen with autoplay enabled. Replaces the current video; there is no queue. Confirms that this video is playing, or returns a startup error within 20 seconds. Does not wait for the video to finish; continue the conversation and other tools.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "video_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{11}$",
+        "description": "The 11-character YouTube video ID returned by search or extracted from a link."
+      },
+      "start_seconds": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 86400,
+        "description": "Start position in seconds."
+      },
+      "muted": {
+        "type": "boolean",
+        "description": "True starts muted; false plays audio through the system speaker."
+      }
+    },
+    "required": [
+      "video_id",
+      "start_seconds",
+      "muted"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 30,
+  "example": {
+    "video_id": "M7lc1UVf-VE",
+    "start_seconds": 0,
+    "muted": false
+  }
+}

@@ -1,0 +1,8 @@
+__pycache__/
+.venv*/
+media/
+runs/
+*.wav
+*.flac
+*.mp3
+*.mid

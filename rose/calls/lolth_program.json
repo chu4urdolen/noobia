@@ -1,0 +1,47 @@
+{
+  "description": "Entity: Lolth. Preview or explicitly apply a saved pose. Targets are calibration candidates; servo 8 default is provisional. Execute only after an agreed physical move.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "pose": {
+        "type": "string",
+        "enum": [
+          "default",
+          "standby"
+        ]
+      },
+      "execute": {
+        "type": "boolean",
+        "description": "False previews locally without contacting the robot; true applies selected targets."
+      },
+      "servo": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 1,
+        "maximum": 8,
+        "description": "One human servo number to select, or null."
+      },
+      "all": {
+        "type": "boolean",
+        "description": "With execute=true and servo=null, true explicitly selects all targets."
+      }
+    },
+    "required": [
+      "pose",
+      "execute",
+      "servo",
+      "all"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 60,
+  "example": {
+    "pose": "default",
+    "execute": false,
+    "servo": null,
+    "all": false
+  }
+}

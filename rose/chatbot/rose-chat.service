@@ -1,0 +1,15 @@
+[Unit]
+Description=Rose Responses chatbot and local input socket
+After=noobia-speech.service
+
+[Service]
+Type=simple
+ExecStart=/noobia/rose_tools/chatbot/.venv/bin/python /noobia/rose_tools/chatbot/server.py
+WorkingDirectory=/noobia/rose_tools/chatbot
+Restart=on-failure
+RestartSec=3
+UMask=0077
+KillMode=control-group
+
+[Install]
+WantedBy=default.target

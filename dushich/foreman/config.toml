@@ -1,0 +1,15 @@
+# Separate local-only Codex home for Foreman Dushich.
+model = "gpt-oss:20b"
+model_provider = "ollama"
+oss_provider = "ollama"
+model_catalog_json = "/noobia/dushich/foreman/private/codex/model.json"
+model_context_window = 131072
+model_auto_compact_token_limit = 114688
+model_reasoning_effort = "medium"
+model_reasoning_summary = "none"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+web_search = "disabled"
+
+[projects."/noobia/dushich/workspace"]
+trust_level = "trusted"

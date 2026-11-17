@@ -1,0 +1,25 @@
+{
+  "description": "Entity: Lolth. Stop the current action and request a pose; this CAN MOVE joints. Requires an agreed physical move, not a passive emergency stop.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": [
+          "standby",
+          "center",
+          "zero"
+        ]
+      }
+    },
+    "required": [
+      "mode"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 15,
+  "example": {
+    "mode": "standby"
+  }
+}

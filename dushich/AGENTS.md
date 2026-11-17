@@ -1,0 +1,1 @@
+/noobia/dushich/coding/AGENTS.md

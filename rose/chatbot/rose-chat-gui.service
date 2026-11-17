@@ -1,0 +1,17 @@
+[Unit]
+Description=Rose controls on touchscreen and fullscreen HDMI display
+Wants=rose-chat.service
+After=rose-chat.service
+
+[Service]
+Type=simple
+ExecStart=/noobia/rose_tools/chatbot/.venv/bin/python /noobia/rose_tools/chatbot/gui.py
+WorkingDirectory=/noobia/rose_tools/chatbot
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-0
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=graphical-session.target

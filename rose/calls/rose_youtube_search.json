@@ -1,0 +1,31 @@
+{
+  "description": "Entity: Rose. Entity: Rose. Search YouTube using the official Data API. Returns video IDs, titles, channels and links. Requires a YouTube Data API key saved in Settings; browser login is separate.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500,
+        "description": "The video search words."
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 10,
+        "description": "Maximum number of video results."
+      }
+    },
+    "required": [
+      "query",
+      "limit"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 25,
+  "example": {
+    "query": "ambient music",
+    "limit": 5
+  }
+}

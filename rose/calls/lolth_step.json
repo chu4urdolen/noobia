@@ -1,0 +1,40 @@
+{
+  "description": "Entity: Lolth. Move one servo by a small electrical-angle step. Requires a specific move agreed with Noob.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "number": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 8,
+        "description": "Human servo number 1 through 8."
+      },
+      "direction": {
+        "type": "string",
+        "enum": [
+          "up",
+          "down"
+        ]
+      },
+      "degrees": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20,
+        "description": "Step magnitude in electrical degrees. Up increases, down decreases; this does not imply physical up/down."
+      }
+    },
+    "required": [
+      "number",
+      "direction",
+      "degrees"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 15,
+  "example": {
+    "number": 1,
+    "direction": "up",
+    "degrees": 5
+  }
+}

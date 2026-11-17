@@ -1,0 +1,16 @@
+# Solo Dushich retains local Ollama while using Aria's Codex permissions.
+# Installed at solo/private/codex/config.toml, separate from delegated tasks.
+model = "gpt-oss:20b"
+model_provider = "ollama"
+oss_provider = "ollama"
+model_catalog_json = "/noobia/dushich/solo/private/codex/model.json"
+model_context_window = 131072
+model_auto_compact_token_limit = 114688
+model_reasoning_effort = "medium"
+model_reasoning_summary = "none"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+web_search = "disabled"
+
+[projects."/noobia/dushich/workspace"]
+trust_level = "trusted"

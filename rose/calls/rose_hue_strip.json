@@ -1,0 +1,38 @@
+{
+  "description": "Entity: Rose. Read or control the Hue light strip. Brightness may be null to keep its setting.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "status",
+          "on",
+          "off",
+          "toggle"
+        ],
+        "description": "Read status, turn on, turn off, or toggle only the Hue strip."
+      },
+      "brightness": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 1,
+        "maximum": 254,
+        "description": "Hue brightness 1\u2013254; null preserves the current setting."
+      }
+    },
+    "required": [
+      "action",
+      "brightness"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 20,
+  "example": {
+    "action": "status",
+    "brightness": null
+  }
+}

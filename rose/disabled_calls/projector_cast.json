@@ -1,0 +1,22 @@
+{
+  "description": "Show a local image/video on the Hccast projector. Requires it to be online.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "maxLength": 1024,
+        "description": "Absolute path to an existing image or video in /noobia, ~/Pictures, ~/Videos, or ~/Downloads. Hidden/private/backup files are rejected."
+      }
+    },
+    "required": [
+      "path"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 180,
+  "example": {
+    "path": "/home/rose/Pictures/example.jpg"
+  }
+}

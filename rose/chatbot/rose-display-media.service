@@ -1,0 +1,14 @@
+[Unit]
+Description=Rose asynchronous HDMI YouTube IFrame player API
+After=pipewire.service
+
+[Service]
+ExecStart=/noobia/rose_tools/chatbot/.venv/bin/python /noobia/rose_tools/chatbot/media_server.py
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-0
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=default.target

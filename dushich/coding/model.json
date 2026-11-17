@@ -1,0 +1,28 @@
+{
+  "models": [
+    {
+      "base_instructions": "",
+      "context_window": 131072,
+      "default_reasoning_level": null,
+      "default_verbosity": "low",
+      "display_name": "gpt-oss:20b",
+      "experimental_supported_tools": [],
+      "input_modalities": [
+        "text"
+      ],
+      "priority": 0,
+      "shell_type": "default",
+      "slug": "gpt-oss:20b",
+      "support_verbosity": true,
+      "supported_in_api": true,
+      "supported_reasoning_levels": [],
+      "supports_parallel_tool_calls": false,
+      "supports_reasoning_summaries": false,
+      "truncation_policy": {
+        "limit": 10000,
+        "mode": "bytes"
+      },
+      "visibility": "list"
+    }
+  ]
+}

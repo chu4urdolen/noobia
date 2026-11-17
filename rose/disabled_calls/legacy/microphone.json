@@ -1,0 +1,26 @@
+{
+  "description": "Check, stop, or resume Rose\u2019s live microphone collection. Off clears unsent speech; keyboard still works. The explicit setting persists across restart.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "status",
+          "on",
+          "off"
+        ],
+        "description": "status reports enabled state and buffered phrase count; off stops this agent\u2019s subscription and clears unsent speech; on resumes collection with love as the send trigger."
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 10,
+  "example": {
+    "action": "off"
+  }
+}

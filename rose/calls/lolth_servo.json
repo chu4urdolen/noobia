@@ -1,0 +1,31 @@
+{
+  "description": "Entity: Lolth. Move exactly one servo to an absolute electrical angle. Requires a specific move agreed with Noob.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "number": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 8,
+        "description": "Human servo number, 1 through 8."
+      },
+      "angle": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 180,
+        "description": "Absolute electrical angle in degrees; physical direction depends on the joint."
+      }
+    },
+    "required": [
+      "number",
+      "angle"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 15,
+  "example": {
+    "number": 1,
+    "angle": 90
+  }
+}

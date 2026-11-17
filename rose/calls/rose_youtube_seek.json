@@ -1,0 +1,23 @@
+{
+  "description": "Entity: Rose. Entity: Rose. Seek the active YouTube video to a position in seconds. Returns immediately.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "seconds": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 86400,
+        "description": "Position from the beginning of the video, in seconds."
+      }
+    },
+    "required": [
+      "seconds"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 10,
+  "example": {
+    "seconds": 60
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "description": "Entity: Rose. Speak text using Rose\u2019s local voice and animated Hue strip.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8000,
+        "description": "The English text to speak aloud; Hue brightness follows the voice."
+      }
+    },
+    "required": [
+      "text"
+    ],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 300,
+  "example": {
+    "text": "Hello Noob."
+  }
+}

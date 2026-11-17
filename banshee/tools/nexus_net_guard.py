@@ -3,16 +3,20 @@
 
 Co-developed by Dushich and Banshee on Nexus.
 Audits kernel sysctl hardening, UFW firewall rules, Fail2ban intrusion
-prevention, SSH hardening, and Noobia Wi-Fi (`wlx40a5ef5f66f1` /
-`192.168.100.106`) stability, with optional `--heal-wifi` auto-recovery so
-all Noobs on `192.168.100.0/24` maintain a rock-solid connection to Nexus.
+prevention, SSH hardening, Noobia Wi-Fi (`wlx40a5ef5f66f1` /
+`192.168.100.106`) stability, socket listener exposure, Wi-Fi link signal
+quality (RSSI), ARP neighbor integrity (spoofing detection), and defense
+config file integrity, with optional `--heal-wifi` auto-recovery so all
+Noobs on `192.168.100.0/24` maintain a rock-solid connection to Nexus.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -123,6 +127,7 @@ def evaluate_fail2ban(service_active: str, jail_text: str) -> dict:
         "sshd_jail_ok": sshd_jail_ok,
     }
 
+
 # ---------------------------------------------------------------------------
 # Listener exposure verification
 # ---------------------------------------------------------------------------
@@ -138,10 +143,10 @@ def evaluate_listeners(ss_text: str) -> dict:
     -------
     dict
         Mapping of ``ok`` and the individual checks:
-        ``ssh_listening`` – ``:22`` present.
-        ``inference_proxy_lan_ok`` – ``192.168.100.106:8080`` present **and**
+        ``ssh_listening`` -- ``:22`` present.
+        ``inference_proxy_lan_ok`` -- ``192.168.100.106:8080`` present **and**
         ``0.0.0.0:8080`` absent.
-        ``ollama_localhost_only`` – ``127.0.0.1:11434`` present **and**
+        ``ollama_localhost_only`` -- ``127.0.0.1:11434`` present **and**
         ``0.0.0.0:11434`` absent.
     """
     ssh_listening = ":22" in ss_text
@@ -157,6 +162,139 @@ def evaluate_listeners(ss_text: str) -> dict:
         "ssh_listening": ssh_listening,
         "inference_proxy_lan_ok": inference_proxy_lan_ok,
         "ollama_localhost_only": ollama_localhost_only,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Wi-Fi link signal quality (RSSI)
+# ---------------------------------------------------------------------------
+_WIFI_SIGNAL_RE = re.compile(r"signal:\s*(-?\d+)\s*dBm", re.IGNORECASE)
+
+
+def evaluate_wifi_signal(iw_link_text: str) -> dict:
+    """Evaluate the quality of the Noobia Wi-Fi link from `iw dev ... link`.
+
+    Parameters
+    ----------
+    iw_link_text:
+        Raw output from ``iw dev wlx40a5ef5f66f1 link``.
+
+    Returns
+    -------
+    dict
+        ``ok`` -- True when the radio is connected with a strong signal
+        (``rssi_dbm >= -75``) or connected with no signal line to parse.
+        ``rssi_dbm`` -- parsed integer RSSI in dBm, or ``None``.
+        ``strong_signal`` -- True when RSSI is at least -75 dBm (or no
+        signal line is present while connected).
+    """
+    if "Not connected" in iw_link_text:
+        return {"ok": False, "rssi_dbm": None, "strong_signal": False}
+    match = _WIFI_SIGNAL_RE.search(iw_link_text)
+    if match:
+        rssi_dbm = int(match.group(1))
+        strong_signal = rssi_dbm >= -75
+        return {"ok": strong_signal, "rssi_dbm": rssi_dbm, "strong_signal": strong_signal}
+    # Connected (not "Not connected") but no parsable signal line: assume
+    # the link is fine rather than failing on an unusual formatter.
+    return {"ok": True, "rssi_dbm": None, "strong_signal": True}
+
+
+# ---------------------------------------------------------------------------
+# ARP neighbor integrity (spoofing detection)
+# ---------------------------------------------------------------------------
+_ARP_NEIGH_RE = re.compile(r"^(\d{1,3}(?:\.\d{1,3}){3})\s+lladdr\s+([0-9a-fA-F:]{17})")
+
+
+def evaluate_arp_neighbors(ip_neigh_text: str) -> dict:
+    """Evaluate `ip -4 neigh show dev <iface>` output for spoofing signs.
+
+    Parameters
+    ----------
+    ip_neigh_text:
+        Raw output from ``ip -4 neigh show dev wlx40a5ef5f66f1``.
+        Lines look like ``192.168.100.1 lladdr 48:ad:08:d8:1f:6c REACHABLE``.
+
+    Returns
+    -------
+    dict
+        ``ok`` -- gateway present **and** no MAC claimed by more than one IP.
+        ``gateway_present`` -- the Noobia gateway 192.168.100.1 is resolvable.
+        ``neighbor_count`` -- number of resolved (lladdr) neighbor entries.
+        ``duplicate_macs`` -- sorted list of MACs bound to more than one IP.
+    """
+    ip_to_mac: dict[str, str] = {}
+    mac_to_ips: dict[str, list[str]] = {}
+    for line in ip_neigh_text.splitlines():
+        if "lladdr" not in line:
+            continue
+        match = _ARP_NEIGH_RE.match(line.strip())
+        if not match:
+            continue
+        ip_addr, mac = match.group(1), match.group(2).lower()
+        ip_to_mac[ip_addr] = mac
+        mac_to_ips.setdefault(mac, []).append(ip_addr)
+
+    duplicate_macs = sorted(mac for mac, ips in mac_to_ips.items() if len(ips) > 1)
+    gateway_present = NOOBIA_GATEWAY in ip_to_mac
+    return {
+        "ok": gateway_present and len(duplicate_macs) == 0,
+        "gateway_present": gateway_present,
+        "neighbor_count": len(ip_to_mac),
+        "duplicate_macs": duplicate_macs,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Defense config integrity (SHA-256)
+# ---------------------------------------------------------------------------
+DEFAULT_DEFENSE_CONFIGS = (
+    "/etc/NetworkManager/conf.d/90-noobia-wifi-powersave-off.conf",
+    "/etc/fail2ban/jail.d/90-nexus-defense.local",
+    "/etc/ssh/sshd_config.d/90-nexus-hardening.conf",
+    "/etc/sysctl.d/90-nexus-network-security.conf",
+)
+
+
+def evaluate_config_integrity(
+    paths: list[str] | tuple[str, ...] = DEFAULT_DEFENSE_CONFIGS,
+) -> dict:
+    """Verify the defense hardening config files exist, are non-empty, and
+    record their SHA-256 digests.
+
+    Parameters
+    ----------
+    paths:
+        Config files to check (defaults to ``DEFAULT_DEFENSE_CONFIGS``).
+
+    Returns
+    -------
+    dict
+        ``ok`` -- every path exists with size > 0.
+        ``missing`` -- paths that are absent or empty (in input order).
+        ``sha256`` -- mapping of path -> hex digest (``None`` when missing).
+    """
+    missing: list[str] = []
+    digests: dict[str, str | None] = {}
+    for path in paths:
+        try:
+            file_path = Path(path)
+            if not file_path.is_file() or file_path.stat().st_size == 0:
+                missing.append(path)
+                digests[path] = None
+                continue
+            hasher = hashlib.sha256()
+            with file_path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(65536), b""):
+                    hasher.update(chunk)
+            digests[path] = hasher.hexdigest()
+        except OSError:
+            missing.append(path)
+            digests[path] = None
+    return {
+        "ok": len(missing) == 0,
+        "missing": missing,
+        "sha256": digests,
     }
 
 
@@ -209,6 +347,17 @@ def check_once(heal_wifi: bool = False) -> dict:
     ss_out = _run(["ss", "-tln"])
     listeners_res = evaluate_listeners(ss_out.stdout)
 
+    # Wi-Fi link signal quality (RSSI telemetry)
+    iw_link_out = _run(["/usr/sbin/iw", "dev", NOOBIA_IFACE, "link"])
+    wifi_signal_res = evaluate_wifi_signal(iw_link_out.stdout)
+
+    # ARP neighbor integrity (spoofing detection)
+    neigh_out = _run(["ip", "-4", "neigh", "show", "dev", NOOBIA_IFACE])
+    arp_res = evaluate_arp_neighbors(neigh_out.stdout)
+
+    # Defense config integrity (SHA-256 guard)
+    config_res = evaluate_config_integrity()
+
     healthy = (
         sysctl_res["ok"]
         and ufw_res["ok"]
@@ -216,6 +365,9 @@ def check_once(heal_wifi: bool = False) -> dict:
         and wifi_res["ok"]
         and ping_ok
         and listeners_res["ok"]
+        and wifi_signal_res["ok"]
+        and arp_res["ok"]
+        and config_res["ok"]
     )
     return {
         "healthy": healthy,
@@ -225,6 +377,9 @@ def check_once(heal_wifi: bool = False) -> dict:
         "wifi": wifi_res,
         "gateway_ping_ok": ping_ok,
         "listeners": listeners_res,
+        "wifi_signal": wifi_signal_res,
+        "arp_neighbors": arp_res,
+        "config_integrity": config_res,
         "healed": healed,
     }
 
@@ -247,7 +402,10 @@ def main() -> int:
                 f"[nexus-net-guard] healthy={res['healthy']} "
                 f"sysctl={res['sysctl']['ok']} ufw={res['ufw']['ok']} "
                 f"fail2ban={res['fail2ban']['ok']} wifi={res['wifi']['ok']} "
-                f"gateway_ping={res['gateway_ping_ok']} healed={res['healed']}",
+                f"gateway_ping={res['gateway_ping_ok']} listeners={res['listeners']['ok']} "
+                f"wifi_signal={res['wifi_signal']['ok']} "
+                f"arp={res['arp_neighbors']['ok']} "
+                f"config={res['config_integrity']['ok']} healed={res['healed']}",
                 flush=True,
             )
         if args.once or not args.watch:

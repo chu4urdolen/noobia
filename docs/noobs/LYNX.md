@@ -24,6 +24,7 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | Need | Source and notes |
 | --- | --- |
 | Current hardware evidence | [`LYNX-HARDWARE-STATUS.md`](../../lynx/linux-port/docs/LYNX-HARDWARE-STATUS.md) |
+| Why Lynx powers off | [Poweroff audit](../../lynx/linux-port/docs/LYNX-POWER-SHUTDOWNS-20261118.md); active 20% reserve and older charging policy |
 | Kernel-to-agent gate and flash decision | [`LYNX-KERNEL-TO-AGENT-GATE.md`](../../lynx/linux-port/docs/LYNX-KERNEL-TO-AGENT-GATE.md) |
 | Camera and flashlight trial checkpoint | [`LYNX-CAMERA-FLASHLIGHT-20261102.md`](../../lynx/linux-port/docs/LYNX-CAMERA-FLASHLIGHT-20261102.md) |
 | Rear flash and color sensor identification | [`LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md`](../../lynx/linux-port/docs/LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md) |

@@ -24,7 +24,7 @@ out of files and reports. Prefer reversible actions. Never claim a test or
 command ran unless its output confirms it.
 
 Banshee's workspace has a separate local Git history and no GitHub remote.
-Follow the shared Git rules for task branches and publication.
+Follow the shared Git rules for work on the repository's primary branch and for publication.
 
 ## Dushich, your local CLI partner
 

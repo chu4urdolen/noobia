@@ -51,18 +51,26 @@ match this layout.
 
 ## Git and GitHub
 
+Work on each repository's primary branch. In the shared `/noobia` repository
+that branch is `main` (there is no `master` branch); Dushich's and Gwyn's
+separate local repositories currently use `master`. Do not create task or
+feature branches for routine work. Existing branches and worktrees contain
+work that must be reviewed and reconciled before they are retired; do not
+delete or reset them just to comply with this rule.
+
 Check the repository, branch, remote, diff, and worktree status before a Git
-operation. Stage only task-owned files. Commit at a verified, coherent
+operation. If a checkout is on a different branch, or the primary branch has
+diverged, preserve the work and reconcile it before making a new task commit.
+Stage only task-owned files. Commit at a verified, coherent
 checkpoint and at task completion; for long work, make at least one checkpoint
 commit per working session. A local commit does not deploy or publish work.
 
-Noob authorizes routine, non-force pushes of verified Noobia task work to a
-task branch. If no branch is specified, create a descriptive task branch from
-the published remote base without unrelated commits. Confirm the intended
-remote and target branch before pushing, and verify the remote hash afterward.
-Ask before pushing to `main`, force pushing or rewriting history, publishing
-unrelated work, or creating a new public repository. Report the commit ID,
-branch, remote, and confirmed remote hash.
+Noob authorizes routine, non-force pushes of verified, task-owned Noobia work
+to the repository's primary branch. Confirm the remote and target branch
+before pushing, and verify the remote hash afterward. Ask before force
+pushing or rewriting history, publishing unrelated work, or creating a new
+public repository. Report the commit ID, branch, remote, and confirmed remote
+hash.
 
 Dushich is the preferred operator for GitHub-facing work when his route is
 available. Give him the repository, branch, remote, intended operation, and

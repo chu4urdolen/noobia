@@ -21,6 +21,9 @@
 /rose/artifacts/
 /common/private/
 /dushich/3dprint/
+**/__pycache__/
+*.pyc
+**/.pytest_cache/
 /backups/
 /images/
 /os-images/

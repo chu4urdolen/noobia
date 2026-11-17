@@ -19,3 +19,7 @@ migrated and verified:
 The old `docs/CONTACT-BOOK.md` and `docs/NEXUS-INFERENCE.md` paths are
 compatibility links. The archive and private runtime directories are excluded
 from Git; they are not shared reference material.
+
+Large device backups, operating-system images, and live service trees remain
+at their current paths. Move them only with a device-specific migration plan
+and a check of installed units, mounts, scripts, and recovery procedures.

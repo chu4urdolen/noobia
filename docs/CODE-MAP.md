@@ -13,7 +13,7 @@ existing local directories; this map points to code and operating notes.
 | Iris, ESP32 camera Noob | [Iris](noobs/IRIS.md) | `iris/firmware/iris_noob/`, `iris/tools/`, `iris/programs/` |
 | Rose | [Rose](noobs/ROSE.md) | `rose/calls/`, `rose/chatbot/`, camera and voice utilities; `rose_tools/` is a compatibility link |
 | Argus | [Argus](noobs/ARGUS.md) | `argus/services/`, `argus/tools/`, `argus/web/` |
-| Dushich | [Dushich](noobs/DUSHICH.md) | `dushich/`, [local coding workshop](../dushich/coding/README.md), [solo terminal](../dushich/solo/README.md), and [conversation web page](../dushich/web/README.md); check device inventory before assuming a runtime |
+| Dushich | [Dushich](noobs/DUSHICH.md) | `dushich/`, [local coding workshop](../dushich/coding/README.md), [solo terminal](../dushich/solo/README.md), and [disabled read-only web monitor](../dushich/web/README.md); check device inventory before assuming a runtime |
 | Aigel (planned) | [Draft](../aigel/README.md) | Local Nexus nurse concept; scope and authority await Noob's plan |
 | Banshee | [Banshee](../banshee/README.md) | `banshee/workspace/`, Google Antigravity CLI coding workspace on Nexus |
 | Gwyn App Nub | [Gwyn](../gwyn-app-nub/README.md) | `gwyn-app-nub/workspace/`, Claude Code workspace and isolated configuration; authentication pending |
@@ -39,8 +39,8 @@ remain under their own `/noobia` directories. Former `banshee` and `dushich`
 home directories are preserved as private archives in those directories.
 Their terminal CLIs are the primary contact routes: `noobia-codex` for Aria,
 `noobia-banshee` (`/noobia/banshee/launch`) for Banshee, and `/noobia/dushich/solo/launch` for
-Solo Dushich. The Dushich web page is transitional; do not build new agent
-chat routing around it.
+Solo Dushich. The Dushich web monitor is disabled by default and read-only;
+do not build new agent chat routing around it.
 
 ## Working rule
 

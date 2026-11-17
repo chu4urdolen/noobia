@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small interactive client for Nexus's gpt-oss-20b service."""
+"""Small interactive client for Nexus's local Qwen inference service."""
 
 import argparse
 import json
@@ -61,7 +61,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:8080", help="Nexus server URL")
     parser.add_argument("--key-file", type=Path, default=DEFAULT_KEY_FILE)
-    parser.add_argument("--model", default="gpt-oss-20b")
+    parser.add_argument("--model", default="qwen3.8-27b")
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--prompt", help="Send one message and exit instead of chatting interactively")
     args = parser.parse_args()
@@ -77,7 +77,7 @@ def main() -> int:
     if args.prompt is not None:
         prompts = [args.prompt]
     else:
-        print("Chat with gpt-oss-20b. Type /reset to clear history or /quit to exit.")
+        print(f"Chat with {args.model}. Type /reset to clear history or /quit to exit.")
         prompts = None
 
     while True:

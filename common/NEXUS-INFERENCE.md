@@ -29,16 +29,18 @@ The 2026-11-04 test returned “2 + 2 equals 4.” with a 0 exit status. `llama-
 ## Inference service
 
 Ollama is the single live model runtime for Dushich and LAN clients. It loads
-`gpt-oss:20b` on CUDA0 with a 131,072-token context. The lightweight
+`qwen3.8:27b` on CUDA0 with a configured 131,072-token context. The lightweight
 `noobia-inference-proxy.service` warms that model at boot and exposes the
 authenticated OpenAI-compatible API at `http://192.168.100.106:8080/v1` on
-the Noobia LAN; `http://127.0.0.1:8080/v1` works on Nexus. The proxy maps the
-old public model name `gpt-oss-20b` to Ollama's `gpt-oss:20b`. It does not bind
+the Noobia LAN; `http://127.0.0.1:8080/v1` works on Nexus. The proxy advertises
+`qwen3.8-27b` and maps it to Ollama's `qwen3.8:27b`. It continues to accept
+the former `gpt-oss-20b` name for existing Lynx clients; that name now also
+routes to Qwen. It does not bind
 to the cellular fallback address or expose Ollama's management API. The old
 `noobia-llama-server.service` is disabled; its launcher remains available as a
 rollback path.
 
-The API requires a key stored at `/home/aria/.config/noobia/gpt-oss-20b.api-key` (mode `0600`, outside the repository). Keep that key private when configuring another client. `/health` is public; authenticated clients can use `/v1/models` and `/v1/chat/completions`. The LAN endpoint uses HTTP, so use an SSH tunnel for access from outside the Noobia LAN.
+The API continues to use the key stored at `/home/aria/.config/noobia/gpt-oss-20b.api-key` (mode `0600`, outside the repository), preserving existing clients. Keep that key private when configuring another client. `/health` is public; authenticated clients can use `/v1/models` and `/v1/chat/completions`. The LAN endpoint uses HTTP, so use an SSH tunnel for access from outside the Noobia LAN.
 
 The service source files are `aria/inference/ollama-proxy.py` and
 `aria/inference/noobia-inference-proxy.service`; `aria/inference/run-server`
@@ -51,10 +53,10 @@ llama.cpp setup. The example client is `aria/inference/chat.py`. On Nexus:
 sudo systemctl status noobia-inference-proxy.service ollama.service
 ```
 
-On 2026-11-06, the single 131K Ollama runner used about 15.5 GiB of the RTX
-5090's 32 GiB, leaving about 16.5 GiB free, with 100% GPU placement. Requests
-from Dushich and LAN clients share one runner and queue when it is busy. The
-context setting matches the model's native maximum; this is an allocation and
+On 2026-11-06, the former `gpt-oss:20b` 131K runner used about 15.5 GiB of
+the RTX 5090's 32 GiB. On 2026-11-17, `qwen3.8:27b` loaded at 131K with 100%
+GPU placement and Ollama reported a 17 GB model size. Dushich and LAN clients
+share one runner and queue when it is busy. This is an allocation and
 short-response check, not a sustained long-prompt or thermal test.
 
 From another machine, copy the example client and API key through a trusted channel, then set `NOOBIA_INFERENCE_API_KEY` or pass `--key-file`, and add `--url http://192.168.100.106:8080`. The client keeps conversation history in memory and supports `/reset` and `/quit`.
@@ -63,5 +65,10 @@ The 2026-11-06 proxy test returned HTTP 200 from `/health` on localhost and the
 LAN address, rejected unauthenticated `/v1/models` with HTTP 401, rejected the
 Ollama management path `/api/tags` with HTTP 404, and completed a chat request
 with the existing client and API key.
+
+On 2026-11-17, after switching to Qwen, the restarted proxy advertised
+`qwen3.8-27b` in `/v1/models`. Authenticated chat requests using both
+`qwen3.8-27b` and the legacy `gpt-oss-20b` alias returned HTTP 200 with
+`qwen3.8:27b` as the actual model.
 
 See `/home/aria/apps/llama.cpp-b12078/NEXUS-INFERENCE-SETUP.md` for installation history and recovery paths.

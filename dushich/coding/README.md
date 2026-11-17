@@ -86,9 +86,9 @@ and `qwen3.8:27b`, and refuses to run when local Ollama is down.
 
 The 131K context is requested in both Ollama and Codex. Confirm actual allocation
 with `ollama ps` after the model loads. Ollama runs only on `127.0.0.1:11434`.
-The authenticated Noobia LAN endpoint on port 8080 still serves
-`gpt-oss:20b` through the same Ollama service. Switching between that
-endpoint and Dushich's `qwen3.8:27b` may unload and reload GPU models. See
+The authenticated Noobia LAN endpoint on port 8080 serves the same
+`qwen3.8:27b` model through Ollama, so Dushich and LAN clients can share
+one GPU model copy. See
 `common/NEXUS-INFERENCE.md` for measured VRAM use and service controls.
 The Ollama service override source is `ollama-override.conf` in this directory.
 The previous `gpt-oss:20b` tag was built from a verified local GGUF conversion

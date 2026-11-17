@@ -14,8 +14,9 @@ import time
 from urllib.parse import urlsplit
 
 
-MODEL_ALIAS = "gpt-oss-20b"
-OLLAMA_MODEL = "gpt-oss:20b"
+MODEL_ALIAS = "qwen3.8-27b"
+OLLAMA_MODEL = "qwen3.8:27b"
+LEGACY_MODEL_ALIASES = {"gpt-oss-20b"}
 KEY_FILE = Path("/home/aria/.config/noobia/gpt-oss-20b.api-key")
 ALLOWED_POST = {"/v1/chat/completions", "/v1/responses", "/v1/embeddings"}
 MAX_BODY = 16 * 1024 * 1024
@@ -60,8 +61,8 @@ class Handler(BaseHTTPRequestHandler):
             self.json_reply(200, {"object": "list", "data": [
                 {"id": MODEL_ALIAS, "object": "model", "created": 0, "owned_by": "noobia"}
             ]})
-        elif path == f"/v1/models/{MODEL_ALIAS}":
-            self.json_reply(200, {"id": MODEL_ALIAS, "object": "model",
+        elif path in {f"/v1/models/{name}" for name in {MODEL_ALIAS, *LEGACY_MODEL_ALIASES}}:
+            self.json_reply(200, {"id": path.removeprefix("/v1/models/"), "object": "model",
                                   "created": 0, "owned_by": "noobia"})
         else:
             self.json_reply(404, {"error": "not found"})
@@ -87,7 +88,9 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, UnicodeDecodeError):
             self.json_reply(400, {"error": "invalid JSON"})
             return
-        if not isinstance(data, dict) or data.get("model") not in {MODEL_ALIAS, OLLAMA_MODEL}:
+        if not isinstance(data, dict) or data.get("model") not in {
+            MODEL_ALIAS, OLLAMA_MODEL, *LEGACY_MODEL_ALIASES
+        }:
             self.json_reply(400, {"error": "unknown model"})
             return
         data["model"] = OLLAMA_MODEL

@@ -1,0 +1,9 @@
+# Local Codex state, archived checkouts, reports, and Forge runtime data.
+/private/
+/workspace/
+/coding/private/
+/solo/private/
+/foreman/private/
+/web/private/
+**/__pycache__/
+*.pyc

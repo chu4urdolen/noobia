@@ -9,7 +9,8 @@ map. Task-specific files still need explicit `--include` or MCP `files` entries.
 
 Noob and Aria work in the main Codex conversation. Dushich works quietly in a
 separate local Codex CLI session using Ollama `gpt-oss:20b` on Nexus. He has his
-own Unix account, workspace, Git history, instructions, and session history.
+own Codex home, task workspace, Git history, instructions, and session history
+under the shared `aria` Unix account.
 He may implement, run tests, debug, and commit a bounded task in his workspace.
 The handoff runner checks tool use, changed files, tests, and a clean commit.
 When a task fails verification or needs a decision, report the blocker to Aria.
@@ -17,8 +18,10 @@ Aria and Noob can inspect the exact task brief and full event log if needed.
 
 ## Boundaries
 
-Dushich's workspace is `/noobia/dushich/workspace`. The project source tree is
-`/noobia`; its code map is `/noobia/docs/CODE-MAP.md`. A Dushich commit in his
+Dushich's interactive helper and solo sessions start at `/noobia`. The verified
+coding runner uses `/noobia/dushich/workspace`, a small clean task repository.
+The project source tree is `/noobia`; its code map is
+`/noobia/docs/CODE-MAP.md`. A Dushich commit in his
 workspace does not automatically change shared Noobia code or deploy to a
 device. Aria reviews relevant code before adopting it. Inference stays local;
 the launcher pins Ollama and refuses unavailable local inference.

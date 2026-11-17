@@ -144,11 +144,10 @@ def _run_foreman(key: str, prompt: str) -> str:
     else:
         command += [prompt]
     env = {'HOME': '/home/aria', 'USER': 'aria', 'LOGNAME': 'aria', 'CODEX_HOME': CODEX_HOME,
-           'GIT_DIR': '/noobia/dushich/workspace/.dushich-git',
-           'GIT_WORK_TREE': '/noobia/dushich/workspace', 'OLLAMA_HOST': 'http://127.0.0.1:11434',
+           'OLLAMA_HOST': 'http://127.0.0.1:11434',
            'PATH': '/opt/noobia/dushich-codex/node_modules/.bin:/usr/local/bin:/usr/bin:/bin',
            'LANG': 'C.UTF-8'}
-    process = subprocess.run(command, cwd='/noobia/dushich/workspace', env=env,
+    process = subprocess.run(command, cwd='/noobia', env=env,
                              capture_output=True, text=True, timeout=300, check=False)
     messages = []
     for line in process.stdout.splitlines():

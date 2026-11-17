@@ -11,5 +11,5 @@ approval_policy = "never"
 sandbox_mode = "danger-full-access"
 web_search = "disabled"
 
-[projects."/noobia/dushich/workspace"]
+[projects."/noobia"]
 trust_level = "trusted"

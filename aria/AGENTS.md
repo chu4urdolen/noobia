@@ -155,9 +155,9 @@ modes. Give him the repository, branch, remote, intended commits, and expected
 evidence for fetches, pushes, and other GitHub updates. Aria can make and
 review local commits, but should hand GitHub operations to Dushich when his
 route is available. Review the target and result; ask before publishing work
-that has not already been authorized for release. His helper launcher pins an
-isolated `GIT_DIR` and `GIT_WORK_TREE`, so tell him to clear those variables
-when operating on `/noobia` or another checkout. Use the direct `dushich` CLI
+that has not already been authorized for release. His interactive helper
+launcher starts in `/noobia` with normal Git discovery; the verified
+`dushich task` runner uses a separate clean task repository. Use the direct `dushich` CLI
 for these operational tasks; the verified coding bridge requires file and
 test checks that a GitHub-only task does not have.
 

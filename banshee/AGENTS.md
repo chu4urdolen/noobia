@@ -94,9 +94,9 @@ Dushich is unavailable, use the shared GitHub SSH key at
 `GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes'`
 for the Git command. Never copy or print the private key. Review the target
 and result, then report the commit ID, branch, remote, and confirmed remote
-hash. His helper launcher pins an
-isolated `GIT_DIR` and `GIT_WORK_TREE`, so tell him to clear those variables
-when operating on `/noobia` or another checkout. Use the direct `dushich` CLI
+hash. His interactive helper launcher starts in `/noobia` with normal Git
+discovery; the verified `dushich task` runner uses a separate clean task
+repository. Use the direct `dushich` CLI
 for GitHub-only tasks; the verified coding bridge requires file and test checks.
 
 For bounded non-coding tasks, contact his local `dushich` CLI with an explicit

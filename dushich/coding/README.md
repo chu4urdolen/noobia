@@ -4,7 +4,7 @@ This setup follows [Ollama's Codex CLI integration](https://github.com/ollama/ol
 and the separate `CODEX_HOME` pattern in
 [Photowalk's example](https://github.com/Photowalk/codex-local-model-switching).
 
-`dushich` starts Codex CLI in `/noobia/dushich/workspace`, using the local
+`dushich` starts Codex CLI in `/noobia`, using the local
 `gpt-oss:20b` model served by Ollama on loopback. `dushich exec "task"` runs a
 bounded noninteractive coding task. `dushich resume` resumes a saved session.
 `dushich exec resume --last "follow-up"` continues the last noninteractive task.
@@ -20,12 +20,9 @@ Dushich is the primary operator for GitHub-facing repository work in helper
 and solo modes. Helper mode uses its dedicated GitHub SSH key at
 `/home/aria/.ssh/noobia_dushich_github`; the launcher sets
 `GIT_SSH_COMMAND` so Git uses that key without an SSH agent. Solo mode also runs as
-Aria. For the outer checkout, clear the helper
-launcher's isolated `GIT_DIR` and `GIT_WORK_TREE` before running Git:
-
-```sh
-env -u GIT_DIR -u GIT_WORK_TREE git -C /noobia status
-```
+Aria. Interactive sessions use normal Git discovery from `/noobia`; specify
+another checkout explicitly when needed. The verified `dushich task` runner
+uses its own clean task repository at `/noobia/dushich/workspace`.
 
 A separate Dushich GitHub key pair is registered at
 `/home/aria/.ssh/noobia_dushich_github{,.pub}` (backed up under `private/ssh/`). Do not commit
@@ -75,15 +72,12 @@ linked into its own Codex home. The planned foreman role has its own
 [`../foreman/AGENTS.md`](../foreman/AGENTS.md); no foreman launcher is active yet.
 The workspace has no shared `AGENTS.md`, preventing one role's instructions
 from appearing in the other role's context.
-The workspace has its own Git history in `.dushich-git/`; this directory is
-private and ignored by Noobia's outer repository. The launcher sets `GIT_DIR`
-and `GIT_WORK_TREE` so Dushich's commits stay in his own history while his
-source files can also be published in the Noobia repository.
-On 2026-11-15, the workspace's deleted, obsolete `AGENTS.md` and five Forge
-helper scripts were recorded in local commit `f35b450`. The live `forge.db`
-and a scratch `test.txt` are ignored, leaving the isolated Git tree clean for
-verified handoffs without moving or modifying the database. No GitHub push
-was part of that cleanup.
+The verified task workspace has a small private Git history in `.dushich-git/`.
+It contains only task projects and Forge data, not a duplicate Noobia checkout.
+The former copied checkout, including its four local commits, is archived at
+`/noobia/dushich/private/backups/workspace-full-20261117/`; a verified Git
+bundle is at `private/backups/workspace-main-20261117.bundle`.
+The interactive helper launcher does not set `GIT_DIR` or `GIT_WORK_TREE`.
 
 Codex uses `danger-full-access` with approval `never`. The shared `aria` account has
 passwordless sudo via `/etc/sudoers.d/90-aria-noobia`; use `sudo -n` for

@@ -53,10 +53,9 @@ rewriting history, or creating a new public repository. Report the commit ID,
 branch, remote, and confirmed remote hash.
 
 Solo mode runs as `aria` and uses the shared GitHub SSH key at
-`/home/aria/.ssh/noobia_dushich_github`. The launcher pins this key and
-`GIT_DIR` and `GIT_WORK_TREE` to your isolated workspace; clear both for the
-outer repository or another checkout, for example:
-`env -u GIT_DIR -u GIT_WORK_TREE git -C /noobia status`.
+`/home/aria/.ssh/noobia_dushich_github`. The launcher pins this key and starts
+you in `/noobia` with normal Git discovery. Check the target repository
+before every Git operation.
 Keep private keys and tokens out of prompts, commits, logs, and reports.
 
 For authorized system service work, use `sudo -n systemctl` with named units.

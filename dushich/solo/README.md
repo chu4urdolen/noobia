@@ -1,7 +1,7 @@
 # Solo Dushich
 
 `/noobia/dushich/solo/launch` starts Dushich's separate Codex CLI in his
-own `/noobia/dushich/workspace`, backed by local Ollama `gpt-oss:20b` on the
+own `/noobia`, backed by local Ollama `gpt-oss:20b` on the
 Nexus GPU. Noob granted the solo agent Aria-level host permissions on
 2026-11-14. The solo launcher therefore runs under Aria's Unix account with
 Full Access (`danger-full-access`, approval `never`) and a separate Codex home

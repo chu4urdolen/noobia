@@ -113,12 +113,12 @@ def main() -> int:
         session = PREFIX + args.resume
         if run('tmux', '-L', 'dushich-clean', 'has-session', '-t', session, check=False).returncode:
             run('tmux', '-L', 'dushich-clean', 'new-session', '-d', '-s', session, '-n', 'workshop',
-                '-c', '/noobia/dushich/workspace',
+                '-c', '/noobia',
                 f'exec /noobia/dushich/solo/codex-solo resume {args.resume}')
     else:
         session = PREFIX + uuid4().hex[:8]
         run('tmux', '-L', 'dushich-clean', 'new-session', '-d', '-s', session, '-n', 'workshop',
-            '-c', '/noobia/dushich/workspace', 'exec /noobia/dushich/solo/codex-solo')
+            '-c', '/noobia', 'exec /noobia/dushich/solo/codex-solo')
         try:
             ident = wait_for_id(session)
             named = PREFIX + ident

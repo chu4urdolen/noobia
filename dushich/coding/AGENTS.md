@@ -59,10 +59,10 @@ remote, and confirmed remote hash.
 
 The shared GitHub SSH key is `/home/aria/.ssh/noobia_dushich_github`; your
 launcher sets `GIT_SSH_COMMAND` to use it. Do not copy or print the private
-key. Its default `GIT_DIR` and
-`GIT_WORK_TREE` point to your isolated workspace. For the outer Noobia repo or
-another checkout, clear both variables for that command, for example:
-`env -u GIT_DIR -u GIT_WORK_TREE git -C /noobia status`.
+key. Interactive helper sessions start in `/noobia` with normal Git discovery;
+check the target repository before every Git operation. The verified
+`dushich task` runner is the explicit exception: it uses its own small,
+clean repository in `/noobia/dushich/workspace`.
 Never include private keys or tokens in prompts, commits, logs, or reports.
 
 For delegated system service work, use `sudo -n systemctl` with named units.

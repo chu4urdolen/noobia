@@ -53,8 +53,13 @@ authenticated `MAG_STATUS` and `MAG_VECTOR` succeeded. The boot ID remained
 `d629cc73-aa6d-4aec-808b-8a374740e203` and health reported no issues.
 Receipt: `logs/magnetometer-local-tool-1794954466351338091/result.json`.
 These raw values do not establish a calibrated compass heading. The service
-startup failure on this boot still needs diagnosis before claiming automatic
-sensor readiness.
+startup failure is consistent with the battery gate: `power.csv` first sampled
+22% at uptime 214 seconds, and OpenRC reported the audio failure at about
+247 seconds; `lynx-audio-bootstrap` requires at least 25% while charging.
+Starting audio and sensorhub after charging succeeded. The original bootstrap
+log was overwritten by that successful start, so the exact failed check was
+not retained. The next reliability task is a bounded retry after charge rises
+above the service threshold, with a cold-boot test.
 
 The new numeric calls return one value per NRP/1 `CALL`, so they work from
 the common Noob VM as well as a direct client. Units are explicit in the

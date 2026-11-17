@@ -1,0 +1,13 @@
+[Unit]
+Description=Nexus warm English transcription worker
+
+[Service]
+WorkingDirectory=/noobia/speech_to_text
+ExecStart=/noobia/speech_to_text/.venv-py314/bin/python /noobia/speech_to_text/nexus_worker.py
+Environment=HF_HUB_DISABLE_XET=1
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=default.target

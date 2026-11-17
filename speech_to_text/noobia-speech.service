@@ -1,0 +1,14 @@
+[Unit]
+Description=Noobia local speech transcription socket
+
+[Service]
+Type=simple
+WorkingDirectory=/noobia/speech_to_text
+ExecStart=/noobia/speech_to_text/.venv/bin/python /noobia/speech_to_text/speech_service.py --language en
+Environment=HF_HUB_DISABLE_XET=1
+KillMode=control-group
+TimeoutStopSec=10
+UMask=0077
+
+[Install]
+WantedBy=default.target

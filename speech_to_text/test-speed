@@ -1,0 +1,4 @@
+#!/bin/sh
+cd "$(dirname "$0")" || exit 1
+export HF_HUB_DISABLE_XET=1
+exec .venv/bin/python speed_test.py "$@"

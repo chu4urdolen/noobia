@@ -1,0 +1,6 @@
+.venv/
+models/
+__pycache__/
+*.wav
+*.pcm
+speed-report*.json

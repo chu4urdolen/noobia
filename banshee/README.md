@@ -14,7 +14,7 @@ The `dushich` MCP server gives Banshee `dushich_context_status`,
 `dushich_ask`, `dushich_start`, `dushich_status`, `dushich_wait`, and
 `dushich_report`. Use `dushich_ask` for a direct question to the linked helper
 thread. Coding handoffs require a specific expected file and independent test. Dushich runs
-through his separate Codex CLI and local Ollama `gpt-oss:20b` on Nexus's GPU.
+through his separate Codex CLI and local Ollama `qwen3.8:27b` on Nexus's GPU.
 His own workspace and verified Git history remain separate. The monitor shows
 complete visible command and test activity. Reattach a detached two-pane
 session with the command printed by `noobia-banshee --detached`.

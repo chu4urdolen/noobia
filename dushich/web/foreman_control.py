@@ -137,7 +137,7 @@ def respond_to_flag(ident: str, response: str) -> None:
 def _run_foreman(key: str, prompt: str) -> str:
     with LOCK:
         session = STATE_DATA['sessions'].get(key)
-    command = [CODEX, '--oss', '--local-provider', 'ollama', '--model', 'gpt-oss:20b',
+    command = [CODEX, '--oss', '--local-provider', 'ollama', '--model', 'qwen3.8:27b',
                '--sandbox', 'workspace-write', '--ask-for-approval', 'never', 'exec', '--json']
     if session:
         command += ['resume', session, prompt]

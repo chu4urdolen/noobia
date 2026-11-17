@@ -54,7 +54,7 @@ def call(name: str, args: dict) -> str:
     if name == "dushich_context_status":
         return json.dumps({"session_id": current_session,
                            "handoffs": len(bridge.jobs(current_session)),
-                           "model": "gpt-oss:20b via local Ollama"})
+                           "model": "qwen3.8:27b via local Ollama"})
     if name == "dushich_ask":
         question = args.get('question')
         if not isinstance(question, str) or not question.strip() or len(question.encode()) > 8000:

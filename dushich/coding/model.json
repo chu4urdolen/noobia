@@ -5,14 +5,14 @@
       "context_window": 131072,
       "default_reasoning_level": null,
       "default_verbosity": "low",
-      "display_name": "gpt-oss:20b",
+      "display_name": "qwen3.8:27b",
       "experimental_supported_tools": [],
       "input_modalities": [
         "text"
       ],
       "priority": 0,
       "shell_type": "default",
-      "slug": "gpt-oss:20b",
+      "slug": "qwen3.8:27b",
       "support_verbosity": true,
       "supported_in_api": true,
       "supported_reasoning_levels": [],

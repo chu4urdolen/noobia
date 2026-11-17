@@ -26,5 +26,5 @@ exec /usr/bin/env -i \
     OLLAMA_HOST=http://127.0.0.1:11434 \
     PATH=/opt/noobia/dushich-codex/node_modules/.bin:/usr/local/bin:/usr/bin:/bin \
     TERM="${TERM:-xterm}" LANG="${LANG:-C.UTF-8}" \
-    /bin/bash -c 'cd /noobia && exec /opt/noobia/dushich-codex/node_modules/.bin/codex --oss --local-provider ollama --model gpt-oss:20b --sandbox danger-full-access --ask-for-approval never "$@"' \
+    /bin/bash -c 'cd /noobia && exec /opt/noobia/dushich-codex/node_modules/.bin/codex --oss --local-provider ollama --model qwen3.8:27b --sandbox danger-full-access --ask-for-approval never "$@"' \
     dushich-solo "$@"

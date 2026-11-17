@@ -8,7 +8,7 @@ map. Task-specific files still need explicit `--include` or MCP `files` entries.
 ## Working relationship
 
 Noob and Aria work in the main Codex conversation. Dushich works quietly in a
-separate local Codex CLI session using Ollama `gpt-oss:20b` on Nexus. He has his
+separate local Codex CLI session using Ollama `qwen3.8:27b` on Nexus. He has his
 own Codex home, task workspace, Git history, instructions, and session history
 under the shared `aria` Unix account.
 He may implement, run tests, debug, and commit a bounded task in his workspace.

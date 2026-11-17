@@ -27,7 +27,7 @@ for arg in "$@"; do
     esac
 done
 
-args=("$codex" --oss --local-provider ollama --model gpt-oss:20b)
+args=("$codex" --oss --local-provider ollama --model qwen3.8:27b)
 if [[ "${1:-}" == task ]]; then
     shift
     args=(/usr/bin/python3 /usr/local/libexec/dushich-task.py)

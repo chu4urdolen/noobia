@@ -20,7 +20,7 @@ from uuid import uuid4
 WORKSPACE = Path("/noobia/dushich/workspace")
 CODEX_HOME = Path("/noobia/dushich/coding/private/codex")
 CODEX = Path("/opt/noobia/dushich-codex/node_modules/.bin/codex")
-MODEL = "gpt-oss:20b"
+MODEL = "qwen3.8:27b"
 os.environ["GIT_DIR"] = str(WORKSPACE / ".dushich-git")
 os.environ["GIT_WORK_TREE"] = str(WORKSPACE)
 

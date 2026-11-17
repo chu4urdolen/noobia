@@ -54,7 +54,9 @@ match this layout.
 Work on each repository's primary branch. In the shared `/noobia` repository
 that branch is `main` (there is no `master` branch); Dushich's and Gwyn's
 separate local repositories currently use `master`. Do not create task or
-feature branches for routine work. Existing branches and worktrees contain
+feature branches for routine work. Noobia's resident agents collaborate on the
+same `main` branch; reserve separate branches for external collaborators when
+their work needs its own review. Existing branches and worktrees contain
 work that must be reviewed and reconciled before they are retired; do not
 delete or reset them just to comply with this rule.
 

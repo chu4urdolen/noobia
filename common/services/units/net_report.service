@@ -1,0 +1,13 @@
+[Unit]
+Description=Aigel Network health report – interface stats, active connections, DNS latency
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/noobia/common/services/net_report.sh
+StandardOutput=journal
+StandardError=journal
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

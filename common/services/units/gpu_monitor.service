@@ -1,0 +1,14 @@
+[Unit]
+Description=Aigel GPU monitor – samples power, utilization, temperature, VRAM and records shutdown events
+After=network.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/bash -c 'mkdir -p /var/log/noobia_gpu || true'
+ExecStart=/noobia/common/services/gpu_monitor.sh
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -7,7 +7,7 @@ USER_PREFIX ?= $(HOME)/.local
 
 .PHONY: all clean install-user
 
-COUNCIL_ROOT := ../..
+COUNCIL_ROOT := ../../council
 COUNCIL_SOURCES := $(COUNCIL_ROOT)/src/authentication.c $(COUNCIL_ROOT)/src/contact_book.c \
 	$(COUNCIL_ROOT)/src/file_storage.c $(COUNCIL_ROOT)/src/network.c \
 	$(COUNCIL_ROOT)/src/protocol.c $(COUNCIL_ROOT)/src/sha256.c

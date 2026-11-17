@@ -132,24 +132,38 @@ static int play_sentence(char *const play_argv[], const char *envelope_path,
     char error[256];
     pid_t player;
 
-    if (!lights_enabled || voice_envelope_load(envelope_path, &levels, &level_count, &hop) != 0)
+    if (!lights_enabled)
         return run_command(play_argv);
+    if (voice_envelope_load(envelope_path, &levels, &level_count, &hop) != 0) {
+        fprintf(stderr, "Hue animation disabled: cannot load speech envelope\n");
+        return run_command(play_argv);
+    }
+    unsigned int lowest = 255, highest = 0;
+    for (size_t i = 0; i < level_count; i++) {
+        if (levels[i] < lowest) lowest = levels[i];
+        if (levels[i] > highest) highest = levels[i];
+    }
+    fprintf(stderr, "[voice] hue=envelope frames=%zu brightness_min=%u brightness_max=%u\n",
+            level_count, lowest, highest);
     parse_hue_color(&red, &green, &blue);
     player = fork();
     if (player < 0) { free(levels); return -1; }
     if (player == 0) { execvp(play_argv[0], play_argv); _exit(127); }
     struct timespec next;
+    size_t updates = 0;
     clock_gettime(CLOCK_MONOTONIC, &next);
     for (size_t i = 0; i < level_count; i++) {
         if (hue_set_rgb(hue, red, green, blue, levels[i], 0.1, error, sizeof(error)) != 0) {
             fprintf(stderr, "Hue animation disabled: %s\n", error);
             break;
         }
+        updates++;
         long hop_ns = (long)(hop * 1000000000.0);
         next.tv_nsec += hop_ns;
         if (next.tv_nsec >= 1000000000L) { next.tv_sec++; next.tv_nsec -= 1000000000L; }
         while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL) == EINTR) {}
     }
+    fprintf(stderr, "[voice] hue=updates successful=%zu expected=%zu\n", updates, level_count);
     free(levels);
     return wait_for_child(player, play_argv[0]);
 }
@@ -422,11 +436,13 @@ int main(int argc, char **argv)
         bool failed = pipeline.failed;
         pthread_mutex_unlock(&pipeline.mutex);
         if (failed) goto pipeline_cleanup;
-        if (index == 0 && strcmp(env_or_default("ROSE_HUE_ENABLED", "0"), "0") != 0 &&
-            hue_config_load(&hue) == 0) {
-            if (hue_lock_acquire(30, hue_error, sizeof(hue_error)) == 0) {
+        if (index == 0 && strcmp(env_or_default("ROSE_HUE_ENABLED", "0"), "0") != 0) {
+            if (hue_config_load(&hue) != 0) {
+                fprintf(stderr, "Hue animation disabled: missing bridge configuration\n");
+            } else if (hue_lock_acquire(30, hue_error, sizeof(hue_error)) == 0) {
                 lights_enabled = true;
                 lock_held = true;
+                fprintf(stderr, "[voice] hue=enabled\n");
             } else {
                 fprintf(stderr, "Hue animation disabled: %s\n", hue_error);
             }

@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""Host checks for Lynx's NRP/1, common VM and sequence behavior."""
+
+import time
+import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+from types import SimpleNamespace
+
+import lynx_noob_runtime
+from lynx_noob_runtime import Runtime
+from lynx_hardware import inventory
+
+
+class RuntimeTest(unittest.TestCase):
+    def setUp(self):
+        self.runtime = Runtime()
+
+    def test_hardware_status_distinguishes_validated_mic_from_gnss_nodes(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "proc/asound").mkdir(parents=True)
+            (root / "proc/asound/cards").write_text("0 [mt6983mt6338]\n")
+            (root / "dev/snd").mkdir(parents=True)
+            (root / "dev/snd/pcmC0D11c").touch()
+            (root / "dev/ccci_c2k_agps").touch()
+            state = inventory(root)
+            self.assertTrue(state["microphone"]["interface_ready"])
+            self.assertTrue(state["microphone"]["validated"])
+            self.assertFalse(state["gnss"]["interface_ready"])
+            (root / "dev/gpsdl0").touch()
+            (root / "sys/module/gps_drv_dl_v050").mkdir(parents=True)
+            gps = inventory(root)["gnss"]
+            self.assertTrue(gps["interface_ready"])
+            self.assertFalse(gps["validated"])
+            self.assertTrue(gps["evidence"]["nmea_trial_verified"])
+            self.assertFalse(gps["evidence"]["position_fix_verified"])
+            (root / "dev/stpbt").touch()
+            (root / "sys/module/bt_drv_6983").mkdir(parents=True)
+            bt = inventory(root)["bluetooth"]
+            self.assertTrue(bt["interface_ready"])
+            self.assertFalse(bt["validated"])
+            self.assertTrue(bt["evidence"]["nexus_le_connection_trial_verified"])
+            self.assertFalse(bt["evidence"]["noobian_bluetooth_transport_verified"])
+            with patch.object(lynx_noob_runtime, "hardware_inventory", return_value=state):
+                self.assertIn("value=1 detail=interface_ready=1 validated=1",
+                              self.runtime.dispatch("NRP/1 39 CALL MIC_STATUS"))
+                self.assertIn("value=0 detail=interface_ready=0 validated=0",
+                              self.runtime.dispatch("NRP/1 40 CALL FLASH_STATUS"))
+
+    def test_nrp_frame_and_common_vm(self):
+        r = self.runtime
+        self.assertEqual(r.dispatch("NRP/1 9 PING"), "NRP/1 9 OK PONG")
+        self.assertIn("protocol=1 vm=1", r.dispatch("NRP/1 3 INFO"))
+        self.assertIn("3:SEQUENCE_SET", r.dispatch("NRP/1 4 CAPS"))
+        self.assertIn("loaded=12", r.dispatch("NRP/1 5 LOAD 01002a00000021e803100600"))
+        self.assertIn("OK started", r.dispatch("NRP/1 6 RUN"))
+        r.tick()
+        self.assertIn("state=WAITING", r.dispatch("NRP/1 7 STATUS"))
+        self.assertIn("state=STOPPED", r.dispatch("NRP/1 8 STOP"))
+
+    def test_mixed_sequence_uses_iris_bit_order_and_eight_record_queue(self):
+        r = self.runtime
+        calls = []
+        r.registry.by_id[300] = ("HAPTIC_SET", lambda args, text:
+                                  (calls.append((args[:], text)) or (args[-1], "")))
+        self.assertIn("bits=10", r.dispatch(
+            'NRP/1 1 CALL_MIXED SEQUENCE_SET 0 10 300 2 2 1 80 ""'))
+        self.assertEqual(r.sequence.tracks[0]["fixed"], [80])
+        self.assertIn("OK value=1", r.dispatch("NRP/1 2 CALL SEQUENCE_START"))
+        r.sequence.tick()
+        time.sleep(0.012)
+        r.sequence.tick()
+        self.assertEqual(calls, [([80, 1], ""), ([80, 0], "")])
+        self.assertIn("value=2", r.dispatch("NRP/1 3 CALL SEQUENCE_QUEUE_SIZE 0"))
+        self.assertIn("value=1", r.dispatch("NRP/1 4 CALL SEQUENCE_POP 0"))
+        self.assertIn("value=0", r.dispatch("NRP/1 5 CALL SEQUENCE_BUSY 0"))
+        self.assertEqual(r.sequence.events.pop(), "SEQUENCE_COMPLETE")
+
+    def test_vm_haptic_program_is_wire_compatible(self):
+        from pathlib import Path
+        r = self.runtime
+        r.registry.by_id[300] = ("HAPTIC_SET", lambda args, text: (args[-1], ""))
+        program = Path(__file__).resolve().parent.parent / "programs/haptic_two_pulses.hex"
+        self.assertIn("loaded=61", r.dispatch("NRP/1 1 LOAD " + program.read_text().strip()))
+        self.assertIn("OK started", r.dispatch("NRP/1 2 RUN"))
+        r.vm.tick()
+        self.assertEqual(r.vm.state, "HALTED")
+        self.assertEqual(r.sequence.tracks[0]["bits"], [1, 0, 1, 0])
+
+    def test_thread_queue_and_stop(self):
+        r = self.runtime
+        seen = []
+        r.cycle.step = lambda: (seen.append(1), r.cycle.events.push({"value": 1}))
+        self.assertIn("running=1", r.dispatch("NRP/1 1 CALL IMAGE_CYCLE_START 100"))
+        r.cycle.tick()
+        self.assertEqual(len(seen), 1)
+        self.assertIn("value=1", r.dispatch("NRP/1 2 CALL IMAGE_CYCLE_POLL"))
+        self.assertIn("event=0", r.dispatch("NRP/1 3 CALL IMAGE_CYCLE_POLL"))
+        self.assertIn("running=0", r.dispatch("NRP/1 4 CALL IMAGE_CYCLE_STOP"))
+
+    def test_read_only_phone_sensors_reject_bad_gauge_and_report_units(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            gauge = root / "battery_snapshot"
+            gauge.write_text("gauge_device_type=42495\ncapacity_percent=45\n"
+                             "capacity_error=0\ntemperature_millidegrees_celsius=28700\n"
+                             "temperature_error=0\ngauge_current_ma_signed=328\n"
+                             "current_error=0\npack_voltage_mv=7746\nvoltage_error=0\n")
+            zone = root / "thermal_zone0"
+            zone.mkdir()
+            (zone / "type").write_text("soc_max\n")
+            (zone / "temp").write_text("36760\n")
+            with patch.object(lynx_noob_runtime, "GAUGE", gauge), \
+                 patch.object(lynx_noob_runtime, "THERMAL", root):
+                runtime = Runtime()
+                self.assertEqual(runtime.dispatch("NRP/1 1 CALL BATTERY_PERCENT"),
+                                 "NRP/1 1 OK value=45 detail=unit=percent")
+                self.assertEqual(runtime.dispatch("NRP/1 2 CALL SOC_TEMP"),
+                                 "NRP/1 2 OK value=36760 detail=unit=mC")
+                gauge.write_text(gauge.read_text().replace("capacity_error=0", "capacity_error=1"))
+                self.assertIn("ERR NATIVE_ERROR", runtime.dispatch("NRP/1 3 CALL BATTERY_PERCENT"))
+
+    def test_accelerometer_axes_share_one_bounded_sample(self):
+        sample = ('{"disabled":true,"events":[{"raw_xyz":[-88,186,9924]}],'
+                  '"info":{"name":"bmi2xy acc","gain":1000}}')
+        with patch.object(Runtime, "accel_status", return_value=(1, "registered=1")), \
+             patch.object(lynx_noob_runtime.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout=sample)) as run:
+            runtime = Runtime()
+            self.assertIn("value=-88", runtime.dispatch("NRP/1 1 CALL ACCEL_X"))
+            self.assertIn("value=186", runtime.dispatch("NRP/1 2 CALL ACCEL_Y"))
+            self.assertIn("value=9924", runtime.dispatch("NRP/1 3 CALL ACCEL_Z"))
+            self.assertEqual(run.call_count, 1)
+
+    def test_gyroscope_axes_share_one_bounded_sample(self):
+        sample = ('{"disabled":true,"events":[{"raw_xyz":[1064,-1064,2128]}],'
+                  '"info":{"name":"bmi2xy gyro","gain":1000000}}')
+        with patch.object(Runtime, "gyro_status", return_value=(1, "registered=1")), \
+             patch.object(lynx_noob_runtime.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout=sample)) as run:
+            runtime = Runtime()
+            self.assertIn("value=1064", runtime.dispatch("NRP/1 1 CALL GYRO_X"))
+            self.assertIn("value=-1064", runtime.dispatch("NRP/1 2 CALL GYRO_Y"))
+            self.assertIn("value=2128", runtime.dispatch("NRP/1 3 CALL GYRO_Z"))
+            self.assertEqual(run.call_count, 1)
+
+    def test_magnetometer_axes_share_one_bounded_sample(self):
+        sample = ('{"disabled":true,"events":[{"raw_xyz":[24,-16,39]}],'
+                  '"info":{"name":"akm09918 mag","gain":1000}}')
+        with patch.object(Runtime, "mag_status", return_value=(1, "registered=1")), \
+             patch.object(lynx_noob_runtime.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout=sample)) as run:
+            runtime = Runtime()
+            self.assertIn("value=24", runtime.dispatch("NRP/1 1 CALL MAG_X"))
+            self.assertIn("value=-16", runtime.dispatch("NRP/1 2 CALL MAG_Y"))
+            self.assertIn("value=39", runtime.dispatch("NRP/1 3 CALL MAG_Z"))
+            self.assertEqual(run.call_count, 1)
+
+    def test_optical_sensor_preserves_zero_reading(self):
+        sample = ('{"disabled":true,"events":[{"raw_xyz":[0,0,0]}],'
+                  '"info":{"name":"tcs3408 als","gain":1}}')
+        with patch.object(Runtime, "optical_status", return_value=(1, "registered=1")), \
+             patch.object(lynx_noob_runtime.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout=sample)):
+            runtime = Runtime()
+            self.assertEqual(runtime.dispatch("NRP/1 1 CALL LIGHT_RAW"),
+                             "NRP/1 1 OK value=0 detail=raw1=0 raw2=0 gain=1")
+
+    def test_touch_events_capture_first_contact_and_release(self):
+        touch = self.runtime.touch
+        touch.feed(3, 47, 0)  # Slot zero.
+        touch.feed(3, 57, 42)  # New tracking id.
+        touch.feed(3, 53, 337)
+        touch.feed(3, 54, 702)
+        touch.feed(0, 0, 0)
+        self.assertIn("record=phase:1,x:337,y:702,px:33,py:70",
+                      self.runtime.dispatch("NRP/1 1 CALL TOUCH_POLL"))
+        touch.feed(3, 57, -1)
+        touch.feed(0, 0, 0)
+        self.assertIn("record=phase:0,x:337,y:702,px:33,py:70",
+                      self.runtime.dispatch("NRP/1 2 CALL TOUCH_POLL"))
+        self.assertIn("event=0", self.runtime.dispatch("NRP/1 3 CALL TOUCH_POLL"))
+
+    def test_fusion_axes_share_bounded_sample_and_reject_unknown_type(self):
+        sample = ('{"disabled":true,"events":[{"raw_xyz":[12,-34,56]}],'
+                  '"info":{"name":"gravity","gain":1000000}}')
+        with patch.object(Runtime, "fusion_status", return_value=(1, "registered=1")), \
+             patch.object(lynx_noob_runtime.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout=sample)) as run:
+            runtime = Runtime()
+            self.assertIn("value=12", runtime.dispatch("NRP/1 1 CALL FUSION_X 9"))
+            self.assertIn("value=-34", runtime.dispatch("NRP/1 2 CALL FUSION_Y 9"))
+            self.assertIn("value=56", runtime.dispatch("NRP/1 3 CALL FUSION_Z 9"))
+            self.assertEqual(run.call_count, 1)
+            self.assertIn("ERR NATIVE_ERROR", runtime.dispatch("NRP/1 4 CALL FUSION_X 72"))
+
+
+if __name__ == "__main__":
+    unittest.main()

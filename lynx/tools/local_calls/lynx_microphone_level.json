@@ -1,0 +1,12 @@
+{
+  "description": "Entity: Lynx. Take one bounded microphone level sample. Returns late RMS and peak only, keeps no audio, and restores the mixer. External acoustic response is not yet validated.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 10,
+  "example": {}
+}

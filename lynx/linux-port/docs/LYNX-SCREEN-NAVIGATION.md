@@ -1,0 +1,124 @@
+# Lynx screen navigation
+
+## Hardware readiness rows, 2026-11-01
+
+The Status page now checks GPS, camera, and flashlight interfaces on each
+refresh. `RECEIVER READY` means the GNSS driver and receiver node exist; it
+does not mean a position fix. Camera `DRIVER LOADED` and `INTERFACE READY`
+mean the module or both video and media nodes are present, respectively;
+neither claims capture works. Flashlight `CHIP PRESENT` reports only the
+detected LM3642 I²C device, while `DRIVER READY` requires a bound driver and
+`/dev/flashlight`. Current V53 shows the chip without an active flashlight
+driver, and camera remains unavailable.
+
+The renderer compiled on Lynx with `-Wall -Wextra -Werror`, passed touch and
+console key self-tests, and rendered a status preview before atomic install.
+The display service restarted and Alpine health passed. Receipt:
+`logs/status-hardware-1793565465984028397/result.json`. The rollback binary
+is `/usr/local/bin/lynx-portrait-display.before-hardware-readiness`; install
+tool: `tools/install_status_hardware_readiness.py`. No boot partition or
+kernel module changed.
+
+## Current Status page, 2026-11-01
+
+The Bluetooth row now reads live local state: `NRP READY` requires the
+Bluetooth supervisor PID, `hci0`, and the service's ready marker;
+`STARTING` means the service exists without all readiness checks, `STANDBY`
+means the stock character device exists without the service, and
+`UNAVAILABLE` means none of those interfaces is present. This avoids the old
+hardcoded `UNAVAILABLE` while Lynx is actually serving authenticated NRP/1
+over BLE. It does not claim a peer is connected. Other rows retain their
+live interface checks, so optional hardware can still read `UNAVAILABLE`
+when its module is not loaded on this boot.
+
+The new renderer compiled on Lynx with `-Wall -Wextra -Werror`, passed its
+touch and console-key self-tests, and rendered a full-size status preview at
+`logs/status-v53-preview/status.png`. That preview displayed `NRP READY`.
+The on-phone renderer and bootstrap were installed transactionally and the
+display service restarted with Wi-Fi, Bluetooth, and Alpine health passing.
+Receipt: `logs/status-bt-install-1793564005472897784/result.json`.
+Rollback copies are `/usr/local/bin/lynx-portrait-display.before-status-bt`
+and `/usr/local/bin/lynx-display-bootstrap.before-status-bt`. The bootstrap
+now checks renderer executability and actual display startup instead of a
+fixed renderer build hash; module and frame manifest hashes remain checked.
+
+On the 2026-11-01 V53 trial boot, the portrait remained black because
+`lynx-display-bootstrap` admitted only exact V50 and V52 `boot_a` hashes.
+An initial correction added V53 and restored the portrait, but this exposed
+the wrong boundary: a normal display service should not require an exact boot
+image SHA after the kernel and hardware checks pass. The current bootstrap
+has **no boot-image hash gate**. It checks the exact kernel ABI, display module
+manifest hashes, panel and touch interfaces, and Alpine health. The previous
+on-phone versions are `/usr/local/bin/lynx-display-bootstrap.before-v53` and
+`/usr/local/bin/lynx-display-bootstrap.before-no-boot-hash`.
+
+The current bootstrap's `--check-files` and `--status` passed on V53 while the
+renderer and Bluetooth remained running. A prior service start rendered the
+portrait at 76%, recovered the first cold modeset on its existing retry path,
+and entered the intended 10-second idle dark state. One touch should wake the
+screen; that physical touch has not been retested on V53.
+
+Requested 2026-10-29 after Noob confirmed the visible dance and chime.
+Installed as a V50 Alpine display program update on 2026-10-29. No partition
+was flashed. The original renderer and bootstrap are backed up on Lynx as
+`/usr/local/bin/lynx-portrait-display.before-nav` and
+`/usr/local/bin/lynx-display-bootstrap.before-nav`.
+
+Keep Lynx's portrait as the home screen. Add two large touch buttons along
+the bottom edge: **CONSOLE** and **STATUS**. A tap opens that page; tapping
+its selected button again returns home. The buttons stay visible on every
+page. The existing ten-second dim and touch-to-wake behavior stays in place.
+A touch that wakes a dark screen should only wake it, so an accidental touch
+cannot also change pages. Touch tracking must use the verified panel's raw
+X/Y axes and act only on a completed single-finger tap inside a button.
+
+The Console page initially shows only its title and an empty content area.
+Do not invent a shell or grant local command execution as part of this UI.
+Later console work can add a scoped, auditable interface separately.
+
+The Status page should use current local readings and label their units and
+freshness. Start with battery percentage, battery temperature, charging
+state/current/voltage, SoC temperature, Wi-Fi address, SSH and Noob service
+state, display/touch, sound and haptic readiness, and the registered motion,
+compass, proximity, and light sensors. Values that fail validation or age out
+must show **UNAVAILABLE** or **STALE**, never a plausible cached number.
+GPS, Bluetooth, camera, and flashlight should explicitly show
+**UNAVAILABLE** until their drivers and userspace paths are proven. The
+ambient-light raw call currently returns no fresh event, so registration
+alone must not be presented as a live lux reading.
+
+The native candidate compiled with `-Wall -Wextra -Werror`. Full-size previews
+are in `logs/nav-preview/home.png`, `console.png`, and `status.png`. The touch
+parser passed a synthetic press, coordinate, and release test. The installer
+`tools/install_v50_screen_navigation.py` checked the exact V50 boot and old
+file hashes, backed up both old files, installed the new renderer with SHA-256
+`3831ccb90d0d05e5377bfcb908e1c17777de6c4e60d56443dda28a781e4bd49d`,
+updated the bootstrap hash pin, and restarted `lynx-display`. Receipt:
+`logs/v50-screen-navigation-1793269553391682767/result.json`. The running
+service, bootstrap file check, Alpine health, and NRP/1 `PING` all passed.
+The display log shows the home portrait presented and the normal idle dim.
+Noob confirmed the first live screen looked good. The display log recorded
+`page=status`, `page=home`, `page=console`, `page=home` after physical taps;
+both buttons and return-to-home therefore worked on Lynx.
+
+The Status page was then expanded to show SSH, touch, and NRP service state,
+and to list camera and flashlight separately. Its full-size preview is
+`logs/nav-preview/status-v2.png`. Native compilation and the synthetic touch
+parser test passed again. `tools/install_v50_screen_navigation.py` upgraded
+the running renderer to SHA-256
+`96a5b979e92d9903829162fa8b12266c624d03e7bd84ffe39fde382f639c1a0a`
+and the matching bootstrap pin. The previous two-button version is backed
+up as `.before-nav-status` beside both installed files; the original portrait
+version remains in `.before-nav`. Receipt:
+`logs/v50-screen-status-upgrade-1793271328779950201/result.json`. Display
+service, bootstrap file check, Alpine health, and NRP/1 `PING` passed after
+the upgrade. Noob's visual check of the expanded page is still pending.
+
+The Console page was then connected to a local unprivileged shell and touch
+keyboard, with separate output/error/warning colors. See
+[LYNX-CONSOLE.md](LYNX-CONSOLE.md) for the service, privilege boundary, live
+trial, and `.before-console` rollback files.
+
+If navigation fails, stop `lynx-display`, restore both `.before-nav` files
+to their original paths, and start the service again. The installer performs
+that rollback automatically if the install/start step fails.

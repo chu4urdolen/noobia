@@ -1,0 +1,12 @@
+{
+  "description": "Entity: Lynx. Request one 100 ms flashlight pulse. Requires an active driver and healthy battery/thermal state; verifies OFF afterward and enforces a 10-second cooldown.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "protocol": "json-stdin",
+  "timeout": 8,
+  "example": {}
+}

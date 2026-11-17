@@ -1,0 +1,27 @@
+#!/sbin/openrc-run
+description="Lynx verified stock Type-C and charger detection modules"
+
+depend() {
+    need lynx-health
+    after lynx-dropbear
+}
+
+start() {
+    ebegin "Preparing Lynx Type-C charger detection"
+    mkdir -p /var/log/lynx
+    if /usr/local/bin/lynx-charging-stack --start \
+        >>/var/log/lynx/charging-stack.log 2>&1; then
+        eend 0
+    else
+        eend 1 "charger stack failed; see charging-stack.log"
+    fi
+}
+
+status() {
+    /usr/local/bin/lynx-charging-stack --status >/dev/null
+}
+
+stop() {
+    ebegin "Leaving Lynx charging modules for kernel shutdown"
+    eend 0
+}

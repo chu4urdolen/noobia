@@ -1,0 +1,40 @@
+#!/bin/sh
+# Native PID1 boot proof: one supported software reboot, no partition writes.
+export PATH=/bin:/sbin
+BB=/bin/busybox
+stop() { while :; do "$BB" sleep 60; done; }
+$BB mount -t proc proc /proc || stop
+$BB mount -t sysfs sysfs /sys || stop
+$BB mount -t tmpfs tmpfs /dev || stop
+$BB mknod -m 600 /dev/console c 5 1
+$BB mknod -m 600 /dev/kmsg c 1 11
+log() { printf '<6>LYNX_BOOT_PROOF: %s\n' "$*" > /dev/kmsg; }
+log "NATIVE_PID1_ENTERED pid=$$"
+for module in mtk_wdt reboot-mode syscon-reboot-mode; do
+    $BB insmod "/lib/modules/$module.ko" || log "insmod returned failure: $module"
+done
+# Refuse the reboot unless the actual stock watchdog and reboot-mode devices
+# are both bound. A module in /sys/module alone is insufficient.
+wdt_ready=0
+mode_ready=0
+for device in /sys/bus/platform/devices/*; do
+    [ -L "$device/driver" ] && [ -d "$device/driver" ] && [ -L "$device/of_node" ] && [ -d "$device/of_node" ] || continue
+    driver=$($BB readlink -f "$device/driver")
+    node=$($BB readlink -f "$device/of_node")
+    case "$driver:$node" in
+        */mtk-wdt:/sys/firmware/devicetree/base/watchdog@1c007000) wdt_ready=1 ;;
+        */syscon-reboot-mode:/sys/firmware/devicetree/base/watchdog@1c007000/reboot-mode)
+            value=$($BB od -An -tx1 "$device/of_node/mode-bootloader" | $BB tr -d ' \n')
+            offset=$($BB od -An -tx1 "$device/of_node/offset" | $BB tr -d ' \n')
+            mask=$($BB od -An -tx1 "$device/of_node/mask" | $BB tr -d ' \n')
+            [ "$value" = 00000003 ] && [ "$offset" = 00000024 ] && [ "$mask" = 0000000f ] && mode_ready=1 ;;
+    esac
+done
+if [ "$wdt_ready" = 1 ] && [ "$mode_ready" = 1 ]; then
+    log 'BOUND_STOCK_DRIVERS; REQUESTING_ONE_RESTART2_BOOTLOADER'
+    /bin/boot-proof-reboot
+    log 'REBOOT_SYSCALL_RETURNED; NO_RETRY'
+else
+    log "DRIVER_GUARD_STOP wdt=$wdt_ready mode=$mode_ready"
+fi
+stop

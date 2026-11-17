@@ -1,0 +1,322 @@
+#!/bin/sh
+# Native PID1 boot proof: one supported software reboot, no partition writes.
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+BB=/bin/busybox
+stop() { while :; do "$BB" sleep 60; done; }
+$BB mount -t proc proc /proc || stop
+$BB mount -t sysfs sysfs /sys || stop
+$BB mount -t tmpfs tmpfs /dev || stop
+$BB mknod -m 600 /dev/console c 5 1
+$BB mknod -m 600 /dev/kmsg c 1 11
+log() { printf '<6>LYNX_BOOT_PROOF: %s\n' "$*" > /dev/kmsg; }
+log "NATIVE_PID1_ENTERED pid=$$"
+for module in mtk_wdt reboot-mode syscon-reboot-mode; do
+    $BB insmod "/lib/modules/$module.ko" || log "insmod returned failure: $module"
+done
+# Refuse the reboot unless the actual stock watchdog and reboot-mode devices
+# are both bound. A module in /sys/module alone is insufficient.
+wdt_ready=0
+mode_ready=0
+for device in /sys/bus/platform/devices/*; do
+    [ -L "$device/driver" ] && [ -d "$device/driver" ] && [ -L "$device/of_node" ] && [ -d "$device/of_node" ] || continue
+    driver=$($BB readlink -f "$device/driver")
+    node=$($BB readlink -f "$device/of_node")
+    case "$driver:$node" in
+        */mtk-wdt:/sys/firmware/devicetree/base/watchdog@1c007000) wdt_ready=1 ;;
+        */syscon-reboot-mode:/sys/firmware/devicetree/base/watchdog@1c007000/reboot-mode)
+            value=$($BB od -An -tx1 "$device/of_node/mode-bootloader" | $BB tr -d ' \n')
+            offset=$($BB od -An -tx1 "$device/of_node/offset" | $BB tr -d ' \n')
+            mask=$($BB od -An -tx1 "$device/of_node/mask" | $BB tr -d ' \n')
+            [ "$value" = 00000003 ] && [ "$offset" = 00000024 ] && [ "$mask" = 0000000f ] && mode_ready=1 ;;
+    esac
+done
+[ "$wdt_ready" = 1 ] && [ "$mode_ready" = 1 ] || { log "CHECKPOINT_RESET_GUARD_STOP"; stop; }
+# Deliberately stops on a failed load: a software return must mean every listed
+# insmod completed successfully. This checks neither hardware binding nor USB.
+# Restore one omitted stock startup module, only for the exact audited DT target.
+lynx_stock_clock_helper_guard() {
+    [ ! -d /sys/module/clk_bringup ] || return 10
+    clock_target=''
+    clock_targets=0
+    for clock_dev in /sys/bus/platform/devices/*; do
+        [ -f "$clock_dev/of_node/compatible" ] || continue
+        clock_compatible=$($BB tr '\000' '\n' < "$clock_dev/of_node/compatible") || return 10
+        printf '%s\n' "$clock_compatible" | $BB grep -Eq '^(mediatek,clk-bring-up|mediatek,clk-post-ao)$' || continue
+        [ "$clock_compatible" = mediatek,clk-bring-up ] || return 10
+        clock_node=$($BB readlink -f "$clock_dev/of_node") || return 10
+        [ "$clock_node" = /sys/firmware/devicetree/base/clkitg/bring-up ] || return 10
+        [ ! -L "$clock_dev/driver" ] && [ ! -e "$clock_dev/driver" ] || return 10
+        clock_hash=$($BB sha256sum "$clock_dev/of_node/clocks") || return 10
+        clock_hash=${clock_hash%% *}
+        [ "$clock_hash" = c6c820b927cb362d545b5798b35dec002e60f50805a78d4cc81ad7e90b698e9b ] || return 10
+        clock_target=$clock_dev
+        clock_targets=$((clock_targets+1))
+    done
+    [ "$clock_targets" = 1 ] || return 10
+    clock_module_hash=$($BB sha256sum /lib/modules/clk-bringup.ko) || return 10
+    clock_module_hash=${clock_module_hash%% *}
+    [ "$clock_module_hash" = 4b62b692837be57cc9aab66136dec5d772840c8f572c37c20c59bda979216823 ] || return 10
+    log 'STOCK_CLOCK_HELPER_EXACT_TARGET_VERIFIED'
+}
+lynx_stock_clock_helper_load() {
+    lynx_stock_clock_helper_guard || return 10
+    lynx_diag_emit 516 1 || true
+    $BB insmod /lib/modules/clk-bringup.ko || return 11
+    lynx_diag_emit 516 2 || true
+    clock_driver=$($BB readlink -f "$clock_target/driver") || return 12
+    [ "$clock_driver" = /sys/bus/platform/drivers/bring_up ] || return 12
+    if [ ! -d /sys/kernel/debug/clk ]; then
+        $BB mount -t debugfs debugfs /sys/kernel/debug || return 13
+    fi
+    # These are framework counters, not hardware register reads or controls.
+    for clock_counter in clk_prepare_count clk_enable_count; do
+        clock_count=$($BB cat "/sys/kernel/debug/clk/bus_aximem_sel/$clock_counter") || return 13
+        case "$clock_count" in ''|*[!0-9]*) return 13 ;; esac
+        [ "$clock_count" -gt 0 ] || return 13
+    done
+    lynx_diag_emit 516 3 || true
+    log 'STOCK_CLOCK_HELPER_BOUND; BUS_AXIMEM_PREPARED_AND_ENABLED'
+    return 0
+}
+# RAM-only matching override. Validate exactly one stock UFS target first.
+# Do not unbind, overwrite an existing override, or touch controller registers.
+lynx_ufs_registration_guard() {
+    ufs_target=''
+    ufs_count=0
+    for ufs_dev in /sys/bus/platform/devices/*; do
+        [ -f "$ufs_dev/of_node/compatible" ] || continue
+        ufs_compatible=$($BB tr '\000' '\n' < "$ufs_dev/of_node/compatible") || return 74
+        printf '%s\n' "$ufs_compatible" | $BB grep -Fxq 'mediatek,mt8183-ufshci' || continue
+        ufs_node=$($BB readlink -f "$ufs_dev/of_node") || return 74
+        [ "$ufs_node" = /sys/firmware/devicetree/base/ufshci@112b0000 ] || return 74
+        [ ! -L "$ufs_dev/driver" ] && [ ! -e "$ufs_dev/driver" ] || return 74
+        [ -f "$ufs_dev/driver_override" ] && [ -w "$ufs_dev/driver_override" ] || return 74
+        ufs_old=$($BB cat "$ufs_dev/driver_override") || return 74
+        case "$ufs_old" in ''|'(null)') ;; *) return 74 ;; esac
+        ufs_target=$ufs_dev
+        ufs_count=$((ufs_count+1))
+    done
+    [ "$ufs_count" = 1 ] || return 74
+    printf '%s\n' 'lynx-block-ufs-probe' > "$ufs_target/driver_override" || return 74
+    ufs_value=$($BB cat "$ufs_target/driver_override") || return 74
+    [ "$ufs_value" = lynx-block-ufs-probe ] || return 74
+    log 'UFS_REGISTRATION_ONLY_GUARD_VERIFIED'
+}
+# Narrow standard trace events. Each event name carries this boot's token.
+# Use one bounded two-byte write for event activation and check readback.
+lynx_ufs_persistent_trace_setup() {
+    IFS=' ' read -r ufs_trace_token < /etc/lynx/session-token || return 1
+    case "$ufs_trace_token" in ''|*[!0-9a-f]*) return 1 ;; esac
+    [ "${#ufs_trace_token}" = 32 ] || return 1
+    $BB mkdir -p /run/lynx/trace || return 1
+    $BB mount -t tracefs tracefs /run/lynx/trace || return 1
+    printf '%s\n' 1 > /run/lynx/trace-enable || return 1
+    ufs_trace_index=0
+    for ufs_trace_item in p:ufs_mediatek_mod:ufs_mtk_setup_ref_clk p:ufs_mediatek_mod:ufs_mtk_setup_ref_clk+0x88 p:ufs_mediatek_mod:ufs_mtk_setup_ref_clk+0x8c p:ufs_mediatek_mod:ufs_mtk_setup_ref_clk+0xa0 p:ufs_mediatek_mod:ufs_mtk_setup_ref_clk+0xa4 p:ufs_mediatek_mod:ufs_mtk_setup_ref_clk+0xf0 p:ufs_mediatek_mod:ufs_mtk_setup_ref_clk+0xf8 r32:ufs_mediatek_mod:ufs_mtk_setup_ref_clk p:ufs_mediatek_mod:ufs_mtk_boost_crypt; do
+        ufs_trace_index=$((ufs_trace_index+1))
+        ufs_trace_kind=${ufs_trace_item%%:*}
+        ufs_trace_symbol=${ufs_trace_item#*:}
+        ufs_trace_event="lx${ufs_trace_token}_${ufs_trace_index}"
+        ufs_trace_args=''
+        case "$ufs_trace_index" in
+            1) ufs_trace_args=' on=$arg2:u8' ;;
+            8) ufs_trace_args=' ret=$retval:s32' ;;
+        esac
+        printf '%s\n' "$ufs_trace_kind:lynx_ufs/$ufs_trace_event $ufs_trace_symbol$ufs_trace_args" >> /run/lynx/trace/kprobe_events || return 1
+        $BB dd if=/run/lynx/trace-enable of="/run/lynx/trace/events/lynx_ufs/$ufs_trace_event/enable" bs=2 count=1 || return 1
+        ufs_trace_enabled=$($BB cat "/run/lynx/trace/events/lynx_ufs/$ufs_trace_event/enable") || return 1
+        [ "$ufs_trace_enabled" = 1 ] || return 1
+    done
+    log "UFS_PERSISTENT_TRACE_READY token=$ufs_trace_token events=$ufs_trace_index"
+}
+lynx_ufs_guarded_probe() {
+    lynx_ufs_persistent_trace_setup || return 6
+    lynx_diag_emit 515 16 || true
+    [ "$($BB cat "$ufs_target/driver_override")" = lynx-block-ufs-probe ] || return 9
+    [ ! -L "$ufs_target/driver" ] && [ ! -e "$ufs_target/driver" ] || return 9
+    # Clearing the verified RAM override restores stock matching. No unbind.
+    printf '\n' > "$ufs_target/driver_override" || return 9
+    ufs_cleared=$($BB cat "$ufs_target/driver_override") || return 9
+    case "$ufs_cleared" in ''|'(null)') ;; *) return 9 ;; esac
+    [ -w /sys/bus/platform/drivers_probe ] || return 9
+    ufs_probe_name=${ufs_target##*/}
+    case "$ufs_probe_name" in ''|*[!a-zA-Z0-9_.-]*) return 9 ;; esac
+    log "UFS_CONTROLLED_PROBE_BEGIN name=$ufs_probe_name"
+    lynx_diag_emit 515 17 || true
+    printf '%s\n' "$ufs_probe_name" > /run/lynx/ufs-probe-name || return 7
+    $BB dd if=/run/lynx/ufs-probe-name of=/sys/bus/platform/drivers_probe bs=64 count=1 || return 7
+    lynx_diag_emit 515 18 || true
+    if [ -L "$ufs_target/driver" ]; then
+        ufs_bound_driver=$($BB readlink -f "$ufs_target/driver") || return 8
+        [ "$ufs_bound_driver" = /sys/bus/platform/drivers/ufshcd-mtk ] || return 8
+        log 'UFS_CONTROLLED_PROBE_RETURNED_BOUND; BLOCK_ACCESS_NOT_TESTED'
+        return 0
+    fi
+    return 8
+}
+lynx_load_checkpoint_modules() {
+    while IFS= read -r module; do
+        [ -n "$module" ] || continue
+        log "CHECKPOINT_MODULE_BEGIN $module"
+        if [ "$module" = ufs-mediatek-mod.ko ]; then
+            lynx_ufs_registration_guard || return 1
+            lynx_stock_clock_helper_load
+            clock_startup_status=$?
+            if [ "$clock_startup_status" != 0 ]; then
+                lynx_diag_emit 516 "$clock_startup_status" || true
+                log "STOCK_CLOCK_HELPER_FAILED_BEFORE_UFS status=$clock_startup_status"
+                return 1
+            fi
+        fi
+        if ! $BB insmod "/lib/modules/$module"; then
+            log "CHECKPOINT_MODULE_FAILED $module"
+            return 1
+        fi
+        if [ "$module" = ufs-mediatek-mod.ko ]; then
+            lynx_ufs_guarded_probe || return 1
+        fi
+        log "CHECKPOINT_MODULE_OK $module"
+    done < "$1"
+}
+
+umask 077
+# Manual nodes: exact stock kernel has no devtmpfs.
+$BB mknod -m 666 /dev/null c 1 3
+$BB mknod -m 666 /dev/zero c 1 5
+$BB mknod -m 666 /dev/random c 1 8
+$BB mknod -m 666 /dev/urandom c 1 9
+$BB mount -t tmpfs -o size=128m tmpfs /run || stop
+$BB mkdir -p /run/lynx /run/wpa_supplicant /run/tmp /sys/fs/pstore
+$BB chmod 700 /run/lynx /run/wpa_supplicant
+: > /run/lynx/boot.log
+$BB chmod 600 /run/lynx/boot.log
+lynx_plain_log() {
+    IFS=' ' read -r log_uptime log_unused < /proc/uptime
+    printf 'LYNX_WIFI uptime=%s %s\n' "$log_uptime" "$*" >> /run/lynx/boot.log
+    printf '<6>LYNX_WIFI uptime=%s %s\n' "$log_uptime" "$*" > /dev/kmsg
+    if [ -c /dev/pmsg0 ]; then printf 'LYNX_WIFI uptime=%s %s\n' "$log_uptime" "$*" > /dev/pmsg0; fi
+    return 0
+}
+$BB hostname lynx
+$BB mdev -s
+$BB mkdir -p /dev/pts
+$BB mount -t devpts -o newinstance,ptmxmode=0666,mode=0620,gid=5 devpts /dev/pts || log 'DEVPTS_MOUNT_FAILED'
+[ -e /dev/ptmx ] || $BB ln -s pts/ptmx /dev/ptmx
+$BB mount -t pstore pstore /sys/fs/pstore || log 'PSTORE_MOUNT_UNAVAILABLE'
+log "PSTORE_BACKEND_CHECK; records=$($BB ls /sys/fs/pstore 2>/dev/null)"
+export TMPDIR=/run/tmp
+# Supplementary Linux files live in unused boot_a space. Verify before extraction.
+lynx_payload_step() {
+    printf '%s\n' "$1" > /run/lynx/payload-step
+}
+lynx_read_own_boot_payload() {
+    lynx_payload_step 1 || return 1
+    candidates=''
+    for entry in /sys/class/block/*/uevent; do
+        [ -f "$entry" ] || continue
+        part=''; name=''
+        while IFS='=' read -r key value; do
+            case "$key" in PARTNAME) part=$value ;; DEVNAME) name=$value ;; esac
+        done < "$entry"
+        [ "$part" = boot_a ] || continue
+        case "$name" in ''|*[!a-zA-Z0-9._-]*) return 1 ;; esac
+        candidates="$candidates $name"
+    done
+    set -- $candidates
+    [ "$#" = 1 ] || { log 'BOOT_A_NOT_UNIQUE_OR_ABSENT'; return 1; }
+    lynx_payload_step 2 || return 1
+    device=/dev/$1
+    [ -b "$device" ] || return 1
+    lynx_payload_step 3 || return 1
+    [ "$($BB blockdev --getsize64 "$device")" = 67108864 ] || return 1
+    lynx_payload_step 4 || return 1
+    $BB blockdev --setro "$device" || return 1
+    [ "$($BB blockdev --getro "$device")" = 1 ] || return 1
+    lynx_payload_step 5 || return 1
+    bytes=$($BB cat /etc/lynx/payload-bytes) || return 1
+    expected=$($BB cat /etc/lynx/payload-sha256) || return 1
+    case "$bytes" in ''|*[!0-9]*) return 1 ;; esac
+    [ "$bytes" -gt 0 ] && [ "$bytes" -lt 40000000 ] || return 1
+    [ "$($BB expr length "$expected")" = 64 ] || return 1
+    case "$expected" in *[!0-9a-f]*) return 1 ;; esac
+    lynx_payload_step 6 || return 1
+    blocks=$(((bytes+4095)/4096))
+    $BB dd if="$device" of=/run/lynx/payload-blocks bs=4096 skip=6144 count="$blocks" || return 1
+    $BB head -c "$bytes" /run/lynx/payload-blocks > /run/lynx/payload.cpio.gz || return 1
+    lynx_payload_step 7 || return 1
+    actual=$($BB sha256sum /run/lynx/payload.cpio.gz) || return 1
+    actual=${actual%% *}
+    [ "$actual" = "$expected" ] || { log 'BOOT_A_PAYLOAD_HASH_MISMATCH'; return 1; }
+    lynx_payload_step 8 || return 1
+    $BB gzip -dc /run/lynx/payload.cpio.gz > /run/lynx/payload.cpio || return 1
+    lynx_payload_step 9 || return 1
+    (cd / && $BB cpio -idmu < /run/lynx/payload.cpio) || return 1
+    lynx_payload_step 10 || return 1
+    log "BOOT_A_SUPPLEMENT_VERIFIED_AND_EXTRACTED bytes=$bytes storage_readonly=1"
+}
+lynx_wifi_bootstrap_child_unlogged() {
+    log 'BOOTSTRAP_BASE_DRIVERS'
+    lynx_load_checkpoint_modules /etc/lynx/bootstrap-base-modules.load || return 151
+    log 'BOOTSTRAP_STORAGE_DRIVERS'
+    lynx_load_checkpoint_modules /etc/lynx/bootstrap-storage-modules.load || return 152
+    # UFS partition scanning can finish asynchronously after insmod returns.
+    log 'BOOTSTRAP_PARTITION_DISCOVERY'
+    boot_seen=0
+    for bootstrap_attempt in $($BB seq 1 30); do
+        $BB mdev -s || return 153
+        for bootstrap_entry in /sys/class/block/*/uevent; do
+            [ -f "$bootstrap_entry" ] || continue
+            if $BB grep -q '^PARTNAME=boot_a$' "$bootstrap_entry"; then boot_seen=1; break; fi
+        done
+        [ "$boot_seen" = 1 ] && break
+        $BB sleep 1
+    done
+    [ "$boot_seen" = 1 ] || return 153
+    log 'BOOTSTRAP_READ_OWN_BOOT_A'
+    lynx_read_own_boot_payload || return 154
+}
+lynx_wifi_bootstrap() {
+    IFS=' ' read -r bootstrap_uptime unused < /proc/uptime || return 1
+    bootstrap_start=${bootstrap_uptime%%.*}
+    case "$bootstrap_start" in ''|*[!0-9]*) return 1 ;; esac
+    (
+        lynx_wifi_bootstrap_child
+        result=$?
+        printf '%s\n' "$result" > /run/lynx/bootstrap-result.tmp
+        $BB mv /run/lynx/bootstrap-result.tmp /run/lynx/bootstrap-result
+    ) >> /run/lynx/boot.log 2>&1 &
+    while :; do
+        if [ -f /run/lynx/bootstrap-result ]; then
+            IFS= read -r result < /run/lynx/bootstrap-result || return 1
+            [ "$result" = 0 ] && return 0
+            log "BOOTSTRAP_FAILED status=$result"
+            break
+        fi
+        IFS=' ' read -r bootstrap_uptime unused < /proc/uptime || return 1
+        bootstrap_seconds=${bootstrap_uptime%%.*}
+        case "$bootstrap_seconds" in ''|*[!0-9]*) return 1 ;; esac
+        [ "$bootstrap_seconds" -lt "$((bootstrap_start+180))" ] || { log 'BOOTSTRAP_DEADLINE'; break; }
+        $BB sleep 1
+    done
+    log 'BOOTSTRAP_REQUESTING_ONE_SUPPORTED_BOOTLOADER_REBOOT'
+    /bin/boot-proof-reboot
+    log 'BOOTSTRAP_REBOOT_RETURNED; NO_RETRY'
+    return 1
+}
+
+. /etc/lynx/diag-stage.sh || stop
+. /etc/lynx/diag-hooks.sh || stop
+if lynx_diag_init supervisor; then diag_ready=1; else diag_ready=0; fi
+
+IFS=' ' read -r nt_initial_uptime nt_initial_unused < /proc/uptime || stop
+nt_initial_seconds=${nt_initial_uptime%%.*}
+case "$nt_initial_seconds" in ''|*[!0-9]*) stop ;; esac
+printf '%s\n' "$nt_initial_seconds" > /run/lynx/network-timing-start || stop
+
+log 'WIFI_TWO_STAGE_BOOTSTRAP_BEGIN'
+lynx_wifi_bootstrap || stop
+. /etc/lynx/calibration-readonly.sh || stop
+. /etc/lynx/wifi-runtime.sh || stop
+lynx_wifi_supervise
+log 'WIFI_SUPERVISOR_FINISHED; PID1_REMAINS_ALIVE'
+stop

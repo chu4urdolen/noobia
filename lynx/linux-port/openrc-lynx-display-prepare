@@ -1,0 +1,38 @@
+#!/sbin/openrc-run
+# Prepare the verified stock DRM stack after Alpine and SSH are healthy.
+# This service binds the panel but leaves it dark; no compositor is started.
+description="Lynx stock DRM preparation (panel remains dark)"
+
+depend() {
+    need lynx-dropbear
+    after lynx-wifi
+}
+
+start() {
+    ebegin "Preparing Lynx DRM"
+    [ -x /usr/local/bin/lynx-display-prepare ] || {
+        eend 1 "display preparation command missing"
+        return 1
+    }
+    /usr/local/bin/lynx-status --assert-ready >/dev/null || {
+        eend 1 "Alpine health not ready"
+        return 1
+    }
+    mkdir -p /var/log/lynx
+    if /usr/local/bin/lynx-display-prepare \
+        >>/var/log/lynx/display-prepare.log 2>&1; then
+        eend 0
+    else
+        eend 1 "DRM preparation failed; see display-prepare.log"
+    fi
+}
+
+status() {
+    [ -c /dev/dri/card0 ] &&
+        [ "$(cat /sys/class/drm/card0-DSI-1/status 2>/dev/null)" = connected ]
+}
+
+stop() {
+    ebegin "Leaving Lynx DRM modules for kernel shutdown"
+    eend 0
+}

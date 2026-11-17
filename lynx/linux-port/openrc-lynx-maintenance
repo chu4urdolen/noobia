@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+description="Lynx supervised maintenance of safety, logs, and Alpine SSH"
+supervisor=supervise-daemon
+command=/usr/libexec/lynx-maintenance-watch.sh
+command_args="--watch"
+pidfile=/run/lynx/maintenance-watch.pid
+respawn_delay=5
+respawn_max=3
+respawn_period=300
+output_log=/run/lynx/maintenance-watch.log
+error_log=/run/lynx/maintenance-watch.err
+
+depend() {
+    need lynx-health
+    after lynx-battery-reserve lynx-local-logs lynx-wifi lynx-dropbear
+}

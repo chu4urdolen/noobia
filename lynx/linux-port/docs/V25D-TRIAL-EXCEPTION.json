@@ -1,0 +1,13 @@
+{
+  "state": "prepared-not-yet-executed",
+  "image_sha256": "130d1cab9fdc48fc4ccafba75920d9bfb8a1a1c95f729ccae517ef1a790d7fb5",
+  "partition": "boot_a",
+  "single_supervised_trial": true,
+  "requires_unplugged_boot": true,
+  "scope": "One user-authorized V25d health-first BusyBox handset boot after exact image, stock undo, live Fastboot identity, cool/unplugged physical status, and observer readiness are checked. General Linux flash hold stays active.",
+  "abort_conditions": "Unexpected Fastboot identity or write response, phone warming, any charging connection during native boot, missing health telemetry, or recovery behavior unlike the tested path. Stop and inspect before any stock restoration.",
+  "other_partitions_allowed": false,
+  "automatic_reboot_allowed": false,
+  "native_charging_untested": true,
+  "alpine_handoff_untested": true
+}

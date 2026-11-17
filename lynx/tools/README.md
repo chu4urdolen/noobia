@@ -1,0 +1,198 @@
+# Lynx diagnostic tools — preserved on Nexus
+
+All phone-work artifacts are kept under `/noobia/lynx`. Argus is powered
+off after archive restoration; these tools and the Linux build do not require
+him. Cached ARM64 BusyBox validation evidence remains available locally.
+
+## Current V50 recovery and V52 Bluetooth work (2026-10-31)
+
+V53 is the current **trial** image: it adds a 30-second shared-radio
+calibration settle period before Wi-Fi power-on. Two monitored boots,
+including one short-uptime warm reboot, reached healthy Alpine. Authenticated
+BLE trials passed on each boot; Bluetooth is now running, still disabled at
+boot. Long-uptime reboot reliability is unverified. See
+[`LYNX-CONNECTIVITY-PRECAL.md`](../linux-port/docs/LYNX-CONNECTIVITY-PRECAL.md).
+`build_v53_precal_settle.py` rebuilds the exact offline image;
+`lynx_boot_a_v53_trial.py` pins V53 and V50 rollback for a `boot_a`-only trial.
+`capture_v52_boot_stream.py --candidate v53` captures its rescue kernel stream.
+`trial_v52_bluetooth_after_alpine.py --candidate v53` runs a bounded post-boot
+Bluetooth trial. Warm reboot reliability remains unverified. The earlier
+`return_fastboot_from_alpine.py` accepted any argument as a live action;
+after an accidental `--help` invocation returned the unchanged V50 boot to
+Fastboot, it was corrected to require `--execute`.
+
+Use the [Lynx code map](../../docs/noobs/LYNX.md) and
+[hardware tool contract](../linux-port/docs/LYNX-HARDWARE-TOOLS.md) for current
+paths. `lynx_noob_runtime.py` runs the Iris-compatible NRP/1 server;
+`lynx_noobctl.py` calls it from Nexus. `lynx_hardware.py` is the shared local
+inventory behind five JSON-stdin wrappers in `local_calls/` and native IDs
+390–394. `lynx_microphone_level.py` provides a one-second level-only local
+tool and native ID 395, with no saved audio and mixer restoration. The other
+four devices have status tools only while their driver trials remain pending.
+`analyze_v50_module_dependencies.py` builds a read-only stock module graph.
+The older V49 sections below remain for the historical display work; check
+the V52 connectivity report before running any old trial script.
+The V50 hardware installers are one-shot deployment records and refuse to
+overwrite their existing rollback copies. Review the current source and live
+hashes before writing a new update installer.
+
+The current shared-radio investigation and V52 offline candidate are in
+[`LYNX-CONNECTIVITY-PRECAL.md`](../linux-port/docs/LYNX-CONNECTIVITY-PRECAL.md).
+`lynx_boot_a_v52_trial.py --prepare` checks the exact V52 and V50 images without
+contacting Lynx. `trial_v52_bluetooth_hci.py` is the guarded post-boot HCI
+probe. `read_lynx_bt_factory_addr.py` reads only the factory Bluetooth address;
+the guarded HCI probe can apply it to controller RAM and test a Nexus link.
+`trial_v52_bluetooth_hci.py --bluez-power` now proves a bounded standard
+`hci0` and BlueZ power-on through `lynx_stpbt_hciuart_bridge.py`; it starts
+neither service at boot. The bridge's exact one-bit feature correction and
+rollback evidence are in the connectivity report. `lynx_bt_mgmt_query.py`
+checks kernel management index visibility without revealing payloads.
+The `--gatt-probe` variant stages `lynx_ble_gatt_probe.py` and a temporary
+Python D-Bus library in RAM. `lynx_ble_nexus_ping.py` proved authenticated
+NRP/1 commands and VM calls over BLE on V52, including a fresh challenge and
+preserved VM state across a reconnect; see
+[`LYNX-BLUETOOTH-NRP.md`](../linux-port/docs/LYNX-BLUETOOTH-NRP.md).
+The GATT endpoint requires the Nexus key for all remote commands. Bluetooth
+remains off at boot. A later automatic-start attempt returned to Fastboot
+before Alpine SSH; the exact cause is unknown.
+The trial scripts use Python `dbus-next==0.2.3` on Nexus. Recreate the ignored
+local dependency with `python3 -m pip install --no-deps --target /noobia/lynx/tools/vendor_dbus_next dbus-next==0.2.3`;
+the installer stages that pure-Python package on Lynx from this directory.
+`lynx_bluetoothd.py` and `lynx-bluetooth-openrc.sh` are installed but
+boot-disabled. `trial_v52_bluetooth_service.py` proved same-boot start/stop,
+authenticated VM reconnect, and OpenRC restart after a GATT child crash.
+`trial_v52_bluetooth_after_alpine.py` runs a bounded trial: it waits
+for a healthy V52 Alpine boot and tests sustained Bluetooth without adding
+the service to the boot runlevel. Its default check refuses V50 without a
+write; `--start` is the guarded live action. One 2026-11-01 boot-disabled
+V52 control returned to Fastboot before Alpine SSH; a later boot reached
+healthy Alpine and passed the delayed trial. `return_fastboot_from_alpine.py`
+proved a one-shot RAM-only, hash-pinned V50 return to USB Fastboot after a
+fresh battery check. `capture_v50_expdb_prefix.py` reads and privately
+compares retained boot logs without a partition write.
+`compare_retained_boot_trace.py` compares retained expdb stage lines with a
+hash-pinned V50 read of a persistent boot log. Its 2026-11-01 receipt shows
+the retained V52-style handoff trace belongs to an older successful boot;
+the raw boot log stays in local `logs/`.
+`capture_v52_boot_stream.py` is the read-only collector for a
+V52 diagnostic boot; it listens for the V52 image's token-matched UDP Wi-Fi
+beacon, pins rescue SSH, streams kernel messages across the Alpine handoff,
+and records a Fastboot return or healthy Alpine result. The beacon can show
+Wi-Fi reached Nexus before SSH; no beacon does not identify where boot stopped.
+On 2026-11-01 that collector captured a healthy V52 handoff. The delayed
+Bluetooth trial then passed authenticated BLE reconnect/VM checks and ten
+health samples over five minutes, with no Bluetooth boot link. A later
+monitored warm reboot returned to Fastboot before rescue SSH, leaving no
+kernel stream; V50 was restored and verified healthy. See
+`LYNX-BLUETOOTH-NRP.md` for the exact receipts and reboot limitation.
+Two later V52 warm reboots passed, but a long-uptime trial returned to
+Fastboot despite confirmed Bluetooth power-off and a 60-second wait.
+`trial_v52_radio_quiesce_reboot.py` is retained forensic source for that
+failed experiment and is no longer installed on Lynx.
+`install_lynx_sofia_timezone.py` installed the host's TZif file on the
+persistent Alpine root; Sofia time survived V50 rollback.
+`stage_v50_bt_ram.py` pins the live V50 identity and copies the matching
+stock BT modules into `/run/lynx-bt-ram/` without loading them. V50 still
+needs shared radio calibration before BT can open.
+`trial_v50_wifi_cycle_local.py` is a retained phone-local Wi-Fi off/on experiment;
+its live mode is disabled.
+Its first live trial lost Wi-Fi and returned to a new healthy V50 boot near
+the watchdog window; no BT module was loaded. The first script logged only
+to RAM, so the exact failure step is unknown. The retained source now writes
+synced persistent events. The previous RAM module stage
+was cleared by the reboot.
+An instrumented repeat located `EIO` at the stock `/dev/wmtWifi` power-off
+write after ten seconds. Bringing `wlan0` down first produced the same
+result in a third guarded trial. Bluetooth remained unloaded; V50 recovered
+both times. Do not repeat this Wi-Fi cycle without a different mechanism.
+`trial_v52_bluetooth_reboot.py` stages an integrated first-boot guard and
+uses OpenRC shutdown and passive Fastboot detection. Its 2026-10-31 trial
+returned to Fastboot before Alpine SSH. `recover_v52_bluetooth_reboot.py`
+and the exact V50 rollback image document recovery. V50 is currently
+running; V52's delayed Bluetooth pass is saved, but its reboot remains
+unreliable. Do not re-enable Bluetooth at boot until the startup path passes a guarded
+trial. `lynx_bt_firstboot_guard.sh` and the OpenRC `start_pre` integration
+passed a 15-second same-boot guard test, but did not run in the failed boot.
+
+On Nexus, `lynx_presence.py` is the low-duty systemd user service reporting
+USB Fastboot, Wi-Fi/SSH, Bluetooth connection, and the last battery reading.
+Read `state/presence/current.json`; see
+[`LYNX-PRESENCE.md`](../linux-port/docs/LYNX-PRESENCE.md). This monitor never
+flashes, reboots, scans Bluetooth, or changes Lynx.
+`trial_v52_gps_pwr.py` and `trial_v52_gps_scp_stack.py` loaded the exact stock
+GNSS power/SCP modules into V52 RAM. `trial_v52_gnss_mnld.py --start-mnl
+--capture-logd --port2` is the bounded native NMEA trial, and
+`parse_lynx_mnl_nmea.py` checks fix validity. See the connectivity report for
+the exact receipts and prerequisites before repeating a hardware trial.
+`trial_v52_gnss_mnld.py --sky-trial` is prepared for a 60-second outdoor fix
+check once Lynx has sky view and still has Wi-Fi. If Lynx has rebooted,
+`stage_august_gnss_bundle.py` restores the verified stock GNSS userspace to
+`/run/lynx-gnss-static` without writing phone storage; the matching GNSS
+modules must also be loaded before another receiver trial. On the current
+V52 boot, that stable path points to the already verified RAM bundle.
+
+## Active tools and archived trials (2026-10-25)
+
+The active tree keeps the current V49 builder/validator, boot_a trial and V48
+rollback, SSH and Alpine wrappers, health/power diagnostics, and display/touch
+bring-up tools. One-off scripts from earlier failed trials were removed from
+the active directory after dependency analysis. Their names are in
+`ARCHIVED-PYTHON-TOOLS.txt`; their exact contents remain in Git commit
+`0477e55` and can be retrieved with
+`git show 0477e55:lynx/tools/NAME.py`. This cleanup did not touch images,
+kernel sources, receipts, phone storage, or the running V49 system.
+
+Current display proof: `trial_v47_dmabuf.py --target v49 --atomic
+--show-seconds 12 --brightness 400 --no-live-trace`. This is a bounded test,
+not a background service. The user must be told before any visual trial.
+See `../linux-port/docs/V49-IOMMU-BEFORE-CMDQ.md` for the observed result.
+`install_v49_display_bundle.py --install` stores the verified module sequence
+and manual replay commands on Alpine; its default mode only checks sources,
+identity, and health. It does not show pixels or enable startup.
+
+## Files
+
+- `platform-tools/adb`, `platform-tools/fastboot`: downloaded Google tools.
+- `android-user-home`, `adb-tmp`: task-local ADB state and temporary files.
+- `mtk-venv`: isolated CLI dependencies, without system package changes.
+- `mtk_readonly.py`: guarded MT6983/OPLUS diagnostic entry point.
+- `mtk-readonly-source-manifest.json`: hashes binding the reviewed source,
+  loader, authentication reference, layout reports and offline RAM payload.
+- `pin_mtk_readonly.py`: explicitly refreshes that manifest after a reviewed
+  source change. It is not a substitute for reviewing new code.
+- `mtk-sessions/<id>/probe-output.log`: complete later probe output.
+- `../linux-port/sources/mtkclient-readback`: reduced, pinned upstream checkout.
+- `../linux-port/artifacts/service-reference`: original small service resources
+  and offline inspection artifacts. The offline patched DA2 is not an approved
+  restoration image and must never be flashed.
+- `../linux-port/docs`: hardware observations, firmware verification, loader
+  authentication and failed-probe reports.
+- `../search_nexus_images.py`, `../logs/nexus-image-search.json`: reproducible
+  filename/archive-index search and its inventory.
+
+## Default behavior and tested paths
+
+Running `mtk_readonly.py` without `--connect` only verifies inputs and prints
+the proposed configuration. `--self-test` exercises guards without USB access.
+`--stock-table` selects a direct metadata read with the unmodified stock loader;
+the latest corrected attempt connected and loaded both stages, then returned
+False for the metadata acknowledgement and stopped without a transfer read.
+No table was obtained. Ordinary stock mode reached DA stage 2 but
+stopped on enabled session authentication before requesting the partition table.
+
+The RAM hash probe was rejected by the loader. Live `--ram-probe --connect`
+repetition is disabled; its offline payload is preserved for analysis. No
+patched DA2 ran on Lynx in that attempt. Do not infer a hardware DRAM defect
+from the generic loader hash-error message.
+
+The wrapper rejects write/erase/RPMB mutation and automatic security-bypass
+APIs, other boot modes, changed inputs, and unapproved commands. These are
+software guards and a reviewed command path, not hardware write protection.
+Live probes need a fresh physical preloader connection and a bounded timeout.
+The wrapper allows ten minutes to connect, then three minutes of active work.
+Use an external fifteen-minute timeout with a five-second hard-kill fallback;
+a shorter total timeout can interrupt a valid late connection.
+No diagnostic option authorizes a Linux flash or proves restoration capability.
+
+The image builder and independent validators are under `../linux-port`.
+Native Linux remains the goal; Android restoration is not a prerequisite.

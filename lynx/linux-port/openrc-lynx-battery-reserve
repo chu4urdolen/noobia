@@ -1,0 +1,41 @@
+#!/sbin/openrc-run
+description="Lynx unplugged battery reserve guard"
+reserve_script=/usr/libexec/lynx-battery-reserve.sh
+reserve_state=/run/lynx/battery-reserve
+
+depend() {
+    need lynx-health
+}
+
+start() {
+    ebegin "Starting Lynx battery reserve guard"
+    [ -x "$reserve_script" ] || { eend 1 "reserve script missing"; return 1; }
+    /bin/sh "$reserve_script" --once >/dev/null || { eend 1 "gauge unavailable"; return 1; }
+    if [ -e "$reserve_state" ]; then
+        [ -r "$reserve_state/pid" ] || { eend 1 "stale reserve state"; return 1; }
+        pid=$(cat "$reserve_state/pid") || return 1
+        case "$pid" in ''|*[!0-9]*) eend 1 "invalid reserve PID"; return 1;; esac
+        kill -0 "$pid" 2>/dev/null || { eend 1 "dead reserve process"; return 1; }
+        eend 0
+        return 0
+    fi
+    /bin/sh "$reserve_script" --watch > /run/lynx/battery-reserve.log 2>&1 < /dev/null &
+    launched=$!
+    sleep 1
+    [ -r "$reserve_state/pid" ] && [ "$(cat "$reserve_state/pid")" = "$launched" ] &&
+        kill -0 "$launched" 2>/dev/null || { eend 1 "reserve process did not start"; return 1; }
+    eend 0
+}
+
+status() {
+    [ -r "$reserve_state/pid" ] || return 1
+    pid=$(cat "$reserve_state/pid") || return 1
+    case "$pid" in ''|*[!0-9]*) return 1;; esac
+    kill -0 "$pid" 2>/dev/null || return 1
+    /bin/sh "$reserve_script" --once >/dev/null
+}
+
+stop() {
+    ewarn "Lynx reserve guard remains active until system power-off"
+    return 0
+}

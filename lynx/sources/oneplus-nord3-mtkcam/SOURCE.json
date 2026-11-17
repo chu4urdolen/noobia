@@ -1,0 +1,56 @@
+{
+  "repository": "https://github.com/OnePlusOSS/android_kernel_5.10_oneplus_mt6983",
+  "commit": "81ec42ad5e803be0cba619f9f7bb298db7d33d7b",
+  "path": "drivers/media/platform/mtk-isp/camsys/isp7_1/cam",
+  "files": [
+    {
+      "file": "Kbuild",
+      "sha256": "8ca71898f1cedc2321419a0ad614559aa6a67d64a7350250f4f10e9ad0377ad5",
+      "bytes": 3170
+    },
+    {
+      "file": "mtk_cam.c",
+      "sha256": "523a22a8a4cc3e45e82843f5c730c044c123aab8380411523dcc51087918ced1",
+      "bytes": 308036
+    },
+    {
+      "file": "mtk_cam-seninf-drv.c",
+      "sha256": "ae39f773d5c3f508504966c6310d0237e49d535e6219337b22e00744d30a8faa",
+      "bytes": 53899
+    },
+    {
+      "file": "mtk_cam-raw.c",
+      "sha256": "c16b72940c738a67ffb8b0895c8ca4b4f7d739d60a512c25151cec9ed3bd988a",
+      "bytes": 217603
+    },
+    {
+      "file": "mtk_cam_pm.c",
+      "sha256": "4152940afbd57c2752764beb3765cbdd39ce62dedf2c2081f7c1e57063da2070",
+      "bytes": 3684
+    },
+    {
+      "file": "mtk_cam-dvfs_qos.c",
+      "sha256": "18cf01ee3637caf0d6d5dc99e2dbf662cf4c33b53e1a0a351809a736c81f3551",
+      "bytes": 39866
+    },
+    {
+      "file": "mtk_cam-raw.h",
+      "sha256": "fb431e9aeb6883fd6b2e19d5f139c1639a2bfec61b4b00e1942ef962aee4629b",
+      "bytes": 12776
+    }
+  ],
+  "extra_files": [
+    {
+      "path": "drivers/remoteproc/mtk_ccd.c",
+      "local": "remoteproc/mtk_ccd.c",
+      "sha256": "e14268391c6b3e47d5287c2a3ee2beced08a882efb943207ecfc21a673d3898b",
+      "bytes": 11751
+    },
+    {
+      "path": "drivers/media/platform/mtk-isp/camsys/isp7_1/cam/mtk_csi_phy_3_0/mtk_cam-seninf-hw_phy_3_0.c",
+      "local": "cam/mtk_csi_phy_3_0/mtk_cam-seninf-hw_phy_3_0.c",
+      "sha256": "f6f1f798d8dc46a802a156bd23c0294ed10ae23057dd02550a7e5e0fbd966689",
+      "bytes": 125351
+    }
+  ]
+}

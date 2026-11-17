@@ -1,0 +1,13 @@
+{
+  "state": "prepared-not-yet-executed",
+  "image_sha256": "e885fb8162e7faf40fba68732fadd77aa3b4328a4b235e4ae4e60873d8feec0d",
+  "partition": "boot_a",
+  "single_supervised_trial": true,
+  "requires_unplugged_boot": true,
+  "scope": "One supervised V25f boot_a-only trial after V25d failed to expose SSH. V25f brings up proven V19 Wi-Fi/SSH first, saves diagnostics, then starts the same reviewed health stage. An independent 180-second power-off timer bounds the period before health startup. General Linux flash hold remains active.",
+  "abort_conditions": "Unexpected Fastboot identity or write response, warm phone, USB still attached during native boot, missing early SSH by the bounded startup window, unexpected reboot/recovery, or missing health telemetry. Stop and inspect before any stock restoration.",
+  "other_partitions_allowed": false,
+  "automatic_reboot_allowed": false,
+  "native_charging_untested": true,
+  "alpine_handoff_untested": true
+}

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Fresh native proof, boot-bound RAM rootfs and durable command captures.
+exec python3 /noobia/lynx/tools/lynx_alpine.py "$@"

@@ -1,0 +1,92 @@
+{
+  "source": "lynx_18_individual_poses.zip",
+  "source_sha256": "c791921dfd309de7b93c580297d3800926e34549e61d9a5905ea11947111a546",
+  "excluded": "13_dance_180deg.png",
+  "poses": [
+    {
+      "file": "01_standing_smile.png",
+      "sha256": "1320836f888a1922f815757714195a4ff0c6d05af2c5bff097e30b888576dc02",
+      "bytes": 1273703
+    },
+    {
+      "file": "02_talking.png",
+      "sha256": "fea2498b386b0cf6f34bc7398fd10788e1504be1b826e1b61e0aceebac11e47d",
+      "bytes": 1261291
+    },
+    {
+      "file": "03_look_left.png",
+      "sha256": "90ebb31293292702d1335da187ed53f1a3e66a14df6f98ad3f5218895777e0d5",
+      "bytes": 1218603
+    },
+    {
+      "file": "04_look_right.png",
+      "sha256": "2df693bfc25a72491625f423e7bee04b4b2993d8e6bfbe9597eff38c108bc18d",
+      "bytes": 1226196
+    },
+    {
+      "file": "05_using_device.png",
+      "sha256": "2a7f15ecefe76869445dbe814a43db5b460483516b42158c9452160b465cbb0c",
+      "bytes": 1149684
+    },
+    {
+      "file": "06_singing.png",
+      "sha256": "88a1da9cf5ce8e49d6ebf58e48d9332edf4aa38494481d705625e5168e96fa22",
+      "bytes": 1076242
+    },
+    {
+      "file": "07_dance_000deg.png",
+      "sha256": "955ea2502556294b67b912a970654a0a734603c0ea78a9f472183977f308da64",
+      "bytes": 1211725
+    },
+    {
+      "file": "08_dance_030deg.png",
+      "sha256": "e90fd04fa00d3b0e096f738d4d8bbac9e6c4242844b94aa350b524577f862537",
+      "bytes": 1192396
+    },
+    {
+      "file": "09_dance_060deg.png",
+      "sha256": "3d58666f9d962d87a8fc5fc8d00ffa692c63d034b30e5ee9b14dded74e671454",
+      "bytes": 1169413
+    },
+    {
+      "file": "10_dance_090deg.png",
+      "sha256": "f5bbfc7f9aa743308d858ab2675ad139a63b9865b3ea17395431dc77290b9415",
+      "bytes": 1110358
+    },
+    {
+      "file": "11_dance_120deg.png",
+      "sha256": "e87e7e31d42940e38674ccb3b313c1f37e4508320d6abfe1537e4c7bf6f143bc",
+      "bytes": 1149286
+    },
+    {
+      "file": "12_dance_150deg.png",
+      "sha256": "c56f74e824cf60be80a02878883b90ac39e36019d1f32f4723e8168159ac36d3",
+      "bytes": 1083594
+    },
+    {
+      "file": "14_dance_210deg.png",
+      "sha256": "a9f6a53739cdb845cf3c92928fadb63c93910ed0a152a86345d18f449b6c09ff",
+      "bytes": 1536347
+    },
+    {
+      "file": "15_dance_240deg.png",
+      "sha256": "ed47913541693f6bb30efc144aa4790ebd333b4b5127edf27e80e649042ce135",
+      "bytes": 1682049
+    },
+    {
+      "file": "16_dance_270deg.png",
+      "sha256": "9c1beab6d73202e6043eff95a8c09d780c9e264c672cf635c266b6068d376c02",
+      "bytes": 1549280
+    },
+    {
+      "file": "17_dance_300deg.png",
+      "sha256": "eb43532077f47b9cb11111326f4367ffe8ae5d490df0c219fa6b0308ef74c2e5",
+      "bytes": 1612183
+    },
+    {
+      "file": "18_dance_330deg.png",
+      "sha256": "292e500d7a33af56560d43ec6de56ef674f8a1f5b1040ac4f6f0769227d565b4",
+      "bytes": 1643746
+    }
+  ]
+}

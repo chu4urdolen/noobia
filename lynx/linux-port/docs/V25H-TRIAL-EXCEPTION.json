@@ -1,0 +1,13 @@
+{
+  "state": "offline-ready-pending-supervised-trial",
+  "image_sha256": "e6afd7ae10f77d78939d4a6b011eaeca2c255c35642434040539913d9891bd5c",
+  "partition": "boot_a",
+  "single_supervised_trial": true,
+  "requires_unplugged_boot": true,
+  "scope": "One V25h boot_a-only trial on exact Lynx CPH2493 slot A. V25h keeps V25g's exact stock kernel and init; only the local Wi-Fi supervisor gains a best-effort discovery beacon. Its 180-second early health deadline and V19/stock boot_a restoration paths are preserved. Arm the image-aware observer before writing. The general safety hold remains active for every other image and partition.",
+  "abort_conditions": "Unexpected Fastboot identity or slot, candidate or stock hash mismatch, write error, warm phone, USB connected during native boot, no authenticated SSH/health proof within the bounded window, unexpected recovery or reboot. Save raw records and return to the proven V19 image if contact fails.",
+  "other_partitions_allowed": false,
+  "automatic_reboot_allowed": false,
+  "native_charging_untested": true,
+  "alpine_handoff_untested": true
+}

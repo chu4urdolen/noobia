@@ -1,0 +1,3 @@
+#!/bin/sh
+# Resolve the latest verified session; keep strict host-key and key-only auth.
+exec python3 /noobia/lynx/tools/lynx_session_ssh.py "$@"

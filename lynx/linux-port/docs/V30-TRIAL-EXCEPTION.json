@@ -1,0 +1,15 @@
+{
+  "state": "prepared-not-executed",
+  "image_sha256": "0159029d4a20322766544f3785e992c93b456fcbbbe8b386671ecbb73bc491c7",
+  "partition": "boot_a",
+  "single_supervised_trial": true,
+  "scope": "One controlled V30 boot_a-only follow-up to the user-authorized native Linux trial. V29 reached BusyBox SSH and safe RAM health, then its PID 1 guard transiently refused the Alpine handoff and left rescue online. V30 changes only guard refusal logging and three bounded five-second guard retries; the general thermal hold stays active for other images.",
+  "required_before_write": "Fresh Fastboot serial/product/slot/partition-size checks, exact V30/V19/stock image hashes, matching stock OTA proof, current cool/unplugged status, ready pinned network collector, and exact V19 rollback command.",
+  "required_after_reboot": "Unplug USB, prove pinned V30 SSH, start and verify RAM health before arming OpenRC, and observe PID 1, SSH, health, refusal logs and thermal state. Never arm without fresh health proof.",
+  "abort_conditions": "Unexpected Fastboot identity or write response, phone warming, charger connected during native boot, failed or stale health readings, unexplained SSH loss, or unexpected recovery behavior. Stop and inspect before any further partition action.",
+  "other_partitions_allowed": false,
+  "slot_switch_allowed": false,
+  "native_charging_untested": true,
+  "pid1_handoff_untested": true,
+  "general_thermal_hold_remains_active": true
+}

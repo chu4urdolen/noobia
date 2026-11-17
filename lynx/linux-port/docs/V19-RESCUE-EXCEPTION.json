@@ -1,0 +1,11 @@
+{
+  "state": "prepared-not-yet-executed",
+  "image_sha256": "5ce2dbf8a7c132fa7e31f6be70aa76f83afe8c293e2cd5f02251a532486fd851",
+  "partition": "boot_a",
+  "single_supervised_rescue": true,
+  "scope": "Return to the previously proven V19 native BusyBox Wi-Fi/SSH image after V25d/V25f failed to expose SSH. Only boot_a; fresh Fastboot identity and pinned V19 collector required. The host does not reboot the phone. Immediately start the previously tested RAM health stage after pinned contact and confirm USB offline.",
+  "other_partitions_allowed": false,
+  "automatic_reboot_allowed": false,
+  "native_charging_untested": true,
+  "unattended_operation_allowed": false
+}

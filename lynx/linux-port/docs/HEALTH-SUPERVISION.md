@@ -1,0 +1,234 @@
+# Lynx automatic health supervision — fresh-boot RAM trial
+
+On 2026-10-18, the guarded fresh-boot V19 RAM trial succeeded on Lynx with USB
+unplugged. The listener was armed before the checked power-off request; a new
+V19 boot sent its Wi-Fi beacon 143 seconds after listener arm, pinned SSH
+answered, and the
+Fastboot fallback was acknowledged. The trial refused stale RAM state and an
+online charger, verified hashes after upload, passed the handset hardware
+preflight, and loaded the reviewed modules in order. The gauge returned
+DeviceType 42495 before the battery monitor was enabled. All four on-phone
+watchers started and the health supervisor passed its final live check.
+No partition was written. Receipts:
+`logs/autonomous-health-window-1792276571479014331/result.json`,
+`logs/wifi-v19-contact-1792276571534186723/result.json`, and
+`logs/autonomous-health-ram-trial-1792276717955774721/result.json`.
+The offline V24 equivalence audit at
+`artifacts/v24-trial-equivalence-1792276839228038762/result.json` confirms
+that the image contains byte-identical health scripts and module archive to
+this successful RAM trial. V24's new init hook and handoff are separate code
+paths and still need handset validation.
+The four-hour observational logger is active at
+`logs/battery-session-1792276725293904387/result.json`. Its first two samples
+showed 24.0–24.1°C battery, 61% charge, CPU/SoC sensors around 30–38°C,
+three cooling controls, and repeated `LYNX_HEALTH_OK`. Charging and V24's
+automatic image hook still require handset validation, so the Linux flash hold
+remains active and Lynx should stay unplugged.
+
+Lynx's V19 native BusyBox boot is reachable through pinned SSH. The earlier
+supervised boot had ID `e1af6ca5-ca54-46e9-8cdf-9a1dbea56994`. The existing
+thermal watcher reads
+CPU/SoC sensors every five seconds and requests power-off at 60°C. The existing
+battery watcher reads the identified ZY0603-family gauge every five seconds and
+requests power-off at 45°C. The tested cooling watcher applies one CPU cooling
+step at 45°C and releases it at 40°C or below. These processes now run on Lynx,
+independent of the host logger and SSH availability.
+
+`linux-port/lynx-health-supervisor.sh` adds a RAM-only backstop. Every five
+seconds it checks that all three watcher PIDs still refer to the expected
+programs, that the gauge is present and its last error-free sample is no more
+than 15 seconds old, that battery temperature and charge are valid, that at
+least two CPU and one SoC sensors answer, and that all three CPU cooling
+controls exist. At 45°C or above it requires the cooling step to be active.
+Three consecutive failed checks request a safe power-off. It does not change
+charging, calibration, partitions, CPU policy, or cooling controls itself.
+
+The script passed seven synthetic cases, including stale battery data, hot
+battery, missing sensor, missing cooling action at 46°C, and exactly one fake
+power-off request after three failures:
+`artifacts/health-supervisor-check-1792263737856087486/result.json`.
+Its exact SHA-256 is
+`b07060f2f20723ce41f04e8f8252cf236967a487c7648057afdd1c6a598fa09e`.
+The hash-matched `--once` mode passed on the real phone, followed by three more
+live samples five seconds apart. Continuous `--watch` mode was then started
+in RAM; the first event and PID were checked. Receipts:
+`logs/live-health-once-1792263713039686377/`,
+`logs/live-health-three-samples-1792263744404436330/`, and
+`logs/live-health-watch-start-1792263766214003510/`.
+
+The new host logger at
+`logs/battery-session-1792263786215525656/result.json` captures recent health
+events with battery, thermal and cooling readings every ten seconds. Its first
+sample showed 26.5°C battery, 77% charge, and 32–34°C CPU/SoC readings. The
+older logger was stopped after the replacement was verified, without any phone
+command. A later runtime-power verification passed at
+`logs/runtime-power-setup-1792264159910202756/result.json`.
+
+This is automatic **within the current RAM boot**. V19 does not yet start the
+modules/watchers by itself after a reboot; a host-assisted setup is still
+required. The next image must package the matching sensor/CPU modules, the
+verified battery monitor, scripts and startup order, then prove them under the
+exact stock kernel and in a supervised handset boot. Do not mistake this RAM
+success for a self-starting or thermally certified phone image. The Linux flash
+hold remains active.
+
+The reviewed stock driver binaries and watcher scripts are now collected in an
+inert, hash-checked archive at
+`artifacts/autonomous-health-inputs/inputs.tar.gz`. Its manifest records the
+exact stock-kernel release, source/build hashes, and all member hashes. The
+closure audit at `artifacts/autonomous-health-closure/result.json` compares its
+two module plans with the successful handset trial. It found four inserted
+drivers in plan order. The plans also require `oplusboot`, `buildvariant`,
+`oplus_project`, and `mtk_boot_common` to have been loaded by the stock
+bootstrap. Those are deliberately absent from the compact archive; a future
+boot stage must check their live presence before inserting anything. The audit
+does not authorize automatic module insertion. Each boot must also repeat the
+device-tree/calibration checks and the gauge DeviceType query before enabling
+the battery monitor.
+
+`linux-port/autonomous-health-preflight.sh` is a read-only gate for that next
+stage. It requires the exact kernel release, the bootstrap modules proved by
+the closure audit, matching device-tree hashes and absent-property checks,
+valid bootloader calibration bounds, the unbound expected gauge topology, and
+all six packed drivers. A six-case filesystem fixture at
+`artifacts/autonomous-health-preflight-check-1792264353611654369/result.json`
+passed, including refusals for a missing bootstrap module, changed device
+tree, truncated calibration, already-bound gauge, and missing packed driver.
+It passed the fresh handset preflight above and performs no insertion. Its input
+archive was hash-verified on Lynx before extraction.
+
+`linux-port/autonomous-health-start.sh` is the next **offline candidate** for
+the supervised post-SSH stage. It runs that preflight, inserts only the four
+reviewed stock sensor/CPU modules, starts the temperature watcher, repeats the
+same-boot gauge DeviceType query, loads the gated battery monitor, starts the
+battery watcher, applies the tested WFI fallback, waits for a below-40°C
+cooling start, then starts the health supervisor. An independent 180-second
+timer requests power-off if an insertion blocks. Its plan and shell syntax
+pass local checks. The script is not packaged into V19/V22. It passed the
+supervised fresh V19 RAM trial above; the V24 image hook and failure handling
+in an unattended cold boot remain unproven. Recovery review must precede any
+flash.
+The startup control flow also passed a disposable filesystem fixture at
+`artifacts/autonomous-health-start-check-1792275808786171502/result.json`:
+an unconfirmed boot was refused before insertion, and a confirmed fake boot
+inserted six mocked modules in the reviewed order and started four fake
+watchers without invoking the power-off timer. The fixture substitutes all
+hardware, kernel modules, and watcher bodies; it is not phone evidence.
+
+An offline V23 packaging check now places the exact inert input archive and
+both health-stage scripts into a separate 64 MiB boot image at
+`artifacts/health-stage-v23-offline/nord3-health-stage-inert.img` (SHA-256
+`c2cc903904255d7cdac00a9dd3cd60c7fde75cfe21e2dc331afafb02eb24e402`).
+The builder verifies the V22 parent hash, keeps its stock kernel and init
+control flow byte-for-byte, updates only payload size/hash metadata, and
+round-trip checks the embedded files. The image inherits private V19 Wi-Fi/SSH
+material and remains local mode 0600. It contains **no automatic startup
+hook**, so this is a layout/integrity artifact, not a tested autonomous image
+or an image to flash.
+
+An additional **unflashed V24 prototype** adds an init hook after pinned host
+confirmation, extracts the hash-checked health archive into RAM, runs the
+health stage in a child bounded by 190 seconds, and arms the existing guarded
+OpenRC handoff only after a final health check. Its image is
+`artifacts/autonomous-health-v24-offline/nord3-autonomous-health-untested.img`,
+SHA-256 `0fa897c1757ef0cd309fd8cde46857f9c5329712202c48393af971596330d5d8`.
+The builder replay matched that exact hash and audited every primary and
+supplement member: only init, payload metadata, and the new handoff script
+changed from V23. A three-case host fixture at
+`artifacts/autonomous-health-handoff-check-1792275946413515701/result.json`
+passed archive extraction and gate arming with stubbed workers, and refused a
+bad archive hash or wrong host token. This is **not** a stock-kernel VM or real
+handset boot test. A separate exact-stock-kernel QEMU run at
+`artifacts/openrc-pid1-handoff-vm-1792276025887785750/result.json` then
+exercised the production health handoff script with a fake sensor/start worker:
+archive verification/extraction, child completion, automatic OpenRC gate arming,
+PID 1 replacement, health service adoption, and clean power-off all passed.
+The VM has no Lynx sensor hardware or Wi-Fi and does not boot the actual V24
+image. V24 must not be flashed while `SAFETY-HOLD.json` is active.
+
+The next handset proof is designed to leave the installed V19 image untouched:
+`tools/launch_autonomous_health_ram_trial.py --prepare` validates the exact
+archive, scripts, and offline fixtures without contacting Lynx. A bounded
+`tools/arm_autonomous_health_trial.py` listener can be armed **before** a
+fresh, unplugged V19 reboot. After a pinned SSH identity and Fastboot-fallback
+acknowledgement, the worker will refuse an old boot, connected charger, loaded
+sensor module, or stale RAM state before uploading anything. It then verifies
+the archive and scripts on Lynx, runs the read-only hardware preflight, and
+starts the health stage in RAM with raw receipts for each step. On a failed
+unprotected session it requests power-off. On success it starts a bounded
+four-hour host logger while on-phone watchers remain independent. This sequence
+passed on the phone with Noob's unplugged confirmation and a coordinated fresh
+V19 boot. No partition write was part of the trial.
+The detached worker's offline sequence test passed at
+`artifacts/autonomous-window-check-1792276271144450533/result.json`:
+listener readiness precedes the RAM trial, a successful trial starts the host
+logger, and missing unplugged confirmation is refused. It uses mocks and did
+not arm the real listener.
+Noob confirmed Lynx was unplugged, the listener was armed, and
+`tools/request_safe_v19_poweroff.py` rechecked the pinned boot and power state
+before sending power-off. Noob was then asked to press Power once. The
+power-off receipt records only that the command was sent; the new pinned V19
+beacon and fresh-state checks establish that a new boot occurred.
+The helper's **read-only** preflight passed on the current boot at
+`logs/safe-v19-poweroff-1792276331596267479/result.json`; no power-off was
+requested in that preflight. The executed power-off request is recorded at
+`logs/safe-v19-poweroff-1792276593071806724/result.json`.
+
+After the first one-hour host logger ended, Lynx remained reachable and the
+on-phone health supervisor passed again at
+`logs/live-health-after-logger-1792275511617151253/result.json`: 23.5°C
+battery, 63% charge, roughly 30°C CPU/SoC, and three cooling controls.
+`configure_runtime_power.py --verify-only` passed at
+`logs/runtime-power-setup-1792275522742700027/result.json`. A second,
+four-hour host capture was started at
+`logs/battery-session-1792275518601564562/result.json`; it is observational
+only and may finish while the on-phone protection continues.
+
+Read-only power-supply inventory on the unplugged phone at
+`logs/live-power-supply-inventory-1792275821681625650/result.json` showed the
+stock MT6375 charger supply registered, with `online=0` and `status=Not
+charging`. The independent gauge snapshot still reported 23.5°C, 63% charge,
+and discharge current. This establishes only the unplugged state; safe charging
+and charge termination under native Linux have not been validated. Keep the
+phone unplugged during this development session.
+
+An OpenRC `lynx-health` service is now prepared in
+`linux-port/openrc-lynx-health`. It adopts a verified early health process or
+starts one after the live prerequisites pass; routine service stop leaves that
+safety process running. The original signed Alpine/OpenRC root is preserved.
+A separate archive containing the service and exact supervisor source is at
+`artifacts/openrc-health-rootfs-export/alpine-openrc-health-rootfs.cpio.gz`,
+SHA-256
+`5398ad7ea3d10e3f48b2bc7273f3a0912f7551d654740161d8bdacdb6d97fd77`.
+The production handoff script and service startup passed under the exact stock
+kernel in QEMU at
+`artifacts/openrc-pid1-handoff-vm-1792263949729710290/result.json`.
+That VM substitutes a fake sensor worker because it has no Lynx hardware; it
+does not validate boot-time module insertion or a new phone image. This archive
+is an offline artifact, not installed on Lynx.
+
+A separate V22 offline image now embeds that health-enabled OpenRC archive:
+`artifacts/openrc-health-v22-offline/nord3-openrc-health-candidate.img`, SHA-256
+`01ce287ace2ede31d272a2742f9562284c8b1b8148b8be1abd19b3b4e9068568`.
+The builder pins the reviewed V21 parent, preserves its stock kernel and init
+control flow, updates only nested OpenRC payload and payload size/hash metadata,
+and round-trip checks the resulting 64 MiB boot image. The private image is
+mode 0600 and remains local. V22 still uses V21's host-assisted prerequisites;
+neither the new root archive nor the offline VM proves independent cold-boot
+health startup. It must not be flashed while the thermal hold is active.
+
+The host resume workflow now retries only the exact reviewed cooling-start
+refusal (where it reached WFI verification but the cooling watcher withheld its
+PID), up to three times after ten-second waits. Other power setup failures stop
+without retry. Twenty offline fixture checks passed at
+`artifacts/alpine-resume-sequence-1792263656831428178/result.json`. This removes
+the manual retry needed during this boot while preserving the cooling script's
+strict below-40°C startup guard.
+
+The current Alpine 3.24.2 RAM environment includes signed Python, Git, and Make
+packages. Its host checkpoint is
+`checkpoints/alpine-runtime-1792263391851313235/result.json`; an exact-stock-
+kernel offline restore passed at
+`artifacts/alpine-checkpoint-restore-1792263530573631274/result.json`.
+The first VM restore exposed a Makefile fixture quoting error, fixed in the
+second run. No persistent phone storage was written.

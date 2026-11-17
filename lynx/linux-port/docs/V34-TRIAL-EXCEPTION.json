@@ -1,0 +1,17 @@
+{
+  "state": "prepared-not-executed",
+  "image_sha256": "727d72621e69743d2939540e84ca137183dae0055e07df458da52bddc60d13d4",
+  "partition": "boot_a",
+  "other_partitions_allowed": false,
+  "general_thermal_hold_remains_active": true,
+  "scope": "One controlled unplugged V34 autonomous Alpine boot trial, with V33 and V19 exact rollback images prepared",
+  "requirements": [
+    "Fresh Fastboot identity and partition preflight",
+    "Fresh pinned SSH collector ready before reboot",
+    "Only boot_a may be flashed",
+    "Prompt USB removal after Fastboot reboot",
+    "Stop and restore V33 or V19 if boot, health, charging, or recovery behavior differs"
+  ],
+  "flash_performed": false,
+  "hardware_boot_tested": false
+}

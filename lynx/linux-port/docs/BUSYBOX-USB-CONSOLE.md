@@ -1,0 +1,26 @@
+# BusyBox USB console — 2026-10-11
+
+Current milestone is a live BusyBox shell over USB, using the proven exact August stock kernel. No kernel rebuild, Android framework, distribution root filesystem, networking or SSH was added in this step.
+
+The successful minimal reboot proof, source and result are preserved unchanged. Noob confirmed no buttons were touched during that return to Fastboot. The project README now points to that result and the current BusyBox milestone; the previous README is archived as README-BEFORE-CONFIRMED-BOOT.md.
+
+New native source: init-busybox-usb-console. New reproducible offline builder: build_busybox_usb_console.py. Image: artifacts/busybox-August-busybox-console/nord3-busybox-candidate.img; SHA2563c75e5791fa9ed6be1a655e978fac4c68b8ea1479ca4777b54106f51326572dc. It retains the exact stock kernel and matching vendor ramdisk dependency, loads the proven reset drivers first, then the preserved USB supplier order. All37 module hashes and versions match stock. It exposes only ACM serial, with USB1d6b:0104 and serial lynx-busybox. A shell connection prints native banner, uname, PID1 information, module progress and full kernel dmesg. PID1 persists after shell exit. Runtime mounts are proc/sysfs/tmpfs/configfs; no partition mounting or native partition-writing tool is included.
+
+The exact proven driver/property guard is embedded before the USB code. If USB setup reports failure and the reset guard passed, init requests one standard software return to Fastboot. If the guard did not pass, init stays alive without a reboot request. A kernel/module-probe hang or apparently bound gadget that never enumerates may still require physical Fastboot entry; automatic recovery is not guaranteed.
+
+The stock-kernel ARM64 VM test executed the exact combined vendor/generic image, observed native PID1, USB setup failure and RESET_GUARD_REFUSED, with no reboot request. Artifact: artifacts/emulated-busybox-console-1791666814527661557/result.json. Independent fixed-image, module/order and unlocked/locked AOSP AVB checks passed in tools/validate_busybox_usb_console.py; report docs/busybox-console-validation.json. These tests do not establish a hardware USB shell.
+
+Host recorder tools/lynx_busybox_console.py matches only the native USB IDs and serial before opening ttyACM. It preserves raw bytes and partial captures, waits for the native banner, then sends only uname/PID1/id checks. Completion parsing was tested against fragmented data and echoed commands so command echo cannot count as a successful reply. Capture has a120-second deadline and32MiB size bound. It emits a heartbeat and process identity; the trial tool refuses a Linux write if the recorder is not actively waiting. Stock restoration does not depend on a recorder being active.
+
+Trial tool: tools/lynx_boot_a_busybox_console_trial.py. Verified offline readiness: logs/boot-a-busybox-console-trial-1791667156051355831.json. It preserves exact Fastboot identity/slot checks, verified firmware/baseline checks and stock boot_a undo. Longer passive observer: tools/lynx_usb_observe_busybox.py, duration180seconds, starts before the trial.
+
+Live trial boot-a-busybox-console-trial-1791667291915431284 accepted only boot_a and one reboot. User was told USB connected, no button presses. Recorder: logs/busybox-console-1791667287110999263.json. Observation: running at time of this entry. Hardware result remains pending. Last persistent boot_a is this console candidate until its verified stock undo is recorded; do not assume the prior stock undo is still the last write. No other partition, slot, bootloader, calibration or authentication change occurred.
+
+
+## First BusyBox USB-console result: no banner; stock undo pending
+
+The boot_a write and reboot succeeded: logs/boot-a-busybox-console-trial-1791667291915431284.json. Native console recorder reached its120-second deadline with zero captured bytes and no shell marker: logs/busybox-console-1791667287110999263.json. User reported OrangeState afterward. No usable BusyBox USB shell is proved. Screen alone does not locate the failure or establish whether the native kernel is running. The previous minimal software-reboot proof remains valid and unchanged.
+
+Last persistent boot_a is the BusyBox console candidate, not stock. Stock undo is pending physical Fastboot return; user was instructed to return to Fastboot with USB connected. Exact stock undo is ready in tools/lynx_boot_a_busybox_console_trial.py --restore-stock, which does not require a live console recorder. No further image trial before undo and new diagnostic evidence. Consolidated result: docs/busybox-console-first-hardware-result.json. Longer passive observer remains bounded to180seconds; the native console collector has exited.
+
+Next code investigation should separate module loading, peripheral-role selection, gadget binding and host enumeration into observable checkpoints using the successful software-return baseline. Also fix the success criterion: a successful UDC bind without host enumeration currently leaves init waiting for ttyGS0; it cannot be treated as a successful console or guarantee an automatic return. Preserve this first image and its evidence before changing that behavior.

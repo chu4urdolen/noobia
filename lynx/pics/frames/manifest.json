@@ -1,0 +1,128 @@
+{
+  "width": 1240,
+  "height": 2772,
+  "format": "little-endian RGB565, gzip compressed",
+  "excluded": "13_dance_180deg.png",
+  "frames": [
+    {
+      "name": "01_standing_smile",
+      "file": "01_standing_smile.rgb565.gz",
+      "sha256": "7c19ab907404f5e88bee802178094d698aeaf4721dfb6cf00258c2bf69bf22d0",
+      "bytes": 738040
+    },
+    {
+      "name": "02_talking",
+      "file": "02_talking.rgb565.gz",
+      "sha256": "aef9faeaba0788372686892e6907ef867b0b3009c53857a7104a584ab599a30f",
+      "bytes": 729152
+    },
+    {
+      "name": "03_look_left",
+      "file": "03_look_left.rgb565.gz",
+      "sha256": "52fbfa546438288a46053616d64a699a3b3a05349937fc4449d502fb27d42212",
+      "bytes": 704677
+    },
+    {
+      "name": "04_look_right",
+      "file": "04_look_right.rgb565.gz",
+      "sha256": "328724f873225bfe63ae84d9c8fa1b7555149bf7050b33a3dd294c4f7e68b392",
+      "bytes": 718409
+    },
+    {
+      "name": "05_using_device",
+      "file": "05_using_device.rgb565.gz",
+      "sha256": "b3678f07536b91d3725d1f78fd249ecfe3a9dd1f9606df731842640b62cb777b",
+      "bytes": 648775
+    },
+    {
+      "name": "06_singing",
+      "file": "06_singing.rgb565.gz",
+      "sha256": "f6bd14900d614765a3df4818fc61de0f046c884b01e1d9fa79f496aa9f275933",
+      "bytes": 614427
+    },
+    {
+      "name": "07_dance_000deg",
+      "file": "07_dance_000deg.rgb565.gz",
+      "sha256": "31ecb0f000ef5a6d7941c8e399362cf2ffd9031db5259a8a48d5a313991a1e10",
+      "bytes": 672390
+    },
+    {
+      "name": "08_dance_030deg",
+      "file": "08_dance_030deg.rgb565.gz",
+      "sha256": "f23f23f13398fab40c664f0875ef1818a94c32c1ad75ebec9510753e1b7a8afe",
+      "bytes": 669909
+    },
+    {
+      "name": "09_dance_060deg",
+      "file": "09_dance_060deg.rgb565.gz",
+      "sha256": "ec2e1d99c0f444e484ac5fa3e99619759b8ea271564d5ce42a97e2f2cefea318",
+      "bytes": 660947
+    },
+    {
+      "name": "10_dance_090deg",
+      "file": "10_dance_090deg.rgb565.gz",
+      "sha256": "75c4476ee532beedabbe51c316d1cee2eb340a3e35ac583903e1191167fa1d9f",
+      "bytes": 643021
+    },
+    {
+      "name": "11_dance_120deg",
+      "file": "11_dance_120deg.rgb565.gz",
+      "sha256": "296c2259bb66edf8699e527e11b06f84558550b78bf69637a617b79edda5d634",
+      "bytes": 670929
+    },
+    {
+      "name": "12_dance_150deg",
+      "file": "12_dance_150deg.rgb565.gz",
+      "sha256": "72f7676048ebf8e4142bb77fe6fdcbdac929cc8aeea22dd8dba70ccabcef2d7a",
+      "bytes": 604500
+    },
+    {
+      "name": "14_dance_210deg",
+      "file": "14_dance_210deg.rgb565.gz",
+      "sha256": "aecc328edb8216f97fc26b04240aba5ce58fe24d5c14e2e3f296eaaace114621",
+      "bytes": 648211
+    },
+    {
+      "name": "15_dance_240deg",
+      "file": "15_dance_240deg.rgb565.gz",
+      "sha256": "6eb866da70a80da125112555344a3d693839ecc63f5645469e1258336e9a6b7f",
+      "bytes": 716655
+    },
+    {
+      "name": "16_dance_270deg",
+      "file": "16_dance_270deg.rgb565.gz",
+      "sha256": "8ed9580fb0edabaecf7b112e1898ac2fdf7dafa93b0179fccf50cdeb3151b638",
+      "bytes": 688732
+    },
+    {
+      "name": "17_dance_300deg",
+      "file": "17_dance_300deg.rgb565.gz",
+      "sha256": "c9b927f7ecadac13eefbd3a36762e1a9de0707b1641f94dd0a1128328ff90504",
+      "bytes": 681594
+    },
+    {
+      "name": "18_dance_330deg",
+      "file": "18_dance_330deg.rgb565.gz",
+      "sha256": "f0168e379b18477b5cd5eb48d46a4252c9c92285fdef7640e6a787bc67484234",
+      "bytes": 667386
+    }
+  ],
+  "animations": {
+    "dance": {
+      "frames": [
+        "07_dance_000deg",
+        "08_dance_030deg",
+        "09_dance_060deg",
+        "10_dance_090deg",
+        "11_dance_120deg",
+        "12_dance_150deg",
+        "14_dance_210deg",
+        "15_dance_240deg",
+        "16_dance_270deg",
+        "17_dance_300deg",
+        "18_dance_330deg"
+      ],
+      "frame_duration_ms": 500
+    }
+  }
+}

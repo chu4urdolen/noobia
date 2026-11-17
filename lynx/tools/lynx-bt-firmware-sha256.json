@@ -1,0 +1,9 @@
+{
+  "BT_FW.cfg": "7696bb23a111a4632acdcf700ff9160d8eeaac8b07239719df968c2a8bf966b7",
+  "soc7_0_ram_bt_1_1_hdr.bin": "dc703cfe3e184a423b659bde087ba487de3d3e1413e23a46765a6d549dd5efa8",
+  "soc7_0_ram_bt_1a_1_hdr.bin": "34b370eaf7fd76f2c48b949cf03834f850cb3bc1d828e23f247b1dbb8711f243",
+  "soc7_0_ram_bt_1b_1_hdr.bin": "51c76e389a660f698565601e6b7ecc215313247ce37d0466a6a0b619c2ed93c1",
+  "soc7_0_ram_mcu_1_1_hdr.bin": "23671bbbc285ecbf78a34cd2e67464aeee79a8cb1658b0d1dce9cd0923f5c5a0",
+  "soc7_0_ram_mcu_1a_1_hdr.bin": "430d6c0e60d9e047917ec1b0d2720c9e20b7590bddc61efd3e0ff62f7cb32980",
+  "soc7_0_ram_mcu_1b_1_hdr.bin": "4bcb71c31f3c146c977cd7545e9732f5e9b86c98339ec1eb410fb84154381ccc"
+}

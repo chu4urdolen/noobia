@@ -1,0 +1,7 @@
+{
+  "confirmed": true,
+  "device": "CPH2493",
+  "chip": "lm3642_22823",
+  "module_sha256": "96dc429c39453dbd0ba469069655bfafc43e329cc3216d912bb080e87b7bef67",
+  "evidence": "Noob saw a bounded 100 ms rear LED flash on 2026-11-02; OFF was verified by the control tool."
+}

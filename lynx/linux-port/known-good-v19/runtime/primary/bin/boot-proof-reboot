@@ -1,0 +1,78 @@
+#!/bin/sh
+# RAM-only result reporting, then the unchanged native reboot helper.
+BB=/bin/busybox
+# Parser lives in the verified supplemental RAM archive.
+lynx_station_failure_code() {
+    nt_station_code=34
+    . /etc/lynx/power-stack-parser.sh || return 0
+    lynx_stack_failure_code
+}
+lynx_network_timing_clock() {
+    IFS=' ' read -r nt_uptime nt_unused < /proc/uptime || return 1
+    nt_seconds=${nt_uptime%%.*}
+    case "$nt_seconds" in ''|*[!0-9]*) return 1 ;; esac
+}
+lynx_network_timing_reboot() {
+    IFS= read -r nt_start < /run/lynx/network-timing-start || return 1
+    case "$nt_start" in ''|*[!0-9]*) return 1 ;; esac
+    nt_code=24
+    if [ -f /run/lynx/bootstrap-result ]; then
+        IFS= read -r nt_boot < /run/lynx/bootstrap-result || return 1
+        case "$nt_boot" in
+            0)
+                nt_code=18
+                if [ -f /run/lynx/worker-result ]; then
+                    IFS= read -r nt_worker < /run/lynx/worker-result || return 1
+                    case "$nt_worker" in
+                        0) nt_code=0 ;;
+                        131|132|133|134|135|136|137|138|139|140|141|142|143|144|145|146)
+                            nt_code=$((nt_worker-130))
+                            if [ "$nt_worker" = 139 ]; then
+                                lynx_station_failure_code
+                                nt_code=$nt_station_code
+                            elif [ "$nt_worker" = 143 ]; then
+                                nt_code=59
+                                if IFS= read -r nt_wpa < /run/lynx/wpa-failure-code; then
+                                    case "$nt_wpa" in 50|51|52|53|54|55|56|57|58|59) nt_code=$nt_wpa ;; esac
+                                fi
+                            elif [ "$nt_worker" = 135 ]; then
+                                if IFS= read -r nt_radio_clock < /run/lynx/radio-clock-result; then
+                                    case "$nt_radio_clock" in 36|37|38|39) nt_code=$nt_radio_clock ;; esac
+                                fi
+                            fi ;;
+                        *) nt_code=17 ;;
+                    esac
+                fi ;;
+            154)
+                nt_code=23
+                if IFS= read -r nt_payload < /run/lynx/payload-step; then
+                    case "$nt_payload" in 1|2|3|4|5|6|7|8|9|10) nt_code=$((39+nt_payload)) ;; esac
+                fi ;;
+            151|152|153) nt_code=$((nt_boot-131)) ;;
+            *) nt_code=19 ;;
+        esac
+    fi
+    # Maximum180s bootstrap +240s Wi-Fi supervision precedes every slot.
+    case "$nt_code" in
+        9) nt_target=525 ;;
+        50|51|52|53|54|55|56|57|58|59) nt_target=$((160+5*(nt_code-50))) ;;
+        40|41|42|43|44|45|46|47|48|49) nt_target=$((210+5*(nt_code-40))) ;;
+        25|26|27|28|29|30|31|32|33|34|35|36|37|38|39) nt_target=$((260+5*(nt_code-25))) ;;
+        *) nt_target=$((335+5*nt_code)) ;;
+    esac
+    lynx_network_timing_clock || return 1
+    if [ "$nt_seconds" -ge "$((nt_start+nt_target-3))" ]; then
+        nt_code=9
+        nt_target=525
+    fi
+    [ "$nt_seconds" -lt "$((nt_start+nt_target-3))" ] || return 1
+    printf '<6>LYNX_NETWORK_TIMING code=%s target=%s\n' "$nt_code" "$nt_target" > /dev/kmsg || true
+    while :; do
+        lynx_network_timing_clock || return 1
+        [ "$nt_seconds" -ge "$((nt_start+nt_target))" ] && break
+        $BB sleep 1
+    done
+    /bin/boot-proof-reboot-native
+    return 1
+}
+lynx_network_timing_reboot

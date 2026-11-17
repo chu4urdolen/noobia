@@ -1,0 +1,147 @@
+# Lynx hardware and Noob runtime status
+
+Lynx is a OnePlus Nord 3 CPH2493, MT6983, running native Alpine. Her current
+boot image is trial V53; Bluetooth was started after boot and passed signed
+NRP/1 reconnect trials on two boots. Automatic Bluetooth startup and
+long-uptime reboot reliability are unverified. The runtime speaks the
+Iris-compatible NRP/1 protocol at
+`192.168.100.107:4243`, currently accepting Nexus (`192.168.100.106`).
+V53 changed only `boot_a` from the working V50 image; its exact V50 rollback
+remains available. The successful shared-radio calibration, HCI response,
+Nexus Bluetooth connection under Lynx's factory address, and native GNSS NMEA
+evidence are in
+[LYNX-CONNECTIVITY-PRECAL.md](LYNX-CONNECTIVITY-PRECAL.md).
+That report also records a bounded standard `hci0` bridge and a successful
+BlueZ power-on trial. The bridge and BlueZ are not started automatically.
+The later bounded GATT trial exchanged NRP/1 `PING`/`PONG` with Nexus over
+BLE without pairing. See [LYNX-BLUETOOTH-NRP.md](LYNX-BLUETOOTH-NRP.md) for
+the receipt and service boundary; this endpoint is still transient.
+The current camera and flashlight findings are in
+[LYNX-CAMERA-FLASHLIGHT-20261102.md](LYNX-CAMERA-FLASHLIGHT-20261102.md).
+That checkpoint supersedes the older flashlight and camera inventory below:
+the flashlight driver is loaded in RAM and its bounded pulse has a physical
+visual confirmation. Four camera sensors bound on a prior trial boot, but
+the camera stack is absent now and capture is not validated.
+
+| Hardware | Current Linux evidence | Noob interface |
+| --- | --- | --- |
+| Wi-Fi, storage, SSH | Alpine boots from `/dev/sdc85`, joins Noobia, opens SSH | NRP/1 transport; SSH remains for maintenance |
+| Display and touch | `lynx-display` runs; `/dev/dri/card0`, `/dev/input/event0` and `touchpanel` exist; two physical taps yielded distinct press events | Pose and animation calls 310–319; touch status and queued first-contact events 380–381 |
+| Vibration | AW86907 driver and firmware load on cold boot | Bounded haptic calls 300–302 |
+| Sound | MT6983 ALSA card, corrected MT6338 codec, TFA98xx firmware, controlled beep | Sound calls 340–346; audio readiness call 355 |
+| Battery | Gauge at I²C `7-0055`, validated type 42495 and error flags | Read-only calls 350–353 |
+| SoC thermal | `soc_max` thermal zone | Read-only call 354 |
+| Accelerometer | `hf_manager` and `sensorhub` register Bosch `bmi2xy acc`; 16 bounded live events recorded | Raw vector and axis calls 360–364 |
+| Gyroscope | Bosch `bmi2xy gyro`; 16 bounded live events recorded | Raw vector and axis calls 365–369 |
+| Proximity and rear optical sensor | AMS `tcs3701 ps` and `tcs3408 als` return bounded events; optical response needs a physical cover/uncover test | Status and raw calls 370–373; the rear optical sensor is distinct from the flash |
+| Magnetometer | AKM09918 returns 16 bounded live events | Raw vector and axis calls 374–378 |
+| Sensor fusion | MediaTek gravity, linear acceleration, rotation vector, and orientation each returned bounded events | Generic `FUSION_STATUS`, axis, and vector calls 382–386 with sensor type 9, 10, 11, or 3 |
+| Charging | MT6375 charger and battery reserve service | Monitored locally; remote charging controls are not exposed |
+| Flashlight | LM3642 bound on this boot; bounded 100 ms command returned OFF and Noob saw the rear LED flash | `FLASH_STATUS` now reports validated while bound; bounded `FLASH_PULSE` 396, `FLASH_STOP` 397; staged boot service disabled |
+| Camera | Four stock sensors bound on trial; ISP processing nodes appeared; full ISP load failed health check and emitted RCU warning | `CAMERA_STATUS` 394 is inventory only; no capture action |
+
+The new numeric calls return one value per NRP/1 `CALL`, so they work from
+the common Noob VM as well as a direct client. Units are explicit in the
+reply: percent, millidegrees Celsius, signed milliamps, and millivolts.
+Invalid gauge/error readings return `NATIVE_ERROR` rather than a plausible
+number. `AUDIO_READY` checks the ALSA card and loaded TFA98xx firmware.
+
+Read-only `MIC_STATUS`, `FLASH_STATUS`, `GNSS_STATUS`, `BT_STATUS`, and
+`CAMERA_STATUS` calls (IDs 390–394) now share their inventory with Lynx's
+local JSON-stdin wrappers. They report an interface separately from functional
+validation; Bluetooth discovery and connection work on V52. GNSS emitted
+checksum-valid NMEA, but its last GGA fix quality was 0 and no position has
+been measured.
+See [LYNX-HARDWARE-TOOLS.md](LYNX-HARDWARE-TOOLS.md) for the interface.
+The read-only V52 inventory was updated: `BT_STATUS` now reports
+the live `/dev/stpbt` interface, `GNSS_STATUS` reports the NMEA trial, and
+both keep `validated=0` until their full functions are established. Receipt:
+`logs/v52-hardware-evidence-1793368998197318672.json`.
+`MIC_LEVEL` (ID 395) now takes a one-second, level-only sample through the
+tested ALSA route and restores the mixer. Local and NRP/1 calls succeeded;
+no PCM was saved. An external clap validated its acoustic response.
+
+The local display now has Console and Status buttons along the bottom. Noob's
+physical taps opened both pages and returned home. Console now has a basic
+touch keyboard and output feed backed by an unprivileged shell. Noob has
+confirmed the horizontal and vertical console scroll bars work. The Status
+page shows validated pack and SoC readings,
+Wi-Fi, local service/driver indicators, and explicit unavailable labels for
+hardware still under development. The expanded page is installed on V50;
+see [LYNX-SCREEN-NAVIGATION.md](LYNX-SCREEN-NAVIGATION.md).
+
+The stock module bundle contains `bt_drv_6983.ko`, `gps_drv_dl_v050.ko`, `nfc_i2c.ko`,
+`imgsensor.ko`, `flashlight.ko`, and video codec modules. Their presence in
+firmware does not establish working hardware. On the observed Alpine boot,
+touch and power ADC nodes existed, but camera/video and Bluetooth device
+nodes were not established. The sensorhub's `/proc/hf_manager` registered a
+Bosch accelerometer and gyroscope, magnetometer, proximity, ambient light,
+and other logical sensors. Accelerometer, gyroscope, magnetometer, proximity,
+and rear light samples have been read. Values are still raw driver values;
+physical units and optical response remain unverified.
+The four fusion sensors have also been sampled, with the sensor manager idle
+after each trial. Their gain metadata is 1,000,000; no physical calibration
+or coordinate-frame validation has been done.
+On 2026-10-29, NRP/1 live calls returned accelerometer, gyroscope,
+magnetometer, proximity, and all four fusion vectors after the Fastboot
+recovery. The ambient light call returned `value=0`, so its current optical
+response remains unverified. `TOUCH_STATUS` reported the panel registered,
+with no finger down and no dropped events. Receipt:
+`logs/v50-visible-sensor-check-1793225599863859026.json`.
+The next driver trials should proceed one stack
+at a time, with boot identity checks, module dependency review, a read-only
+probe first, and rollback over SSH. The detailed test sequence is in
+[LYNX-REMAINING-HARDWARE-TRIALS.md](LYNX-REMAINING-HARDWARE-TRIALS.md).
+
+Read-only stock module inventory after the sensorhub milestone: Bluetooth's
+`bt_drv_6983.ko` matches the V50 kernel, with `btif_drv` still absent while
+the connectivity modules are loaded. GPS's `gps_drv_dl_v050.ko` also matches
+and depends on loaded `conninfra`. Camera `imgsensor.ko` matches but needs
+`mtk_ccu` and `v4l2-fwnode`, both currently absent; no `/dev/video*` or
+`/dev/media*` node exists. Before the flashlight probe,
+`mtk_battery_oc_throttling` was absent. These are dependency
+findings, not working-device claims. The ALSA card exposes capture PCM nodes,
+and a one-second capture returned 48,000 samples with the input mixer
+restored afterward. The nonzero signal may be a startup transient: a known
+haptic pulse caused no clear response. A later 700 Hz beep trial measured
+amplitude 29.96 versus 0.01 in a quiet late window. An external acoustic
+stimulus and cold boot are still needed before enabling microphone use in
+NRP/1. The August ODM
+`test_path/mixer_paths.xml` names `Mic_Type_Mux_0`, which is absent from
+Lynx's current ALSA controls, so that test route cannot be applied as-is.
+
+The exact `lm3642_22823` flashlight driver did bind during a RAM-only probe,
+but unloading the `flashlight` core timed out and Lynx lost Wi-Fi contact.
+No LED command was sent. V50 was recovered with `fastboot reboot` and verified
+healthy, with the temporary modules gone. The flashlight trial remains paused
+pending review of the unload path; see
+[LYNX-REMAINING-HARDWARE-TRIALS.md](LYNX-REMAINING-HARDWARE-TRIALS.md).
+
+The audio service stores the exact 75-module dependency plan and corrected
+codec under `/var/lib/lynx-audio/v1`, verifies every module hash, and loads
+only missing modules. It requires at least 25% battery while charging (or
+50% otherwise), battery below 35°C, and `soc_max` below 45°C. It mutes both
+speakers before loading the matching TFA98xx firmware. Disable it with
+`rc-service lynx-audio stop; rc-update del lynx-audio default` over Alpine SSH.
+The V50 boot image and BusyBox rescue path remain available.
+The clean cold boot receipt for automatic audio and sensorhub readiness is
+`logs/v50-audio-cold-boot-1793199862813330816/result.json`.
+
+`lynx-sensorhub` stores and verifies the two matching August stock modules
+under `/var/lib/lynx-sensors/v1`. It depends on `lynx-audio` because SCP is
+currently provided by that stack, and waits for the registered accelerometer
+before reporting ready. It does not enable any sensor at boot. The first
+RAM-only module receipt is `logs/v50-sensorhub-module-trial-1793199405514115242/`;
+the bounded accelerometer read is `logs/v50-hf-accelerometer-1793199639429564957/`.
+That read returned 16 samples. Bounded gyroscope, optical, and magnetometer
+receipts are `logs/v50-hf-gyroscope-1793200181549329489/`,
+`logs/v50-hf-optical-1793200278234671051/`, and
+`logs/v50-hf-magnetometer-1793200364041072751/`. The helper explicitly
+disables each sensor after sampling, and `/proc/hf_manager` shows an empty
+active list. A subsequent clean boot started audio and sensorhub automatically,
+with NRP/1 accelerometer readings and the health assertion passing.
+
+The bounded four-sensor fusion trial receipt is
+`logs/v50-hf-fusion-1793210128107519984/result.json`. NRP/1 fusion
+installation and rollback files are recorded in
+`logs/v50-fusion-nrp-install-1793210212865323826/result.json`.

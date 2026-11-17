@@ -1,0 +1,15 @@
+{
+  "state": "prepared-not-executed",
+  "image_sha256": "1d65456979d8a48d31de77c987b8aaf9b5ac11af62c51d00fdaff68ad47e747f",
+  "partition": "boot_a",
+  "single_supervised_trial": true,
+  "scope": "One controlled boot_a-only V33 trial under Noob's Linux-trial authorization. V33 derives from the hardware-booted V32 and changes only primary /init to reopen PID 1 standard descriptors before the Alpine guard. The stock kernel, supplementary payload and V32 bounded retry remain byte-for-byte identical. Other images remain under the general thermal hold.",
+  "required_before_write": "Fresh Fastboot serial, product, unlocked slot A, partition size and download limit; exact V33/V19/stock hashes; offline validation; cool handset; ready pinned collector; exact V19 rollback.",
+  "required_after_reboot": "Unplug USB, prove pinned SSH, start and verify V31 RAM health within the fresh-boot window, then arm Alpine only after the live guard passes. Observe PID 1, mounts, SSH, health and saved stdout/stderr. Stop on unexpected behavior.",
+  "abort_conditions": "Unexpected identity, slot, write or reboot response; phone warming; charger connected during native boot; stale or failed health; unexplained SSH loss; unexpected recovery behavior; or a partial Alpine mount after refusal.",
+  "other_partitions_allowed": false,
+  "slot_switch_allowed": false,
+  "native_charging_untested": true,
+  "pid1_handoff_untested": true,
+  "general_thermal_hold_remains_active": true
+}

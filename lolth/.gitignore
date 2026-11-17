@@ -1,0 +1,6 @@
+.arduino-cli/
+.build/
+firmware/lolth_noob/src/lolth_wifi.local.h
+firmware/lolth_noob/src/lolth_ap.h
+lolth-*.bin
+firmware/lafvin_stock/0.SpiderBot/BIN/

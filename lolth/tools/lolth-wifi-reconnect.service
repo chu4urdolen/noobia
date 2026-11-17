@@ -1,0 +1,12 @@
+[Unit]
+Description=Keep Lolth's dedicated Wi-Fi adapter connected to her AP
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /noobia/lolth/tools/lolth_wifi_reconnect.py
+Restart=on-failure
+RestartSec=2
+StandardOutput=null
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,10 @@
+{
+  "name": "observed-standby-candidate",
+  "description": "Lower joints only, from the old VM standby program. Unvalidated with LAFVIN's angle mapping.",
+  "targets": {
+    "1": 60,
+    "4": 125,
+    "5": 105,
+    "8": 60
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "observed-default-candidate",
+  "description": "All eight observed neutral targets from Noob calibration. Servo 8 is provisional; targets have not been validated with LAFVIN's angle mapping.",
+  "targets": {
+    "1": 90,
+    "2": 90,
+    "3": 90,
+    "4": 95,
+    "5": 75,
+    "6": 121,
+    "7": 90,
+    "8": 105
+  }
+}

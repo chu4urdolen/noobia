@@ -2,6 +2,7 @@
 """Linux NRP/1 runtime for Lynx: ESP common VM, sequences, threads, native calls."""
 
 import argparse
+import base64
 from collections import deque
 from contextlib import ExitStack
 import fcntl
@@ -26,6 +27,13 @@ NAME = re.compile(r"[a-z0-9_]{1,63}\Z")
 LED = Path("/sys/class/leds/vibrator")
 DISPLAY = Path("/var/lib/lynx-display")
 MEDIA = Path("/run/lynx/media.sock")
+AGENT_TOOLS = Path("/usr/local/share/lynx/agent-tools")
+AGENT_JOBS = Path("/var/lib/lynx-agent/jobs")
+QUEUE_HEALTH_ISSUES = {
+    'queue_unavailable', 'queue_not_private', 'entry_unreadable',
+    'unexpected_entry', 'entry_not_private', 'queue_unreadable',
+    'stop_marker_unreadable', 'stop_marker_not_private',
+}
 GAUGE = Path("/sys/bus/i2c/devices/7-0055/battery_snapshot")
 THERMAL = Path("/sys/class/thermal")
 SOUND_CARDS = Path("/proc/asound/cards")
@@ -39,6 +47,13 @@ _haptic_ready_at = 0.0
 
 class NativeError(ValueError):
     pass
+
+
+def agent_job_queue():
+    # Installed alongside lynx-noobd on Lynx; keep the host runtime importable
+    # while this optional service is absent from a development checkout.
+    from lynx_agent_queue import JobQueue
+    return JobQueue(AGENT_JOBS)
 
 
 def i32(value):
@@ -714,6 +729,144 @@ class Runtime:
         reg(395, "MIC_LEVEL", self.mic_level)
         reg(396, "FLASH_PULSE", self.flash_pulse)
         reg(397, "FLASH_STOP", self.flash_stop)
+        reg(510, "AGENT_SUBMIT", self.agent_submit)
+        reg(511, "AGENT_STATUS", self.agent_status)
+        reg(512, "AGENT_CANCEL", self.agent_cancel)
+        reg(513, "AGENT_RESULT", self.agent_result)
+        self.register_catalog_tools()
+
+    @staticmethod
+    def agent_submit(numbers, text):
+        if numbers or not 1 <= len(text.encode('ascii')) <= 255:
+            raise NativeError('usage: ASCII prompt of 1..255 bytes')
+        try:
+            job_id = agent_job_queue().create_job(text)
+        except (OSError, RuntimeError, ImportError) as exc:
+            raise NativeError('agent queue unavailable') from exc
+        return 1, f'job_id={job_id}'
+
+    @staticmethod
+    def agent_status(numbers, text):
+        if numbers:
+            raise NativeError('usage: job ID text')
+        try:
+            state = agent_job_queue().status(text.strip())
+        except (OSError, RuntimeError, ImportError) as exc:
+            raise NativeError('agent job unavailable') from exc
+        value = {'pending': 0, 'running': 1, 'finished': 2}[state['status']]
+        detail = f"status={state['status']}"
+        if state['status'] == 'finished':
+            detail += f" ok={int(state['ok'])}"
+        return value, detail
+
+    @staticmethod
+    def agent_cancel(numbers, text):
+        if numbers:
+            raise NativeError('usage: job ID text')
+        try:
+            cancelled = agent_job_queue().cancel(text.strip())
+        except (OSError, RuntimeError, ImportError) as exc:
+            raise NativeError('agent job unavailable') from exc
+        return int(cancelled), f'cancelled={int(cancelled)}'
+
+    @staticmethod
+    def agent_result(numbers, text):
+        if len(numbers) != 1 or not 0 <= numbers[0] <= 8000:
+            raise NativeError('usage: offset(0..8000) and job ID text')
+        try:
+            queue = agent_job_queue()
+            state = queue.status(text.strip())
+            if state['status'] != 'finished':
+                return 0, f"status={state['status']}"
+            path = queue._path(text.strip(), 'done')
+            if path.is_symlink():
+                raise NativeError('invalid agent result file')
+            result = json.loads(path.read_text())
+            content = result['text'].encode('utf-8')
+        except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
+            raise NativeError('agent result unavailable') from exc
+        offset = numbers[0]
+        chunk = content[offset:offset + 96]
+        encoded = base64.urlsafe_b64encode(chunk).decode('ascii').rstrip('=')
+        more = int(offset + len(chunk) < len(content))
+        return len(content), (f"offset={offset} data={encoded} more={more} "
+                              f"ok={int(result['ok'])}")
+
+    def register_catalog_tools(self):
+        """Expose opt-in agent tool manifests through the same NRP/1 registry."""
+        for manifest in sorted(AGENT_TOOLS.glob('*.json')):
+            script = manifest.with_suffix('.sh')
+            if script.is_symlink() or not script.is_file():
+                continue
+            try:
+                meta = json.loads(manifest.read_text())
+                ident = meta.get('nrp_id')
+                if ident is None:
+                    continue
+                name = manifest.stem.upper()
+                if not isinstance(ident, int) or not 500 <= ident <= 999 or not NAME.fullmatch(manifest.stem):
+                    continue
+                if meta.get('protocol') != 'json-stdin' or not isinstance(meta.get('parameters'), dict):
+                    continue
+                if ident in self.registry.by_id or name in self.registry.by_name:
+                    continue
+            except (OSError, ValueError, TypeError):
+                continue
+
+            def invoke(numbers, text, *, script=script, meta=meta, name=name):
+                if numbers:
+                    raise NativeError('tool accepts JSON text only')
+                try:
+                    arguments = json.loads(text) if text else {}
+                except ValueError as exc:
+                    raise NativeError('invalid tool JSON') from exc
+                schema = meta['parameters']
+                if (not isinstance(arguments, dict) or
+                        set(arguments) - set(schema.get('properties', {})) or
+                        any(field not in arguments for field in schema.get('required', []))):
+                    raise NativeError('invalid tool arguments')
+                timeout = min(60, max(1, int(meta.get('timeout', 10))))
+                env = {k: v for k, v in os.environ.items()
+                       if 'KEY' not in k.upper() and not k.startswith(('OPENAI_', 'NOOBIA_INFERENCE_'))}
+                try:
+                    result = subprocess.run(['/bin/sh', str(script)], input=json.dumps(arguments),
+                                            capture_output=True, text=True, timeout=timeout,
+                                            env=env, check=False)
+                except (OSError, subprocess.TimeoutExpired) as exc:
+                    raise NativeError('tool unavailable') from exc
+                if result.returncode:
+                    raise NativeError('tool failed')
+                if meta.get('nrp_result') == 'queue_health_v1':
+                    try:
+                        payload = json.loads(result.stdout)
+                        if not isinstance(payload, dict) or set(payload) != {
+                                'counts', 'oldest_pending_seconds', 'stopped', 'issues'}:
+                            raise ValueError('invalid queue health fields')
+                        counts = payload['counts']
+                        if not isinstance(counts, dict) or set(counts) != {
+                                'pending', 'running', 'done'} or any(
+                                    type(value) is not int or value < 0
+                                    for value in counts.values()):
+                            raise ValueError('invalid queue counts')
+                        age = payload['oldest_pending_seconds']
+                        if age is not None and (type(age) is not int or age < 0):
+                            raise ValueError('invalid pending age')
+                        if type(payload['stopped']) is not bool or \
+                                not isinstance(payload['issues'], list) or \
+                                len(payload['issues']) > len(QUEUE_HEALTH_ISSUES) or \
+                                any(issue not in QUEUE_HEALTH_ISSUES
+                                    for issue in payload['issues']):
+                            raise ValueError('invalid queue health state')
+                        compact = json.dumps(payload, separators=(',', ':')).encode('utf-8')
+                    except (TypeError, ValueError) as exc:
+                        raise NativeError('tool result unavailable') from exc
+                    if not 1 <= len(compact) <= 384:
+                        raise NativeError('tool result too large')
+                    encoded = base64.urlsafe_b64encode(compact).decode('ascii').rstrip('=')
+                    return 1, f'tool={name} data={encoded}'
+                return 1, f'tool={name} completed=1'
+
+            self.registry.add(ident, name, invoke)
 
     @staticmethod
     def hardware_status(args, text, device):

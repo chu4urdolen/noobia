@@ -12,9 +12,60 @@ event() {
     $BB logger -p daemon.err -t lynx-maintenance "$*" 2>/dev/null || true
 }
 
+recent_health_ok() {
+    state=$RUN/health-supervisor
+    [ -r "$state/pid" ] && [ -r "$state/events.log" ] || return 1
+    pid=$(cat "$state/pid") || return 1
+    case "$pid" in ''|*[!0-9]*) return 1;; esac
+    kill -0 "$pid" 2>/dev/null || return 1
+    now=$(date -u +%s) || return 1
+    updated=$($BB stat -c %Y "$state/events.log") || return 1
+    case "$now:$updated" in *[!0-9:]*) return 1;; esac
+    [ "$now" -ge "$updated" ] && [ "$((now-updated))" -le 12 ] || return 1
+    $BB tail -n 6 "$state/events.log" | $BB grep -q '^LYNX_HEALTH_OK '
+}
+
 safety_ok() {
-    /sbin/rc-service lynx-health status >/dev/null 2>&1 &&
-        /sbin/rc-service lynx-battery-reserve status >/dev/null 2>&1
+    health_rc=0
+    reserve_rc=0
+    /sbin/rc-service lynx-health status >/dev/null 2>&1 || health_rc=$?
+    /sbin/rc-service lynx-battery-reserve status >/dev/null 2>&1 || reserve_rc=$?
+    if [ "$health_rc" -eq 0 ] && [ "$reserve_rc" -eq 0 ]; then
+        return 0
+    fi
+
+    # A service status failure may mean a dead watcher, a stale sample, or a
+    # transient sensor read. Preserve the independent watchers and diagnose.
+    health_once_rc=0
+    reserve_once_rc=0
+    health_script=/usr/libexec/lynx-health-supervisor.sh
+    [ -r "$health_script" ] || health_script=$RUN/lynx-health-supervisor.sh
+    health_detail=$(/bin/sh "$health_script" --once 2>&1) || health_once_rc=$?
+    reserve_detail=$(/bin/sh /usr/libexec/lynx-battery-reserve.sh --once 2>&1) || reserve_once_rc=$?
+    health_detail=$(printf '%s' "$health_detail" | $BB tr '\n' ' ' | $BB cut -c 1-160)
+    reserve_detail=$(printf '%s' "$reserve_detail" | $BB tr '\n' ' ' | $BB cut -c 1-160)
+    event "SAFETY_PROBE health_status=$health_rc reserve_status=$reserve_rc health_once=$health_once_rc reserve_once=$reserve_once_rc health_detail=$health_detail reserve_detail=$reserve_detail"
+
+    # The cooler polls every five seconds. A brief rise through 45 C can
+    # precede its next sample; the independent health supervisor has already
+    # demonstrated recovery if its recent log contains a healthy sample.
+    # Never defer a missing process, reserve failure, stale heartbeat, or
+    # temperature at or above 55 C. The independent thermal watcher stops
+    # at 60 C and the health watcher still shuts down after three failures.
+    if [ "$health_rc" -ne 0 ] && [ "$reserve_rc" -eq 0 ]; then
+        case "$health_detail" in
+            'LYNX_HEALTH_REFUSED cooling not applied at '*)
+                temperature=${health_detail##*at }
+                case "$temperature" in
+                    ''|*[!0-9]*) ;;
+                    *) if [ "$temperature" -lt 55000 ] && recent_health_ok; then
+                           event "SAFETY_PROBE_DEFERRED cooling_transition_mC=$temperature"
+                           return 0
+                       fi;;
+                esac;;
+        esac
+    fi
+    return 1
 }
 
 wifi_address() {

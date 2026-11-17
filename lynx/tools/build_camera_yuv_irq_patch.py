@@ -2,6 +2,7 @@
 """Rebuild the experimental Nord 3 ISP IRQ patch without contacting Lynx."""
 
 import hashlib
+import argparse
 import json
 import os
 from pathlib import Path
@@ -69,6 +70,11 @@ def provider_map(imports):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--extra-patch", type=Path,
+                        help="apply a second reviewed patch after the YUV IRQ gate")
+    args = parser.parse_args()
+    extra_patch = args.extra_patch.resolve() if args.extra_patch else None
     if run(["git", "-C", str(SPARSE), "rev-parse", "HEAD"], text=True).stdout.strip() != COMMIT:
         raise RuntimeError("unexpected kernel source commit")
     manifest = json.loads((ROOT / "sources/oneplus-nord3-mtkcam/SOURCE.json").read_text())
@@ -78,13 +84,16 @@ def main():
         source = SOURCE / row["file"]
         if not source.is_file() or source.stat().st_size != row["bytes"] or digest(source) != row["sha256"]:
             raise RuntimeError("source integrity failed: " + row["file"])
-    if not PATCH.is_file() or not BASE.is_dir() or not COMPILER.is_dir():
+    if not PATCH.is_file() or not BASE.is_dir() or not COMPILER.is_dir() or (extra_patch and not extra_patch.is_file()):
         raise RuntimeError("pinned build input absent")
     output = PORT / "artifacts" / f"camera-yuv-irq-rebuild-{time.time_ns()}"
     output.mkdir(mode=0o700)
     report = {"schema": 1, "state": "building", "phone_contacted": False,
               "kernel_source_commit": COMMIT, "patch_sha256": digest(PATCH),
               "stock_module_sha256": digest(STOCK)}
+    if extra_patch:
+        report["extra_patch_sha256"] = digest(extra_patch)
+        report["extra_patch_path"] = str(extra_patch)
 
     def save():
         (output / "build-result.json").write_text(json.dumps(report, indent=2) + "\n")
@@ -99,6 +108,10 @@ def main():
         patched = run(["patch", "--batch", "--forward", "-p1", "-d", str(source_copy)],
                       input=PATCH.read_bytes())
         (output / "patch.stdout").write_bytes(patched.stdout)
+        if extra_patch:
+            patched_extra = run(["patch", "--batch", "--forward", "-p1", "-d", str(source_copy)],
+                                input=extra_patch.read_bytes())
+            (output / "extra-patch.stdout").write_bytes(patched_extra.stdout)
         kbuild = source_copy / "Kbuild"
         data = kbuild.read_text().replace(
             "obj-$(CONFIG_VIDEO_MTK_ISP_CAMSYS) += mtk-cam-isp.o", "obj-m += mtk-cam-isp.o")

@@ -2,6 +2,8 @@
 """Host checks for Lynx's NRP/1, common VM and sequence behavior."""
 
 import time
+import base64
+import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -16,6 +18,42 @@ from lynx_hardware import inventory
 class RuntimeTest(unittest.TestCase):
     def setUp(self):
         self.runtime = Runtime()
+
+    def test_agent_catalog_tool_is_also_an_nrp_native(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'lynx_agent_health.json').write_text(json.dumps({
+                'description': 'Read agent health', 'protocol': 'json-stdin',
+                'parameters': {'type': 'object', 'properties': {}, 'required': [],
+                               'additionalProperties': False}, 'timeout': 2, 'nrp_id': 500}))
+            (root / 'lynx_agent_health.sh').write_text('#!/bin/sh\nprintf "{}\\n"\n')
+            with patch.object(lynx_noob_runtime, 'AGENT_TOOLS', root):
+                runtime = Runtime()
+            self.assertIn('500:LYNX_AGENT_HEALTH', runtime.dispatch('NRP/1 1 CAPS'))
+            self.assertIn('value=1 detail=tool=LYNX_AGENT_HEALTH completed=1',
+                          runtime.dispatch('NRP/1 2 CALL LYNX_AGENT_HEALTH'))
+            self.assertIn('ERR NATIVE_ERROR',
+                          runtime.dispatch('NRP/1 3 CALL_TEXT LYNX_AGENT_HEALTH {"bad":1}'))
+
+    def test_opt_in_catalog_result_is_bounded_json(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'lynx_queue_health.json').write_text(json.dumps({
+                'protocol': 'json-stdin', 'parameters': {'type': 'object',
+                    'properties': {}, 'required': [], 'additionalProperties': False},
+                'nrp_id': 514, 'nrp_result': 'queue_health_v1'}))
+            (root / 'lynx_queue_health.sh').write_text(
+                '#!/bin/sh\nprintf \'{"counts":{"pending":0,"running":0,"done":1},'
+                '"oldest_pending_seconds":null,"stopped":false,'
+                '"issues":["entry_not_private"]}\\n\'\n')
+            with patch.object(lynx_noob_runtime, 'AGENT_TOOLS', root):
+                runtime = Runtime()
+            reply = runtime.dispatch('NRP/1 1 CALL LYNX_QUEUE_HEALTH')
+            encoded = reply.split(' data=', 1)[1]
+            decoded = json.loads(base64.urlsafe_b64decode(encoded + '=' * (-len(encoded) % 4)))
+            self.assertEqual(decoded, {'counts': {'pending': 0, 'running': 0, 'done': 1},
+                                       'oldest_pending_seconds': None, 'stopped': False,
+                                       'issues': ['entry_not_private']})
 
     def test_hardware_status_distinguishes_validated_mic_from_gnss_nodes(self):
         with TemporaryDirectory() as temporary:

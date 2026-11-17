@@ -22,6 +22,11 @@ PATCHED_SHA = "b0072fce10d91202cf02586bb21cea7ccb61d36988828fc86c696e8f9c838b64"
 PATCH = ROOT / "linux-port/patches/camera-yuv-irq/0001-gate-yuv-irq-on-runtime-power.patch"
 PATCH_SHA = "31f6176bdb69951552c4a6b09653415217f1312d4981574d2d80d735f67fb7cb"
 BUILD_RECEIPT = ROOT / "linux-port/artifacts/camera-yuv-irq-build/build-result.json"
+SENSOR_POWER_PATCH = ROOT / "linux-port/patches/camera-yuv-irq/0002-power-sensor-for-camsv.patch"
+SENSOR_POWER_PATCH_SHA = "35931ce25dac39d5ab77bd771a082c242a61367b52b91673ca888815ddea8418"
+SENSOR_POWER_BUILD = ROOT / "linux-port/artifacts/camera-yuv-irq-rebuild-1793787441973056494/build-result.json"
+SENSOR_POWER_ISP = ROOT / "linux-port/artifacts/camera-yuv-irq-rebuild-1793787441973056494/cam/mtk-cam-isp-stripped.ko"
+SENSOR_POWER_SHA = "0910503d465a9ea51b70a6b501fc7dead5f2eafd1f7d5a17845b1056eb5d9b3e"
 
 
 def main():
@@ -33,15 +38,21 @@ def main():
                       help="check local artifact and Lynx read-only; do not load anything")
     parser.add_argument("--attended", action="store_true",
                         help="confirm Noob is physically present for Fastboot recovery")
+    parser.add_argument("--with-sensor-power", action="store_true",
+                        help="trial the CAMSV sensor-power patch in addition to the YUV IRQ gate")
     args = parser.parse_args()
     if args.execute and not args.attended:
         parser.error("--execute --attended required; Noob must be present for recovery")
+    candidate = SENSOR_POWER_ISP if args.with_sensor_power else PATCHED_ISP
+    candidate_sha = SENSOR_POWER_SHA if args.with_sensor_power else PATCHED_SHA
+    build_receipt = SENSOR_POWER_BUILD if args.with_sensor_power else BUILD_RECEIPT
     os.umask(0o077)
     out = ROOT / "logs" / f"camera-isp-patched-trial-{time.time_ns()}"
     out.mkdir(mode=0o700)
     report = {"schema": 1, "state": "preflight", "boot_partition_writes": False,
               "camera_capture_requested": False, "modules_unloaded": False,
-              "candidate_sha256": PATCHED_SHA, "patch_sha256": PATCH_SHA,
+              "candidate_sha256": candidate_sha, "patch_sha256": PATCH_SHA,
+              "sensor_power_patch": args.with_sensor_power,
               "steps": []}
 
     def save():
@@ -67,17 +78,26 @@ def main():
     load_attempted = False
     try:
         manifest = json.loads(MANIFEST.read_text())
-        source = PATCHED_ISP
+        source = candidate
         payload = source.read_bytes()
-        if manifest["kernel"] != KERNEL or hashlib.sha256(payload).hexdigest() != PATCHED_SHA:
+        if manifest["kernel"] != KERNEL or hashlib.sha256(payload).hexdigest() != candidate_sha:
             raise RuntimeError("patched ISP module incompatible")
         if hashlib.sha256(PATCH.read_bytes()).hexdigest() != PATCH_SHA:
             raise RuntimeError("source patch changed since module build")
-        build = json.loads(BUILD_RECEIPT.read_text())
+        if args.with_sensor_power and hashlib.sha256(SENSOR_POWER_PATCH.read_bytes()).hexdigest() != SENSOR_POWER_PATCH_SHA:
+            raise RuntimeError("sensor-power source patch changed since module build")
+        build = json.loads(build_receipt.read_text())
         if (build.get("state") != "offline-module-built-not-tested-on-lynx" or
-                build.get("stripped_trial_module_sha256") != PATCHED_SHA or
-                not build.get("import_crcs_equal") or not build.get("depends_equal")):
+                build.get("stripped_trial_module_sha256") != candidate_sha):
             raise RuntimeError("patched ISP build receipt incomplete")
+        if args.with_sensor_power and build.get("extra_patch_sha256") != SENSOR_POWER_PATCH_SHA:
+            raise RuntimeError("sensor-power build receipt mismatch")
+        if args.with_sensor_power:
+            if (build.get("import_count") != 322 or len(build.get("depends", [])) != 16 or
+                    not build.get("vermagic", "").startswith(KERNEL)):
+                raise RuntimeError("sensor-power module ABI receipt incomplete")
+        elif not build.get("import_crcs_equal") or not build.get("depends_equal"):
+            raise RuntimeError("YUV-only module ABI receipt incomplete")
         identity = step("identity", "cat /proc/sys/kernel/random/boot_id; uname -r; "
                         "sha256sum /dev/sdc39 | cut -c1-64", timeout=30).splitlines()
         if len(identity) != 3 or identity[1:] != [KERNEL, BOOT]:
@@ -108,7 +128,7 @@ def main():
         step("stage_dir", f"mkdir -p {STAGE}; chmod 700 {STAGE}")
         remote = f"{STAGE}/mtk-cam-isp.ko"
         step("stage_module", f"cat > {remote}", payload, timeout=45)
-        if step("hash_module", f"sha256sum {remote} | cut -c1-64") != PATCHED_SHA:
+        if step("hash_module", f"sha256sum {remote} | cut -c1-64") != candidate_sha:
             raise RuntimeError("transferred ISP checksum mismatch")
         watchdog = f"{STAGE}/watchdog.sh"
         step("watchdog_file", f"cat > {watchdog}",
@@ -147,7 +167,8 @@ def main():
                             timeout=10)
             irq_line, health_json = snapshot.split("__HEALTH__", 1)
             irq_parts = irq_line.split()
-            if len(irq_parts) < 9 or irq_parts[0] != "247:":
+            if (len(irq_parts) < 9 or not irq_parts[0].rstrip(":").isdigit()
+                    or "cam_yuv_b" not in irq_line):
                 raise RuntimeError("YUV-B IRQ line missing")
             if sum(int(value) for value in irq_parts[1:9]) > 10000:
                 raise RuntimeError("YUV-B IRQ count exceeded safe bound")
@@ -169,6 +190,28 @@ def main():
                 step("storm_reboot", "echo b > /proc/sysrq-trigger", timeout=6)
             except Exception as reboot_exc:
                 report["storm_reboot_error"] = str(reboot_exc)
+        elif armed and load_attempted:
+            try:
+                snapshot = step("post_error_safety_check",
+                                "grep cam_yuv_b /proc/interrupts; echo __HEALTH__; "
+                                "/usr/local/bin/lynx-status --assert-ready; echo __RCU__; "
+                                "dmesg | grep -E 'rcu_preempt detected stalls' | tail -3 || true",
+                                timeout=10)
+                irq_line, rest = snapshot.split("__HEALTH__", 1)
+                health_text, rcu_text = rest.split("__RCU__", 1)
+                parts = irq_line.split()
+                health = json.loads(health_text)
+                if (len(parts) < 9 or "cam_yuv_b" not in irq_line or
+                        sum(int(value) for value in parts[1:9]) > 10000 or
+                        health["boot_id"] != identity[0] or health["issues"] or
+                        rcu_text.strip()):
+                    raise RuntimeError("post-error safety gate failed")
+                step("watchdog_disarm_after_safe_error", f"kill {pid} 2>/dev/null || true")
+                armed = False
+                report.pop("watchdog_pid", None)
+                report["post_error_safe_check"] = True
+            except Exception as safety_exc:
+                report["post_error_safety_error"] = str(safety_exc)
         if armed and not load_attempted:
             try:
                 step("watchdog_disarm_before_load", f"kill {pid} 2>/dev/null || true")
@@ -176,7 +219,8 @@ def main():
                 report.pop("watchdog_pid", None)
             except Exception as disarm_exc:
                 report["disarm_error"] = str(disarm_exc)
-        report.update(state="failed_watchdog_remains_armed" if armed else "failed_before_load",
+        report.update(state="failed_watchdog_remains_armed" if armed else
+                      "failed_after_safe_check" if load_attempted else "failed_before_load",
                       error=str(exc))
     finally:
         for label, proc in monitors:

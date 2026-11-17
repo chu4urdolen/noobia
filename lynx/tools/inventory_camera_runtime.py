@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Save Lynx's camera nodes, modules, IRQs, and recent kernel messages read-only."""
+"""Save Lynx's camera nodes, modules, IRQs, and recent kernel messages.
+
+Do not add V4L2 sensor-control enumeration here: --list-ctrls-menus caused
+a vendor-kernel Oops on 2026-11-04. See CAMERA-CTRL-CRASH-20261104.md.
+"""
 
 import argparse
 import json
@@ -59,7 +63,8 @@ def camera_devices():
         })
     return result
 
-messages = subprocess.run(["dmesg"], capture_output=True, text=True, timeout=8)
+messages = subprocess.run(["dmesg"], capture_output=True, text=True,
+                          errors="replace", timeout=8)
 camera_words = ("camisp", "seninf", "cam_raw", "cam_yuv", "imgsensor", "ccd", "camera")
 report = {
     "schema": 1,
@@ -85,7 +90,7 @@ if "--media-graph" in sys.argv[1:]:
     for node in sorted(Path("/dev").glob("media*")):
         try:
             graph = subprocess.run(["media-ctl", "--print-topology", "-d", str(node)],
-                                   capture_output=True, text=True, timeout=3)
+                                   capture_output=True, text=True, errors="replace", timeout=3)
             report["media_graphs"][str(node)] = {
                 "exit": graph.returncode, "stdout": graph.stdout[:100000],
                 "stderr": graph.stderr[:4000]}
@@ -93,7 +98,7 @@ if "--media-graph" in sys.argv[1:]:
             report["media_graphs"][str(node)] = {"error": str(exc)}
     try:
         devices = subprocess.run(["v4l2-ctl", "--list-devices"],
-                                 capture_output=True, text=True, timeout=3)
+                                 capture_output=True, text=True, errors="replace", timeout=3)
         report["v4l2_list_devices"] = {"exit": devices.returncode,
                                         "stdout": devices.stdout[:100000],
                                         "stderr": devices.stderr[:4000]}
@@ -114,7 +119,7 @@ def main():
                           "python3 - --media-graph" if args.media_graph else "python3 -")
     command[-2:-2] = ["-p", "2222"]
     result = subprocess.run(command, input=REMOTE, capture_output=True,
-                            text=True, timeout=20)
+                            text=True, errors="replace", timeout=20)
     if result.returncode:
         raise SystemExit("Lynx inventory failed: " + result.stderr[-300:])
     report = json.loads(result.stdout)

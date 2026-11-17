@@ -11,8 +11,8 @@ pinned OnePlus kernel commit `81ec42ad5e803be0cba619f9f7bb298db7d33d7b`.
 It disables each YUV IRQ immediately after registration, disables it before
 runtime clock suspend, and enables it after runtime clock resume. It reads
 the same four status registers as the stock handler before enabling. The
-patch has not been proven on Lynx; in particular, runtime PM state and IRQ
-acknowledgement semantics still require a guarded trial.
+patch passed one guarded RAM-only load on Lynx. A real camera stream and
+runtime-resume IRQ behaviour remain untested.
 The source also links each RAW device to its matching YUV device with
 `DL_FLAG_PM_RUNTIME` in `mtk_raw_setup_dependencies()`. The stream path calls
 `pm_runtime_get_sync()` on RAW devices, which should power their YUV suppliers
@@ -35,7 +35,7 @@ as the stock ISP module. The partial symbol table maps the 34 imports from
 those providers using the stock modules' `__ksymtab` exports; the remaining
 imports are recorded as `vmlinux`. Load the known provider prefix manually
 in a guarded RAM trial. The candidate must not be installed at boot or flashed
-until the YUV-B IRQ remains quiet and a real camera frame is captured.
+until a real camera frame is captured and the stream remains stable.
 
 `tools/build_camera_yuv_irq_patch.py` reproduces the build in a new timestamped
 artifact directory without contacting Lynx. One clean rebuild passed the
@@ -52,6 +52,41 @@ debug-stripped trial file.
 `tools/trial_camera_isp_patched.py --execute --attended` is the bounded RAM trial. It
 checks the exact V53 boot hash, module checksum, prerequisites, battery, and
 thermals; starts kernel and IRQ recorders; arms a reboot fallback; and stops
-if YUV-B exceeds 10,000 interrupts. The trial has not loaded the candidate:
-one preflight caught an outdated checksum and another found Lynx still in
-BusyBox before Alpine SSH started. Both ended before `insmod`.
+if YUV-B exceeds 10,000 interrupts. The attended trial loaded the candidate
+into RAM on boot ID `f649a319-dcbb-47b9-9a54-7e482ee7eef2`. Its receipt is
+`logs/camera-isp-patched-trial-1793711196204592626/result.json`. The 35-second
+observation passed with no RCU stall, YUV-B IRQ 247 at zero, and Alpine health
+intact. The fallback watchdog was disarmed. No frame was requested and no
+partition was changed.
+
+After the load, `/dev/media1` appeared as the `mtk-cam` capture graph with
+four bound sensors. `logs/camera-runtime-inventory-1793711513222991424.json`
+records the graph. A candidate route from sensor4 through seninf-1 to raw-0
+was enabled in RAM using dynamic link flags 5; it has not been streamed.
+Source review shows raw-0 has 20 enabled immutable video output links and
+`mtk_cam_vb2_start_streaming()` waits for every enabled node in the pipeline.
+A single `v4l2-ctl --stream-mmap` on main-stream is therefore not a valid
+frame trial. The CAMSV path below avoids that multi-output barrier.
+
+## CAMSV sensor-power follow-up
+
+CAMSV-0 has a single output. `tools/lynx_camsv_dmabuf_capture.py` uses a
+DMA heap buffer and media request because the vendor buffer driver omits MMAP
+allocation. With the matching stock CCU and CCD firmware staged in RAM, the
+first CAMSV trial reached stream-on but got no frame. The sensor4 GC02M1 I²C
+transactions failed with `-6`, and its AVDD/DOVDD regulator rails remained
+disabled throughout the capture window. The matching stock `adaptor-drv.c`
+has a separate `s_power` operation; its stream callback does not enable power
+in this build. See the detailed timeline in `docs/LYNX-CAMERA-PORT-PLAN.md`.
+
+`0002-power-sensor-for-camsv.patch` adds a balanced sensor power call only for
+CAMSV stream contexts. `tools/build_camera_yuv_irq_patch.py --extra-patch
+linux-port/patches/camera-yuv-irq/0002-power-sensor-for-camsv.patch` produced a
+module with stock vermagic, 322 matching import CRCs, and 16 matching module
+dependencies. Receipt:
+`artifacts/camera-yuv-irq-rebuild-1793712879991700862/build-result.json`.
+The revised module passed one guarded RAM load on boot ID
+`c9746c2f-20c3-4183-be5f-6ec04109813f`; no capture was attempted and YUV-B
+IRQ stayed quiet. Receipt:
+`logs/camera-isp-patched-trial-1793713338389485699/result.json`. A live frame
+trial is still needed before using this module at boot.

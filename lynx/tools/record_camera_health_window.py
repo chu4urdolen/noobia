@@ -18,6 +18,7 @@ COMMAND = (
     "grep -E '^(mtk_cam_isp|imgsensor|mtk_imgsys_v4l2) ' /proc/modules || true; "
     "echo __INTERRUPTS__; cat /proc/interrupts; "
     "echo __SOFTIRQS__; cat /proc/softirqs; "
+    "echo __KERNEL_TAIL__; dmesg | tail -n 120; "
     "echo __HEALTH__; /usr/local/bin/lynx-status --assert-ready"
 )
 

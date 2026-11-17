@@ -1,9 +1,4 @@
-"""Private, durable job spool for Lynx's future supervised agent worker.
-
-This is a lightweight copy of the original implementation that lives in the
-shared Noobia repository.  It is duplicated here so that the Dushich workspace
-can run its tests without importing from the shared path.
-"""
+"""Private, durable job spool for Lynx's future supervised agent worker."""
 
 from contextlib import contextmanager
 import fcntl
@@ -63,7 +58,8 @@ class JobQueue:
 
     def _write(self, path, data):
         temporary = self.root / (".tmp-" + uuid.uuid4().hex)
-        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                     0o600)
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
                 json.dump(data, stream, separators=(",", ":"))
@@ -153,4 +149,3 @@ class JobQueue:
                             return {"status": "finished", "ok": json.load(stream)["ok"]}
                     return {"status": suffix}
             raise QueueError("job not found")
-

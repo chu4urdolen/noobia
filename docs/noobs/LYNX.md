@@ -1,6 +1,6 @@
 # Lynx code map
 
-Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the latest 2026-11-01
+Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the latest 2026-11-04
 checkpoint, she is running trial V53 Alpine with Wi-Fi, SSH, and a Bluetooth
 service started after boot. V53 waits for shared-radio calibration before
 requesting Wi-Fi. Two monitored boots, including one short-uptime warm reboot,
@@ -24,9 +24,11 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | Need | Source and notes |
 | --- | --- |
 | Current hardware evidence | [`LYNX-HARDWARE-STATUS.md`](../../lynx/linux-port/docs/LYNX-HARDWARE-STATUS.md) |
+| Kernel-to-agent gate and flash decision | [`LYNX-KERNEL-TO-AGENT-GATE.md`](../../lynx/linux-port/docs/LYNX-KERNEL-TO-AGENT-GATE.md) |
 | Camera and flashlight trial checkpoint | [`LYNX-CAMERA-FLASHLIGHT-20261102.md`](../../lynx/linux-port/docs/LYNX-CAMERA-FLASHLIGHT-20261102.md) |
 | Rear flash and color sensor identification | [`LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md`](../../lynx/linux-port/docs/LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md) |
 | Four-camera native Linux plan | [`LYNX-CAMERA-PORT-PLAN.md`](../../lynx/linux-port/docs/LYNX-CAMERA-PORT-PLAN.md) |
+| Camera ISP and capture trials | `lynx/tools/prepare_camera_camsv.py` read-only status and attended RAM preparation; `trial_camera_camsv_frame.py` guarded frame capture. GC02M1 raw capture, exposure/gain response, and RGGB phase validated; modules are RAM-only |
 | Shared Bluetooth/GNSS calibration and V52/V53 trials | [`LYNX-CONNECTIVITY-PRECAL.md`](../../lynx/linux-port/docs/LYNX-CONNECTIVITY-PRECAL.md) |
 | Bluetooth NRP/1 service boundary | [`LYNX-BLUETOOTH-NRP.md`](../../lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md) |
 | Trial sequence and known hazards | [`LYNX-REMAINING-HARDWARE-TRIALS.md`](../../lynx/linux-port/docs/LYNX-REMAINING-HARDWARE-TRIALS.md) |
@@ -34,6 +36,7 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | Nexus remote client | `lynx/tools/lynx_noobctl.py` |
 | Nexus presence monitor | [`LYNX-PRESENCE.md`](../../lynx/linux-port/docs/LYNX-PRESENCE.md); `lynx/tools/lynx_presence.py` |
 | Local hardware backend and agent wrappers | `lynx/tools/lynx_hardware.py`, `lynx/tools/lynx_microphone_level.py`, `lynx/tools/local_calls/`; [tool contract](../../lynx/linux-port/docs/LYNX-HARDWARE-TOOLS.md) |
+| Optical and proximity local tools | `lynx/tools/lynx_light_read.py`, `lynx/tools/lynx_proximity_read.py`, and their `local_calls/` wrappers; [controlled rear light trial](../../lynx/linux-port/docs/LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md) |
 | Display, keyboard, scrolling | `lynx/tools/lynx_drm_dmabuf_pattern.c`; [`LYNX-CONSOLE.md`](../../lynx/linux-port/docs/LYNX-CONSOLE.md) |
 | Media control | `lynx/tools/lynx_media.py`; [`LYNX-MEDIA-CONTROL.md`](../../lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md) |
 | Microphone capture experiment | `lynx/tools/trial_v50_microphone.py`; external clap validated on V50 |
@@ -42,6 +45,9 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | V50 Alpine to Fastboot and retained logs | `lynx/tools/return_fastboot_from_alpine.py`, `lynx/tools/capture_v50_expdb_prefix.py`; [Bluetooth boot evidence](../../lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md) |
 | Deferred cleanup after a stable build | [`LYNX-CLEANUP-WHEN-STABLE.md`](../../lynx/linux-port/docs/LYNX-CLEANUP-WHEN-STABLE.md) |
 | One-shot OpenAI inference test | `lynx/tools/lynx_inference_probe.py`, `lynx/tools/trial_v50_openai_inference.py`; [inference notes](../../lynx/linux-port/docs/LYNX-INFERENCE.md) |
+| Local agent, supervised queue, private health summary, and NRP control | `lynx/tools/agent/`, `lynx/tools/lynx_agent_remote.py`; [agent status and gates](../../lynx/linux-port/docs/LYNX-AGENT.md) |
+| Read-only UFS and Alpine file backup | `lynx/tools/backup_full_ufs.py`, `lynx/tools/backup_alpine_files.py`; [backup status, safety-guard incident, and restoration limits](../../lynx/linux-port/docs/LYNX-FULL-UFS-BACKUP-20261106.md) |
+| Alpine root expansion | `lynx/tools/grow_alpine_root.py`, `lynx/tools/audit_alpine_root_growth.py`; [current readiness and battery gate](../../lynx/linux-port/docs/ROOT-GROW-READINESS-20261108.md) |
 
 GPS, Bluetooth, and camera have matching stock modules. V52's shared-radio
 calibration succeeded, Bluetooth answered HCI commands, and Nexus connected
@@ -60,12 +66,31 @@ On a later V53 trial boot the flashlight driver bound and accepted a bounded
 100 ms command, with OFF verified and rear LED flash visually confirmed by Noob.
 `FLASH_STATUS` now reports `validated=1` while the driver is loaded. Four camera
 sensors also bound after their clock and regulator providers were loaded.
-Camera capture remains unverified. A monitored V53 trial found the stock
-`mtk-cam-isp` causes YUV-B Linux IRQ 247 to fire tens of millions of times on
-CPU 0 without streaming. SSH became intermittent; Noob then brought Lynx to
-Fastboot and Nexus rebooted unchanged V53. Do not load ISP again until the
-YUV-B IRQ path is repaired. See the camera and flashlight checkpoints before
-another trial. The V50 boot image and recovery path must stay available.
+A monitored V53 trial found the stock `mtk-cam-isp` causes a YUV-B interrupt
+storm. A patched ISP gate passed a
+RAM-only load with zero YUV-B IRQs. A second patch explicitly powers the
+CAMSV sensor. With the matching full CCU firmware staged in RAM, the GC02M1
+macro camera now completes a 1600×1200 DMA-BUF raw frame, with sensor I²C,
+CAMSV IRQ, and stream cleanup observed. A brighter-scene frame has visible
+geometry but remains underexposed. The RGGB phase is confirmed by a red-cable
+target; physical lens identity remains unverified. Request-scoped exposure and
+gain control produced
+a measured brightness response; see
+[`CAMERA-EXPOSURE-20261104.md`](../../lynx/linux-port/docs/CAMERA-EXPOSURE-20261104.md).
+The IMX355 wide route and 3264×2448 capture format have also passed guarded
+RAM-only tests. Its first complete raw frame is nearly black, so scene and
+lens validation are still pending; the macro route and original capture
+format were restored. See the camera plan for receipts.
+An attended bright-scene trial on 2026-11-06 produced a recognizable wide
+image and a 201× rise in positive raw signal versus the dark frame. The
+macro route and original format were again restored; see the camera plan.
+A later sensor-control enumeration with
+`v4l2-ctl --list-ctrls-menus` caused a vendor kernel Oops; do not repeat it.
+Pstore identified the exact ioctl path, and V53 Alpine has been restored and
+verified. See the camera plan and
+[`CAMERA-CTRL-CRASH-20261104.md`](../../lynx/linux-port/docs/CAMERA-CTRL-CRASH-20261104.md)
+for receipts and recovery steps.
+The V50 boot image and recovery path must stay available.
 The Status page now reports live Bluetooth service readiness; see
 [`LYNX-SCREEN-NAVIGATION.md`](../../lynx/linux-port/docs/LYNX-SCREEN-NAVIGATION.md).
 It also distinguishes a detected flashlight chip from an active driver and

@@ -33,12 +33,20 @@ the camera stack is absent now and capture is not validated.
 | SoC thermal | `soc_max` thermal zone | Read-only call 354 |
 | Accelerometer | `hf_manager` and `sensorhub` register Bosch `bmi2xy acc`; 16 bounded live events recorded | Raw vector and axis calls 360–364 |
 | Gyroscope | Bosch `bmi2xy gyro`; 16 bounded live events recorded | Raw vector and axis calls 365–369 |
-| Proximity and rear optical sensor | AMS `tcs3701 ps` and `tcs3408 als` return bounded events; optical response needs a physical cover/uncover test | Status and raw calls 370–373; the rear optical sensor is distinct from the flash |
+| Proximity and rear optical sensor | AMS `tcs3701 ps` and `tcs3408 als` return bounded events; Noob's steady-lamp cover/uncover trial validated the lower pale circle's optical response | Status and raw calls 370–373; local `lynx_proximity_read` and `lynx_light_read` agent tools; raw values are not calibrated distance or lux |
 | Magnetometer | AKM09918 returns 16 bounded live events | Raw vector and axis calls 374–378 |
+
 | Sensor fusion | MediaTek gravity, linear acceleration, rotation vector, and orientation each returned bounded events | Generic `FUSION_STATUS`, axis, and vector calls 382–386 with sensor type 9, 10, 11, or 3 |
 | Charging | MT6375 charger and battery reserve service | Monitored locally; remote charging controls are not exposed |
 | Flashlight | LM3642 bound on this boot; bounded 100 ms command returned OFF and Noob saw the rear LED flash | `FLASH_STATUS` now reports validated while bound; bounded `FLASH_PULSE` 396, `FLASH_STOP` 397; staged boot service disabled |
 | Camera | Four stock sensors bound on trial; ISP processing nodes appeared; full ISP load failed health check and emitted RCU warning | `CAMERA_STATUS` 394 is inventory only; no capture action |
+
+On 2026-11-15, authenticated `MAG_STATUS` returned `registered=1` and
+`MAG_VECTOR` returned raw `x=19380 y=659 z=-236700 gain=1000` on Lynx's
+current V53 boot. Dushich drafted an isolated local magnetometer reader in
+`dushich/workspace/projects/lynx_magnetometer/`; Aria corrected its event
+validation and five offline tests passed. It has not been installed on Lynx.
+These raw values do not establish a calibrated compass heading.
 
 The new numeric calls return one value per NRP/1 `CALL`, so they work from
 the common Noob VM as well as a direct client. Units are explicit in the
@@ -78,14 +86,19 @@ nodes were not established. The sensorhub's `/proc/hf_manager` registered a
 Bosch accelerometer and gyroscope, magnetometer, proximity, ambient light,
 and other logical sensors. Accelerometer, gyroscope, magnetometer, proximity,
 and rear light samples have been read. Values are still raw driver values;
-physical units and optical response remain unverified.
+physical units remain uncalibrated. A controlled 2026-11-15 trial measured
+rear optical raw medians 353 uncovered, 0 covered, and 242 uncovered again;
+see [LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md](LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md).
+The local JSON tool `lynx_light_read` is installed on Lynx and visible to her
+agent catalog. It uses the same bounded sensor helper as NRP/1 call 373,
+disables the sensor after one sample, and does not claim calibrated lux.
 The four fusion sensors have also been sampled, with the sensor manager idle
 after each trial. Their gain metadata is 1,000,000; no physical calibration
 or coordinate-frame validation has been done.
 On 2026-10-29, NRP/1 live calls returned accelerometer, gyroscope,
 magnetometer, proximity, and all four fusion vectors after the Fastboot
-recovery. The ambient light call returned `value=0`, so its current optical
-response remains unverified. `TOUCH_STATUS` reported the panel registered,
+recovery. The ambient light call returned `value=0` then, leaving its optical
+response unverified until the later 2026-11-15 lamp test. `TOUCH_STATUS` reported the panel registered,
 with no finger down and no dropped events. Receipt:
 `logs/v50-visible-sensor-check-1793225599863859026.json`.
 The next driver trials should proceed one stack

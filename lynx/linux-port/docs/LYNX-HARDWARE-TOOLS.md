@@ -2,11 +2,13 @@
 
 Implemented 2026-10-29 as the first shared interface for Lynx's microphone,
 flashlight, GNSS, Bluetooth, and camera. The same read-only inventory powers
-`/usr/local/bin/lynx-hardware status <device|all>` on Lynx and five NRP/1
-native calls from Nexus:
+`/usr/local/bin/lynx-hardware status <device|all>` on Lynx and the NRP/1
+native calls below from Nexus:
 
 | NRP/1 ID | Call | Local JSON-stdin wrapper |
 | --- | --- | --- |
+| 371 | `PROX_RAW` | `lynx_proximity_read.sh` |
+| 373 | `LIGHT_RAW` | `lynx_light_read.sh` |
 | 390 | `MIC_STATUS` | `lynx_microphone.sh` |
 | 391 | `FLASH_STATUS` | `lynx_flashlight.sh` |
 | 392 | `GNSS_STATUS` | `lynx_gnss.sh` |
@@ -15,6 +17,21 @@ native calls from Nexus:
 | 395 | `MIC_LEVEL` | `lynx_microphone_level.sh` |
 | 396 | `FLASH_PULSE` | `lynx_flashlight_pulse.sh` |
 | 397 | `FLASH_STOP` | `lynx_flashlight_stop.sh` |
+
+The rear optical tool was added on 2026-11-15 after a controlled lamp test
+confirmed the lower pale circle's response. Its JSON-stdin manifest is
+`lynx_light_read.json`; one call returns raw driver values and verifies that
+the sensor is disabled afterward. The installed agent catalog sees it, and
+NRP/1 `LIGHT_RAW` still works. It does not return calibrated lux or color
+temperature. Install receipt:
+`logs/light-local-tool-1794775831723610074/result.json`.
+
+The proximity tool was added on the same boot, using the registered
+`tcs3701 ps` sensor and the same bounded helper as NRP/1 `PROX_RAW`. Its local agent
+catalog call returned raw `[1,1023,3]` with `disabled=true`; the remote call
+remained available. These values are not a calibrated distance or a verified
+near/far threshold. No service restart or boot change was needed. Install
+receipt: `logs/proximity-local-tool-1794776097781625387/result.json`.
 
 The camera and flashlight trial evidence and current boot boundary are in
 [LYNX-CAMERA-FLASHLIGHT-20261102.md](LYNX-CAMERA-FLASHLIGHT-20261102.md).
@@ -33,11 +50,12 @@ Installation receipt:
 `logs/flashlight-visual-install-1793635454301342988/result.json`.
 
 The local wrappers and adjacent `.json` schemas live in
-`/usr/local/share/lynx-tools/calls/` on Lynx; source is in
+`/usr/local/share/lynx/agent-tools/` on Lynx; source is in
 `lynx/tools/local_calls/`. Each accepts `{}` on stdin and returns JSON. This
-follows Rose's agent wrapper pattern. The NRP/1 calls use Iris's common native
+follows Rose's agent wrapper pattern. The inventory NRP/1 calls use Iris's common native
 call shape and return `value=0` until a function has actually been validated;
-their detail includes `interface_ready` separately. A device node or loaded
+their detail includes `interface_ready` separately. Raw sensor calls such as
+`LIGHT_RAW` report a reading and make no calibration claim. A device node or loaded
 module alone never sets `validated=1`.
 
 `MIC_LEVEL` is the first bounded action. It uses the already tested ALSA

@@ -42,10 +42,10 @@ evidence to check:
 
 ```sh
 dushich task \
-  --expect projects/wordcount/wordcount.py \
-  --test 'python3 -m unittest discover -s projects/wordcount -q' \
+  --expect projects/example/test_example.py \
+  --test 'python3 -m unittest discover -s projects/example -q' \
   --require-commit \
-  'Improve the word-count CLI and its tests; commit after tests pass.'
+  'Create a small example module and its tests; commit after tests pass.'
 ```
 
 The task runner requires a clean Git tree at the start. It saves the Codex
@@ -73,7 +73,13 @@ linked into its own Codex home. The planned foreman role has its own
 The workspace has no shared `AGENTS.md`, preventing one role's instructions
 from appearing in the other role's context.
 The verified task workspace has a small private Git history in `.dushich-git/`.
-It contains only task projects and Forge data, not a duplicate Noobia checkout.
+It is intentionally sparse: new task projects are created as needed, while
+`forge.db` and human-help flags remain ignored runtime data. The previous
+task projects and helper scripts are preserved with a SHA-256 manifest under
+`/noobia/dushich/private/backups/task-workspace-files-20261117/`, and the
+pre-cleanup task Git history is in
+`/noobia/dushich/private/backups/task-workspace-precleanup-20261117.bundle`.
+The active workspace is not a duplicate Noobia checkout.
 The former copied checkout, including its four local commits, is archived at
 `/noobia/dushich/private/backups/workspace-full-20261117/`; a verified Git
 bundle is at `private/backups/workspace-main-20261117.bundle`.

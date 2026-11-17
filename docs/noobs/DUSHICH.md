@@ -8,6 +8,11 @@ under `3dprint/`. The Nexus coding agent is documented in
 and configuration sources beside it. Its live workspace is
 `/noobia/dushich/workspace`; its separate Codex history is in
 `/noobia/dushich/coding/private/codex`. This is a Nexus runtime, not phone firmware.
+The workspace now holds only the clean verified-task Git repository and Forge
+runtime data. Older task projects are archived under
+`/noobia/dushich/private/backups/task-workspace-files-20261117/`.
+The [duplicate-filename tool](../../dushich/tools/README.md) can scan
+`/noobia` without blocking a terminal and writes complete private JSON reports.
 The [coding trial](../../dushich/coding/TRIAL-STATUS.md) records verified tool,
 test, Git, memory, performance, and limitation evidence.
 

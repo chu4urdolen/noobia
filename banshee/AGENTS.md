@@ -167,7 +167,7 @@ Never copy or print the private key.
 
 Review the target and result, then report the commit ID, branch, remote, and confirmed remote hash.
 
-His interactive helper launcher starts in `/noobia` with normal Git discovery; the verified `dushich task` runner uses a separate clean task repository.
+His interactive helper launcher starts in `/noobia` with normal Git discovery; the verified `dushich task` runner uses a separate task repository.
 
 Use the direct `dushich` CLI for GitHub-only tasks; the verified coding bridge requires file and test checks.
 
@@ -179,7 +179,7 @@ The `dushich` MCP handoff below is a verified coding workflow with required file
 
 For a conversation question, use `dushich_ask`.
 
-It asks the Helper Dushich thread linked to this Banshee conversation without creating a coding task or requiring a clean Git tree.
+It asks the Helper Dushich thread linked to this Banshee conversation without creating a coding task.
 
 Do not use `dushich_start` just to test recall.
 

@@ -27,14 +27,40 @@ IRIS_TOOLS = ROOT / "iris" / "tools"
 ROSE_CALLS = ROOT / "rose" / "calls"
 LOCAL_CALLS = LYNX_TOOLS / "local_calls"
 
-# Import manifest converter from same package
-try:
-    from manifest_converter import load_manifest_tools, manifest_to_mcp_tool
-except ImportError:
-    from noobia.common.mcp.manifest_converter import (  # type: ignore
-        load_manifest_tools,
-        manifest_to_mcp_tool,
-    )
+# Regex pattern for valid tool names
+NAME_PATTERN = re.compile(r"^[a-zA-Z][a-zA-Z0-9_-]{0,63}$")
+
+
+def load_native_mcp_tools(directory: str | Path) -> Dict[str, Tuple[Optional[Path], Dict[str, Any]]]:
+    """Scan a directory for native MCP tool manifests (*.json) and optional matching scripts (*.sh)."""
+    dir_path = Path(directory)
+    if not dir_path.is_dir():
+        return {}
+    tools = {}
+    for manifest_path in sorted(dir_path.glob("*.json")):
+        name = manifest_path.stem
+        if not NAME_PATTERN.match(name):
+            continue
+        script_path = manifest_path.with_suffix(".sh")
+        if script_path.is_symlink() or not script_path.is_file():
+            script_path = None
+        try:
+            meta = json.loads(manifest_path.read_text(encoding="utf-8"))
+            tool_name = meta.get("name", name)
+            input_schema = meta.get("inputSchema") or meta.get("parameters", {
+                "type": "object", "properties": {}, "additionalProperties": False
+            })
+            mcp_spec = {
+                "name": tool_name,
+                "description": meta.get("description", f"Noobia tool: {tool_name}"),
+                "inputSchema": input_schema,
+            }
+            if "timeout" in meta:
+                mcp_spec["timeout"] = meta["timeout"]
+            tools[tool_name] = (script_path, mcp_spec)
+        except Exception:
+            continue
+    return tools
 
 # Import Lynx auth if available
 sys.path.insert(0, str(LYNX_TOOLS))
@@ -613,13 +639,13 @@ class NoobMCPServer:
         for d in dirs:
             if not Path(d).is_dir():
                 continue
-            loaded = load_manifest_tools(d)
-            for name, (script, meta, mcp_spec) in loaded.items():
+            loaded = load_native_mcp_tools(d)
+            for name, (script, mcp_spec) in loaded.items():
                 if name in self.tools:
                     # Built-in takes precedence unless local script is specifically wanted
                     continue
                 self.tools[name] = mcp_spec
-                self.handlers[name] = self._make_local_script_handler(script, meta)
+                self.handlers[name] = self._make_local_script_handler(script, mcp_spec)
 
     @staticmethod
     def _make_local_script_handler(

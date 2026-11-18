@@ -4,6 +4,8 @@ This directory provides Noobia's unified Model Context Protocol (MCP) server
 and client architecture, standardizing application-level tool discovery and execution
 across Noobia inhabitants (Lynx, Iris, Rose, etc.) over Wi-Fi, Bluetooth, and local links.
 
+**MCP is the default tool standard across Noobia.** Tools are declared natively as standard MCP tool manifests (`name`, `description`, `inputSchema`), eliminating legacy custom DIY json-stdin loaders.
+
 ## Background & Architecture
 
 ### 1. Transport & Wire Protocol (L1 - L4)
@@ -12,15 +14,24 @@ Noobia devices are accessed remotely over:
 - **Bluetooth (BLE GATT)**: Iris connects as a BLE client to the Nexus GATT server bridge (`nexus_ble_bridge.sh`). Lynx exposes a GATT service with authenticated notifications (`lynx_ble_auth.py`).
 - **Wire Protocol**: All transports communicate using the line-oriented `NRP/1` protocol (`NRP/1 <seq> <COMMAND> [args...]`).
 
-### 2. Legacy DIY App-Level System
-Previously, application-level tools were organized using custom, ad-hoc formats:
-- In `lynx/tools/local_calls/` and `rose/calls/`, tools were declared as pairs of `<name>.json` (with custom `"protocol": "json-stdin"`, parameters schemas, and timeouts) and `<name>.sh` shell wrappers taking JSON on stdin.
-- On Lynx, `lynx_noob_runtime.py` dynamically registered tools with an `nrp_id` into NRP/1.
-- `lynx_agent.py` and `rose/chatbot/core.py` used proprietary `Catalog` and `Tools` classes that manually converted the `.json` files into OpenAI function-call schemas.
-- External or modern AI agents (Antigravity, Claude Code, Cursor, Windsurf) had no standardized MCP access to device sensors and actuators.
-
-### 3. The Standardized MCP System
-The new MCP architecture standardizes everything at the application layer without breaking underlying hardware daemons or safety bounds:
+### 2. Native MCP System
+Noobia tools natively adopt the Model Context Protocol:
+- Tool definitions use standard MCP schemas:
+  ```json
+  {
+    "name": "lynx_flashlight_pulse",
+    "description": "Request one 100 ms flashlight pulse.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "duration_ms": { "type": "integer", "minimum": 20, "maximum": 100 }
+      },
+      "additionalProperties": false
+    }
+  }
+  ```
+- Device daemons (`lynx_noob_runtime.py`) and agent loops (`lynx_agent.py`) read standard MCP `inputSchema` directly.
+- The unified Noobia MCP Server (`noob_mcp.py`) exposes all device operations and local tools via standard JSON-RPC 2.0.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -32,7 +43,7 @@ The new MCP architecture standardizes everything at the application layer withou
 │                 Noobia MCP Server (noob_mcp.py)             │
 │                                                             │
 │  ├── Built-in Remote Tools (Lynx, Iris)                     │
-│  ├── Dynamic Manifest Converter (manifest_converter.py)     │
+│  ├── Native MCP Tool Discovery                              │
 │  └── Execution Router                                       │
 └──────────────┬───────────────────────────────┬──────────────┘
                │                               │
@@ -41,7 +52,7 @@ The new MCP architecture standardizes everything at the application layer withou
                ▼                               ▼
     ┌──────────────────────┐         ┌────────────────────┐
     │  Lynx / Iris Device  │         │  Local Scripts     │
-    │  Hardware Services   │         │  (json-stdin)      │
+    │  Hardware Services   │         │  (Standard MCP)    │
     └──────────────────────┘         └────────────────────┘
 ```
 
@@ -50,18 +61,15 @@ The new MCP architecture standardizes everything at the application layer withou
 - **[`noob_mcp.py`](file:///noobia/common/mcp/noob_mcp.py)**:
   The Model Context Protocol server. Fully implements JSON-RPC 2.0 methods:
   - `initialize`: handshake and server capabilities.
-  - `tools/list`: enumerates all built-in and dynamic MCP tools.
+  - `tools/list`: enumerates all built-in and dynamic native MCP tools.
   - `tools/call`: executes a tool and returns standard MCP content blocks.
   - Supports CLI inspection: `--list` and `--call <name> --args <json>`.
-
-- **[`manifest_converter.py`](file:///noobia/common/mcp/manifest_converter.py)**:
-  Translates legacy Noobia DIY `json-stdin` manifests (`.json`) into standard MCP tool schemas (`name`, `description`, `inputSchema`).
 
 - **[`mcp_client.py`](file:///noobia/common/mcp/mcp_client.py)**:
   Standard Python client to query and invoke tools from any MCP server via subprocess stdio or in-process adapter (`InProcessMCPServerAdapter`).
 
 - **[`test_noob_mcp.py`](file:///noobia/common/mcp/test_noob_mcp.py)**:
-  Automated test suite verifying manifest conversion, JSON-RPC protocol compliance, tool invocation, and error handling.
+  Automated test suite verifying native manifest loading, JSON-RPC protocol compliance, tool invocation, and error handling.
 
 ## Available Tools
 

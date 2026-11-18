@@ -1,12 +1,11 @@
 {
+  "name": "lynx_proximity_read",
   "description": "Entity: Lynx. Read one raw proximity sensor sample. Values are driver raw units, not a calibrated distance or a verified near/far interpretation.",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {},
     "required": [],
     "additionalProperties": false
   },
-  "protocol": "json-stdin",
-  "timeout": 5,
-  "example": {}
+  "timeout": 5
 }

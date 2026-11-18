@@ -1,63 +1,43 @@
 #!/usr/bin/env python3
-"""Comprehensive test suite for Noobia MCP server and manifest converter."""
+"""Comprehensive test suite for Noobia MCP server and client (native MCP by default)."""
 
 import json
 from pathlib import Path
 import tempfile
 import unittest
 
-from manifest_converter import load_manifest_tools, manifest_to_mcp_tool
-from noob_mcp import NoobMCPServer
+from noob_mcp import NoobMCPServer, load_native_mcp_tools
 from mcp_client import InProcessMCPServerAdapter, MCPClient
 
 
-class TestManifestConverter(unittest.TestCase):
-    def test_manifest_to_mcp_tool_valid(self):
-        meta = {
-            "description": "Read Lynx sensor status",
-            "protocol": "json-stdin",
-            "timeout": 5,
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "sensor_type": {"type": "string", "enum": ["accel", "gyro"]}
-                },
-                "required": ["sensor_type"],
-                "additionalProperties": False,
-            },
-        }
-        tool = manifest_to_mcp_tool("lynx_sensor", meta)
-        self.assertEqual(tool["name"], "lynx_sensor")
-        self.assertEqual(tool["description"], "Read Lynx sensor status")
-        self.assertEqual(tool["inputSchema"]["type"], "object")
-        self.assertIn("sensor_type", tool["inputSchema"]["properties"])
-        self.assertEqual(tool["inputSchema"]["required"], ["sensor_type"])
-
-    def test_manifest_invalid_protocol(self):
-        with self.assertRaises(ValueError):
-            manifest_to_mcp_tool("bad_tool", {"protocol": "custom-binary"})
-
-    def test_manifest_invalid_name(self):
-        with self.assertRaises(ValueError):
-            manifest_to_mcp_tool("123bad_name!", {"protocol": "json-stdin"})
-
-    def test_load_manifest_tools(self):
+class TestNativeMCPManifests(unittest.TestCase):
+    def test_load_native_mcp_tools(self):
         with tempfile.TemporaryDirectory() as td:
             p = Path(td)
-            (p / "my_tool.json").write_text(
+            (p / "lynx_custom_sensor.json").write_text(
                 json.dumps({
-                    "description": "Custom test tool",
-                    "protocol": "json-stdin",
-                    "parameters": {"type": "object", "properties": {}},
+                    "name": "lynx_custom_sensor",
+                    "description": "Read Lynx custom sensor",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "samples": {"type": "integer", "minimum": 1, "maximum": 10}
+                        },
+                        "required": ["samples"],
+                        "additionalProperties": False,
+                    },
+                    "timeout": 5,
                 })
             )
-            (p / "my_tool.sh").write_text("#!/bin/sh\necho ok\n")
+            (p / "lynx_custom_sensor.sh").write_text("#!/bin/sh\necho ok\n")
 
-            tools = load_manifest_tools(p)
-            self.assertIn("my_tool", tools)
-            script, meta, mcp_def = tools["my_tool"]
-            self.assertEqual(mcp_def["name"], "my_tool")
-            self.assertEqual(mcp_def["description"], "Custom test tool")
+            tools = load_native_mcp_tools(p)
+            self.assertIn("lynx_custom_sensor", tools)
+            script, mcp_def = tools["lynx_custom_sensor"]
+            self.assertEqual(mcp_def["name"], "lynx_custom_sensor")
+            self.assertEqual(mcp_def["description"], "Read Lynx custom sensor")
+            self.assertEqual(mcp_def["inputSchema"]["type"], "object")
+            self.assertIn("samples", mcp_def["inputSchema"]["properties"])
 
 
 class TestNoobMCPServer(unittest.TestCase):
@@ -103,7 +83,7 @@ class TestNoobMCPServer(unittest.TestCase):
     def test_in_process_adapter(self):
         adapter = InProcessMCPServerAdapter(self.server)
         tools = adapter.list_tools()
-        self.assertTrue(len(tools) > 10)
+        self.assertTrue(len(tools) >= 20)
         defs = adapter.openai_tool_definitions()
         self.assertEqual(len(defs), len(tools))
         self.assertEqual(defs[0]["type"], "function")
@@ -118,7 +98,6 @@ class TestMCPClientSubprocess(unittest.TestCase):
             tools = client.list_tools()
             self.assertTrue(len(tools) >= 20)
             text, is_err = client.call_tool("lynx_ping")
-            # Note: Lynx is currently reachable on the test network!
             self.assertFalse(is_err)
             self.assertIn("OK", text)
 

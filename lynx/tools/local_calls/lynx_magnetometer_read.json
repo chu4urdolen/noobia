@@ -1,12 +1,11 @@
 {
+  "name": "lynx_magnetometer_read",
   "description": "Entity: Lynx. Read one AKM09918 raw magnetometer vector. Values are driver raw units, not a calibrated compass heading.",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {},
     "required": [],
     "additionalProperties": false
   },
-  "protocol": "json-stdin",
-  "timeout": 5,
-  "example": {}
+  "timeout": 5
 }

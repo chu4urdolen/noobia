@@ -806,7 +806,8 @@ class Runtime:
                 name = manifest.stem.upper()
                 if not isinstance(ident, int) or not 500 <= ident <= 999 or not NAME.fullmatch(manifest.stem):
                     continue
-                if meta.get('protocol') != 'json-stdin' or not isinstance(meta.get('parameters'), dict):
+                schema = meta.get('inputSchema') or meta.get('parameters')
+                if not isinstance(schema, dict):
                     continue
                 if ident in self.registry.by_id or name in self.registry.by_name:
                     continue
@@ -820,7 +821,7 @@ class Runtime:
                     arguments = json.loads(text) if text else {}
                 except ValueError as exc:
                     raise NativeError('invalid tool JSON') from exc
-                schema = meta['parameters']
+                schema = meta.get('inputSchema') or meta.get('parameters', {})
                 if (not isinstance(arguments, dict) or
                         set(arguments) - set(schema.get('properties', {})) or
                         any(field not in arguments for field in schema.get('required', []))):

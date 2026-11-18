@@ -1,12 +1,11 @@
 {
+  "name": "lynx_gnss",
   "description": "Entity: Lynx. Read gnss interface status and validation state. This does not activate hardware or prove operation.",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {},
     "required": [],
     "additionalProperties": false
   },
-  "protocol": "json-stdin",
-  "timeout": 10,
-  "example": {}
+  "timeout": 10
 }

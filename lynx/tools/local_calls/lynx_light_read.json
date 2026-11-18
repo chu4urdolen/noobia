@@ -1,12 +1,11 @@
 {
+  "name": "lynx_light_read",
   "description": "Entity: Lynx. Read one raw rear light sensor sample. The lower pale rear circle has a verified optical response. Values are driver raw units, not calibrated lux or color temperature.",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {},
     "required": [],
     "additionalProperties": false
   },
-  "protocol": "json-stdin",
-  "timeout": 5,
-  "example": {}
+  "timeout": 5
 }

@@ -1,14 +1,21 @@
 {
+  "name": "lynx_motion_read",
   "description": "Entity: Lynx. Read one raw accelerometer or gyroscope vector. Values are driver raw units and are not calibrated physical units.",
-  "parameters": {
+  "inputSchema": {
     "type": "object",
     "properties": {
-      "choice": {"type": "string", "enum": ["accel", "gyro"]}
+      "choice": {
+        "type": "string",
+        "enum": [
+          "accel",
+          "gyro"
+        ]
+      }
     },
-    "required": ["choice"],
+    "required": [
+      "choice"
+    ],
     "additionalProperties": false
   },
-  "protocol": "json-stdin",
-  "timeout": 5,
-  "example": {"choice": "accel"}
+  "timeout": 5
 }

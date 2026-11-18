@@ -1,7 +1,9 @@
 # Gwyn App Nub
 
-Gwyn App Nub is Noobia's planned Claude Code coding agent on Nexus. The
-workspace is `/noobia/gwyn-app-nub/workspace`, with its own Git repository.
+Gwyn App Nub is Noobia's Claude Code coding agent and app-writer on Nexus,
+active since 2026-11-18. Gwyn's role file and personality are in
+[`AGENTS.md`](AGENTS.md). The workspace is `/noobia/gwyn-app-nub/workspace`,
+with its own Git repository; its `CLAUDE.md` imports `AGENTS.md`.
 Claude Code 2.1.311 was installed from Anthropic's official native Linux
 installer on 2026-11-14. The CLI is `/home/aria/.local/bin/claude`.
 
@@ -13,15 +15,14 @@ Gwyn's workspace `CLAUDE.md` points to the shared
 [coding instructions](/noobia/common/AGENTS.md) for directory, tool, service,
 and Git conventions.
 
-Authentication is pending. When Noob is ready, run
-`/noobia/gwyn-app-nub/auth` in a Nexus terminal. That invokes Claude Code's
-own Anthropic Console login flow with API billing. Alternatively, an
+Authentication is complete (checked 2026-11-18, Claude Code 2.1.327). To
+re-authenticate, run `/noobia/gwyn-app-nub/auth` in a Nexus terminal. That
+invokes Claude Code's own Anthropic Console login flow with API billing. Alternatively, an
 `ANTHROPIC_API_KEY` supplied in the launching shell is supported by Claude
 Code; do not put a key in Git, a chat message, or a command-line argument.
-After login, run `/noobia/gwyn-app-nub/launch` and check `/status` in Claude
-Code before any paid coding task.
+Start Gwyn with `/noobia/gwyn-app-nub/launch`.
 
-The initial setup leaves Gwyn unpaired. A Dushich handoff and dashboard
+Gwyn is not yet paired with Dushich. A Dushich handoff and dashboard
 adapter can be added after authentication and a first verified Claude Code
 conversation, when the real session format and permission behavior can be
 checked. The existing Dushich local GPU runtime does not use Claude API

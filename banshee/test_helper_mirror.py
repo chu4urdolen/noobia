@@ -44,6 +44,32 @@ class BansheeMirrorTests(unittest.TestCase):
             self.assertIn('hello', calls[0][0])
             self.assertIn('hi', calls[1][0])
 
+    def test_ask_includes_cumulative_conversation_summary(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            conversations = root / 'conversations'
+            conversations.mkdir()
+            calls = []
+            def turn(prompt, previous):
+                calls.append((prompt, previous))
+                return '33333333-3333-3333-3333-333333333333', [
+                    {'type': 'item.completed', 'item': {'type': 'agent_message', 'text': 'Yes, I see the summary.'}}
+                ]
+            turns = [{'index': 0, 'role': 'noob', 'text': 'hello'}]
+            with patch.object(mirror, 'CONVERSATIONS', conversations), \
+                 patch.object(mirror, 'ROOT', root / 'mirror'), \
+                 patch.object(mirror, 'ACTIVATION', root / 'mirror' / 'activation.json'), \
+                 patch.object(mirror, 'visible_turns', side_effect=lambda _: list(turns)), \
+                 patch.object(mirror.shared, 'run_turn', side_effect=turn), \
+                 patch.object(mirror.dushich_summarizer, 'incremental_summarize', return_value='Compacted summary text.'):
+                mirror.activate()
+                fresh = conversations / (SESSION + '.db')
+                fresh.touch()
+                answer = mirror.ask(SESSION, 'Can you see the summary?')
+            self.assertEqual(answer, 'Yes, I see the summary.')
+            self.assertIn('Cumulative conversation summary', calls[-1][0])
+            self.assertIn('Compacted summary text.', calls[-1][0])
+
 
 if __name__ == '__main__':
     unittest.main()

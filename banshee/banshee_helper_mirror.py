@@ -178,9 +178,21 @@ def ask(conversation_id: str, question: str) -> str:
                 break
         if state['sent'] < state['events']:
             raise RuntimeError('Helper mirror is still catching up; ask again shortly')
+        turns = visible_turns(CONVERSATIONS / (conversation_id + '.db'))
+        lines = [f"{'Noob' if turn['role'] == 'noob' else 'Banshee'}: {turn['text']}"
+                 for turn in turns]
+        summary = dushich_summarizer.incremental_summarize(
+            conversation_id,
+            lines,
+            context_size=SUMMARIZER_CONTEXT_SIZE,
+            desired_size=SUMMARIZER_DESIRED_SIZE,
+        )
         prompt = ('Banshee asks you directly about the conversation you have been observing. '
-                  'Do not use tools or edit files. Answer from your linked conversation context; '
-                  'say when you are unsure. Question:\n' + question)
+                  'Do not use tools or edit files. Answer from your linked conversation context '
+                  'and the cumulative conversation summary below; say when you are unsure.\n\n'
+                  + (f'Cumulative conversation summary ({conversation_id}):\n{summary}\n\n'
+                     if summary else '')
+                  + 'Question:\n' + question)
         thread_id, events = shared.run_turn(prompt, state.get('thread_id'))
         state['thread_id'] = thread_id
         save_state(conversation_id, state)

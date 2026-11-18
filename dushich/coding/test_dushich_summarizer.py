@@ -453,6 +453,35 @@ class TestCLISources(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertNotIn("SUMMARY", out)
 
+    def test_cli_text_with_custom_instructions_mocked(self) -> None:
+        """CLI --text + --instructions must reach summarize_this as custom_instructions."""
+        import dushich_summarizer as ds
+
+        body = "Banshee shipped the lighthouse and Dushich verified the tests passed. " * 4
+        custom = "Focus on mentions of Banshee"
+        recorded: dict = {}
+
+        def fake(text, context_size=None, desired_size=None, infer_fn=None, custom_instructions=""):
+            recorded["text"] = text
+            recorded["custom_instructions"] = custom_instructions
+            return "Compacted."
+
+        old_argv, old_stdin = sys.argv, sys.stdin
+        out = io.StringIO()
+        try:
+            sys.argv = ["dushich_summarizer", "--text", body, "--instructions", custom]
+            sys.stdin = io.StringIO("")
+            with mock.patch.object(ds, "summarize_this", side_effect=fake):
+                with contextlib.redirect_stdout(out):
+                    rc = ds.main()
+        finally:
+            sys.argv, sys.stdin = old_argv, old_stdin
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(recorded["text"], body)
+        self.assertEqual(recorded["custom_instructions"], custom)
+        self.assertIn("Compacted.", out.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

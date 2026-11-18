@@ -478,6 +478,27 @@ and [Advertising API](https://bluez.readthedocs.io/en/latest/advertising-api/).
 The Nexus client uses the documented [Adapter](https://bluez.readthedocs.io/en/latest/adapter-api/)
 and [Device](https://bluez.readthedocs.io/en/latest/device-api/) methods.
 
+## V53 stop-only watchdog trial, 2026-11-18
+
+`tools/trial_v52_bluetooth_after_alpine.py` now accepts
+`--watchdog stop-only` for a bounded trial that attempts a 90-second OpenRC
+Bluetooth stop if the host runner fails to clean up. This mode has no reboot
+command. The default reboot watchdog remains unchanged. Four focused offline
+tests passed, including cancellation and the recorded stop exit status.
+Dushich made the initial source change; Aria completed the stop-result record,
+tests, review, and live trial.
+
+On V53 boot `6613079f-ae1f-4e05-8123-0988b423d6da`, with 27% battery and
+positive charging current, the read-only preflight passed. A one-minute
+same-boot trial started Bluetooth, passed authenticated BLE reconnect,
+signed `PING`/`INFO`, unsigned rejection, fresh challenge, and VM continuity,
+then stopped it. The final health check had no issues, `hci0` was absent,
+the kernel logged `btmtk_set_power_off` and `conninfra_pwr_off`, and the
+watchdog was canceled. No reboot or runlevel change occurred. Receipts:
+`lynx/logs/v53-bt-after-alpine-1795012808225109130/result.json` (preflight)
+and `lynx/logs/v53-bt-after-alpine-1795013332028269788/result.json` (trial).
+Long-duration operation and automatic startup remain unverified.
+
 ## Acceptance sequence
 
 - Service starts and stops repeatedly on the same boot, leaving Wi-Fi and

@@ -22,6 +22,10 @@ command; this is a checkpoint, not a live guarantee.
   charging. At 25% the sensor retry started audio and sensorhub automatically;
   health and a bounded accelerometer sample passed. See the sensor retry and
   poweroff audit records. Recheck live state before further commands.
+- With 27% and positive charging current on the same boot, a bounded V53
+  Bluetooth start/reconnect/stop trial passed using a stop-only watchdog;
+  health, Wi-Fi, and radio power-off checks passed. See the Bluetooth NRP
+  record. Longer operation and autostart still need separate trials.
 - The previous conversation found `/noobia` clean on `main` at `f76b6b6` and
   confirmed `origin/main` there. Other resident agents share `main`, so
   recheck Git status, remote, and HEAD before any new commit or push.
@@ -59,8 +63,8 @@ command; this is a checkpoint, not a live guarantee.
   started normally after charge rose. Installed `lynx-sensor-retry`, a bounded
   OpenRC service that waits for the existing bootstrap charge/temperature
   gates, then starts audio before sensorhub. It is running and idle on the
-  current healthy boot. Twenty-nine offline tests passed; the low-charge
-  cold-boot retry is still unverified. See [retry record](LYNX-SENSOR-RETRY-20261118.md).
+  current healthy boot. Twenty-nine offline tests passed; the natural
+  low-charge cold-boot retry has now passed. See [retry record](LYNX-SENSOR-RETRY-20261118.md).
 - Investigated spontaneous-looking shutdowns. Most saved events are deliberate
   battery-reserve poweroffs at 20% while discharging; Nov 16 ended at 20% and
   −152 mA. One Nov 6 shutdown at 48% was `safety_guard_failed`, but its older
@@ -75,7 +79,11 @@ command; this is a checkpoint, not a live guarantee.
 1. GNSS emits NMEA but has not produced a position fix. Bluetooth has passed
    HCI and authenticated NRP/1 GATT trials, but its automatic and long-uptime
    behavior remains unverified. SIM/cellular needs modem and SIM inventory
-   before any radio activation; current SIM presence is not established.
+   before any radio activation. Noob confirmed no SIM is installed on
+   2026-11-18 and will add one when the inventory supports a specific trial.
+   A read-only [cellular inventory](LYNX-CELLULAR-INVENTORY-20261118.md)
+   found CCCI nodes and SIM hot-plug platform names, but no working modem
+   route has been established.
 2. Flashlight has a verified bounded pulse from one rear LED. The second rear
    light and safe persistent startup need separate investigation. Avoid the
    stock flashlight core unload sequence that previously lost SSH.

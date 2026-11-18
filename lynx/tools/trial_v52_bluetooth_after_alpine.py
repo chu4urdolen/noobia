@@ -19,6 +19,23 @@ BOOT_SHAS = {"v52": V52_SHA, "v53": V53_SHA}
 ADDRESS_RECEIPT = ROOT / "logs/v52-bt-factory-address-1793365780727214907.json"
 
 
+def build_watchdog_script(watchdog_seconds, guard, mode="reboot"):
+    """Return the staged watchdog shell script for a late-Bluetooth trial."""
+    if mode == "reboot":
+        tail = (f"echo timeout > {guard}/state\n"
+                "exec /sbin/openrc-shutdown -r now\n")
+    elif mode == "stop-only":
+        tail = (f"echo stop-only-timeout > {guard}/state\n"
+                "/usr/bin/timeout 90 /sbin/rc-service lynx-bluetooth stop\n"
+                "stop_status=$?\n"
+                f"printf 'stop_exit=%s\\n' \"$stop_status\" > {guard}/state\n"
+                "exit \"$stop_status\"\n")
+    else:
+        raise ValueError("watchdog mode must be 'reboot' or 'stop-only'")
+    return ("#!/bin/sh\n" + f"sleep {watchdog_seconds}\n" +
+            f"test -e {guard}/cancel && exit 0\n" + tail)
+
+
 def phone(command, timeout=12):
     argv = ssh_command("192.168.100.107", command)
     argv[-2:-2] = ["-p", "2222"]
@@ -32,6 +49,12 @@ def main():
     parser.add_argument("--minutes", type=int, default=5)
     parser.add_argument("--leave-running", action="store_true",
                         help="keep radio on after a successful live trial")
+    parser.add_argument("--watchdog", choices=("reboot", "stop-only"),
+                        default="reboot",
+                        help="action when the trial timeout fires: 'reboot' "
+                             "(default, compatible behavior) or 'stop-only' "
+                             "(attempt a bounded 'rc-service lynx-bluetooth "
+                             "stop' and never request reboot)")
     args = parser.parse_args()
     if not 1 <= args.minutes <= 15 or args.leave_running and not args.start:
         parser.error("minutes must be 1..15; --leave-running requires --start")
@@ -75,9 +98,8 @@ def main():
             report["state"] = "eligible-no-write"
             return
         watchdog_seconds = min(1200, args.minutes * 60 + 240)
-        watchdog = ("#!/bin/sh\n" + f"sleep {watchdog_seconds}\n" +
-                    f"test -e {guard}/cancel && exit 0\n" +
-                    f"echo timeout > {guard}/state\nexec /sbin/openrc-shutdown -r now\n")
+        watchdog = build_watchdog_script(watchdog_seconds, guard, args.watchdog)
+        report["watchdog_mode"] = args.watchdog
         digest = hashlib.sha256(watchdog.encode()).hexdigest()
         # The script is generated from numeric constants and a fixed /run path.
         step("stage_watchdog", "set -eu; mkdir -m 700 " + guard +

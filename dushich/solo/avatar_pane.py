@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -50,6 +51,38 @@ def render_png_halfblocks(png_path: str | Path, size: int = 18, height_px: int |
             )
         lines.append("".join(row) + "\033[0m")
     return "\n".join(lines)
+
+
+def render_png_chafa(png_path: str | Path, width_cols: int = 18, height_rows: int | None = None) -> str:
+    """Render a PNG with `chafa` high-density subpixel symbols.
+
+    Falls back to `render_png_halfblocks` when chafa is unavailable or
+    fails. Preserves aspect ratio: a 2:3 portrait at `width_cols=18`
+    renders 14 rows tall.
+    """
+    if height_rows is None:
+        w, h = Image.open(png_path).size
+        height_rows = max(2, round(width_cols * (h / max(1, w)) * 0.5))
+    if shutil.which("chafa"):
+        out = subprocess.run(
+            [
+                "chafa",
+                "--format", "symbols",
+                "--symbols", "block+border+space+quad+sextant",
+                "--colors", "full",
+                "--size", f"{width_cols}x{height_rows}",
+                "--stretch", str(png_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            text = out.stdout.rstrip("\n")
+            # Drop chafa's trailing cursor-restore sequence (e.g. \033[?25h).
+            text = re.sub(r"(?:\033\[[0-9;?]*[A-Za-z])+\s*\Z", "", text)
+            return text.rstrip("\n")
+    return render_png_halfblocks(png_path, width_cols, height_rows * 2)
 
 
 def detect_solo_state(screen_text: str, pane_title: str = "") -> str:
@@ -106,18 +139,18 @@ class FrameCache:
         self.pics_dir = Path(pics_dir)
         self.agent = agent
         self.size = size
-        self._cache: dict[str, tuple[int, str]] = {}
+        self._cache: dict[str, str] = {}
 
     def get(self, frame_name: str) -> str:
         png = self.pics_dir / self.agent / f"{frame_name}.png"
-        mtime = png.stat().st_mtime_ns if png.exists() else 0
-        cached = self._cache.get(frame_name)
-        if cached is None or cached[0] != mtime:
-            self._cache[frame_name] = (mtime, render_png_halfblocks(png, self.size))
-        return self._cache[frame_name][1]
+        mtime_ns = png.stat().st_mtime_ns
+        if frame_name not in self._cache or self._cache[frame_name][1] != mtime_ns:
+            art = render_png_chafa(png, self.size)
+            self._cache[frame_name] = (art, mtime_ns)
+        return self._cache[frame_name][0]
 
 
-def read_pane_text(tmux_socket: str, target_pane: str) -> tuple[str | None, str]:
+def read_pane_text(tmux_socket: str, target_pane: str) -> tuple[str, str]:
     """Read the target pane's captured text and title via tmux."""
     try:
         out = subprocess.run(
@@ -126,11 +159,9 @@ def read_pane_text(tmux_socket: str, target_pane: str) -> tuple[str | None, str]
             text=True,
             timeout=5,
         )
-        if out.returncode != 0:
-            return None, ""
         text = out.stdout or ""
     except Exception:
-        return None, ""
+        text = ""
     try:
         title = subprocess.run(
             ["tmux", f"-L{tmux_socket}", "display-message", "-t", target_pane, "-p", "#{pane_title}"],
@@ -164,12 +195,12 @@ def draw_frame(top_art: str, bottom_art: str = "", clear_all: bool = False) -> N
     sys.stdout.flush()
 
 
-def render_bottom_fill(rows: int, size: int) -> str:
+def render_bottom_fill(rows: int, size: int, top_rows: int = 14) -> str:
     """Render the Rose.png fill for the rows below the avatar grid."""
-    bottom_px = max(0, (rows - (size // 2) - 1) * 2)
-    if bottom_px < 2 or not ROSE_PATH.exists():
+    rem_rows = max(0, rows - top_rows - 1)
+    if rem_rows < 2 or not ROSE_PATH.exists():
         return ""
-    return render_png_halfblocks(ROSE_PATH, size, bottom_px)
+    return render_png_chafa(ROSE_PATH, size, rem_rows)
 
 
 def main() -> int:
@@ -211,8 +242,6 @@ def main() -> int:
 
         if args.target_pane:
             text, title = read_pane_text(args.tmux_socket, args.target_pane)
-            if text is None:
-                return 0
         else:
             text, title = "", ""
         state = tracker.update(is_pane_working(text, title), now)

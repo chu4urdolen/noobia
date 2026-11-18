@@ -12,6 +12,7 @@ from avatar_pane import (
     detect_solo_state,
     draw_frame,
     is_pane_working,
+    render_png_chafa,
     render_png_halfblocks,
     select_frame_name,
 )
@@ -149,6 +150,12 @@ class TestRenderPngHalfblocks(unittest.TestCase):
     def test_odd_height_px_is_evened_out(self):
         art = render_png_halfblocks(IDLE_PNG, 18, height_px=41)
         self.assertEqual(len(art.splitlines()), 20)
+
+
+class TestRenderPngChafa(unittest.TestCase):
+    def test_render_png_chafa_preserves_portrait_rows(self):
+        art = render_png_chafa("/noobia/pics/Dushich/idle.png", 18)
+        self.assertEqual(len(art.splitlines()), 14)
 
 
 class TestDrawFrame(unittest.TestCase):

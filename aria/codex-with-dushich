@@ -70,7 +70,7 @@ if ! tmux has-session -t "$session" 2>/dev/null; then
     tmux select-pane -t "$session":0.0 -T 'Aria + Noob • Codex'
     tmux select-pane -t "$session":0.1 -T 'Dushich • live activity'
     tmux select-pane -t "$session":0.0
-    tmux set-option -t "$session" mouse off
+    tmux set-option -t "$session" mouse on
 elif [[ -n "$resume_id" ]]; then
     # A session can survive after its Codex pane exits because the Dushich
     # monitor is still running. Recreate the missing coding pane in place.

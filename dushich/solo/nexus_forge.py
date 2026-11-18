@@ -597,7 +597,7 @@ def _self_test(args: argparse.Namespace) -> int:
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 10, 10)
     ctx = cairo.Context(surface)
     last = None
-    for agent in ("Aria", "Banshee", "Dushich"):
+    for agent in ("Aria", "Banshee", "Dushich", "Gwyn"):
         for frame in REQUIRED_FRAMES:
             png = pics / agent / f"{frame}.png"
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(png), 140, 210, False)

@@ -40,6 +40,7 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | Local hardware backend and agent wrappers | `lynx/tools/lynx_hardware.py`, `lynx/tools/lynx_microphone_level.py`, `lynx/tools/local_calls/`; [tool contract](../../lynx/linux-port/docs/LYNX-HARDWARE-TOOLS.md) |
 | Optical and proximity local tools | `lynx/tools/lynx_light_read.py`, `lynx/tools/lynx_proximity_read.py`, and their `local_calls/` wrappers; [controlled rear light trial](../../lynx/linux-port/docs/LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md) |
 | Magnetometer local tool | `lynx/tools/lynx_magnetometer_read.py` and `local_calls/lynx_magnetometer_read.*`; raw bounded vector, [hardware status](../../lynx/linux-port/docs/LYNX-HARDWARE-STATUS.md) |
+| Motion local tool | `lynx/tools/lynx_motion_read.py` and `local_calls/lynx_motion_read.*`; bounded accelerometer or gyroscope vector |
 | Display, keyboard, scrolling | `lynx/tools/lynx_drm_dmabuf_pattern.c`; [`LYNX-CONSOLE.md`](../../lynx/linux-port/docs/LYNX-CONSOLE.md) |
 | Media control | `lynx/tools/lynx_media.py`; [`LYNX-MEDIA-CONTROL.md`](../../lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md) |
 | Microphone capture experiment | `lynx/tools/trial_v50_microphone.py`; external clap validated on V50 |

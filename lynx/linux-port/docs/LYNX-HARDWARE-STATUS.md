@@ -61,6 +61,14 @@ log was overwritten by that successful start, so the exact failed check was
 not retained. The next reliability task is a bounded retry after charge rises
 above the service threshold, with a cold-boot test.
 
+On 2026-11-18, Dushich built a bounded local motion reader and Aria installed
+it as `lynx_motion_read` in Lynx's agent catalog. Live accelerometer and
+gyroscope calls returned raw vectors, and the agent catalog executed the
+accelerometer tool successfully. Both samples disabled their sensors afterward;
+health and boot identity were unchanged. Thirty-eight offline cases passed.
+Receipt: `logs/motion-local-tool-1794956244324033878/result.json`. Values are
+driver raw units, not calibrated acceleration or angular speed.
+
 The new numeric calls return one value per NRP/1 `CALL`, so they work from
 the common Noob VM as well as a direct client. Units are explicit in the
 reply: percent, millidegrees Celsius, signed milliamps, and millivolts.

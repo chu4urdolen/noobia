@@ -76,11 +76,17 @@ boot with no health issues. Receipt:
 inference proxy was started manually for this test and subsequently enabled at
 boot. No cloud key is installed on Lynx.
 
-Nexus now has `noobia-gpu-power-limit.service` enabled before `ollama.service`.
-It reapplies the attended 400 W RTX 5090 cap after a Nexus reboot. Ollama
-requires that unit, and `noobia-inference-proxy.service` is enabled at boot.
+Nexus had `noobia-gpu-power-limit.service` enabled before `ollama.service`,
+reapplying the attended 400 W RTX 5090 cap after a reboot. Ollama required
+that unit, and `noobia-inference-proxy.service` is enabled at boot.
 All three services were active after the configuration; the proxy answered
-`/health`. This establishes the startup configuration, not a reboot trial.
+`/health`. This established the startup configuration, not a reboot trial.
+
+> **Update, 2026‑11‑18** — `noobia-gpu-power-limit.service` (and its script
+> and the `ollama.service` drop‑in that required it) is retired from the
+> system and from git. Aigel's `gpu_monitor` service
+> (`common/services/`) now owns the GPU power policy: it enforces a
+> 500 W limit on every start, so nothing else touches the limit at boot.
 
 ## Supervised local queue, 2026-11-09
 

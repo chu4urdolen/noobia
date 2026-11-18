@@ -45,8 +45,10 @@ if [[ $# -eq 0 && -t 0 && -t 1 && -z "${NOOBIA_DUSHICH_TMUX_PANE:-}" ]] && comma
     lines="$(tput lines 2>/dev/null || echo 24)"
     tmux -L dushich-clean new-session -d -x "$cols" -y "$lines" -s "$session" -n workshop -c /noobia \
         "exec env NOOBIA_DUSHICH_TMUX_PANE=1 /usr/local/bin/dushich"
+    tmux -L dushich-clean set-option -g allow-passthrough on
+    tmux -L dushich-clean set-option -t "$session" allow-passthrough on
     tmux -L dushich-clean split-window -h -l 18 -t "$session":0.0 -c /noobia \
-        "exec /usr/bin/python3 /noobia/dushich/solo/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane ${session}:0.0 --size 18"
+        "exec /usr/bin/python3 /noobia/dushich/solo/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane ${session}:0.0 --size 18 --sixel"
     tmux -L dushich-clean set-hook -t "$session" client-attached "resize-pane -t ${session}:0.1 -x 18"
     tmux -L dushich-clean set-hook -t "$session" client-resized "resize-pane -t ${session}:0.1 -x 18"
     tmux -L dushich-clean set-hook -t "$session" window-resized "resize-pane -t ${session}:0.1 -x 18"

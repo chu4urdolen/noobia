@@ -19,6 +19,7 @@ import sys
 import time
 from pathlib import Path
 
+import tempfile
 from PIL import Image
 
 REQUIRED_FRAMES = ("idle", "working_1", "working_2", "working_3", "working_4", "final")
@@ -54,14 +55,10 @@ def render_png_halfblocks(png_path: str | Path, size: int = 18, height_px: int |
 
 
 def render_png_chafa(png_path: str | Path, width_cols: int = 18, height_rows: int | None = None) -> str:
-    """Render a PNG with `chafa` high-density subpixel symbols.
-
-    Falls back to `render_png_halfblocks` when chafa is unavailable or
-    fails. Preserves aspect ratio: a 2:3 portrait at `width_cols=18`
-    renders 14 rows tall.
-    """
+    """Render a PNG with `chafa` high-density subpixel symbols."""
     if height_rows is None:
-        w, h = Image.open(png_path).size
+        with Image.open(png_path) as im:
+            w, h = im.size
         height_rows = max(2, round(width_cols * (h / max(1, w)) * 0.5))
     if shutil.which("chafa"):
         out = subprocess.run(
@@ -79,10 +76,59 @@ def render_png_chafa(png_path: str | Path, width_cols: int = 18, height_rows: in
         )
         if out.returncode == 0 and out.stdout.strip():
             text = out.stdout.rstrip("\n")
-            # Drop chafa's trailing cursor-restore sequence (e.g. \033[?25h).
             text = re.sub(r"(?:\033\[[0-9;?]*[A-Za-z])+\s*\Z", "", text)
             return text.rstrip("\n")
     return render_png_halfblocks(png_path, width_cols, height_rows * 2)
+
+
+def render_composite_sixel(
+    top_png: str | Path,
+    cols: int = 18,
+    rows: int = 21,
+    cell_w: int = 10,
+    cell_h: int = 20,
+) -> str:
+    """Composite top Dushich portrait + bottom Rose fill into one Sixel image."""
+    usable_rows = max(4, rows - 1)
+    top_rows = min(usable_rows, max(2, round(cols * 1.5 * 0.5)))
+    rem_rows = max(0, usable_rows - top_rows)
+
+    px_w = cols * cell_w
+    top_px_h = top_rows * cell_h
+    rem_px_h = rem_rows * cell_h
+    total_px_h = top_px_h + rem_px_h
+
+    canvas = Image.new("RGB", (px_w, total_px_h), (0, 0, 0))
+    with Image.open(top_png) as top_im:
+        canvas.paste(top_im.convert("RGB").resize((px_w, top_px_h), Image.Resampling.LANCZOS), (0, 0))
+    if rem_px_h > 0 and ROSE_PATH.exists():
+        with Image.open(ROSE_PATH) as rose_im:
+            canvas.paste(rose_im.convert("RGB").resize((px_w, rem_px_h), Image.Resampling.LANCZOS), (0, top_px_h))
+
+    if shutil.which("chafa"):
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+        try:
+            canvas.save(tmp_path, format="PNG")
+            passthru = "tmux" if os.environ.get("TMUX") else "none"
+            out = subprocess.run(
+                [
+                    "chafa",
+                    "--format", "sixels",
+                    "--passthrough", passthru,
+                    "--size", f"{cols}x{usable_rows}",
+                    "--stretch",
+                    str(tmp_path),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if out.returncode == 0 and out.stdout.strip():
+                return out.stdout
+        finally:
+            tmp_path.unlink(missing_ok=True)
+    return render_png_chafa(top_png, cols, top_rows)
 
 
 def detect_solo_state(screen_text: str, pane_title: str = "") -> str:
@@ -211,12 +257,15 @@ def main() -> int:
     parser.add_argument("--target-pane", default="")
     parser.add_argument("--size", type=int, default=DEFAULT_SIZE)
     parser.add_argument("--interval", type=float, default=0.4)
+    parser.add_argument("--sixel", action="store_true", help="render full-resolution Sixel via passthrough")
     parser.add_argument("--once", action="store_true", help="render one frame and exit")
     args = parser.parse_args()
 
     cache = FrameCache(args.pics_dir, args.agent, args.size)
+    sixel_cache: dict[tuple[str, int, int, int], str] = {}
     tracker = StateTracker()
     last_dims: tuple[int, int] | None = None
+    last_drawn: tuple[str, int, int] | None = None
     bottom_art = ""
 
     while True:
@@ -238,15 +287,30 @@ def main() -> int:
         if (cols, rows) != last_dims:
             clear_all = True
             last_dims = (cols, rows)
-            bottom_art = render_bottom_fill(rows, args.size)
+            last_drawn = None
+            if not args.sixel:
+                bottom_art = render_bottom_fill(rows, args.size)
 
         if args.target_pane:
             text, title = read_pane_text(args.tmux_socket, args.target_pane)
+            if text is None:
+                return 0
         else:
             text, title = "", ""
         state = tracker.update(is_pane_working(text, title), now)
         frame = select_frame_name(state, int(now / args.interval))
-        draw_frame(cache.get(frame), bottom_art, clear_all)
+        draw_key = (frame, cols, rows)
+        if draw_key != last_drawn or clear_all:
+            if args.sixel:
+                png = Path(args.pics_dir) / args.agent / f"{frame}.png"
+                mtime = png.stat().st_mtime_ns if png.exists() else 0
+                skey = (frame, cols, rows, mtime)
+                if skey not in sixel_cache:
+                    sixel_cache[skey] = render_composite_sixel(png, args.size, rows)
+                draw_frame(sixel_cache[skey], "", clear_all)
+            else:
+                draw_frame(cache.get(frame), bottom_art, clear_all)
+            last_drawn = draw_key
         if args.once:
             return 0
         time.sleep(args.interval)

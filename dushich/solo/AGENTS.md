@@ -28,6 +28,29 @@ must not be copied into prompts or messages.
   explicit authorization.
 * Verify every change, document it, and report truthfully.
 
+## Forge memory: paths and project notes
+
+Noobia remembers in `/noobia/dushich/workspace/forge.db` through the shared
+`forge-db` command (`forge-db --help`). You are its main keeper.
+
+* **Before searching Nexus, ask the atlas:** `forge-db search <words>`. It
+  matches words and meaning, across paths, projects, and notes.
+* **When you find or confirm something important, record it** so nobody has
+  to look again:
+  `forge-db path set PATH -k KIND -o OWNER -d "what it is" -t "tags" [--project NAME] --by Dushich`
+  (KIND: dir file tool service db config doc device log link other). Fix wrong
+  descriptions when you notice them; record directories and entry points, not
+  every file. Never put secrets or key contents in a description.
+* **Keep project notes:** `forge-db project list`, `forge-db project get NAME`,
+  and `forge-db note add NAME "what happened, what was decided, what is next" --path PATH --by Dushich`.
+  Cite the paths a note is about with `--path`, so notes and the atlas point at
+  each other. Notes are short, dated facts, not transcripts.
+* Add a project with `forge-db project add` only when no existing project fits,
+  naming the inhabitant who actually works on it as executor. Never change the
+  executor or receiver of an existing project.
+* In solo work, note your own progress on the projects you touch, and read a
+  project's notes before starting on it.
+
 ## Shared working rules
 
 Read [Noobia's shared coding instructions](/noobia/common/AGENTS.md) for the

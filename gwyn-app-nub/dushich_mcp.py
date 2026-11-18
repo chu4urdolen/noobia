@@ -26,6 +26,12 @@ TOOLS = [
          "context": {"type": "string", "description": "Selected visible context only; no private reasoning or credentials"},
          "files": {"type": "array", "items": {"type": "string"}, "description": "Selected text files inside /noobia/gwyn-app-nub, sent as reference text"},
      }, "required": ["task", "expect", "test"], "additionalProperties": False}},
+    {"name": "dushich_explore", "description": "Ask local Dushich where something is or how it works on Nexus. He checks the forge-db atlas first, explores read-only on the local GPU, records findings in the atlas, and answers. Waits up to 50 seconds, then returns a job ID for dushich_explore_wait.",
+     "inputSchema": {"type": "object", "properties": {"question": {"type": "string"}},
+                     "required": ["question"], "additionalProperties": False}},
+    {"name": "dushich_explore_wait", "description": "Wait up to 50 seconds more for a dushich_explore job and return its answer when finished.",
+     "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}},
+                     "required": ["id"], "additionalProperties": False}},
     {"name": "dushich_status", "description": "Check a Gwyn handoff's status.",
      "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}},
                      "required": ["id"], "additionalProperties": False}},
@@ -70,6 +76,23 @@ def call(name: str, args: dict) -> str:
         if process.returncode:
             raise ValueError(process.stderr.strip() or 'Could not ask Helper Dushich')
         return process.stdout.strip()
+    if name in {"dushich_explore", "dushich_explore_wait"}:
+        if name == "dushich_explore":
+            question = args.get("question")
+            if not isinstance(question, str) or not question.strip():
+                raise ValueError("question is required")
+            command = ["/usr/local/bin/dushich-explore", "ask", question, "--by", "Gwyn", "--timeout", "50"]
+        else:
+            if not isinstance(args.get("id"), str):
+                raise ValueError("id is required")
+            command = ["/usr/local/bin/dushich-explore", "wait", args["id"], "--timeout", "50"]
+        process = subprocess.run(command, capture_output=True, text=True, timeout=90, check=False)
+        output = process.stdout.strip() or process.stderr.strip()
+        if process.returncode == 2:
+            raise ValueError(output)
+        if ": running" in output or ": queued" in output:
+            output += "\nCall dushich_explore_wait with this job ID."
+        return output
     if name == "dushich_start":
         task, expect, tests = args.get("task"), args.get("expect"), args.get("test")
         context, files = args.get("context", ""), args.get("files", [])

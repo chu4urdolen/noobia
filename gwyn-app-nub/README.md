@@ -62,6 +62,12 @@ Dushich's workspace. The Nexus Forge bottom-right quadrant is now
 "Gwyn + Dushich Helper" and animates both avatars from the tmux panes.
 Dushich's local GPU runtime does not use Claude API tokens.
 
+`dushich_explore` / `dushich_explore_wait` wrap the shared `dushich-explore`
+command: Dushich answers "where is / how does" questions about Nexus and
+records what he finds in the forge-db path atlas. Gwyn also has the user-scope
+`noobia` MCP server (`/noobia/common/mcp/noob_mcp.py`) for Lynx, Iris, and
+local tools.
+
 Official references: [installation](https://code.claude.com/docs/en/setup),
 [authentication](https://code.claude.com/docs/en/authentication), and
 [CLI commands](https://code.claude.com/docs/en/cli-reference).

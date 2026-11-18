@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Run forge_db.py with the forge venv (meaning search) when available.
+py=/opt/noobia/forge-venv/bin/python
+[[ -x "$py" ]] || py=/usr/bin/python3
+# Once the embedding model is cached, never reach the network for it.
+[[ -d /opt/noobia/forge-venv/models ]] && export HF_HUB_OFFLINE=1
+exec "$py" /noobia/common/tools/forge_db.py "$@"

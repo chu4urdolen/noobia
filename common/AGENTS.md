@@ -93,6 +93,70 @@ python3 /noobia/lynx/tools/lynx_remote.py result --glob 'v53-bt-after-alpine-*'
 - `result`: newest-first compact digest (state, boot_id, watchdog_mode, health-sample count and pass flag, nexus state, final steps); `--glob` narrows the `lynx/logs` directory pattern, `--limit` prints more than one.
 - Never contacts Lynx unless `run` is explicitly invoked; offline tests live in `lynx/tools/test_lynx_remote.py`.
 
+### Forge memory (`forge-db`)
+
+**Ask the atlas before searching Nexus, and record what you find.**
+`forge-db` (`/usr/local/bin/forge-db` → `/noobia/common/tools/forge_db.py`)
+keeps Noobia's shared memory in `/noobia/dushich/workspace/forge.db`, next to
+the Foreman's `projects` table:
+
+- `nexus_paths`: important paths on Nexus with a kind, owner, one-line
+  description, tags, and optional project. It records whether each path still
+  exists.
+- `project_notes`: short dated notes per project (decisions, state,
+  handoffs, blockers) that cite atlas paths.
+- Search by meaning: `forge-db search` mixes word matches with sentence
+  embeddings, so "graphics card heat" finds the GPU monitor. It uses
+  `qwen3-embedding:0.6b` on the RTX 5090 through Ollama only when that cannot
+  evict Dushich's Qwen (the model is already loaded, or
+  `OLLAMA_MAX_LOADED_MODELS` is at least 2). Otherwise it uses the CPU model
+  `BAAI/bge-small-en-v1.5` (fastembed in `/opt/noobia/forge-venv`).
+  `forge-db stats` shows which model is active, and switching models
+  re-embeds on the next `forge-db embed`.
+
+```sh
+forge-db search where do we keep the gpu power logs
+forge-db path set /noobia/rose/rose_composer -k dir -o Rose \
+  -d "Song analysis and beat grids for Rose's choreography" -t "audio music" --by Gwyn
+forge-db project list
+forge-db project get Lynx                    # description, its paths, recent notes
+forge-db note add Lynx "V53 boots; USB console still unproven" --path /noobia/lynx --by Aria
+forge-db path check --prefix /noobia/lynx    # flag recorded paths that vanished
+forge-db --json changes --since 2026-11-18T20:00:00+00:00
+```
+
+`--by` is required on every write: use your own name. Never store secrets or
+key contents in a description. Add projects with `forge-db project add` only
+when no existing one fits, and don't change another project's executor or
+receiver. Tests: `python3 -m unittest discover -s /noobia/common/tools -p 'test_forge_db.py'`.
+
+### Dushich explorer (`dushich-explore`)
+
+**Use it for broad "where is / how does" questions about Nexus** instead of
+sweeping the file system yourself. Dushich checks the atlas first, explores
+with read-only commands on the local GPU (no cloud tokens), records what he
+finds in `forge-db`, and answers briefly. Dushich is not sandboxed. The brief
+asks him to change nothing but the atlas, and every result lists the atlas
+rows he wrote so you can check them.
+
+```sh
+dushich-explore ask "Where does Lynx handle Bluetooth auth?" --by Banshee --timeout 600
+dushich-explore start "How is the Council service started?" --by Aria   # returns a job ID
+dushich-explore wait JOB_ID --timeout 120
+```
+
+A job usually takes 2–6 minutes and runs one at a time on the GPU. Job state
+is kept in `/home/aria/.codex/dushich-bridge/explore/`.
+
+### Media and browser tools
+
+- `ffmpeg` and `sqlite3` are installed system-wide for audio, video, and
+  database work.
+- Playwright with its own headless Chromium lives in `/opt/noobia/web-venv`.
+  Use it to open, click through, and screenshot web apps:
+  `/opt/noobia/web-venv/bin/python your_check.py` with
+  `from playwright.sync_api import sync_playwright`.
+
 ## Nexus Linux services
 
 Put Nexus Linux service entry scripts in `/noobia/common/services/` and systemd unit

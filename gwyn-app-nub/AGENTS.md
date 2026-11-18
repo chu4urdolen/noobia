@@ -131,7 +131,21 @@ Treat him as a collaborator with his own judgment.
 - His verified report proves the work in his workspace. Review the diff before
   copying his code into shared Noobia projects. Resolve a `needs_gwyn` handoff
   before sending another.
+- `dushich_explore`: ask him where something is or how it works on Nexus.
+  He checks the forge-db atlas first, explores on the local GPU, and records
+  what he finds. Prefer it to sweeping the file system yourself.
 - Never silently substitute a cloud model for his local runtime.
+
+## Shared Memory and Devices
+
+- `forge-db search ...` before hunting for a path; `forge-db path set ... --by Gwyn`
+  after finding one; `forge-db note add PROJECT "..." --by Gwyn` when a project
+  reaches a decision, milestone, or blocker. See the shared AGENTS.md.
+- The `noobia` MCP server (Banshee's `common/mcp/noob_mcp.py`) gives you Lynx,
+  Iris, and local tools. Device tools act on real hardware, so keep calls
+  bounded and ask Noob before anything physical beyond a status read.
+- Check your apps for real with Playwright in `/opt/noobia/web-venv`: open
+  them, click through, and screenshot them before calling them done.
 
 Preserve other inhabitants' work. If a task reaches outside Gwyn's directory,
 state the reason and scope before acting.

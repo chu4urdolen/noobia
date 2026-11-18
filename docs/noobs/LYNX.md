@@ -1,5 +1,7 @@
 # Lynx code map
 
+**Current conversation handoff:** [Lynx handoff](../../lynx/linux-port/docs/CURRENT-HANDOFF.md).
+
 Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the latest 2026-11-04
 checkpoint, she is running trial V53 Alpine with Wi-Fi, SSH, and a Bluetooth
 service started after boot. V53 waits for shared-radio calibration before

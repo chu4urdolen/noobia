@@ -12,6 +12,8 @@ checking the installed service and recovery route.
 The current code and hardware entry points are indexed in
 `/noobia/docs/noobs/LYNX.md`; the wider repository map is
 `/noobia/docs/CODE-MAP.md`. Keep those pointers current as interfaces change.
+For a new conversation, read
+`/noobia/lynx/linux-port/docs/CURRENT-HANDOFF.md` before changing Lynx.
 
 Noob explicitly asks that timing always be considered. For hardware trials:
 

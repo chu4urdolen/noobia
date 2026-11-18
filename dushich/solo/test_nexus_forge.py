@@ -40,19 +40,19 @@ class TestDefaultQuadrants(unittest.TestCase):
         self.assertEqual(q["helper_agent"], "")
         self.assertIn("/noobia/banshee/launch", q["command"][-1])
 
-    def test_bottom_right_is_nexus_shell(self):
+    def test_bottom_right_is_gwyn_app_nub(self):
         q = DEFAULT_QUADRANTS["bottom_right"]
-        self.assertEqual(q["title"], "Nexus Shell")
-        self.assertEqual(q["agent"], "")
+        self.assertEqual(q["title"], "Gwyn App Nub")
+        self.assertEqual(q["agent"], "Gwyn")
         self.assertEqual(q["helper_agent"], "")
-        self.assertEqual(q["command"][-1], "-i")
+        self.assertIn("/noobia/gwyn-app-nub/launch", q["command"][-1])
 
     def test_every_command_is_a_nonempty_list(self):
         for name, q in DEFAULT_QUADRANTS.items():
             with self.subTest(name=name):
                 self.assertIsInstance(q["command"], list)
                 self.assertTrue(len(q["command"]) >= 1)
-                self.assertIn(q["agent"], ("", "Aria", "Banshee", "Dushich"))
+                self.assertIn(q["agent"], ("", "Aria", "Banshee", "Dushich", "Gwyn"))
                 self.assertEqual(q["helper_agent"], "")
 
     def test_quadrant_names_default_vs_left_only(self):

@@ -112,10 +112,10 @@ DEFAULT_QUADRANTS = {
         ],
     },
     "bottom_right": {
-        "title": "Nexus Shell",
-        "agent": "",
+        "title": "Gwyn App Nub",
+        "agent": "Gwyn",
         "helper_agent": "",
-        "command": ["/bin/bash", "-i"],
+        "command": ["/bin/bash", "-lc", "exec /noobia/gwyn-app-nub/launch"],
     },
 }
 
@@ -506,11 +506,11 @@ def _verify_quadrants() -> None:
     assert tr["title"] == "Banshee + Dushich Helper"
     assert tr["agent"] == "Banshee" and tr["helper_agent"] == ""
     br = DEFAULT_QUADRANTS["bottom_right"]
-    assert br["title"] == "Nexus Shell"
-    assert br["agent"] == "" and br["helper_agent"] == ""
+    assert br["title"] == "Gwyn App Nub"
+    assert br["agent"] == "Gwyn" and br["helper_agent"] == ""
     for name, spec in DEFAULT_QUADRANTS.items():
         assert isinstance(spec["command"], list) and spec["command"], name
-        assert spec["agent"] in ("", "Aria", "Banshee", "Dushich"), name
+        assert spec["agent"] in ("", "Aria", "Banshee", "Dushich", "Gwyn"), name
         assert spec["helper_agent"] == "", name
     assert quadrant_names(left_only=True) == ["top_left", "bottom_left"]
     assert len(quadrant_names()) == 4

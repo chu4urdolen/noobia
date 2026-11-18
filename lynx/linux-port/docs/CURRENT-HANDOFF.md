@@ -110,12 +110,12 @@ command; this is a checkpoint, not a live guarantee.
    run that daemon or write CCCI controls as a status probe. See the cellular
    inventory record before any modem action.
    The documented GNSS outdoor trial in `LYNX-CONNECTIVITY-PRECAL.md` uses
-   `trial_v52_gnss_mnld.py`, whose preflight requires the exact older V52
-   kernel hash. On the current V53 boot, its GNSS modules, device nodes, and
-   RAM daemon bundle are absent. Offline checks confirmed V52 and V53 kernel
-   bytes match and ten relevant stock module hashes pass, but no V53 GNSS
-   module load has been tried. Review the guards and recovery path before
-   reuse.
+   `trial_v52_gnss_mnld.py`; its offline-checked `--candidate v53` preflight
+   now pins the exact V53 boot hash. On the current V53 boot, GNSS modules,
+   device nodes, and the RAM daemon bundle are absent. Offline checks
+   confirmed V52 and V53 kernel bytes match and ten relevant stock module
+   hashes pass, but no V53 GNSS module load has been tried. Review the
+   reboot-watchdog recovery path before the live trial.
 2. Flashlight has a verified bounded pulse from one rear LED. The second rear
    light and safe persistent startup need separate investigation. Avoid the
    stock flashlight core unload sequence that previously lost SSH.

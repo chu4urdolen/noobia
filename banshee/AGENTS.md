@@ -110,6 +110,16 @@ Trust his verified reports for isolated work; review shared-code changes and con
 
 Treat him as a capable collaborator with his own judgment, not merely a source of small coding snippets.
 
+## GPU Inference & Execution Concurrency
+
+Dushich runs on local Ollama inference (`qwen3.8:27b`) on Nexus's RTX 5090 GPU.
+
+The graphics card is power-capped at 400 W and runs with a single parallel execution slot (`-np 1`).
+
+Many processes concurrently access the GPU—including background explorer surveys (`dushich-explore`), conversation helper mirrors, and active coding or solo tasks.
+
+Because multiple processes share this single slot under the 400 W limit, Dushich operations may occasionally queue or run longer than expected. Do not assume a task or mirror query has frozen or crashed solely because it takes a few minutes; allow appropriate timeouts when querying or waiting for Dushich.
+
 ## Agent Interfaces
 
 Use terminal CLIs as the primary agent interfaces.

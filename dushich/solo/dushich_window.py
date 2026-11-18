@@ -30,6 +30,7 @@ ASPECT_RATIO = 1.5
 ACTIVE_STATUSES = ("queued", "running")
 DEFAULT_BRIDGE_DIR = "/home/aria/.codex/dushich-bridge"
 DEFAULT_BANSHEE_RUNS_DIR = "/noobia/banshee/private/task-runs"
+DEFAULT_GWYN_RUNS_DIR = "/noobia/gwyn-app-nub/private/task-runs"
 
 
 def compute_sidebar_layout(
@@ -77,15 +78,17 @@ def is_dushich_helper_working(
     helper_pane_title: str = "",
     bridge_dir: str = DEFAULT_BRIDGE_DIR,
     banshee_runs_dir: str = DEFAULT_BANSHEE_RUNS_DIR,
+    gwyn_runs_dir: str = DEFAULT_GWYN_RUNS_DIR,
 ) -> bool:
     """True while the Dushich helper is visibly or queued/running in the bridge."""
     if is_pane_working(helper_pane_text, helper_pane_title):
         return True
     candidates: list[Path] = []
-    for base in (bridge_dir, banshee_runs_dir):
+    for base in (bridge_dir, banshee_runs_dir, gwyn_runs_dir):
         root = Path(base)
         if root.is_dir():
             candidates.extend(sorted(root.glob("*/state.json")))
+            candidates.extend(sorted(root.glob("*/*/state.json")))
     return _any_active_state(candidates)
 
 

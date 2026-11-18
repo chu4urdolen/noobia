@@ -24,6 +24,14 @@ from PIL import Image
 
 REQUIRED_FRAMES = ("idle", "working_1", "working_2", "working_3", "working_4", "final")
 BRAILLE_SPINNERS = set("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⣾⣷⣯⣟⡿⢿⣻⣽")
+CLAUDE_WORKING_RE = re.compile(
+    r"[✽✻✶]\s+\S+…|…\s*\(\s*\d+[smh]|(?:·|\()\s*thinking\b|thinking\)|↓\s*[\d.]+[km]?\s*tokens",
+    re.IGNORECASE,
+)
+CLAUDE_FINAL_RE = re.compile(
+    r"\b(?:worked|thought|cooked|cogitated|baked|brewed|pondered|churned|twitched|simmered)\s+for\s+\d+|\bfor\s+\d+[smh]\b.*·\s*done",
+    re.IGNORECASE,
+)
 DEFAULT_PICS_DIR = "/noobia/pics"
 DEFAULT_SIZE = 18
 FINAL_DURATION = 2.0
@@ -138,13 +146,16 @@ def detect_solo_state(screen_text: str, pane_title: str = "") -> str:
         "esc to interrupt" in lower
         or "running command" in lower
         or "thinking..." in lower
-        or (
-            any(ch in BRAILLE_SPINNERS for ch in pane_title)
-            or any(ch in BRAILLE_SPINNERS for ch in screen_text)
-        )
+        or any(ch in BRAILLE_SPINNERS for ch in pane_title)
+        or any(ch in BRAILLE_SPINNERS for ch in screen_text)
+        or bool(CLAUDE_WORKING_RE.search(screen_text))
     ):
         return "working"
-    if "worked for " in lower or "thought for " in lower:
+    if (
+        "worked for " in lower
+        or "thought for " in lower
+        or bool(CLAUDE_FINAL_RE.search(lower))
+    ):
         return "final"
     return "idle"
 

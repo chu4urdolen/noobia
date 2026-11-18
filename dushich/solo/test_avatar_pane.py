@@ -60,9 +60,29 @@ class TestDetectSoloState(unittest.TestCase):
         self.assertEqual(detect_solo_state("⎿  Thinking..."), "working")
         self.assertEqual(detect_solo_state("Running command..."), "working")
 
+    def test_working_by_claude_code_spinners_and_hints(self):
+        self.assertEqual(
+            detect_solo_state("✽ Twisting… (20s · ↓ 1.8k tokens · thinking)"),
+            "working",
+        )
+        self.assertEqual(detect_solo_state("✻ Thinking… (5s)"), "working")
+        self.assertEqual(detect_solo_state("✶ Boiling… (12s)"), "working")
+        self.assertEqual(
+            detect_solo_state("Tip: Hit shift+tab to cycle\n(10s · thinking)"),
+            "working",
+        )
+
     def test_final(self):
         self.assertEqual(detect_solo_state("Worked for 5s"), "final")
         self.assertEqual(detect_solo_state("Thought for 1m 20s"), "final")
+        self.assertEqual(
+            detect_solo_state("✻ Cooked for 38s · done 12:22 AM · 1 shell, 2 monitors"),
+            "final",
+        )
+        self.assertEqual(
+            detect_solo_state("✻ Cogitated for 5s · done 12:16 AM"),
+            "final",
+        )
 
     def test_working_beats_final(self):
         self.assertEqual(

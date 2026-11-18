@@ -105,6 +105,9 @@ the Foreman's `projects` table:
   exists.
 - `project_notes`: short dated notes per project (decisions, state,
   handoffs, blockers) that cite atlas paths.
+- `tags` and `tag_links`: a curated vocabulary of UPPERCASE tags (`#ROSE`,
+  `#SECURITY`, `#NETWORK`, `#ART`, ...). Any path or project can carry
+  several. Reuse existing tags (`forge-db tag list`) before defining one.
 - Search by meaning: `forge-db search` mixes word matches with sentence
   embeddings, so "graphics card heat" finds the GPU monitor. It uses
   `qwen3-embedding:0.6b` on the RTX 5090 through Ollama only when that cannot
@@ -122,10 +125,17 @@ forge-db project list
 forge-db project get Lynx                    # description, its paths, recent notes
 forge-db note add Lynx "V53 boots; USB console still unproven" --path /noobia/lynx --by Aria
 forge-db path check --prefix /noobia/lynx    # flag recorded paths that vanished
+forge-db tag list                            # vocabulary with usage counts
+forge-db tag show SECURITY                   # every project and path carrying it
+forge-db search --tag ROSE --tag AUDIO       # filter by tags, optionally with words
+forge-db tag attach NETWORK --path /noobia/aigel/tools/nexus_net_guard.py --project lynx --by Aria
+forge-db tag add MUSIC -d "Songs, beat grids, and sound for performances" --by Gwyn
 forge-db --json changes --since 2026-11-18T20:00:00+00:00
 ```
 
-`--by` is required on every write: use your own name. Never store secrets or
+`path set` also takes `--tag NAME` (repeatable). Its `-t` / `--keywords`
+option is free-text search words, not curated tags. `--by` is required on
+every write: use your own name. Never store secrets or
 key contents in a description. Add projects with `forge-db project add` only
 when no existing one fits, and don't change another project's executor or
 receiver. Tests: `python3 -m unittest discover -s /noobia/common/tools -p 'test_forge_db.py'`.
@@ -147,6 +157,8 @@ dushich-explore wait JOB_ID --timeout 120
 
 A job usually takes 2–6 minutes and runs one at a time on the GPU. Job state
 is kept in `/home/aria/.codex/dushich-bridge/explore/`.
+
+The RTX 5090 graphics card is capped at 400 W and local Ollama inference runs with a single parallel execution slot (`-np 1`). Because multiple processes (explorer surveys, dialogue helper mirrors, and active coding tasks) access the GPU concurrently, operations may occasionally queue or run longer than expected. Set generous timeouts when querying Dushich.
 
 ### Media and browser tools
 

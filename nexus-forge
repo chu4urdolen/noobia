@@ -1,3 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Update agent CLIs (AGY, Codex, Claude Code) before Forge and the agents start
+if [[ -x "/noobia/common/tools/update_agents.sh" ]]; then
+    /noobia/common/tools/update_agents.sh || true
+fi
+
 exec /usr/bin/python3 /noobia/dushich/solo/nexus_forge.py "$@"

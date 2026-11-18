@@ -88,7 +88,7 @@ DEFAULT_QUADRANTS = {
         "command": [
             "/bin/bash",
             "-lc",
-            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-aria-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux attach-session -t \"$s\"; fi; NOOBIA_ARIA_NO_GUI=1 exec /noobia/aria/codex-with-dushich",
+            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-aria-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then if tmux list-panes -t \"$s\":0 -F '#{pane_current_command}' 2>/dev/null | grep -qx 'codex'; then exec tmux attach-session -t \"$s\"; else tmux kill-session -t \"$s\" 2>/dev/null || true; fi; fi; NOOBIA_ARIA_NO_GUI=1 exec /noobia/aria/codex-with-dushich",
         ],
     },
     "bottom_left": {

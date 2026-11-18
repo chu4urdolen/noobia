@@ -21,9 +21,25 @@ that modem firmware booted, that either SIM slot works, or that cellular
 registration is safe or available. Do not infer SIM presence or a usable
 radio from the CCCI device names.
 
-Before asking Noob to insert a SIM, identify the modem firmware and required
-userspace, determine the actual physical slot mapping and insertion procedure,
-and design a bounded status-only probe that cannot silently enable RF. Choose
-a recovery path and record battery, thermal, Wi-Fi, and SSH health before any
-modem trial. The SIM stays out until that preparation supports a specific
-test.
+## Offline stock references
+
+Dushich's bounded offline inventory found an `md1img` partition entry in
+`linux-port/artifacts/stock-cph2493-August-eu-ota/payload-partitions.json`
+(80,928,768 bytes; SHA-256
+`7cf648e726d4ef57e9e82eb918c113156c73f0f4118f1011973c022af10c2fa7`).
+The stock kernel configuration in the same artifact directory enables
+`CONFIG_MTK_CCCI_DEVICES`, sets `CONFIG_MTK_MD1_SUPPORT`, and builds
+`CONFIG_MTK_ECCCI_DRIVER` and `CONFIG_SIM_DETECT` as modules. Those are stock
+image and build facts, not evidence of a live modem on Alpine.
+
+The local [OnePlus Nord 3 manual](../../downloads/OnePlus_Nord_3_5G_User_Manual_EN.pdf)
+specifies an original Nano-SIM and a tray ejector procedure. It refers to a
+second SIM but does not identify the tray position that maps to SIM1. The
+physical slot mapping and Alpine hot-plug behavior therefore remain unknown.
+
+Before asking Noob to insert a SIM, establish whether the modem firmware has
+booted on Alpine, identify required userspace, determine the physical slot
+mapping and hot-plug path, and design a bounded status-only probe that cannot
+silently enable RF. Choose a recovery path and record battery, thermal,
+Wi-Fi, and SSH health before any modem trial. The SIM stays out until that
+preparation supports a specific test.

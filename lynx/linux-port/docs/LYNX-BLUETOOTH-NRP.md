@@ -499,6 +499,15 @@ watchdog was canceled. No reboot or runlevel change occurred. Receipts:
 and `lynx/logs/v53-bt-after-alpine-1795013332028269788/result.json` (trial).
 Long-duration operation and automatic startup remain unverified.
 
+A later 15-minute hold was intentionally stopped early at Noob's request to
+wrap up. Authenticated reconnect and eight health samples passed before Aria
+stopped the OpenRC service. The runner then marked `health_sample_13` failed
+because the service was deliberately off; its cleanup still passed STOP,
+`hci0` absence, health, and watchdog cancellation. Lynx remained on the same
+boot at 31% with positive charging current. Receipt:
+`lynx/logs/v53-bt-after-alpine-1795013959054541438/result.json`.
+This partial hold does not close the long-duration gate.
+
 ## Acceptance sequence
 
 - Service starts and stops repeatedly on the same boot, leaving Wi-Fi and

@@ -7,7 +7,7 @@ animated avatar sidebar.  The quadrants:
     top-left     Aria + Dushich Helper   (Aria codex, Dushich helper)
     bottom-left  Dushich Solo            (dushich, no helper)
     top-right    Banshee + Dushich Helper (banshee, Dushich helper)
-    bottom-right Nexus Shell             (bare interactive shell)
+    bottom-right Gwyn + Dushich Helper   (Claude Code, Dushich helper)
 
 Every quadrant reuses the pure helpers from `avatar_pane` / `dushich_window`
 (`StateTracker`, `is_pane_working`, `select_frame_name`,
@@ -112,10 +112,14 @@ DEFAULT_QUADRANTS = {
         ],
     },
     "bottom_right": {
-        "title": "Gwyn App Nub",
+        "title": "Gwyn + Dushich Helper",
         "agent": "Gwyn",
         "helper_agent": "",
-        "command": ["/bin/bash", "-lc", "exec /noobia/gwyn-app-nub/launch"],
+        "command": [
+            "/bin/bash",
+            "-lc",
+            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-gwyn-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux attach-session -t \"$s\"; fi; exec /noobia/gwyn-app-nub/launch",
+        ],
     },
 }
 
@@ -205,6 +209,20 @@ def read_banshee_tmux_state(socket: str = "default") -> tuple:
     Returns a ``(banshee_working, dushich_helper_working)`` tuple derived from
     the two panes of the most recent ``noobia-banshee-*`` session.
     """
+    return _read_helper_tmux_state("noobia-banshee-", ("banshee", "antigravity"), socket)
+
+
+def read_gwyn_tmux_state(socket: str = "default") -> tuple:
+    """Read the live Gwyn tmux session (``noobia-gwyn-*``) off-screen.
+
+    Same pane layout as Banshee: Claude Code on the left (pane 0), the
+    Dushich helper monitor on the right (pane 1).
+    """
+    return _read_helper_tmux_state("noobia-gwyn-", ("gwyn", "claude"), socket)
+
+
+def _read_helper_tmux_state(prefix: str, agent_words: tuple, socket: str) -> tuple:
+    """Return ``(agent_working, dushich_helper_working)`` for a two-pane session."""
     if not socket:
         return False, False
     socket = socket.lstrip("-L")
@@ -216,14 +234,14 @@ def read_banshee_tmux_state(socket: str = "default") -> tuple:
         ).stdout
     except Exception:
         return False, False
-    banshee_sessions = [
+    sessions = [
         line.strip()
         for line in out.splitlines()
-        if line.strip().startswith("noobia-banshee-")
+        if line.strip().startswith(prefix)
     ]
-    if not banshee_sessions:
+    if not sessions:
         return False, False
-    session = banshee_sessions[-1]
+    session = sessions[-1]
     try:
         panes_out = subprocess.run(
             cmd_prefix + [
@@ -235,7 +253,7 @@ def read_banshee_tmux_state(socket: str = "default") -> tuple:
     except Exception:
         return False, False
 
-    banshee_text = banshee_title = helper_text = helper_title = ""
+    agent_text = agent_title = helper_text = helper_title = ""
     for line in panes_out.splitlines():
         if "\t" not in line:
             continue
@@ -248,13 +266,13 @@ def read_banshee_tmux_state(socket: str = "default") -> tuple:
             ).stdout
         except Exception:
             text = ""
-        if "banshee" in title.lower() or "antigravity" in title.lower() or index == "0":
-            banshee_text, banshee_title = text, title
+        if any(word in title.lower() for word in agent_words) or index == "0":
+            agent_text, agent_title = text, title
         elif "dushich" in title.lower() or index == "1":
             helper_text, helper_title = text, title
-    banshee_working = is_pane_working(banshee_text, banshee_title)
+    agent_working = is_pane_working(agent_text, agent_title)
     helper_working = is_dushich_helper_working(helper_text, helper_title)
-    return banshee_working, helper_working
+    return agent_working, helper_working
 
 
 def read_dushich_solo_tmux_state() -> bool:
@@ -449,6 +467,16 @@ if _GI_AVAILABLE:
                 except Exception:
                     banshee_working = False
 
+            gwyn_working = False
+            if self.agent == "Gwyn":
+                try:
+                    gwyn_working, g_helper = read_gwyn_tmux_state(
+                        self.aria_socket
+                    )
+                    helper_tmux_working = helper_tmux_working or g_helper
+                except Exception:
+                    gwyn_working = False
+
             dushich_working = False
             if self.agent == "Dushich":
                 try:
@@ -461,6 +489,7 @@ if _GI_AVAILABLE:
                 or aria_working
                 or banshee_working
                 or dushich_working
+                or gwyn_working
             )
             new_frame = select_frame_name(
                 self.tracker.update(primary_working, now), self.tick
@@ -470,7 +499,7 @@ if _GI_AVAILABLE:
 
             if self.helper_agent and self.helper_tracker is not None:
                 helper_working = is_dushich_helper_working(text, title)
-                if self.agent in ("Aria", "Banshee"):
+                if self.agent in ("Aria", "Banshee", "Gwyn"):
                     helper_working = helper_working or helper_tmux_working
                 h_frame = select_frame_name(
                     self.helper_tracker.update(helper_working, now), self.tick
@@ -547,7 +576,7 @@ def _verify_quadrants() -> None:
     assert tr["title"] == "Banshee + Dushich Helper"
     assert tr["agent"] == "Banshee" and tr["helper_agent"] == ""
     br = DEFAULT_QUADRANTS["bottom_right"]
-    assert br["title"] == "Gwyn App Nub"
+    assert br["title"] == "Gwyn + Dushich Helper"
     assert br["agent"] == "Gwyn" and br["helper_agent"] == ""
     for name, spec in DEFAULT_QUADRANTS.items():
         assert isinstance(spec["command"], list) and spec["command"], name

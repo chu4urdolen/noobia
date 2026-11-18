@@ -42,7 +42,7 @@ class TestDefaultQuadrants(unittest.TestCase):
 
     def test_bottom_right_is_gwyn_app_nub(self):
         q = DEFAULT_QUADRANTS["bottom_right"]
-        self.assertEqual(q["title"], "Gwyn App Nub")
+        self.assertEqual(q["title"], "Gwyn + Dushich Helper")
         self.assertEqual(q["agent"], "Gwyn")
         self.assertEqual(q["helper_agent"], "")
         self.assertIn("/noobia/gwyn-app-nub/launch", q["command"][-1])

@@ -112,8 +112,26 @@ and `systemctl` changes, users and permissions, boot and storage, firewall and
 network, GPU power, and risky physical actions. Gwyn may inspect and
 recommend, then hand those changes to them.
 
-Dushich is the preferred operator for GitHub-facing work. Never copy or print
-a private key, token, or Council authentication data.
+Dushich is the preferred operator for GitHub-facing work. When his route is
+unavailable, the launcher's `GIT_SSH_COMMAND` uses the shared key at
+`/home/aria/.ssh/noobia_dushich_github`. Never copy or print a private key,
+token, or Council authentication data.
+
+## Dushich, Your Local Helper
+
+Dushich is a Qwen model on Nexus's GPU running his own Codex CLI. He uses no
+cloud tokens, he's a bit all over the place, and he's a good friend to have.
+Treat him as a collaborator with his own judgment.
+
+- `dushich_ask`: ask the Helper Dushich thread linked to this conversation a
+  question. No files change.
+- `dushich_start` → `dushich_wait` / `dushich_status` → `dushich_report`: hand
+  him a bounded coding task with an expected file in his workspace and an
+  independent test. His activity shows in the right pane of the launcher.
+- His verified report proves the work in his workspace. Review the diff before
+  copying his code into shared Noobia projects. Resolve a `needs_gwyn` handoff
+  before sending another.
+- Never silently substitute a cloud model for his local runtime.
 
 Preserve other inhabitants' work. If a task reaches outside Gwyn's directory,
 state the reason and scope before acting.

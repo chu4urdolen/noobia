@@ -49,27 +49,29 @@ def calculate_model_context_size(model: str = DEFAULT_MODEL) -> tuple[int, int]:
     return context_size, desired_size
 
 
-def build_piece_prompt(piece: str, desired_size: int) -> str:
+def build_piece_prompt(piece: str, desired_size: int, custom_instructions: str = "") -> str:
+    custom = f"\n{custom_instructions.strip()}" if custom_instructions.strip() else ""
     return (
-        f"{AGENT_INSTRUCTIONS}\n"
+        f"{AGENT_INSTRUCTIONS}{custom}\n"
         f"Summarize the following conversation segment in under {desired_size} characters:\n\n"
         f"{piece}"
     )
 
 
-def build_refine_prompt(summary: str, desired_size: int, pct_shorter: int) -> str:
+def build_refine_prompt(summary: str, desired_size: int, pct_shorter: int, custom_instructions: str = "") -> str:
+    custom = f"\n{custom_instructions.strip()}" if custom_instructions.strip() else ""
     return (
-        f"{AGENT_INSTRUCTIONS}\n"
+        f"{AGENT_INSTRUCTIONS}{custom}\n"
         f"Shorten this summary by at least {pct_shorter}% so it is under {desired_size} characters while keeping key facts:\n\n"
         f"{summary}"
     )
 
 
-def instruction_size(desired_size: int) -> int:
+def instruction_size(desired_size: int, custom_instructions: str = "") -> int:
     """Worst-case prompt overhead (instructions + template) for ``desired_size``."""
     return max(
-        len(build_piece_prompt("", desired_size)),
-        len(build_refine_prompt("", desired_size, 99)),
+        len(build_piece_prompt("", desired_size, custom_instructions)),
+        len(build_refine_prompt("", desired_size, 99, custom_instructions)),
     )
 
 
@@ -120,10 +122,10 @@ def _ollama_infer(prompt: str, context_size: int, model: str = DEFAULT_MODEL) ->
     return data["message"]["content"].strip()
 
 
-def summarize_piece(piece: str, desired_size: int, context_size: int = 32000, infer_fn=None) -> str:
+def summarize_piece(piece: str, desired_size: int, context_size: int = 32000, infer_fn=None, custom_instructions: str = "") -> str:
     """Summarize one conversation segment to under ``desired_size`` characters."""
     infer = infer_fn or _ollama_infer
-    return infer(build_piece_prompt(piece, desired_size), context_size)
+    return infer(build_piece_prompt(piece, desired_size, custom_instructions), context_size)
 
 
 def refine_summary(
@@ -132,6 +134,7 @@ def refine_summary(
     context_size: int = 32000,
     infer_fn=None,
     max_refinements: int = 4,
+    custom_instructions: str = "",
 ) -> str:
     """Shorten ``summary`` (iteratively, with an explicit % target) until it
     fits under ``desired_size`` characters, then trim as a last resort."""
@@ -139,7 +142,7 @@ def refine_summary(
     refinements = 0
     while len(summary) > desired_size and refinements < max_refinements:
         pct_shorter = max(1, math.ceil((len(summary) - desired_size) * 100 / len(summary)))
-        summary = infer(build_refine_prompt(summary, desired_size, pct_shorter), context_size)
+        summary = infer(build_refine_prompt(summary, desired_size, pct_shorter, custom_instructions), context_size)
         refinements += 1
     if len(summary) > desired_size:
         summary = cut_at_sentence_boundary(summary, desired_size)[0]
@@ -151,6 +154,7 @@ def summarize_this(
     context_size: int | None = None,
     desired_size: int | None = None,
     infer_fn=None,
+    custom_instructions: str = "",
 ) -> str:
     """Iteratively summarize ``text`` into a summary of at most ``desired_size``.
 
@@ -167,7 +171,7 @@ def summarize_this(
     if context_size <= desired_size:
         raise ValueError("context_size must be larger than desired_size")
 
-    instr_len = instruction_size(desired_size)
+    instr_len = instruction_size(desired_size, custom_instructions)
     piece_budget = context_size - desired_size - instr_len
     if piece_budget <= 20:
         # Tiny windows (e.g. unit tests) still need a working slice budget;
@@ -176,16 +180,28 @@ def summarize_this(
         piece_budget = 10
 
     if len(text) <= desired_size:
-        return text
+        if not custom_instructions.strip():
+            return text
+        # Custom instructions must still be applied for already-small text:
+        # run one instruction-aware summarize + refine pass.
+        infer_early = infer_fn or _ollama_infer
+        return refine_summary(
+            summarize_piece(text, desired_size, context_size, infer_early, custom_instructions),
+            desired_size,
+            context_size,
+            infer_early,
+            custom_instructions=custom_instructions,
+        )
 
     infer = infer_fn or _ollama_infer
     remaining = text
     first_piece, remaining = cut_at_sentence_boundary(remaining, piece_budget)
     running_summary = refine_summary(
-        summarize_piece(first_piece, desired_size, context_size, infer),
+        summarize_piece(first_piece, desired_size, context_size, infer, custom_instructions),
         desired_size,
         context_size,
         infer,
+        custom_instructions=custom_instructions,
     )
     while remaining:
         next_piece, remaining = cut_at_sentence_boundary(remaining, max(10, piece_budget - 2))
@@ -193,10 +209,11 @@ def summarize_this(
             break
         combined = running_summary + "\n\n" + next_piece
         running_summary = refine_summary(
-            summarize_piece(combined, desired_size, context_size, infer),
+            summarize_piece(combined, desired_size, context_size, infer, custom_instructions),
             desired_size,
             context_size,
             infer,
+            custom_instructions=custom_instructions,
         )
     return running_summary
 
@@ -211,6 +228,7 @@ def incremental_summarize(
     desired_size: int | None = None,
     state_dir: Path = DEFAULT_STATE_DIR,
     infer_fn=None,
+    custom_instructions: str = "",
 ) -> str:
     """Incrementally summarize a conversation across helper calls.
 
@@ -253,6 +271,7 @@ def incremental_summarize(
             context_size=context_size,
             desired_size=desired_size,
             infer_fn=infer_fn,
+            custom_instructions=custom_instructions,
         )
     else:
         updated_summary = combined
@@ -295,24 +314,33 @@ def _self_test() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Summarize a conversation (stdin) into a bounded size using local Ollama."
+        description="Summarize a conversation (stdin, --text, or --file) into a bounded size using local Ollama."
     )
     parser.add_argument("--context-size", type=int, default=None, help="Context window in characters")
     parser.add_argument("--desired-size", type=int, default=None, help="Desired summary size in characters")
+    parser.add_argument("--file", "-f", default=None, help="Read input from this file instead of stdin/--text")
+    parser.add_argument("--text", "-t", default=None, help="Read input from this string instead of stdin")
+    parser.add_argument("--instructions", "-i", default="", help="Custom focus instructions appended after the base prompt")
     parser.add_argument("--self-test", action="store_true", help="Run built-in checks and exit")
     args = parser.parse_args()
 
     if args.self_test:
         return _self_test()
 
-    text = sys.stdin.read()
+    if args.file is not None:
+        text = Path(args.file).read_text(encoding="utf-8")
+    elif args.text is not None:
+        text = args.text
+    else:
+        text = sys.stdin.read()
     if not text.strip():
-        print("dushich-summarizer: no input on stdin", file=sys.stderr)
+        print("dushich-summarizer: no input", file=sys.stderr)
         return 1
     summary = summarize_this(
         text,
         context_size=args.context_size,
         desired_size=args.desired_size,
+        custom_instructions=args.instructions,
     )
     print(summary)
     return 0

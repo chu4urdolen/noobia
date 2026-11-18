@@ -39,6 +39,38 @@ is needed, so a password prompt cannot block the caller. For long
 work, return a job ID promptly and provide separate status and result commands;
 never leave the calling terminal blocked indefinitely.
 
+### Local Dushich Summarizer
+
+Any Noobia agent can call `/noobia/dushich/tools/dushich_summarizer.py` (also
+installed at `/usr/local/bin/dushich-summarizer` and importable from
+`/noobia/dushich/coding/dushich_summarizer.py`) to compact a large string,
+file, or transcript on the local Nexus GPU without consuming cloud tokens. It
+uses an iterative context-shifting window: it cuts each piece at a sentence
+boundary up to `context_size - desired_size - instruction_size`, summarizes it
+below `desired_size` (refining by an explicit `%` reduction if needed), and
+concatenates the next sentence-aligned piece until the entire input is
+digested.
+
+```sh
+# Summarize a file with custom focus instructions:
+/noobia/dushich/tools/dushich_summarizer.py \
+  --file /path/to/file.py \
+  --context-size 32000 \
+  --desired-size 8000 \
+  --instructions "Focus on the functions in the file."
+
+# Summarize a string directly (or pipe via stdin):
+/noobia/dushich/tools/dushich_summarizer.py \
+  --text "$LARGE_TEXT" \
+  --instructions "Focus on the mentions of Banshee."
+```
+
+- `--file PATH` (`-f`): Read the text to summarize from a file.
+- `--text STRING` (`-t`): Pass a large string directly on the command line (or omit both to read from `stdin`).
+- `--context-size CHARS`: Input character window per pass (defaults to `32000` for `qwen3.8:27b`, `24000` for `gpt-oss:20b`).
+- `--desired-size CHARS`: Target summary output size in characters (defaults to 25% of `--context-size`, i.e., `8000`).
+- `--instructions TEXT` (`-i`): Optional custom instructions appended right after the base summarizer instructions (subtracted from the per-piece slice budget automatically).
+
 ## Nexus Linux services
 
 Put Nexus Linux service entry scripts in `/noobia/common/services/` and systemd unit

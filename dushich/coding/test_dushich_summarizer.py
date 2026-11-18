@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """Unit tests for the Dushich iterative context-shifting summarizer."""
 
+import contextlib
+import io
 import json
 import math
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from dushich_summarizer import (
+    summarize_piece,
     AGENT_INSTRUCTIONS,
     MODEL_CONTEXT_SPECS,
     build_piece_prompt,
@@ -304,6 +309,149 @@ class TestIncrementalSummarize(unittest.TestCase):
         state = json.loads((self.state_dir / "summary-conv-2.json").read_text())
         self.assertEqual(state["last_cursor"], len(more_turns))
         self.assertEqual(state["summary"], "Compact summary.")
+
+
+class TestCustomInstructions(unittest.TestCase):
+    INSTRUCTIONS = "Focus only on mentions of Banshee."
+
+    def test_piece_prompt_inserts_right_after_agent_instructions(self) -> None:
+        prompt = build_piece_prompt("piece", 500, self.INSTRUCTIONS)
+        self.assertTrue(prompt.startswith(AGENT_INSTRUCTIONS))
+        self.assertEqual(
+            prompt[len(AGENT_INSTRUCTIONS):len(AGENT_INSTRUCTIONS) + 1 + len(self.INSTRUCTIONS)],
+            "\n" + self.INSTRUCTIONS,
+        )
+
+    def test_refine_prompt_inserts_right_after_agent_instructions(self) -> None:
+        prompt = build_refine_prompt("sum", 500, 30, self.INSTRUCTIONS)
+        self.assertTrue(prompt.startswith(AGENT_INSTRUCTIONS))
+        self.assertEqual(
+            prompt[len(AGENT_INSTRUCTIONS):len(AGENT_INSTRUCTIONS) + 1 + len(self.INSTRUCTIONS)],
+            "\n" + self.INSTRUCTIONS,
+        )
+
+    def test_empty_or_blank_instructions_are_ignored(self) -> None:
+        self.assertEqual(build_piece_prompt("piece", 500), build_piece_prompt("piece", 500, ""))
+        self.assertEqual(build_piece_prompt("piece", 500), build_piece_prompt("piece", 500, "   \n  "))
+        self.assertEqual(build_refine_prompt("s", 500, 30), build_refine_prompt("s", 500, 30, ""))
+
+    def test_instruction_size_includes_custom_instructions(self) -> None:
+        desired = 500
+        base = instruction_size(desired)
+        with_custom = instruction_size(desired, self.INSTRUCTIONS)
+        self.assertGreater(with_custom, base)
+        self.assertEqual(with_custom - base, len("\n" + self.INSTRUCTIONS))
+
+    def test_summarize_piece_passes_custom_instructions(self) -> None:
+        prompts: list[str] = []
+        summarize_piece(
+            "piece", 500, 32000,
+            infer_fn=lambda p, c: prompts.append(p) or "sum",
+            custom_instructions=self.INSTRUCTIONS,
+        )
+        self.assertEqual(len(prompts), 1)
+        self.assertIn(self.INSTRUCTIONS, prompts[0])
+
+    def test_summarize_this_short_text_still_applies_custom(self) -> None:
+        prompts: list[str] = []
+        out = summarize_this(
+            "Tiny text.",
+            context_size=500,
+            desired_size=200,
+            infer_fn=lambda p, c: prompts.append(p) or "Focus summary.",
+            custom_instructions=self.INSTRUCTIONS,
+        )
+        self.assertEqual(len(prompts), 1)
+        self.assertIn(self.INSTRUCTIONS, prompts[0])
+        self.assertEqual(out, "Focus summary.")
+
+    def test_summarize_this_short_text_no_custom_returns_text(self) -> None:
+        out = summarize_this(
+            "Tiny text.",
+            context_size=500,
+            desired_size=200,
+            infer_fn=lambda p, c: "never",
+        )
+        self.assertEqual(out, "Tiny text.")
+
+    def test_piece_budget_shrinks_with_custom_instructions(self) -> None:
+        desired, context = 300, 2000
+        base_budget = context - desired - instruction_size(desired)
+        custom_budget = context - desired - instruction_size(desired, self.INSTRUCTIONS)
+        self.assertLess(custom_budget, base_budget)
+
+        prompts: list[str] = []
+        def fake(prompt: str, context: int) -> str:
+            prompts.append(prompt)
+            return "Summary here."
+        text = "Noob shipped the lighthouse. " * 120  # large -> forces a cut
+        summarize_this(
+            text, context_size=context, desired_size=desired,
+            infer_fn=fake, custom_instructions=self.INSTRUCTIONS,
+        )
+        self.assertGreaterEqual(len(prompts), 1)
+        template = build_piece_prompt("", desired, self.INSTRUCTIONS)
+        first_piece = prompts[0][len(template):]
+        self.assertLessEqual(len(first_piece), custom_budget)
+        self.assertLessEqual(len(prompts[0]), context)
+
+
+class TestCLISources(unittest.TestCase):
+    def _run_main(self, argv: list[str], stdin: str = ""):
+        import dushich_summarizer as ds
+
+        recorded: dict = {}
+
+        def fake_summarize_this(text, context_size=None, desired_size=None,
+                                infer_fn=None, custom_instructions=""):
+            recorded["text"] = text
+            recorded["custom_instructions"] = custom_instructions
+            return "SUMMARY"
+
+        old_argv, old_stdin = sys.argv, sys.stdin
+        out = io.StringIO()
+        try:
+            sys.argv = ["dushich_summarizer"] + argv
+            sys.stdin = io.StringIO(stdin)
+            with mock.patch.object(ds, "summarize_this", side_effect=fake_summarize_this):
+                with contextlib.redirect_stdout(out):
+                    rc = ds.main()
+        finally:
+            sys.argv, sys.stdin = old_argv, old_stdin
+        return rc, out.getvalue(), recorded
+
+    def test_cli_text_and_instructions(self) -> None:
+        body = "Some big conversation text here. " * 5
+        rc, out, rec = self._run_main(["--text", body, "-i", "Focus on Banshee"])
+        self.assertEqual(rc, 0)
+        self.assertIn("Some big conversation text here.", rec["text"])
+        self.assertEqual(rec["custom_instructions"], "Focus on Banshee")
+        self.assertIn("SUMMARY", out)
+
+    def test_cli_file_and_instructions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / "conv.txt"
+            body = "Aria discussed the lighthouse with Banshee. " * 5
+            f.write_text(body)
+            rc, out, rec = self._run_main(
+                ["--file", str(f), "--instructions", "Keep speaker names"]
+            )
+        self.assertEqual(rc, 0)
+        self.assertEqual(rec["text"], body)
+        self.assertEqual(rec["custom_instructions"], "Keep speaker names")
+        self.assertIn("SUMMARY", out)
+
+    def test_cli_stdin_and_default_empty_instructions(self) -> None:
+        body = "Dushich shipped the fix. " * 5
+        rc, out, rec = self._run_main([], stdin=body)
+        self.assertEqual(rc, 0)
+        self.assertEqual(rec["text"], body)
+        self.assertEqual(rec["custom_instructions"], "")
+
+    def test_cli_empty_input_returns_error(self) -> None:
+        rc, out, rec = self._run_main(["--text", "   "])
+        self.assertEqual(rc, 1)
+        self.assertNotIn("SUMMARY", out)
 
 
 if __name__ == "__main__":

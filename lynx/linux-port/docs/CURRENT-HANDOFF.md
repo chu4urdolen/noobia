@@ -90,6 +90,9 @@ command; this is a checkpoint, not a live guarantee.
    `lynx/tools/lynx_cellular_inventory.py` with offline tests for a repeatable
    metadata-only check. It has not been run on Lynx; the Noobia Wi-Fi link
    must return before that and before any modem trial.
+   The documented GNSS outdoor trial in `LYNX-CONNECTIVITY-PRECAL.md` uses
+   `trial_v52_gnss_mnld.py`, whose preflight requires the exact older V52
+   kernel hash; review its guard and RAM prerequisites for V53 before reuse.
 2. Flashlight has a verified bounded pulse from one rear LED. The second rear
    light and safe persistent startup need separate investigation. Avoid the
    stock flashlight core unload sequence that previously lost SSH.

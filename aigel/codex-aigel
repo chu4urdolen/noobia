@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Aigel runs with Aria's Unix authority and her own separate Codex home.
+codex=/opt/noobia/dushich-codex/node_modules/.bin/codex
+home=/noobia/aigel/private/codex
+[[ -x "$codex" ]] || { echo "Aigel Codex CLI is missing" >&2; exit 1; }
+[[ -f "$home/config.toml" ]] || { echo "Aigel config is missing" >&2; exit 1; }
+[[ -r "$home/AGENTS.md" ]] || { echo "Aigel instructions are missing" >&2; exit 1; }
+/usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1:11434/api/version >/dev/null || {
+    echo "Local Ollama is unavailable" >&2; exit 1;
+}
+
+if [[ $# -gt 0 ]]; then
+    [[ $# -eq 2 && "$1" == resume && "$2" =~ ^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$ ]] || {
+        echo "Usage: codex-aigel [resume SESSION_ID]" >&2; exit 2;
+    }
+fi
+
+exec /usr/bin/env -i \
+    HOME=/home/aria USER=aria LOGNAME=aria \
+    CODEX_HOME="$home" \
+    GIT_AUTHOR_NAME=Aigel GIT_AUTHOR_EMAIL=aigel@nexus.local \
+    GIT_COMMITTER_NAME=Aigel GIT_COMMITTER_EMAIL=aigel@nexus.local \
+    OLLAMA_HOST=http://127.0.0.1:11434 \
+    PATH=/opt/noobia/dushich-codex/node_modules/.bin:/usr/local/bin:/usr/bin:/bin \
+    TERM="${TERM:-xterm}" LANG="${LANG:-C.UTF-8}" \
+    /bin/bash -c 'cd /noobia && exec /opt/noobia/dushich-codex/node_modules/.bin/codex --oss --local-provider ollama --model qwen3.8:27b --sandbox danger-full-access --ask-for-approval never "$@"' \
+    aigel "$@"

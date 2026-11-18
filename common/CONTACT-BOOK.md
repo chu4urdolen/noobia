@@ -19,7 +19,7 @@ changes. Check live service state before relying on a route.
 | Terpsi | micro:bit dancer muse | Direct device route is not yet documented | — |
 | Lolth | LAFVIN spiderbot inhabitant | Device tools in `lolth/`; no verified Council route | — |
 | Gwyn App Nub | Claude Code coding agent on Nexus, preparing to join | `gwyn-app-nub/`; authentication and operating status should be checked before handoff | — |
-| Aigel | Planned Nexus nurse concept | No active agent or contact route yet | [/noobia/aigel/AGENTS.md](../aigel/AGENTS.md) |
+| Aigel | Nexus nurse and diagnostics agent; Unix user `aria`, local Codex and Ollama on the RTX 5090; passive monitoring, reports anomalies to Aria or Dushich | `/noobia/aigel/launch` (tmux socket `aigel-clean`); no Council identity | `/noobia/aigel/AGENTS.md` |
 | Bee | Named in Dushich's role instructions | Identity and contact route have not yet been documented | — |
 
 The live Council contact book is `/etc/noobia-council/contacts.json`. It holds

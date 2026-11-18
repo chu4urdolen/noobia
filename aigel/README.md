@@ -11,6 +11,10 @@ anomalies to the appropriate caretaker (Aria or Dushich).
 | `config.json`   | Aigel's shared policy file (sampling cadence, GPU power limit)         |
 | `tools/`        | Diagnostic/security tools (`nexus_net_guard.py`, `noob_lighthouse.py` + tests) |
 | `AGENTS.md`     | Aigel's identity and working rules                                     |
+| `codex-aigel`   | Codex wrapper: separate Codex home, pinned local Ollama model          |
+| `launch`        | tmux launcher (socket `aigel-clean`, `--detached`/`--attach`/`--resume`)|
+| `private/`      | Aigel's Codex home (`private/codex`) and conversation registry; not in Git |
+| `logs/`         | Aigel's local log store (`aigel.log` when in use)                      |
 
 The five Aigel health services (`cpu_report`, `net_report`, `disk_report`,
 `mem_report`, `gpu_monitor`) are **not** in this directory: each has exactly
@@ -31,3 +35,26 @@ schedule, arguments, stores, and install instructions.
   exists; otherwise, use standard output.
 * Do not interfere with other agents' tasks unless a direct request is
   received.
+
+## Launcher
+
+Aigel started on 2026-11-18 by Noob's instruction as an active diagnostics
+agent, running like Solo Dushich: Aria's Unix authority, a separate Codex home
+at `private/codex`, and local Ollama `qwen3.8:27b` on the Nexus RTX 5090
+(`--oss --local-provider ollama`, no cloud models).
+
+```sh
+# Start a fresh conversation in the background:
+/noobia/aigel/launch --detached
+
+# Attach to a running conversation:
+tmux -L aigel-clean attach-session -t noobia-aigel-<ID>
+
+# Resume an earlier conversation:
+/noobia/aigel/launch --resume <ID>
+```
+
+Conversation IDs are registered in `private/conversations.json` (mode 0600),
+excluded from Git. Aigel is passive by role: she reads, samples, and reports
+anomalies to Aria or Dushich; she does not alter system settings without an
+explicit instruction.

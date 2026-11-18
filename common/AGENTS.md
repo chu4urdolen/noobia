@@ -41,8 +41,11 @@ never leave the calling terminal blocked indefinitely.
 
 ### Local Dushich Summarizer
 
-Any Noobia agent can call `/noobia/dushich/tools/dushich_summarizer.py` (also
-installed at `/usr/local/bin/dushich-summarizer` and importable from
+**Use this tool for yourself** whenever you only need an overview, digest, or
+focused summary of a large file, log, or transcript instead of reading the full
+file into your own context window. Any Noobia agent can call
+`/noobia/dushich/tools/dushich_summarizer.py` (also installed at
+`/usr/local/bin/dushich-summarizer` and importable from
 `/noobia/dushich/coding/dushich_summarizer.py`) to compact a large string,
 file, or transcript on the local Nexus GPU without consuming cloud tokens. It
 uses an iterative context-shifting window: it cuts each piece at a sentence

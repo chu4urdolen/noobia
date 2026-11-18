@@ -22,7 +22,7 @@ class TestDefaultQuadrants(unittest.TestCase):
         q = DEFAULT_QUADRANTS["top_left"]
         self.assertEqual(q["title"], "Aria + Dushich Helper")
         self.assertEqual(q["agent"], "Aria")
-        self.assertEqual(q["helper_agent"], "Dushich")
+        self.assertEqual(q["helper_agent"], "")
         self.assertTrue(q["command"])
         self.assertIn("codex-with-dushich", q["command"][-1])
 
@@ -37,13 +37,13 @@ class TestDefaultQuadrants(unittest.TestCase):
         q = DEFAULT_QUADRANTS["top_right"]
         self.assertEqual(q["title"], "Banshee + Dushich Helper")
         self.assertEqual(q["agent"], "Banshee")
-        self.assertEqual(q["helper_agent"], "Dushich")
+        self.assertEqual(q["helper_agent"], "")
         self.assertIn("/noobia/banshee/launch", q["command"][-1])
 
     def test_bottom_right_is_nexus_shell(self):
         q = DEFAULT_QUADRANTS["bottom_right"]
         self.assertEqual(q["title"], "Nexus Shell")
-        self.assertEqual(q["agent"], "Dushich")
+        self.assertEqual(q["agent"], "")
         self.assertEqual(q["helper_agent"], "")
         self.assertEqual(q["command"][-1], "-i")
 
@@ -52,8 +52,8 @@ class TestDefaultQuadrants(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIsInstance(q["command"], list)
                 self.assertTrue(len(q["command"]) >= 1)
-                self.assertIn(q["agent"], ("Aria", "Banshee", "Dushich"))
-                self.assertIn(q["helper_agent"], ("", "Dushich"))
+                self.assertIn(q["agent"], ("", "Aria", "Banshee", "Dushich"))
+                self.assertEqual(q["helper_agent"], "")
 
     def test_quadrant_names_default_vs_left_only(self):
         self.assertEqual(quadrant_names(), [

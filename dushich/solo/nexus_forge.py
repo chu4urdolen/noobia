@@ -84,24 +84,28 @@ DEFAULT_QUADRANTS = {
     "top_left": {
         "title": "Aria + Dushich Helper",
         "agent": "Aria",
-        "helper_agent": "Dushich",
+        "helper_agent": "",
         "command": ["/bin/bash", "-lc", "NOOBIA_ARIA_NO_GUI=1 exec /noobia/aria/codex-with-dushich"],
     },
     "bottom_left": {
         "title": "Dushich Solo",
         "agent": "Dushich",
         "helper_agent": "",
-        "command": ["/bin/bash", "-lc", "NOOBIA_DUSHICH_TMUX_PANE=1 exec /usr/local/bin/dushich"],
+        "command": [
+            "/bin/bash",
+            "-lc",
+            "for _ in $(seq 1 40); do /usr/bin/curl -fsS --max-time 1 http://127.0.0.1:11434/api/version >/dev/null 2>&1 && break; sleep 0.5; done; NOOBIA_DUSHICH_TMUX_PANE=1 exec /usr/local/bin/dushich",
+        ],
     },
     "top_right": {
         "title": "Banshee + Dushich Helper",
         "agent": "Banshee",
-        "helper_agent": "Dushich",
+        "helper_agent": "",
         "command": ["/bin/bash", "-lc", "exec /noobia/banshee/launch"],
     },
     "bottom_right": {
         "title": "Nexus Shell",
-        "agent": "Dushich",
+        "agent": "",
         "helper_agent": "",
         "command": ["/bin/bash", "-i"],
     },
@@ -357,6 +361,12 @@ if _GI_AVAILABLE:
         def _on_draw(self, area, cr):
             width = max(1, area.get_allocated_width())
             height = max(1, area.get_allocated_height())
+            if not self.agent:
+                if ROSE_PATH.exists():
+                    rose = self._get_pixbuf(str(ROSE_PATH), width, height)
+                    Gdk.cairo_set_source_pixbuf(cr, rose, 0, 0)
+                    cr.paint()
+                return False
             has_helper = bool(self.helper_agent)
             layout = compute_sidebar_layout(
                 width, height, aspect_ratio=ASPECT_RATIO, has_helper=has_helper
@@ -403,19 +413,20 @@ def _verify_quadrants() -> None:
     }
     tl = DEFAULT_QUADRANTS["top_left"]
     assert tl["title"] == "Aria + Dushich Helper"
-    assert tl["agent"] == "Aria" and tl["helper_agent"] == "Dushich"
+    assert tl["agent"] == "Aria" and tl["helper_agent"] == ""
     bl = DEFAULT_QUADRANTS["bottom_left"]
     assert bl["title"] == "Dushich Solo"
     assert bl["agent"] == "Dushich" and bl["helper_agent"] == ""
     tr = DEFAULT_QUADRANTS["top_right"]
     assert tr["title"] == "Banshee + Dushich Helper"
-    assert tr["agent"] == "Banshee" and tr["helper_agent"] == "Dushich"
+    assert tr["agent"] == "Banshee" and tr["helper_agent"] == ""
     br = DEFAULT_QUADRANTS["bottom_right"]
     assert br["title"] == "Nexus Shell"
+    assert br["agent"] == "" and br["helper_agent"] == ""
     for name, spec in DEFAULT_QUADRANTS.items():
         assert isinstance(spec["command"], list) and spec["command"], name
-        assert spec["agent"] in ("Aria", "Banshee", "Dushich"), name
-        assert spec["helper_agent"] in ("", "Dushich"), name
+        assert spec["agent"] in ("", "Aria", "Banshee", "Dushich"), name
+        assert spec["helper_agent"] == "", name
     assert quadrant_names(left_only=True) == ["top_left", "bottom_left"]
     assert len(quadrant_names()) == 4
 
@@ -500,6 +511,7 @@ def _run_gui(args: argparse.Namespace) -> int:
     names = quadrant_names(left_only=args.left_only)
     window = Gtk.Window(title=args.title)
     window.set_default_size(1600, 960)
+    window.maximize()
     window.connect("destroy", Gtk.main_quit)
 
     panels = {}

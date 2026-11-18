@@ -17,6 +17,21 @@ if [[ $# -gt 0 ]]; then
     }
 fi
 
+if [[ -f "$home/version.json" ]]; then
+    /usr/bin/python3 -c '
+import json, pathlib
+p = pathlib.Path("'"$home"'/version.json")
+try:
+    data = json.loads(p.read_text(encoding="utf-8"))
+    latest = data.get("latest_version")
+    if latest and data.get("dismissed_version") != latest:
+        data["dismissed_version"] = latest
+        p.write_text(json.dumps(data) + "\n", encoding="utf-8")
+except Exception:
+    pass
+' 2>/dev/null || true
+fi
+
 exec /usr/bin/env -i \
     HOME=/home/aria USER=aria LOGNAME=aria \
     CODEX_HOME="$home" \

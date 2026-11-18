@@ -42,20 +42,59 @@ else
     done
     session="noobia-aria-$(date -u +%Y%m%dT%H%M%S)-$$"
 fi
-aria_command='exec /home/aria/.local/bin/codex'
+# Auto-dismiss pending Codex update prompts so unattended/forge starts don't block
+if [[ -f "/home/aria/.codex/version.json" ]]; then
+    python3 -c '
+import json, pathlib
+p = pathlib.Path("/home/aria/.codex/version.json")
+try:
+    data = json.loads(p.read_text(encoding="utf-8"))
+    latest = data.get("latest_version")
+    if latest and data.get("dismissed_version") != latest:
+        data["dismissed_version"] = latest
+        p.write_text(json.dumps(data) + "\n", encoding="utf-8")
+except Exception:
+    pass
+' 2>/dev/null || true
+fi
+
+codex_bin=""
+for candidate in /usr/local/bin/codex /home/aria/.local/bin/codex $(command -v codex 2>/dev/null); do
+    if [[ -x "$candidate" ]] && "$candidate" --version >/dev/null 2>&1; then
+        codex_bin="$candidate"
+        break
+    fi
+done
+if [[ -z "$codex_bin" ]]; then
+    echo "Working Codex executable not found" >&2
+    exit 1
+fi
+
+aria_command="exec $codex_bin --no-alt-screen"
 if [[ -n "$resume_id" ]]; then
-    aria_command="exec /home/aria/.local/bin/codex -c 'mcp_servers.dushich.args=[\"--session-id\",\"$resume_id\"]' resume $resume_id"
+    aria_command="exec $codex_bin --no-alt-screen -c 'mcp_servers.dushich.args=[\"--session-id\",\"$resume_id\"]' resume $resume_id"
 fi
 if ! tmux has-session -t "$session" 2>/dev/null; then
     tmux new-session -d -s "$session" -n workshop -c /noobia \
         "$aria_command"
+    sleep 0.3
+    if ! tmux has-session -t "$session" 2>/dev/null; then
+        echo "Aria session failed to start in tmux" >&2
+        exit 1
+    fi
     if [[ -z "$resume_id" ]]; then
         if resume_id="$(/noobia/aria/codex-pane-session.py "$session" 2>/dev/null)" && [[ -n "$resume_id" ]]; then
-            tmux rename-session -t "$session" "noobia-aria-$resume_id"
-            session="noobia-aria-$resume_id"
+            if tmux has-session -t "$session" 2>/dev/null; then
+                tmux rename-session -t "$session" "noobia-aria-$resume_id"
+                session="noobia-aria-$resume_id"
+            fi
         else
             resume_id=""
         fi
+    fi
+    if ! tmux has-session -t "$session" 2>/dev/null; then
+        echo "Aria session lost during startup" >&2
+        exit 1
     fi
     if [[ -n "$resume_id" ]]; then
         monitor_command="exec /noobia/aria/dushich-bridge monitor --full --session-id $resume_id"

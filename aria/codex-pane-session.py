@@ -67,7 +67,16 @@ def main() -> int:
     started_at = time.time()
     deadline = time.monotonic() + 60
     while time.monotonic() < deadline:
-        if "Ask Codex to do anything" in capture(pane):
+        try:
+            screen = capture(pane)
+        except subprocess.CalledProcessError:
+            time.sleep(0.2)
+            continue
+        if "Update available" in screen:
+            subprocess.run(["tmux", "send-keys", "-t", pane, "Escape"], check=False)
+            time.sleep(0.4)
+            continue
+        if "Ask Codex to do anything" in screen:
             break
         time.sleep(0.2)
     else:

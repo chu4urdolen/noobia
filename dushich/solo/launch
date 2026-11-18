@@ -73,7 +73,16 @@ def screen_id(screen: str) -> str | None:
 def wait_for_id(session: str) -> str:
     deadline = time.monotonic() + 20
     while time.monotonic() < deadline:
-        if 'Ask Codex to do anything' in capture(session):
+        try:
+            screen = capture(session)
+        except subprocess.CalledProcessError:
+            time.sleep(.2)
+            continue
+        if 'Update available' in screen:
+            run('tmux', '-L', 'dushich-clean', 'send-keys', '-t', session + ':0.0', 'Escape', check=False)
+            time.sleep(.4)
+            continue
+        if 'Ask Codex to do anything' in screen:
             break
         time.sleep(.2)
     else:

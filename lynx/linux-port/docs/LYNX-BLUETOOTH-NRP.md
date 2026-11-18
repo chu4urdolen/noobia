@@ -508,6 +508,20 @@ boot at 31% with positive charging current. Receipt:
 `lynx/logs/v53-bt-after-alpine-1795013959054541438/result.json`.
 This partial hold does not close the long-duration gate.
 
+On the same V53 boot, a fresh 15-minute same-boot hold completed. The runner
+recorded authenticated BLE reconnect and 30 passing health samples, then
+stopped Bluetooth and canceled its stop-only watchdog. An independent check
+immediately afterward found the same boot ID, audio and sensorhub started,
+Bluetooth stopped, `hci0` absent, battery 40% with positive charging current,
+no health issues, an empty pstore, and kernel `btmtk_set_power_off` and
+`conninfra_pwr_off` records. Receipt:
+`lynx/logs/v53-bt-after-alpine-1795015234481282242/result.json`.
+This verifies a 15-minute same-boot run. Automatic startup and long-uptime
+reboot reliability remain unverified. About one minute after the final
+health reading, Nexus lost carrier on its Noobia Wi-Fi adapter and could no
+longer see the Noobia SSID; phone state after that network outage was not
+established. Do not infer a Lynx shutdown from the SSH timeout.
+
 ## Acceptance sequence
 
 - Service starts and stops repeatedly on the same boot, leaving Wi-Fi and

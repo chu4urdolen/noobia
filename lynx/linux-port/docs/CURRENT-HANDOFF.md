@@ -25,7 +25,10 @@ command; this is a checkpoint, not a live guarantee.
 - With 27% and positive charging current on the same boot, a bounded V53
   Bluetooth start/reconnect/stop trial passed using a stop-only watchdog;
   health, Wi-Fi, and radio power-off checks passed. See the Bluetooth NRP
-  record. Longer operation and autostart still need separate trials.
+  record. A later full 15-minute same-boot hold also passed all 30 health
+  samples and clean radio shutdown. Autostart and long-uptime reboot still
+  need separate trials. Nexus then lost the Noobia Wi-Fi SSID; re-establish
+  contact before treating phone state as known.
 - The previous conversation found `/noobia` clean on `main` at `f76b6b6` and
   confirmed `origin/main` there. Other resident agents share `main`, so
   recheck Git status, remote, and HEAD before any new commit or push.
@@ -83,7 +86,10 @@ command; this is a checkpoint, not a live guarantee.
    2026-11-18 and will add one when the inventory supports a specific trial.
    A read-only [cellular inventory](LYNX-CELLULAR-INVENTORY-20261118.md)
    found CCCI nodes and SIM hot-plug platform names, but no working modem
-   route has been established.
+   route has been established. Dushich prepared
+   `lynx/tools/lynx_cellular_inventory.py` with offline tests for a repeatable
+   metadata-only check. It has not been run on Lynx; the Noobia Wi-Fi link
+   must return before that and before any modem trial.
 2. Flashlight has a verified bounded pulse from one rear LED. The second rear
    light and safe persistent startup need separate investigation. Avoid the
    stock flashlight core unload sequence that previously lost SSH.

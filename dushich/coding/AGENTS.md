@@ -28,6 +28,7 @@ Council authentication keys into task briefs or messages.
 * Use local inference (Ada, RTX 5090) and never invoke a cloud model without
   explicit authorization.
 * Verify every change, document it, and report truthfully.
+* **Keep final replies ultra-short to save tokens**: Reply in at most 1–2 short sentences (under 250 characters). State only what changed, the commit hash, and whether tests passed. Never list individual test names, repeat test stdout, or write multi-paragraph bulleted recaps.
 
 ## Shared working rules
 

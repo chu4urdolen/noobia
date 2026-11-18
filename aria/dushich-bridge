@@ -17,6 +17,10 @@ import time
 from uuid import uuid4
 
 
+sys.path.insert(0, "/noobia/dushich/coding")
+import compact_output
+import dushich_summarizer
+
 ROOT = Path("/home/aria/.codex/dushich-bridge")
 DELEGATE = Path("/noobia/aria/delegate-dushich")
 ID = re.compile(r"^\d{8}T\d{6}Z-[0-9a-f]{8}$")
@@ -24,9 +28,11 @@ REPORT = re.compile(r"^/noobia/dushich/coding/private/codex/task-runs/\d{8}T\d{6
 THREAD = re.compile(r"^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$")
 SESSION = THREAD
 SESSIONS = Path("/home/aria/.codex/sessions")
-MAX_SESSION_CONTEXT = 160_000
-MAX_TOOL_CONTEXT = 80_000
-MAX_TOTAL_CONTEXT = 320_000
+SUMMARIZER_CONTEXT_SIZE = 32_000
+SUMMARIZER_DESIRED_SIZE = 8_000
+MAX_SESSION_CONTEXT = 32_000
+MAX_TOOL_CONTEXT = 8_000
+MAX_TOTAL_CONTEXT = 64_000
 
 
 def write_json(path: Path, data: object) -> None:
@@ -143,7 +149,13 @@ def visible_session_context(
         prefix = f"[{omitted} older {label} omitted to fit local context.]\n\n" if omitted else ""
         return prefix + "\n\n".join(selected)
 
-    return (recent(messages, since_messages, MAX_SESSION_CONTEXT, "messages"), len(messages),
+    dialogue = dushich_summarizer.incremental_summarize(
+        session_id,
+        messages,
+        context_size=SUMMARIZER_CONTEXT_SIZE,
+        desired_size=SUMMARIZER_DESIRED_SIZE,
+    )
+    return (dialogue, len(messages),
             recent(tools, since_tools, MAX_TOOL_CONTEXT, "tool calls"), len(tools))
 
 
@@ -303,7 +315,7 @@ def monitor_full(session_id: str | None, run_id: str | None, once: bool) -> int:
     print("DUSHICH • complete tool output (scroll up for history)", flush=True)
     print(f"Aria session: {session_id or 'all sessions'}", flush=True)
     while True:
-        selected_jobs = [run_id] if run_id else jobs_for_session(session_id)
+        selected_jobs = [run_id] if run_id else (jobs_for_session(session_id) or jobs_for_session(None))
         if not selected_jobs and once:
             print("No Dushich handoff in this Aria conversation.", flush=True)
         for selected in selected_jobs:
@@ -512,7 +524,7 @@ def main() -> int:
                 return monitor_full(session_id, args.id, args.once)
             while True:
                 size = shutil.get_terminal_size((72, 25))
-                display = monitor_text(args.id or latest_job(session_id), size.columns, size.lines)
+                display = monitor_text(args.id or latest_job(session_id) or latest_job(None), size.columns, size.lines)
                 if args.once:
                     print(display)
                     return 0
@@ -529,7 +541,7 @@ def main() -> int:
         if not (path / "result.txt").exists():
             print(f"{state['status']}: no final report yet")
         else:
-            print((path / "result.txt").read_text(encoding="utf-8"), end="")
+            print(compact_output.compact_task_report((path / "result.txt").read_text(encoding="utf-8"), max_reply_chars=400))
     elif args.action == "events":
         raw = read_dushich_events(args.id, state.get("report"))
         if not raw:

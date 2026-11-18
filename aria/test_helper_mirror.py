@@ -72,11 +72,12 @@ class MirrorTests(unittest.TestCase):
                 return '22222222-2222-2222-2222-222222222222', []
             with patch.object(mirror, 'SESSIONS', root), patch.object(mirror, 'ROOT', root / 'mirror'), \
                  patch.object(mirror, 'run_turn', side_effect=turn), \
+                 patch.object(mirror.dushich_summarizer, 'summarize_this', side_effect=lambda text, **_: text[:4000]), \
                  patch.object(mirror, 'MAX_BATCH', 15_000):
                 result = mirror.sync(SESSION, max_batches=5)
             self.assertEqual(result['sent'], 1)
             self.assertEqual(result['sent_chars'], 0)
-            self.assertEqual(sum(p.count('~') for p in prompts), 22_000)
+            self.assertTrue(all(p.count('~') <= 8_000 for p in prompts))
 
 
 if __name__ == '__main__':

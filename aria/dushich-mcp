@@ -26,8 +26,16 @@ def infer_session_id() -> str | None:
     inherited = os.environ.get("CODEX_SESSION_ID", "")
     if UUID.fullmatch(inherited):
         return inherited
-    now = datetime.now(timezone.utc)
-    candidates: list[tuple[datetime, str]] = []
+    try:
+        locks = sorted(Path("/home/aria/.codex/thread-writer-locks").glob("*.lock"),
+                       key=lambda p: p.stat().st_mtime, reverse=True)
+        for lock in locks:
+            stem = lock.stem
+            if UUID.fullmatch(stem) and list(SESSIONS.rglob(f"*{stem}.jsonl")):
+                return stem
+    except OSError:
+        pass
+    candidates: list[tuple[float, str]] = []
     for path in SESSIONS.rglob("*.jsonl"):
         try:
             with path.open(encoding="utf-8") as stream:
@@ -35,18 +43,12 @@ def infer_session_id() -> str | None:
             meta = first.get("payload", {})
             if first.get("type") != "session_meta" or meta.get("cwd") != "/noobia":
                 continue
-            created = datetime.fromisoformat(meta["timestamp"].replace("Z", "+00:00"))
-            age = (now - created).total_seconds()
-            if -2 <= age <= 30 and UUID.fullmatch(meta.get("id", "")):
-                candidates.append((created, meta["id"]))
+            if UUID.fullmatch(meta.get("id", "")):
+                candidates.append((path.stat().st_mtime, meta["id"]))
         except (OSError, ValueError, KeyError, TypeError):
             continue
     candidates.sort(reverse=True)
-    if not candidates:
-        return None
-    if len(candidates) > 1 and (candidates[0][0] - candidates[1][0]).total_seconds() < 2:
-        return None
-    return candidates[0][1]
+    return candidates[0][1] if candidates else None
 
 TOOLS = [
     {

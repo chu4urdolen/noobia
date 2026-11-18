@@ -324,7 +324,17 @@ def main() -> int:
         print("Missing: " + ", ".join(final["missing"]))
     for test in final.get("tests", []):
         print("Verification test: " + test["command"])
-        print((test["stdout"] + test["stderr"]).strip()[-3000:])
+        raw_out = (test["stdout"] + test["stderr"]).strip()
+        if test["exit_code"] == 0 and "-" * 70 in raw_out:
+            tail = raw_out.split("-" * 70, 1)[1].strip()
+            summary_lines = [l.strip() for l in tail.splitlines() if l.strip()]
+            print(" | ".join(summary_lines[:2])[:200])
+        elif test["exit_code"] == 0:
+            lines = [l.strip() for l in raw_out.splitlines() if l.strip()]
+            if lines:
+                print(lines[-1][:200])
+        else:
+            print(raw_out[-600:])
         print(f"Test exit: {test['exit_code']}")
     print(f"Report: {report_path}")
     return 0 if passed else 1

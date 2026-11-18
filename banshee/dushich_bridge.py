@@ -14,12 +14,17 @@ import sys
 import time
 from uuid import uuid4
 
+sys.path.insert(0, "/noobia/dushich/coding")
+import compact_output
+import dushich_summarizer
 from visible_dialogue import CONVERSATIONS, latest_for_workspace, read as visible_turns
 
 
 ROOT = Path("/noobia/banshee/private/task-runs")
 WORKSPACE = Path("/noobia/banshee/workspace")
 DELEGATE = Path("/noobia/aria/delegate-dushich")
+SUMMARIZER_CONTEXT_SIZE = 24_000
+SUMMARIZER_DESIRED_SIZE = 6_000
 SESSION = re.compile(r"^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$")
 RUN = re.compile(r"^\d{8}T\d{6}Z-[0-9a-f]{8}$")
 THREAD = SESSION
@@ -126,11 +131,16 @@ def conversation_context(session_id: str) -> tuple[str, str]:
                                       Path('/home/aria/.gemini/antigravity-cli/history.jsonl')))
     if not path:
         return '', ''
-    turns = visible_turns(path)[-12:]
+    turns = visible_turns(path)
     lines = [f"{'Noob' if turn['role'] == 'noob' else 'Banshee'}: {turn['text']}"
              for turn in turns]
-    result = '\n\n'.join(lines)
-    return path.stem, result[-16000:]
+    summary = dushich_summarizer.incremental_summarize(
+        path.stem,
+        lines,
+        context_size=SUMMARIZER_CONTEXT_SIZE,
+        desired_size=SUMMARIZER_DESIRED_SIZE,
+    )
+    return path.stem, summary
 
 
 def start(session_id: str, task: str, expect: list[str], tests: list[str],
@@ -208,8 +218,9 @@ def worker(run_id: str) -> None:
 def report(run_id: str) -> str:
     current = state(run_id)
     path = job_path(run_id) / "result.txt"
-    return (path.read_text(encoding="utf-8") if path.exists()
-            else f"Dushich handoff {run_id}: {current['status']}")
+    if not path.exists():
+        return f"Dushich handoff {run_id}: {current['status']}"
+    return compact_output.compact_task_report(path.read_text(encoding="utf-8"), max_reply_chars=400)
 
 
 def monitor(session_id: str, once: bool = False) -> None:

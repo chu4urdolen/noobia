@@ -86,8 +86,14 @@ def main() -> int:
     last_turn = attempts[-1].get("turn", {}) if isinstance(attempts, list) and attempts else {}
     message = last_turn.get("final_message", "").strip()
     if message:
-        print("\nDushich's report (verify against the checks above):")
-        print(message[:2500] + ("\n[truncated]" if len(message) > 2500 else ""))
+        sys.path.insert(0, "/noobia/dushich/coding")
+        try:
+            import compact_output
+            message = compact_output.extract_final_codex_reply(message, max_chars=400)
+        except Exception:
+            message = message[:400]
+        print("\nDushich's report:")
+        print(message)
     print(f"Thread: {last_turn.get('thread_id', 'unknown')}")
     return completed.returncode
 

@@ -66,6 +66,15 @@ def _self_test(args: argparse.Namespace) -> int:
         assert (pixbuf.get_width(), pixbuf.get_height()) == (180, 270)
     rose = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(ROSE_PATH), 180, 300, False)
     assert isinstance(rose, GdkPixbuf.Pixbuf)
+    import cairo
+    gi.require_version("Gdk", "3.0")
+    from gi.repository import Gdk
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 180, 570)
+    cr = cairo.Context(surface)
+    Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0)
+    cr.paint()
+    Gdk.cairo_set_source_pixbuf(cr, rose, 0, 270)
+    cr.paint()
     print("self-test OK")
     return 0
 

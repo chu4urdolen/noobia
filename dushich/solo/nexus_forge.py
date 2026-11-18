@@ -98,7 +98,7 @@ DEFAULT_QUADRANTS = {
         "command": [
             "/bin/bash",
             "-lc",
-            "for _ in $(seq 1 40); do /usr/bin/curl -fsS --max-time 1 http://127.0.0.1:11434/api/version >/dev/null 2>&1 && break; sleep 0.5; done; NOOBIA_DUSHICH_TMUX_PANE=1 exec /usr/local/bin/dushich",
+            "for _ in $(seq 1 40); do /usr/bin/curl -fsS --max-time 1 http://127.0.0.1:11434/api/version >/dev/null 2>&1 && break; sleep 0.5; done; s=$(tmux -Ldushich-clean list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-dushich-solo-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux -Ldushich-clean attach-session -t \"$s\"; fi; exec /noobia/dushich/solo/launch",
         ],
     },
     "top_right": {
@@ -255,6 +255,37 @@ def read_banshee_tmux_state(socket: str = "default") -> tuple:
     banshee_working = is_pane_working(banshee_text, banshee_title)
     helper_working = is_dushich_helper_working(helper_text, helper_title)
     return banshee_working, helper_working
+
+
+def read_dushich_solo_tmux_state() -> bool:
+    """Read the live Dushich Solo tmux session off-screen."""
+    try:
+        out = subprocess.run(
+            ["tmux", "-Ldushich-clean", "list-sessions", "-F", "#{session_name}"],
+            capture_output=True, text=True, timeout=5,
+        ).stdout
+    except Exception:
+        return False
+    sessions = [
+        line.strip()
+        for line in out.splitlines()
+        if line.strip().startswith("noobia-dushich-solo-")
+    ]
+    if not sessions:
+        return False
+    session = sessions[-1]
+    try:
+        text = subprocess.run(
+            ["tmux", "-Ldushich-clean", "capture-pane", "-t", f"{session}:0.0", "-p"],
+            capture_output=True, text=True, timeout=5,
+        ).stdout
+        title = subprocess.run(
+            ["tmux", "-Ldushich-clean", "display-message", "-t", f"{session}:0.0", "-p", "#{pane_title}"],
+            capture_output=True, text=True, timeout=5,
+        ).stdout.strip()
+    except Exception:
+        return False
+    return is_pane_working(text, title)
 
 
 # ---------------------------------------------------------------------------
@@ -418,8 +449,18 @@ if _GI_AVAILABLE:
                 except Exception:
                     banshee_working = False
 
+            dushich_working = False
+            if self.agent == "Dushich":
+                try:
+                    dushich_working = read_dushich_solo_tmux_state()
+                except Exception:
+                    dushich_working = False
+
             primary_working = (
-                is_pane_working(text, title) or aria_working or banshee_working
+                is_pane_working(text, title)
+                or aria_working
+                or banshee_working
+                or dushich_working
             )
             new_frame = select_frame_name(
                 self.tracker.update(primary_working, now), self.tick

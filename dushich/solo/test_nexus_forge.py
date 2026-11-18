@@ -31,7 +31,7 @@ class TestDefaultQuadrants(unittest.TestCase):
         self.assertEqual(q["title"], "Dushich Solo")
         self.assertEqual(q["agent"], "Dushich")
         self.assertEqual(q["helper_agent"], "")
-        self.assertIn("/usr/local/bin/dushich", q["command"][-1])
+        self.assertIn("/noobia/dushich/solo/launch", q["command"][-1])
 
     def test_top_right_is_banshee_plus_dushich(self):
         q = DEFAULT_QUADRANTS["top_right"]

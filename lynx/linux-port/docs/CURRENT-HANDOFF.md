@@ -13,11 +13,17 @@ command; this is a checkpoint, not a live guarantee.
   pinned Lynx host identity; NRP/1 listens on port 4243 and accepts Nexus.
   Use `python3 /noobia/lynx/tools/lynx_presence.py --once` for a low-duty
   contact check. Do not treat a black screen as proof she is off.
-- Last check in this conversation: Alpine Wi-Fi SSH online on boot
+- Previous conversation's check: Alpine Wi-Fi SSH online on boot
   `d629cc73-aa6d-4aec-808b-8a374740e203`, 69% battery, −151 mA net current,
   24.8°C battery, no USB. She was discharging; check again before work.
-- `/noobia` was clean on `main` at `f76b6b6`, and Dushich verified that
-  `origin/main` matched that commit. Other resident agents share `main`, so
+- Follow-up on 2026-11-18: the previous boot shut down at 20% while
+  discharging; the reserve marker is at 10:05 UTC (about 12:05 Sofia time).
+  Lynx returned on boot `6613079f-ae1f-4e05-8123-0988b423d6da` and was
+  charging. At 25% the sensor retry started audio and sensorhub automatically;
+  health and a bounded accelerometer sample passed. See the sensor retry and
+  poweroff audit records. Recheck live state before further commands.
+- The previous conversation found `/noobia` clean on `main` at `f76b6b6` and
+  confirmed `origin/main` there. Other resident agents share `main`, so
   recheck Git status, remote, and HEAD before any new commit or push.
 
 ## Working hardware and software
@@ -38,7 +44,7 @@ command; this is a checkpoint, not a live guarantee.
   `/noobia/lynx/tools/local_calls/` in source. The agent reads the catalog
   dynamically. Existing motion NRP/1 calls already serve remote and VM use.
 
-## This conversation's verified changes
+## Recent verified changes
 
 - Installed a bounded local magnetometer reader. A live AKM09918 raw vector,
   existing authenticated `MAG_STATUS`/`MAG_VECTOR`, and same-boot health passed.
@@ -66,22 +72,19 @@ command; this is a checkpoint, not a live guarantee.
 
 ## Hardware still to finish
 
-1. Verify `lynx-sensor-retry` on a naturally occurring low-charge cold boot.
-   Inspect its log, audio/sensorhub status, battery current, and health.
-   Do not force a discharge or reboot just for this test.
-2. GNSS emits NMEA but has not produced a position fix. Bluetooth has passed
+1. GNSS emits NMEA but has not produced a position fix. Bluetooth has passed
    HCI and authenticated NRP/1 GATT trials, but its automatic and long-uptime
    behavior remains unverified. SIM/cellular needs modem and SIM inventory
    before any radio activation; current SIM presence is not established.
-3. Flashlight has a verified bounded pulse from one rear LED. The second rear
+2. Flashlight has a verified bounded pulse from one rear LED. The second rear
    light and safe persistent startup need separate investigation. Avoid the
    stock flashlight core unload sequence that previously lost SSH.
-4. GC02M1 macro and IMX355 wide produced recognizable frames using a patched
+3. GC02M1 macro and IMX355 wide produced recognizable frames using a patched
    ISP module loaded in RAM. The stock ISP caused a YUV-B IRQ storm. Main
    IMX890 and front S5K3P9SP remain untested. A stock camera-control ioctl
    caused a kernel Oops; avoid repeating it. Package the patched module on
    Alpine only after a guarded cold-boot test and local disable switch.
-5. Continue adding small local agent tools for verified hardware, with the
+4. Continue adding small local agent tools for verified hardware, with the
    same bounded behavior and explicit validation as the motion tool. Do not
    label an inventory-only interface as a working capture or actuator.
 

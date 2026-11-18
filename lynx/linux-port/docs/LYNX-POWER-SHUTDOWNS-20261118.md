@@ -7,13 +7,22 @@ thermal watchers. She is online over Wi-Fi on boot
 ## Observed shutdowns
 
 The persistent `/var/log/lynx/messages` records `LYNX_BATTERY_RESERVE_SHUTDOWN
-reason=low_capacity` on Nov 5, 7, 10, 11, and 16. The Nov 16 event was at
+reason=low_capacity` on Nov 5, 7, 10, 11, 16, and 18. The Nov 16 event was at
 09:53:26; the last `power.csv` sample on that boot showed 20% capacity,
 −152 mA signed current, and 25.0°C battery temperature. The 86% to 20%
 discharge over the preceding 9 hours 47 minutes is consistent with an
 unplugged phone running its Linux services. Earlier low-capacity events also
 ended near 20% with negative current. These are deliberate reserve shutdowns,
 not unexplained reboots.
+
+On Nov 18 the shutdown marker was logged at 10:05:15 UTC (about 12:05 Sofia
+time). The last persistent sample from boot
+`d629cc73-aa6d-4aec-808b-8a374740e203` was at 10:04:58 UTC: 20%,
+−153 mA, and 26.5°C. Lynx later booted as
+`6613079f-ae1f-4e05-8123-0988b423d6da` and reported 21% with a positive
+charging current. The screen went dark during the normal idle period; the
+display log showed the portrait presented and `idle_dark`, while Alpine SSH
+and health were working. A physical touch-to-wake check remains pending.
 
 One different event occurred on Nov 6 at 18:29:06: maintenance logged
 `SAFE_POWEROFF reason=safety_guard_failed` after two failed safety checks.

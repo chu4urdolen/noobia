@@ -36,9 +36,20 @@ wrapper SHA-256 is
 Lynx's boot ID and health assertion were unchanged. Twenty-nine offline
 policy and worker tests passed.
 
-**Remaining gate:** a low-charge cold boot has not yet exercised the retry
-loop. On that boot, inspect `/var/log/lynx-sensor-retry.log`, both service
-statuses, the battery snapshot, and `lynx-status --assert-ready`. Preserve
-the V53 boot image and V50 rollback. The retry service is independent of the
-older active 20% battery reserve policy described in
+## Natural low-charge cold boot, 2026-11-18
+
+Boot `6613079f-ae1f-4e05-8123-0988b423d6da` started while charging at
+about 21%. OpenRC's first audio and sensorhub starts failed below the audio
+bootstrap's 25% charging gate. The retry worker logged `wait` with reason
+`charge below 25 percent` and remained started. When the gauge reached 25%,
+it logged `attempt_start` and then `ready` for both services. No manual
+service start, reboot, or image change was needed. The ALSA card and Bosch
+accelerometer registration appeared; a bounded local accelerometer sample
+returned a raw vector and confirmed the sensor was disabled afterward.
+`lynx-status --assert-ready` reported no issues on the same boot. Receipt:
+`lynx/logs/sensor-retry-natural-boot-1795012736632224565/result.json`.
+
+The natural low-charge retry gate is now verified. Preserve the V53 boot image
+and V50 rollback. The retry service is independent of the older active 20%
+battery reserve policy described in
 [the shutdown audit](LYNX-POWER-SHUTDOWNS-20261118.md).

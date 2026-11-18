@@ -69,6 +69,13 @@ health and boot identity were unchanged. Thirty-eight offline cases passed.
 Receipt: `logs/motion-local-tool-1794956244324033878/result.json`. Values are
 driver raw units, not calibrated acceleration or angular speed.
 
+On the natural 2026-11-18 cold boot at about 21% while charging, audio and
+sensorhub initially stopped below the audio bootstrap's 25% gate. The
+`lynx-sensor-retry` worker waited, then started both automatically at 25% on
+the same boot. A bounded accelerometer sample, service statuses, and Alpine
+health passed. Receipt:
+`logs/sensor-retry-natural-boot-1795012736632224565/result.json`.
+
 The new numeric calls return one value per NRP/1 `CALL`, so they work from
 the common Noob VM as well as a direct client. Units are explicit in the
 reply: percent, millidegrees Celsius, signed milliamps, and millivolts.

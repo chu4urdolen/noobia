@@ -85,7 +85,11 @@ DEFAULT_QUADRANTS = {
         "title": "Aria + Dushich Helper",
         "agent": "Aria",
         "helper_agent": "",
-        "command": ["/bin/bash", "-lc", "NOOBIA_ARIA_NO_GUI=1 exec /noobia/aria/codex-with-dushich"],
+        "command": [
+            "/bin/bash",
+            "-lc",
+            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-aria-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux attach-session -t \"$s\"; fi; NOOBIA_ARIA_NO_GUI=1 exec /noobia/aria/codex-with-dushich",
+        ],
     },
     "bottom_left": {
         "title": "Dushich Solo",
@@ -101,7 +105,11 @@ DEFAULT_QUADRANTS = {
         "title": "Banshee + Dushich Helper",
         "agent": "Banshee",
         "helper_agent": "",
-        "command": ["/bin/bash", "-lc", "exec /noobia/banshee/launch"],
+        "command": [
+            "/bin/bash",
+            "-lc",
+            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-banshee-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux attach-session -t \"$s\"; fi; exec /noobia/banshee/launch",
+        ],
     },
     "bottom_right": {
         "title": "Nexus Shell",
@@ -275,10 +283,17 @@ if _GI_AVAILABLE:
             return False
 
         # -- terminal lifecycle --------------------------------------------
-        def _on_child_exited(self, _term, _status) -> None:
+        def _on_child_exited(self, _term, status) -> None:
+            if self.agent and status != 0:
+                GLib.timeout_add(1500, self._respawn)
+                return
             if self._poll_id is not None:
                 GLib.source_remove(self._poll_id)
                 self._poll_id = None
+
+        def _respawn(self) -> bool:
+            self.spawn()
+            return False
 
         def spawn(self) -> None:
             """Launch the quadrant's command in the terminal (via idle)."""

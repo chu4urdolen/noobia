@@ -148,6 +148,18 @@ def main() -> int:
     if args.detached:
         print('Solo Dushich session ready: ' + session)
         print('Reattach: /noobia/dushich/solo/launch --attach ' + session.removeprefix(PREFIX))
+    elif (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')
+          or Path(f'/run/user/{os.getuid()}/wayland-0').exists()):
+        run('tmux', '-L', 'dushich-clean', 'kill-pane', '-t', session + ':0.1', check=False)
+        run('tmux', '-L', 'dushich-clean', 'set-option', '-t', session, 'status', 'off', check=False)
+        run('tmux', '-L', 'dushich-clean', 'set-window-option', '-t', session + ':0', 'pane-border-status', 'off', check=False)
+        os.execvp('/usr/bin/python3', [
+            '/usr/bin/python3', '/noobia/dushich/solo/dushich_window.py',
+            '--agent', 'Dushich', '--tmux-socket', 'dushich-clean',
+            '--target-pane', f'{session}:0.0', '--sidebar-width', '180',
+            '--title', f'Solo Dushich ({session.removeprefix(PREFIX)[:8]})',
+            '--command', 'tmux', '-L', 'dushich-clean', 'attach-session', '-t', session,
+        ])
     elif os.environ.get('TMUX'):
         os.execvp('tmux', ['tmux', '-L', 'dushich-clean', 'switch-client', '-t', session])
     else:

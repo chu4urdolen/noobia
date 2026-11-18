@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Load exact stock SCP/GPS modules into V52 RAM, one by one, with guard logs."""
+"""Load exact stock SCP/GPS modules into V52/V53 RAM with guard logs."""
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -12,6 +13,8 @@ from lynx_wifi_v19_contact import ssh_command
 ROOT = Path(__file__).resolve().parent.parent
 GRAPH = ROOT / "logs/hardware-dependencies-1793303434757393031.json"
 V52_SHA = "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf"
+V53_SHA = "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e"
+BOOT_SHAS = {"v52": V52_SHA, "v53": V53_SHA}
 ORDER = ("mtk-mbox", "mtk_rpmsg_mbox", "mtk_tinysys_ipi", "kernel_fb",
          "mtk-afe-external", "scp", "connscp", "gps_scp")
 
@@ -23,6 +26,9 @@ def phone(command, data=None, timeout=18):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--candidate", choices=BOOT_SHAS, default="v52")
+    args = parser.parse_args()
     graph = json.loads(GRAPH.read_text())["modules"]
     modules = {}
     for name in ORDER:
@@ -31,10 +37,10 @@ def main():
         if not info["kernel_matches"] or hashlib.sha256(data).hexdigest() != info["sha256"]:
             raise SystemExit("stock module changed: " + name)
         modules[name] = (data, info)
-    out = ROOT / "logs" / f"v52-gps-scp-stack-{time.time_ns()}"
+    out = ROOT / "logs" / f"{args.candidate}-gps-scp-stack-{time.time_ns()}"
     out.mkdir(mode=0o700)
     remote = "/run/lynx-gps-scp-stack-" + str(time.time_ns())
-    report = {"state": "preflight", "partition_writes": False,
+    report = {"state": "preflight", "candidate": args.candidate, "partition_writes": False,
               "module_unload_attempted": False, "remote": remote,
               "order": list(ORDER), "steps": []}
     boot_id = None
@@ -64,8 +70,8 @@ def main():
     try:
         identity = step("identity", "cat /proc/sys/kernel/random/boot_id; "
                         "sha256sum /dev/sdc39 | cut -c1-64").splitlines()
-        if len(identity) != 2 or identity[1] != V52_SHA:
-            raise RuntimeError("not exact V52 boot")
+        if len(identity) != 2 or identity[1] != BOOT_SHAS[args.candidate]:
+            raise RuntimeError("not exact " + args.candidate + " boot")
         boot_id = identity[0]
         report["boot_id"] = boot_id
         health = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready"))

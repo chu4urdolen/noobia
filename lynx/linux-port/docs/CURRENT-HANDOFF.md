@@ -59,6 +59,10 @@ command; this is a checkpoint, not a live guarantee.
   and queue health calls passed. Lynx remained healthy on the same boot. See
   [agent notes](LYNX-AGENT.md) and
   `lynx/logs/native-mcp-deploy-1795034061636565363/result.json`.
+- V53 GNSS trial scripts now have an offline-checked `--candidate v53` path
+  pinned to the verified V53 boot image and same-boot Bluetooth evidence.
+  This is preparation only: no V53 GNSS modules have been loaded. The live
+  trials use reboot watchdogs and need an attended recovery window.
 
 ## Recent verified changes
 

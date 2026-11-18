@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Stage the verified August GNSS userspace bundle into Lynx RAM only."""
 
+import argparse
 import hashlib
 import io
 import json
@@ -15,6 +16,8 @@ from prepare_august_gnss_bundle import OUT
 ROOT = Path(__file__).resolve().parent.parent
 REMOTE = "/run/lynx-gnss-static"
 V52_SHA = "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf"
+V53_SHA = "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e"
+BOOT_SHAS = {"v52": V52_SHA, "v53": V53_SHA}
 
 
 def phone(command, data=None, timeout=25):
@@ -28,6 +31,9 @@ def digest(path):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--candidate", choices=BOOT_SHAS, default="v52")
+    args = parser.parse_args()
     manifest = json.loads((OUT / "manifest.json").read_text())
     if manifest["source_build"] != "CPH2493GDPR_11_13.1.0.561EX01_2023081414430000":
         raise SystemExit("GNSS source build changed")
@@ -45,9 +51,9 @@ def main():
     shim_sha = digest(OUT / "lib64/liblynx_props.so")
     mnld_sha = digest(OUT / "bin/mnld")
     custom_sha = digest(OUT / "lib64/libcustom_nvram.so")
-    out = ROOT / "logs" / f"v52-gnss-bundle-stage-{time.time_ns()}"
+    out = ROOT / "logs" / f"{args.candidate}-gnss-bundle-stage-{time.time_ns()}"
     out.mkdir(mode=0o700)
-    report = {"state": "preflight", "remote": REMOTE,
+    report = {"state": "preflight", "candidate": args.candidate, "remote": REMOTE,
               "partition_writes": False, "source_build": manifest["source_build"],
               "mnld_sha256": mnld_sha, "property_shim_sha256": shim_sha,
               "custom_nvram_sha256": custom_sha}
@@ -57,8 +63,8 @@ def main():
 
     save()
     identity = phone("cat /proc/sys/kernel/random/boot_id; sha256sum /dev/sdc39 | cut -c1-64")
-    if identity.returncode or identity.stdout.decode().splitlines()[1:] != [V52_SHA]:
-        raise SystemExit("not exact V52 boot")
+    if identity.returncode or identity.stdout.decode().splitlines()[1:] != [BOOT_SHAS[args.candidate]]:
+        raise SystemExit("not exact " + args.candidate + " boot")
     report["boot_id"] = identity.stdout.decode().splitlines()[0]
     reuse = phone(f"test -f {REMOTE}/bin/mnld && "
                   f'test "$(sha256sum {REMOTE}/bin/mnld | cut -c1-64)" = {mnld_sha} && '

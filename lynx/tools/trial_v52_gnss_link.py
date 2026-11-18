@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guarded RAM-only GNSS data-link trial after a successful V52 Bluetooth probe."""
+"""Guarded RAM-only GNSS data-link trial after a same-boot Bluetooth probe."""
 
 import argparse
 import hashlib
@@ -13,6 +13,8 @@ from lynx_wifi_v19_contact import ssh_command
 ROOT = Path(__file__).resolve().parent.parent
 GRAPH = ROOT / "logs/hardware-dependencies-1793303434757393031.json"
 V52_SHA = "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf"
+V53_SHA = "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e"
+BOOT_SHAS = {"v52": V52_SHA, "v53": V53_SHA}
 KERNEL = "5.10.149-android12-9-o-g311738fbb5a8"
 MODULES = ("gps_drv_dl_v050",)
 PROBE = '''#!/usr/bin/env python3
@@ -40,17 +42,36 @@ def phone(command, data=None, timeout=18):
     return subprocess.run(argv, input=data, capture_output=True, timeout=timeout)
 
 
+def valid_bt_receipt(bt, candidate):
+    if candidate == "v52":
+        return bt.get("state") == "hci-commands-complete-healthy" and bt.get("watchdog_cancelled") is True
+    events = bt.get("steps")
+    nexus = bt.get("nexus")
+    if not isinstance(events, list) or not isinstance(nexus, dict):
+        return False
+    samples = [event for event in events if isinstance(event, dict) and
+               str(event.get("name", "")).startswith("health_sample")]
+    steps = {event.get("name"): event.get("exit") for event in events
+             if isinstance(event, dict)}
+    return (bt.get("state") == "stopped-after-healthy-trial" and
+            bt.get("watchdog_mode") == "stop-only" and
+            nexus.get("state") == "reconnect-smoke-complete" and
+            len(samples) >= 30 and all(sample.get("exit") == 0 for sample in samples) and
+            all(steps.get(name) == 0 for name in ("stop", "stopped_check", "cancel_watchdog")))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--candidate", choices=BOOT_SHAS, default="v52")
     parser.add_argument("--bt-receipt", type=Path, required=True,
-                        help="successful V52 HCI trial receipt from the same boot")
+                        help="successful Bluetooth trial receipt from the same boot")
     args = parser.parse_args()
     source_receipt = args.bt_receipt.resolve(strict=True)
     if not source_receipt.is_relative_to(ROOT / "logs"):
         parser.error("BT receipt must be under Lynx logs")
     bt = json.loads(source_receipt.read_text())
-    if bt.get("state") != "hci-commands-complete-healthy" or not bt.get("watchdog_cancelled"):
-        parser.error("successful V52 HCI receipt required")
+    if not valid_bt_receipt(bt, args.candidate):
+        parser.error("successful " + args.candidate + " Bluetooth receipt required")
     graph = json.loads(GRAPH.read_text())["modules"]
     stock = {}
     for name in MODULES:
@@ -60,10 +81,11 @@ def main():
             parser.error("stock GNSS module changed: " + name)
         stock[name] = (data, info["sha256"])
 
-    out = ROOT / "logs" / f"v52-gnss-link-{time.time_ns()}"
+    out = ROOT / "logs" / f"{args.candidate}-gnss-link-{time.time_ns()}"
     out.mkdir(mode=0o700)
     remote = "/run/lynx-gnss-link-" + str(time.time_ns())
-    report = {"state": "preflight", "bt_receipt": str(source_receipt),
+    report = {"state": "preflight", "candidate": args.candidate,
+              "bt_receipt": str(source_receipt),
               "boot_partition_writes": False, "module_unload_attempted": False,
               "position_fix": False, "remote": remote, "steps": []}
     armed = False
@@ -94,9 +116,9 @@ def main():
     try:
         identity = step("identity", "cat /proc/sys/kernel/random/boot_id; "
                         "uname -r; sha256sum /dev/sdc39 | cut -c1-64").splitlines()
-        if (len(identity) != 3 or identity[1:] != [KERNEL, V52_SHA] or
+        if (len(identity) != 3 or identity[1:] != [KERNEL, BOOT_SHAS[args.candidate]] or
                 identity[0] != bt.get("boot_id")):
-            raise RuntimeError("V52 boot differs from successful Bluetooth trial")
+            raise RuntimeError(args.candidate + " boot differs from successful Bluetooth trial")
         report["boot_id"] = identity[0]
         health = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready"))
         if (health["boot_id"] != identity[0] or health["issues"] or

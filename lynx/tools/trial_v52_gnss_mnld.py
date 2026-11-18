@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Eight-second RAM-only mnld trial with only /dev/gpsdl0 and a reboot guard."""
+"""Bounded RAM-only mnld trial on V52/V53 with a reboot guard."""
 
 import hashlib
 import json
@@ -13,6 +13,8 @@ from parse_lynx_mnl_nmea import summarize
 
 ROOT = Path(__file__).resolve().parent.parent
 V52_SHA = "9206aafb339ad66b2d942ea5795b8f476a5eaf3a148f9cdfc76be22cb83e30bf"
+V53_SHA = "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e"
+BOOT_SHAS = {"v52": V52_SHA, "v53": V53_SHA}
 BUNDLE = "/run/lynx-gnss-static"
 
 
@@ -24,6 +26,7 @@ def phone(command, data=None, timeout=18):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--candidate", choices=BOOT_SHAS, default="v52")
     parser.add_argument("--power-nodes", action="store_true",
                         help="expose verified gps_emi and gps_pwr as well")
     parser.add_argument("--scp-node", action="store_true",
@@ -51,10 +54,11 @@ def main():
         args.scp_node = True
     if args.scp_node:
         args.power_nodes = True
-    out = ROOT / "logs" / f"v52-gnss-mnld-{time.time_ns()}"
+    out = ROOT / "logs" / f"{args.candidate}-gnss-mnld-{time.time_ns()}"
     out.mkdir(mode=0o700)
     remote = "/run/lynx-gnss-mnld-trial-" + str(time.time_ns())
-    report = {"state": "preflight", "partition_writes": False,
+    report = {"state": "preflight", "candidate": args.candidate,
+              "partition_writes": False,
               "device_nodes_exposed": (["/dev/gpsdl0", "/dev/gpsdl1", "/dev/gps_emi", "/dev/gps_pwr", "/dev/gps2scp"]
                                        if args.port2 else
                                        ["/dev/gpsdl0", "/dev/gps_emi", "/dev/gps_pwr", "/dev/gps2scp"]
@@ -81,8 +85,8 @@ def main():
     try:
         identity = step("identity", "cat /proc/sys/kernel/random/boot_id; "
                         "sha256sum /dev/sdc39 | cut -c1-64").splitlines()
-        if len(identity) != 2 or identity[1] != V52_SHA:
-            raise RuntimeError("not exact V52 boot")
+        if len(identity) != 2 or identity[1] != BOOT_SHAS[args.candidate]:
+            raise RuntimeError("not exact " + args.candidate + " boot")
         report["boot_id"] = identity[0]
         health = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready"))
         if (health["boot_id"] != identity[0] or health["issues"] or

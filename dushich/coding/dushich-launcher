@@ -39,6 +39,19 @@ fi
     echo "Run Dushich from the aria account" >&2
     exit 1
 }
+if [[ $# -eq 0 && -t 0 && -t 1 && -z "${NOOBIA_DUSHICH_TMUX_PANE:-}" ]] && command -v tmux >/dev/null 2>&1; then
+    session="noobia-dushich-$$"
+    tmux -L dushich-clean new-session -d -s "$session" -n workshop -c /noobia \
+        "exec env NOOBIA_DUSHICH_TMUX_PANE=1 /usr/local/bin/dushich"
+    tmux -L dushich-clean split-window -h -l 30 -t "$session":0.0 -c /noobia \
+        "exec /usr/bin/python3 /noobia/dushich/solo/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane ${session}:0.0 --size 28"
+    tmux -L dushich-clean set-window-option -t "$session":0 pane-border-status top
+    tmux -L dushich-clean set-window-option -t "$session":0 pane-border-format ' #{pane_title} '
+    tmux -L dushich-clean select-pane -t "$session":0.0 -T 'Dushich • Codex'
+    tmux -L dushich-clean select-pane -t "$session":0.1 -T 'Dushich • Status'
+    tmux -L dushich-clean select-pane -t "$session":0.0
+    exec tmux -L dushich-clean attach-session -t "$session"
+fi
 exec /usr/bin/env -i \
     HOME=/home/aria USER=aria LOGNAME=aria \
     CODEX_HOME=/noobia/dushich/coding/private/codex \

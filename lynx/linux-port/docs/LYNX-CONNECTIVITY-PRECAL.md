@@ -350,6 +350,22 @@ module staging above; restage those prerequisites first. Run
 `PYTHONPATH=tools python3 tools/stage_august_gnss_bundle.py` to restore the
 userspace bundle on a later V52 boot.
 
+### V53 GNSS preparation checkpoint, 2026-11-18
+
+The V53 image is an exact V52 derivative with only
+`etc/lynx/wifi-runtime.sh` changed. An offline byte comparison confirmed the
+V52 and V53 boot images contain identical kernel bytes; the exact images and
+all ten stock modules used by the earlier GPS power/SCP path passed SHA-256
+checks. Receipt:
+`lynx/logs/v53-gnss-offline-readiness-1795032776945579035/result.json`.
+This is compatibility evidence, not a V53 module-load test.
+
+On Lynx's current V53 boot, the GPS data-link, power, SCP modules and device
+nodes, and `/run/lynx-gnss-static/bin/mnld` were absent. The V52 power, SCP,
+bundle-stage, and `mnld` runners all require the exact V52 boot hash. Their
+guards and reboot-watchdog recovery path need a V53 review before any outdoor
+trial. Do not run the old `--sky-trial` command as-is on V53.
+
 ### Bluetooth link and factory identity, 2026-10-30
 
 Nexus discovered Lynx's LE advertisement and subsequently completed a direct

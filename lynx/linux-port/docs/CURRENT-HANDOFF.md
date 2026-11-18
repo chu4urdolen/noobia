@@ -101,8 +101,10 @@ command; this is a checkpoint, not a live guarantee.
    The documented GNSS outdoor trial in `LYNX-CONNECTIVITY-PRECAL.md` uses
    `trial_v52_gnss_mnld.py`, whose preflight requires the exact older V52
    kernel hash. On the current V53 boot, its GNSS modules, device nodes, and
-   RAM daemon bundle are absent; review the guard and prerequisites for V53
-   before reuse.
+   RAM daemon bundle are absent. Offline checks confirmed V52 and V53 kernel
+   bytes match and ten relevant stock module hashes pass, but no V53 GNSS
+   module load has been tried. Review the guards and recovery path before
+   reuse.
 2. Flashlight has a verified bounded pulse from one rear LED. The second rear
    light and safe persistent startup need separate investigation. Avoid the
    stock flashlight core unload sequence that previously lost SSH.

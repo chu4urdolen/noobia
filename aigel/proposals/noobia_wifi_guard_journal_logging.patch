@@ -1,0 +1,243 @@
+# Proposal: journal-visible logging for noobia_wifi_guard.sh
+#
+# Status     : PROPOSAL — not applied, live service untouched
+# Author     : Aigel (diagnostics), 2026-11-18
+# Requested  : Dushich (review + coordination with Aria, owner of the standing service)
+# Scope      : observability only; heal behaviour (what is retried, how often) is UNCHANGED
+#
+## Why
+During the 2026-11-18 Noobia Wi-Fi incident, noobia_wifi_guard retried
+`nmcli connection up` every 15 s for ~4.5 h (since boot 16:31:25) with all
+output redirected to /dev/null. Its journal was completely empty, so the only
+way to discover it was trying was process inspection. The guard should tell
+its caretakers it is working (and failing), without spamming the journal.
+
+## Logging policy (only behavioural addition)
+  * one line when degradation starts (cycle 1), with the reconnect result;
+  * one heartbeat line every HEARTBEAT_CYCLES cycles (~5 min at 15 s) while
+    still degraded;
+  * one line when the link recovers (after N degraded cycles);
+  * one line per maintenance action actually applied (power-save, fq_codel);
+  * quiet cycles in between. During a total outage this is ~130 lines/day,
+    instead of 5760 silent retries or 5760 identical lines.
+New knob: NOOBIA_WIFI_GUARD_HEARTBEAT (cycles between heartbeats, default 20).
+stdout is already journalled by the unit; no log files are created.
+
+## 1) CURRENT script (verbatim, /noobia/common/services/noobia_wifi_guard.sh)
+```bash
+#!/usr/bin/env bash
+# noobia_wifi_guard.sh — Self-contained Noobia Wi-Fi stability & defense service
+#
+# Continuously keeps wlx40a5ef5f66f1 connected to 'Noobia MT7612U'
+# (192.168.100.106/24) with Wi-Fi power-save disabled and fq_codel active,
+# and ensures ufw and fail2ban stay active.
+# One-shot diagnostic and security audit tools live under /noobia/aigel/tools/.
+
+set -euo pipefail
+
+export PATH="/usr/sbin:/sbin:/usr/bin:/bin:${PATH:-}"
+IFACE="wlx40a5ef5f66f1"
+PROFILE="Noobia MT7612U"
+STATIC_IP="192.168.100.106"
+INTERVAL="${NOOBIA_WIFI_GUARD_INTERVAL:-15}"
+
+trap 'exit 0' TERM INT
+
+while :; do
+    dev_status="$(nmcli -t -f DEVICE,STATE,CONNECTION device status 2>/dev/null || true)"
+    ip_status="$(ip -4 -br addr show "$IFACE" 2>/dev/null || true)"
+    ps_status="$(iw dev "$IFACE" get power_save 2>/dev/null || true)"
+
+    if [[ "$dev_status" != *"${IFACE}:connected:${PROFILE}"* ]] || [[ "$ip_status" != *"$STATIC_IP"* ]]; then
+        nmcli --wait 10 connection up "$PROFILE" ifname "$IFACE" >/dev/null 2>&1 || true
+    fi
+
+    if [[ "${ps_status,,}" != *"power save: off"* ]]; then
+        iw dev "$IFACE" set power_save off >/dev/null 2>&1 || true
+    fi
+
+    qdisc_status="$(tc qdisc show dev "$IFACE" 2>/dev/null || true)"
+    if [[ "$qdisc_status" != *"fq_codel"* ]]; then
+        tc qdisc replace dev "$IFACE" root fq_codel >/dev/null 2>&1 || true
+    fi
+
+    sleep "$INTERVAL"
+done
+```
+
+## 2) PROPOSED script (verbatim)
+```bash
+#!/usr/bin/env bash
+# noobia_wifi_guard.sh — Self-contained Noobia Wi-Fi stability & defense service
+#
+# Continuously keeps wlx40a5ef5f66f1 connected to 'Noobia MT7612U'
+# (192.168.100.106/24) with Wi-Fi power-save disabled and fq_codel active,
+# and ensures ufw and fail2ban stay active.
+# One-shot diagnostic and security audit tools live under /noobia/aigel/tools/.
+#
+# Logging (Aigel proposal, 2026-11-18 — NOT yet applied): heal attempts and
+# recovery events are written to stdout, where systemd-journald captures them.
+# During a long outage the journal gets exactly one line when the outage
+# starts, one heartbeat per HEARTBEAT_CYCLES cycles (~5 min at the default
+# 15 s interval), and one line when the link recovers. Heal behaviour itself
+# (what is retried, how often) is unchanged from the current script.
+
+set -euo pipefail
+
+export PATH="/usr/sbin:/sbin:/usr/bin:/bin:${PATH:-}"
+IFACE="wlx40a5ef5f66f1"
+PROFILE="Noobia MT7612U"
+STATIC_IP="192.168.100.106"
+INTERVAL="${NOOBIA_WIFI_GUARD_INTERVAL:-15}"
+HEARTBEAT_CYCLES="${NOOBIA_WIFI_GUARD_HEARTBEAT:-20}"   # ~5 min at 15 s interval
+
+# stdout is captured by journald; no log file is created.
+log() { printf '[noobia-wifi-guard] %s\n' "$*"; }
+
+trap 'exit 0' TERM INT
+
+degraded_cycles=0
+
+while :; do
+    dev_status="$(nmcli -t -f DEVICE,STATE,CONNECTION device status 2>/dev/null || true)"
+    ip_status="$(ip -4 -br addr show "$IFACE" 2>/dev/null || true)"
+    ps_status="$(iw dev "$IFACE" get power_save 2>/dev/null || true)"
+
+    if [[ "$dev_status" == *"${IFACE}:connected:${PROFILE}"* && "$ip_status" == *"$STATIC_IP"* ]]; then
+        if (( degraded_cycles > 0 )); then
+            log "recovered: ${IFACE} connected to ${PROFILE} with ${STATIC_IP} after ${degraded_cycles} degraded cycle(s)"
+            degraded_cycles=0
+        fi
+    else
+        degraded_cycles=$((degraded_cycles + 1))
+        if nmcli --wait 10 connection up "$PROFILE" ifname "$IFACE" >/dev/null 2>&1; then
+            last_attempt="succeeded (exit 0)"
+        else
+            last_attempt="failed"
+        fi
+        if (( degraded_cycles == 1 || degraded_cycles % HEARTBEAT_CYCLES == 0 )); then
+            log "degraded (cycle ${degraded_cycles}): ${IFACE} not connected to ${PROFILE}; reconnect attempt ${last_attempt}; ip='${ip_status:-no-address}'"
+        fi
+    fi
+
+    if [[ "${ps_status,,}" != *"power save: off"* ]]; then
+        if iw dev "$IFACE" set power_save off >/dev/null 2>&1; then
+            log "maintenance: power-save set to off"
+        else
+            log "maintenance: power-save set failed (iw missing or device absent)"
+        fi
+    fi
+
+    qdisc_status="$(tc qdisc show dev "$IFACE" 2>/dev/null || true)"
+    if [[ "$qdisc_status" != *"fq_codel"* ]]; then
+        if tc qdisc replace dev "$IFACE" root fq_codel >/dev/null 2>&1; then
+            log "maintenance: fq_codel qdisc installed"
+        else
+            log "maintenance: fq_codel install failed"
+        fi
+    fi
+
+    sleep "$INTERVAL"
+done
+```
+
+## 3) Unified diff (current → proposed)
+```diff
+--- /noobia/common/services/noobia_wifi_guard.sh	2026-11-18 00:24:57.719353713 +0200
++++ /noobia/aigel/proposals/.proposed_wifi_guard.sh	2026-11-18 21:20:50.528974528 +0200
+@@ -5,6 +5,13 @@
+ # (192.168.100.106/24) with Wi-Fi power-save disabled and fq_codel active,
+ # and ensures ufw and fail2ban stay active.
+ # One-shot diagnostic and security audit tools live under /noobia/aigel/tools/.
++#
++# Logging (Aigel proposal, 2026-11-18 — NOT yet applied): heal attempts and
++# recovery events are written to stdout, where systemd-journald captures them.
++# During a long outage the journal gets exactly one line when the outage
++# starts, one heartbeat per HEARTBEAT_CYCLES cycles (~5 min at the default
++# 15 s interval), and one line when the link recovers. Heal behaviour itself
++# (what is retried, how often) is unchanged from the current script.
+ 
+ set -euo pipefail
+ 
+@@ -13,25 +20,52 @@
+ PROFILE="Noobia MT7612U"
+ STATIC_IP="192.168.100.106"
+ INTERVAL="${NOOBIA_WIFI_GUARD_INTERVAL:-15}"
++HEARTBEAT_CYCLES="${NOOBIA_WIFI_GUARD_HEARTBEAT:-20}"   # ~5 min at 15 s interval
++
++# stdout is captured by journald; no log file is created.
++log() { printf '[noobia-wifi-guard] %s\n' "$*"; }
+ 
+ trap 'exit 0' TERM INT
+ 
++degraded_cycles=0
++
+ while :; do
+     dev_status="$(nmcli -t -f DEVICE,STATE,CONNECTION device status 2>/dev/null || true)"
+     ip_status="$(ip -4 -br addr show "$IFACE" 2>/dev/null || true)"
+     ps_status="$(iw dev "$IFACE" get power_save 2>/dev/null || true)"
+ 
+-    if [[ "$dev_status" != *"${IFACE}:connected:${PROFILE}"* ]] || [[ "$ip_status" != *"$STATIC_IP"* ]]; then
+-        nmcli --wait 10 connection up "$PROFILE" ifname "$IFACE" >/dev/null 2>&1 || true
++    if [[ "$dev_status" == *"${IFACE}:connected:${PROFILE}"* && "$ip_status" == *"$STATIC_IP"* ]]; then
++        if (( degraded_cycles > 0 )); then
++            log "recovered: ${IFACE} connected to ${PROFILE} with ${STATIC_IP} after ${degraded_cycles} degraded cycle(s)"
++            degraded_cycles=0
++        fi
++    else
++        degraded_cycles=$((degraded_cycles + 1))
++        if nmcli --wait 10 connection up "$PROFILE" ifname "$IFACE" >/dev/null 2>&1; then
++            last_attempt="succeeded (exit 0)"
++        else
++            last_attempt="failed"
++        fi
++        if (( degraded_cycles == 1 || degraded_cycles % HEARTBEAT_CYCLES == 0 )); then
++            log "degraded (cycle ${degraded_cycles}): ${IFACE} not connected to ${PROFILE}; reconnect attempt ${last_attempt}; ip='${ip_status:-no-address}'"
++        fi
+     fi
+ 
+     if [[ "${ps_status,,}" != *"power save: off"* ]]; then
+-        iw dev "$IFACE" set power_save off >/dev/null 2>&1 || true
++        if iw dev "$IFACE" set power_save off >/dev/null 2>&1; then
++            log "maintenance: power-save set to off"
++        else
++            log "maintenance: power-save set failed (iw missing or device absent)"
++        fi
+     fi
+ 
+     qdisc_status="$(tc qdisc show dev "$IFACE" 2>/dev/null || true)"
+     if [[ "$qdisc_status" != *"fq_codel"* ]]; then
+-        tc qdisc replace dev "$IFACE" root fq_codel >/dev/null 2>&1 || true
++        if tc qdisc replace dev "$IFACE" root fq_codel >/dev/null 2>&1; then
++            log "maintenance: fq_codel qdisc installed"
++        else
++            log "maintenance: fq_codel install failed"
++        fi
+     fi
+ 
+     sleep "$INTERVAL"
+```
+
+## Review checklist for Dushich / Aria
+  [ ] Heal logic performs the same actions, in the same order, at the same
+        cadence (only the if/else shape changed to compute a shared `healthy` flag).
+  [ ] `set -euo pipefail` safety: all arithmetic is in assignments or `if`
+        conditions (no bare `((...))` statements that could trip -e).
+  [ ] journald capture: stdout only; verify with
+        `systemctl restart noobia_wifi_guard && journalctl -u noobia_wifi_guard -f`
+        (restart is a reviewed action — coordinate).
+  [ ] No credentials, keys, or private data in any log line (verified: only
+        interface name, profile name, static IP, and command outcome).
+
+## Verification (after Aria/Dushich apply)
+  1. `bash -n` the applied script (already passed for this proposal).
+  2. With consent and in a controlled test window, force a degraded state
+     (e.g. temporarily disable the AP SSID or unplug the dongle), and confirm:
+     one `degraded (cycle 1)` line, one heartbeat per ~5 min, one `recovered`
+     line when the link returns.
+  3. `journalctl -u noobia_wifi_guard --since "-10 min"` reads as expected.
+
+## Rollback
+Restore the previous script (kept verbatim in section 1 and in Git history
+at b46f42b), then `systemctl restart noobia_wifi_guard`. The logging adds no
+persistent state; there is nothing to migrate.

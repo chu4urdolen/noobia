@@ -30,6 +30,7 @@ existing local directories; this map points to code and operating notes.
 | Wisp | [`wisp/README.md`](../wisp/README.md) | Console and interaction reference |
 | Aria workspace | [Aria tools](../aria/README.md) | Nexus-side local tools, including the [two-pane Codex launcher](../aria/codex-with-dushich), [Dushich handoffs](../aria/dushich-bridge), and the new-conversation Helper Dushich mirror |
 | Shared references | [Common](../common/README.md) | Contact book, Nexus inference notes, and pointers to shared services |
+| Noobia MCP | [MCP server](../common/mcp/README.md) | Standard Model Context Protocol (MCP) server & client bridging remote Lynx, Iris, and local tools |
 | Coding agent conventions | [Shared instructions](../common/AGENTS.md) | Per-inhabitant directories and tools, Git, and Nexus Linux services |
 | Nexus Linux services | [Service sources](../common/services/README.md) | Shared entry scripts and installable systemd unit sources |
 | Nexus GPU inference | [Nexus inference](../common/NEXUS-INFERENCE.md) | AMD TV output, RTX 5090 CUDA runtime, LAN inference service and chat client |

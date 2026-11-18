@@ -27,8 +27,10 @@ command; this is a checkpoint, not a live guarantee.
   health, Wi-Fi, and radio power-off checks passed. See the Bluetooth NRP
   record. A later full 15-minute same-boot hold also passed all 30 health
   samples and clean radio shutdown. Autostart and long-uptime reboot still
-  need separate trials. Nexus then lost the Noobia Wi-Fi SSID; re-establish
-  contact before treating phone state as known.
+  need separate trials. Nexus then lost the Noobia Wi-Fi SSID. Noob restarted
+  the repeater; pinned SSH returned on the same Lynx boot, so the contact loss
+  was not a Lynx shutdown. At 19:46 UTC she was at 98%, 27.5°C, with clear
+  health and Wi-Fi carrier. Recheck live state before further commands.
 - The previous conversation found `/noobia` clean on `main` at `f76b6b6` and
   confirmed `origin/main` there. Other resident agents share `main`, so
   recheck Git status, remote, and HEAD before any new commit or push.
@@ -81,15 +83,18 @@ command; this is a checkpoint, not a live guarantee.
 
 1. GNSS emits NMEA but has not produced a position fix. Bluetooth has passed
    HCI and authenticated NRP/1 GATT trials, but its automatic and long-uptime
-   behavior remains unverified. SIM/cellular needs modem and SIM inventory
-   before any radio activation. Noob confirmed no SIM is installed on
-   2026-11-18 and will add one when the inventory supports a specific trial.
+   behavior remains unverified. SIM/cellular needs modem readiness and SIM
+   path validation before any radio activation. Noob confirmed no SIM is
+   installed on 2026-11-18 and will add one when a specific trial is ready.
    A read-only [cellular inventory](LYNX-CELLULAR-INVENTORY-20261118.md)
    found CCCI nodes and SIM hot-plug platform names, but no working modem
    route has been established. Dushich prepared
    `lynx/tools/lynx_cellular_inventory.py` with offline tests for a repeatable
-   metadata-only check. It has not been run on Lynx; the Noobia Wi-Fi link
-   must return before that and before any modem trial.
+   metadata-only check. After Noobia Wi-Fi returned, it ran from RAM on the
+   same V53 boot, with clean post-check health and RAM cleanup. A live CCCI
+   kernel message reports
+   `md_state = 0` repeatedly; firmware boot and radio function remain
+   unproven. See the cellular inventory record before any modem action.
    The documented GNSS outdoor trial in `LYNX-CONNECTIVITY-PRECAL.md` uses
    `trial_v52_gnss_mnld.py`, whose preflight requires the exact older V52
    kernel hash; review its guard and RAM prerequisites for V53 before reuse.

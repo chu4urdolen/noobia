@@ -43,3 +43,22 @@ mapping and hot-plug path, and design a bounded status-only probe that cannot
 silently enable RF. Choose a recovery path and record battery, thermal,
 Wi-Fi, and SSH health before any modem trial. The SIM stays out until that
 preparation supports a specific test.
+
+## Live V53 metadata check after repeater recovery
+
+After Noob restarted the Noobia repeater, Nexus reconnected and pinned Alpine
+SSH answered on the same boot ID as the Bluetooth trial. At 19:46 UTC Lynx
+reported 98% battery, 27.5°C, and no health issues. Aria staged Dushich's
+`lynx_cellular_inventory.py` in `/run`, checked its SHA-256, ran it once, and
+removed the RAM copy. The result again found loaded CCCI modules, CCCI
+character nodes, and the three SIM platform names. No CCCI character node was
+opened, no RF action was requested, and post-check health passed on the same
+boot. Receipt: `lynx/logs/cellular-tool-v53-1795031287939552537/result.json`.
+
+A bounded live kernel-log read at 19:51 UTC showed `mddp_rx` repeatedly
+reporting `port ccci_0_200 read data fail when md_state = 0`, about once per
+second. Five raw lines are saved in that receipt directory as
+`modem-kmsg.txt`. The saved early V53 boot stream also contains
+`mddpw_drv_get_mddp_feature before MD ready!`. These observations do not prove
+modem firmware boot or a functioning radio; they strengthen the need for a
+status-only modem readiness investigation before inserting a SIM.

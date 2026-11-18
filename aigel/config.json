@@ -1,7 +1,7 @@
 {
   "sample_interval_ms": 1000,
   "sample_period_s": 300,
-  "power_limit_w": 500,
+  "power_limit_w": 400,
   "thresholds": {
     "disk_used_pct": {
       "direction": "high",

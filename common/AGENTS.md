@@ -168,6 +168,10 @@ The RTX 5090 graphics card is capped at 400 W and local Ollama inference runs wi
   Use it to open, click through, and screenshot web apps:
   `/opt/noobia/web-venv/bin/python your_check.py` with
   `from playwright.sync_api import sync_playwright`.
+- `uv` and `uvx` (`/home/aria/.local/bin`, uv 0.13.9) create fast, clean
+  Python environments for a project: `uv venv`, `uv pip install ...`,
+  `uv run script.py`. Prefer a per-project environment to installing into the
+  system Python 3.14.
 
 ## Nexus Linux services
 

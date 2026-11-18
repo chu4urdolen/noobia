@@ -298,6 +298,31 @@ def evaluate_config_integrity(
     }
 
 
+def derive_verdict(healthy: bool, healed: bool, sections: dict, ping_ok: bool) -> tuple[str, list[str]]:
+    """Summarize a ``check_once`` report into one verdict with short reasons.
+
+    ``ok``   — every check passes.
+    ``warn`` — everything passes now, but Wi-Fi was degraded and auto-healed
+               during the check.
+    ``fail`` — any check (including the gateway ping) is not passing.
+    """
+    reasons: list[str] = []
+    for name, res in sections.items():
+        if isinstance(res, dict) and res.get("ok") is False:
+            text = f"{name} failed"
+            missing = res.get("missing")
+            if isinstance(missing, list) and missing:
+                text += ": " + ", ".join(str(item) for item in missing[:4])
+            reasons.append(text)
+    if not ping_ok:
+        reasons.append("gateway ping failed")
+    if not reasons:
+        if healed:
+            return "warn", ["wifi was degraded and was auto-healed during this check"]
+        return "ok", []
+    return "fail", reasons
+
+
 def check_once(heal_wifi: bool = False) -> dict:
     sysctl_res = parse_sysctl_hardening(read_live_sysctls())
 
@@ -369,8 +394,21 @@ def check_once(heal_wifi: bool = False) -> dict:
         and arp_res["ok"]
         and config_res["ok"]
     )
+    sections = {
+        "sysctl": sysctl_res,
+        "ufw": ufw_res,
+        "fail2ban": f2b_res,
+        "wifi": wifi_res,
+        "listeners": listeners_res,
+        "wifi_signal": wifi_signal_res,
+        "arp_neighbors": arp_res,
+        "config_integrity": config_res,
+    }
+    verdict, reasons = derive_verdict(healthy, healed, sections, ping_ok)
     return {
         "healthy": healthy,
+        "verdict": verdict,
+        "reasons": reasons,
         "sysctl": sysctl_res,
         "ufw": ufw_res,
         "fail2ban": f2b_res,
@@ -399,13 +437,14 @@ def main() -> int:
             print(json.dumps(res, indent=2), flush=True)
         else:
             print(
-                f"[nexus-net-guard] healthy={res['healthy']} "
+                f"[nexus-net-guard] verdict={res['verdict']} healthy={res['healthy']} "
                 f"sysctl={res['sysctl']['ok']} ufw={res['ufw']['ok']} "
                 f"fail2ban={res['fail2ban']['ok']} wifi={res['wifi']['ok']} "
                 f"gateway_ping={res['gateway_ping_ok']} listeners={res['listeners']['ok']} "
                 f"wifi_signal={res['wifi_signal']['ok']} "
                 f"arp={res['arp_neighbors']['ok']} "
-                f"config={res['config_integrity']['ok']} healed={res['healed']}",
+                f"config={res['config_integrity']['ok']} healed={res['healed']}"
+                + (f" reasons={'; '.join(res['reasons'])}" if res["reasons"] else ""),
                 flush=True,
             )
         if args.once or not args.watch:

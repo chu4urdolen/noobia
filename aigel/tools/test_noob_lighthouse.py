@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 """Unit tests for the Noob Lighthouse LAN presence and service beacon."""
 
+import json
+import os
+import tempfile
 import unittest
+from pathlib import Path
 
-from noob_lighthouse import KNOWN_INHABITANTS, summarize_beacon_results
+from noob_lighthouse import (
+    KNOWN_INHABITANTS,
+    load_roster,
+    parse_ping_rtt,
+    summarize_beacon_results,
+)
 
 
 def make_probes(**overrides: dict) -> dict[str, dict]:
@@ -93,6 +102,100 @@ class TestSummarizeBeaconResults(unittest.TestCase):
         probes = make_probes()
         res = summarize_beacon_results(probes)
         self.assertIs(res["inhabitants"], probes)
+
+
+class TestLoadRoster(unittest.TestCase):
+    """The shared roster config, its fallbacks, and the env override."""
+
+    def setUp(self) -> None:
+        self._old_env = __import__("os").environ.pop("LIGHTHOUSE_ROSTER", None)
+
+    def tearDown(self) -> None:
+        if self._old_env is None:
+            __import__("os").environ.pop("LIGHTHOUSE_ROSTER", None)
+        else:
+            __import__("os").environ["LIGHTHOUSE_ROSTER"] = self._old_env
+
+    def test_explicit_path_wins(self) -> None:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
+            json.dump({"inhabitants": {"vader": {"ip": "192.168.100.99", "role": "test"}}}, handle)
+            name = handle.name
+        try:
+            roster = load_roster(name)
+            self.assertEqual(set(roster), {"vader"})
+            self.assertEqual(roster["vader"]["ip"], "192.168.100.99")
+        finally:
+            Path(name).unlink()
+
+    def test_env_override_beats_default(self) -> None:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
+            json.dump({"inhabitants": {"env_node": {"ip": "192.168.100.88"}}}, handle)
+            name = handle.name
+        try:
+            os.environ["LIGHTHOUSE_ROSTER"] = name
+            roster = load_roster()
+            self.assertEqual(set(roster), {"env_node"})
+        finally:
+            os.environ.pop("LIGHTHOUSE_ROSTER", None)
+            Path(name).unlink()
+
+    def test_explicit_path_beats_env(self) -> None:
+        env_name = None
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
+            json.dump({"inhabitants": {"env_node": {"ip": "192.168.100.88"}}}, handle)
+            env_name = handle.name
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
+            json.dump({"inhabitants": {"path_node": {"ip": "192.168.100.77"}}}, handle)
+            path_name = handle.name
+        try:
+            os.environ["LIGHTHOUSE_ROSTER"] = env_name
+            roster = load_roster(path_name)
+            self.assertEqual(set(roster), {"path_node"})
+        finally:
+            os.environ.pop("LIGHTHOUSE_ROSTER", None)
+            Path(env_name).unlink()
+            Path(path_name).unlink()
+
+    def test_missing_file_falls_back_to_builtin(self) -> None:
+        roster = load_roster("/nonexistent/roster.json")
+        self.assertEqual(set(roster), set(KNOWN_INHABITANTS))
+
+    def test_malformed_file_falls_back_to_builtin(self) -> None:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
+            handle.write("{ this is not json")
+            name = handle.name
+        try:
+            roster = load_roster(name)
+            self.assertEqual(set(roster), set(KNOWN_INHABITANTS))
+        finally:
+            Path(name).unlink()
+
+    def test_entry_without_ip_rejected(self) -> None:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
+            json.dump({"inhabitants": {"broken": {"role": "no ip here"}}}, handle)
+            name = handle.name
+        try:
+            roster = load_roster(name)
+            self.assertEqual(set(roster), set(KNOWN_INHABITANTS))
+        finally:
+            Path(name).unlink()
+
+
+class TestParsePingRtt(unittest.TestCase):
+    def test_extracts_average(self) -> None:
+        stdout = (
+            "64 bytes from 8.8.8.8 icmp_seq=1 ttl=118 time=1.23 ms\n\n"
+            "--- 8.8.8.8 ping statistics ---\n"
+            "1 packets transmitted, 1 received, 0% packet loss, time 0ms\n"
+            "rtt min/avg/max/mdev = 1.234/1.234/1.234/0.000\n"
+        )
+        self.assertAlmostEqual(parse_ping_rtt(stdout), 1.234)
+
+    def test_no_statistics_returns_none(self) -> None:
+        self.assertIsNone(parse_ping_rtt("0 packets transmitted, 1 received"))
+
+    def test_empty_returns_none(self) -> None:
+        self.assertIsNone(parse_ping_rtt(""))
 
 
 if __name__ == "__main__":

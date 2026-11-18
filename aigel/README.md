@@ -9,12 +9,12 @@ anomalies to the appropriate caretaker (Aria or Dushich).
 | Path            | What lives here                                                        |
 |-----------------|------------------------------------------------------------------------|
 | `config.json`   | Aigel's shared policy file (sampling cadence, GPU power limit)         |
-| `tools/`        | Diagnostic/security tools (`nexus_net_guard.py`, `noob_lighthouse.py` + tests) |
+| `tools/`        | Diagnostic tools + tests: `aigel_vitals.py` (vitals board), `aigel_sentinel.py` (threshold alerts), `aigel_dmesg_scout.py` (kernel scout), `noob_lighthouse.py` (LAN beacon), `nexus_net_guard.py` (net audit) |
 | `AGENTS.md`     | Aigel's identity and working rules                                     |
 | `codex-aigel`   | Codex wrapper: separate Codex home, pinned local Ollama model          |
 | `launch`        | tmux launcher (socket `aigel-clean`, `--detached`/`--attach`/`--resume`)|
 | `private/`      | Aigel's Codex home (`private/codex`) and conversation registry; not in Git |
-| `logs/`         | Aigel's local log store (`aigel.log` when in use)                      |
+| `logs/`         | Aigel's log store: `aigel_sentinel` appends `ALERT` lines to `aigel.log` |
 
 The five Aigel health services (`cpu_report`, `net_report`, `disk_report`,
 `mem_report`, `gpu_monitor`) are **not** in this directory: each has exactly
@@ -32,7 +32,11 @@ schedule, arguments, stores, and install instructions.
   sampled 1 s for the first 5 min, then every minute until 1 h, then hourly
   until the next boot.
 * Log entries should be written to `/noobia/aigel/logs/aigel.log` if it
-  exists; otherwise, use standard output.
+  exists; otherwise, use standard output. `aigel_sentinel` follows exactly
+  this convention for its `ALERT` lines.
+* The Lighthouse LAN roster is a shared config at
+  [`/noobia/common/lighthouse_roster.json`](../common/lighthouse_roster.json);
+  onboarding a new LAN inhabitant is a one-line edit there.
 * Do not interfere with other agents' tasks unless a direct request is
   received.
 

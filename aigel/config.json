@@ -1,5 +1,47 @@
 {
   "sample_interval_ms": 1000,
   "sample_period_s": 300,
-  "power_limit_w": 500
+  "power_limit_w": 500,
+  "thresholds": {
+    "disk_used_pct": {
+      "direction": "high",
+      "warn": 90,
+      "fail": 95
+    },
+    "ram_free_pct": {
+      "direction": "low",
+      "warn": 10,
+      "fail": 2
+    },
+    "load1_per_core": {
+      "direction": "high",
+      "warn": 2.0,
+      "fail": 4.0
+    },
+    "dns_rtt_ms": {
+      "direction": "high",
+      "warn": 150,
+      "fail": 400
+    },
+    "gpu_temp_c": {
+      "direction": "high",
+      "warn": 85,
+      "fail": 95
+    },
+    "journal_error_count": {
+      "direction": "high",
+      "warn": 10,
+      "fail": 50
+    },
+    "wifi_state": {
+      "bad": [
+        "DOWN"
+      ],
+      "severity": "fail"
+    },
+    "nexus_ready": {
+      "expect": true,
+      "severity": "fail"
+    }
+  }
 }

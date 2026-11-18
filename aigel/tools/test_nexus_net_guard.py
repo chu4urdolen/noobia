@@ -13,6 +13,7 @@ from nexus_net_guard import (
     evaluate_config_integrity,
     evaluate_fail2ban,
     evaluate_listeners,
+    derive_verdict,
     evaluate_noobia_wifi,
     evaluate_ufw_status,
     evaluate_wifi_signal,
@@ -227,6 +228,45 @@ class TestEvaluateConfigIntegrity(unittest.TestCase):
                 "/etc/sysctl.d/90-nexus-network-security.conf",
             ),
         )
+
+
+class TestDeriveVerdict(unittest.TestCase):
+    """The top-level ok/warn/fail verdict with reasons."""
+
+    def test_ok_when_all_healthy(self) -> None:
+        sections = {"sysctls": {"ok": True}, "ufw": {"ok": True}}
+        verdict, reasons = derive_verdict(healthy=True, healed=False, sections=sections, ping_ok=True)
+        self.assertEqual(verdict, "ok")
+        self.assertEqual(reasons, [])
+
+    def test_warn_when_wifi_was_healed(self) -> None:
+        sections = {"sysctls": {"ok": True}}
+        verdict, reasons = derive_verdict(healthy=True, healed=True, sections=sections, ping_ok=True)
+        self.assertEqual(verdict, "warn")
+        self.assertTrue(any("auto-healed" in reason for reason in reasons))
+
+    def test_fail_when_a_section_fails(self) -> None:
+        sections = {"sysctls": {"ok": False, "missing": ["a", "b"]}, "ufw": {"ok": True}}
+        verdict, reasons = derive_verdict(healthy=True, healed=False, sections=sections, ping_ok=True)
+        self.assertEqual(verdict, "fail")
+        self.assertTrue(any("sysctls failed" in reason and "a" in reason for reason in reasons))
+
+    def test_fail_when_gateway_ping_fails(self) -> None:
+        verdict, reasons = derive_verdict(healthy=True, healed=False, sections={}, ping_ok=False)
+        self.assertEqual(verdict, "fail")
+        self.assertIn("gateway ping failed", reasons)
+
+    def test_fail_wins_over_healed(self) -> None:
+        sections = {"ufw": {"ok": False}}
+        verdict, reasons = derive_verdict(healthy=False, healed=True, sections=sections, ping_ok=True)
+        self.assertEqual(verdict, "fail")
+        self.assertTrue(any("ufw failed" in reason for reason in reasons))
+
+    def test_missing_reason_capped_at_four(self) -> None:
+        sections = {"x": {"ok": False, "missing": ["m1", "m2", "m3", "m4", "m5"]}}
+        verdict, reasons = derive_verdict(healthy=False, healed=False, sections=sections, ping_ok=True)
+        self.assertEqual(verdict, "fail")
+        self.assertTrue(any("m1" in reason and "m5" not in reason for reason in reasons))
 
 
 if __name__ == "__main__":

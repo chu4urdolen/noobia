@@ -14,10 +14,12 @@ import argparse
 import concurrent.futures
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 KNOWN_INHABITANTS = {
     "gateway": {"ip": "192.168.100.1", "role": "Noobia Wi-Fi Router", "tcp_ports": []},
@@ -26,6 +28,42 @@ KNOWN_INHABITANTS = {
     "argus": {"ip": "192.168.100.105", "role": "Argus (Historian)", "tcp_ports": [22, 47200, 47201]},
     "rose": {"ip": "192.168.100.7", "role": "Rose", "tcp_ports": [22, 47300, 47301]},
 }
+
+DEFAULT_ROSTER_FILE = "/noobia/common/lighthouse_roster.json"
+
+
+def load_roster(path: str | None = None) -> dict:
+    """Load the inhabitant roster from the shared JSON config.
+
+    Precedence: explicit ``path`` argument, the ``LIGHTHOUSE_ROSTER``
+    environment variable, then ``DEFAULT_ROSTER_FILE``. Falls back to the
+    built-in ``KNOWN_INHABITANTS`` table when the file is missing, unreadable,
+    or malformed. Every entry needs at least an ``ip``.
+    """
+    candidate = path or os.environ.get("LIGHTHOUSE_ROSTER") or DEFAULT_ROSTER_FILE
+    if candidate:
+        try:
+            data = json.loads(Path(candidate).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return dict(KNOWN_INHABITANTS)
+        inhabitants = data.get("inhabitants", data) if isinstance(data, dict) else None
+        if isinstance(inhabitants, dict) and inhabitants and all(
+            isinstance(info, dict) and "ip" in info
+            for info in inhabitants.values()
+        ):
+            return {name: dict(info) for name, info in inhabitants.items()}
+    return dict(KNOWN_INHABITANTS)
+
+
+def parse_ping_rtt(stdout: str) -> float | None:
+    """Extract the average RTT in milliseconds from ping output, if present."""
+    match = re.search(r"min/avg/max/mdev = [\d.]+/([\d.]+)", stdout)
+    if match:
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return None
+    return None
 
 
 def summarize_beacon_results(probes: dict[str, dict]) -> dict:
@@ -62,7 +100,8 @@ def summarize_beacon_results(probes: dict[str, dict]) -> dict:
     }
 
 
-def _run_ping(ip: str) -> bool:
+def _run_ping(ip: str) -> tuple[bool, float | None]:
+    """Ping once; return (reachable, average RTT in ms or None)."""
     env = dict(os.environ)
     env["PATH"] = "/usr/sbin:/sbin:/usr/bin:/bin:" + env.get("PATH", "")
     try:
@@ -74,9 +113,9 @@ def _run_ping(ip: str) -> bool:
             check=False,
             env=env,
         )
-        return proc.returncode == 0
+        return proc.returncode == 0, parse_ping_rtt(proc.stdout)
     except (OSError, subprocess.SubprocessError):
-        return False
+        return False, None
 
 
 def _probe_ports(ip: str, ports: list[int], timeout: float) -> list[int]:
@@ -93,34 +132,39 @@ def _probe_ports(ip: str, ports: list[int], timeout: float) -> list[int]:
 def probe_inhabitant(name: str, info: dict, timeout: float = 0.5) -> dict:
     """Ping one inhabitant and probe its Noob-facing TCP ports."""
     ip = info["ip"]
+    ping_ok, rtt_ms = _run_ping(ip)
     return {
         "ip": ip,
         "role": info.get("role", ""),
-        "ping_ok": _run_ping(ip),
+        "ping_ok": ping_ok,
+        "rtt_ms": rtt_ms,
         "open_ports": _probe_ports(ip, list(info.get("tcp_ports", [])), timeout),
     }
 
 
-def probe_all(timeout: float = 0.5) -> dict:
+def probe_all(timeout: float = 0.5, roster: dict | None = None) -> dict:
     """Probe every known inhabitant in parallel and summarize the beacon.
 
-    All five inhabitants are probed concurrently via ``ThreadPoolExecutor``
-    so a healthy LAN returns well inside 1.5 seconds.
+    All inhabitants are probed concurrently via ``ThreadPoolExecutor`` so a
+    healthy LAN returns well inside 1.5 seconds. The roster is loaded from
+    the shared config file by default (see ``load_roster``).
     """
+    roster = roster or load_roster()
     probes: dict[str, dict] = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(KNOWN_INHABITANTS))) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(roster))) as pool:
         futures = {
             pool.submit(probe_inhabitant, name, info, timeout): name
-            for name, info in KNOWN_INHABITANTS.items()
+            for name, info in roster.items()
         }
         for future, name in futures.items():
             try:
                 probes[name] = future.result(timeout=10)
             except (concurrent.futures.Error, Exception):
                 probes[name] = {
-                    "ip": KNOWN_INHABITANTS[name]["ip"],
-                    "role": KNOWN_INHABITANTS[name].get("role", ""),
+                    "ip": roster[name]["ip"],
+                    "role": roster[name].get("role", ""),
                     "ping_ok": False,
+                    "rtt_ms": None,
                     "open_ports": [],
                 }
     return summarize_beacon_results(probes)
@@ -140,11 +184,17 @@ def main() -> int:
         if args.json:
             print(json.dumps(res, indent=2), flush=True)
         else:
+            rtt_bits = [
+                f"{name}={int(res['inhabitants'][name]['rtt_ms'])}ms"
+                for name in res["online"]
+                if res["inhabitants"].get(name, {}).get("rtt_ms") is not None
+            ]
             print(
                 f"[noob-lighthouse] nexus_ready={res['nexus_ready']} "
                 f"online={res['online_count']}/{res['total_count']} "
                 f"online={','.join(res['online']) or '-'} "
-                f"offline={','.join(res['offline']) or '-'}",
+                f"offline={','.join(res['offline']) or '-'}"
+                + (f" rtt={','.join(rtt_bits)}" if rtt_bits else ""),
                 flush=True,
             )
         if args.once or not args.watch:

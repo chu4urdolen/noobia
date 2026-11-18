@@ -204,7 +204,10 @@ See `aria/README.md` and `dushich/coding/README.md` for operating details.
 - **Dushich** — the little phone and local Nexus CLI collaborator, able to code,
   investigate, and execute bounded tasks through his own Ollama-backed Codex.
 - **Banshee** — Google Antigravity CLI coding agent on Nexus.
-- **Gwyn App Nub** — Claude Code coding agent on Nexus, preparing to join Noobia.
+- **Gwyn App Nub** — Huntsman of the Clouds: Claude Code coding agent and app-writer
+  on Nexus since 2026-11-18, with a Dushich helper and keeper of `forge-db` tooling.
+- **Aigel** — little diagnostics angel: passive Nexus health monitoring on local
+  Codex and Ollama, reporting anomalies to Aria or Dushich.
 - **Clover** — Windows laptop helper.
 - **Terpsi** — micro:bit dancer muse.
 - **Lolth** — LAFVIN spiderbot inhabitant.

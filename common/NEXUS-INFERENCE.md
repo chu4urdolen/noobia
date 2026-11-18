@@ -29,7 +29,14 @@ The 2026-11-04 test returned “2 + 2 equals 4.” with a 0 exit status. `llama-
 ## Inference service
 
 Ollama is the single live model runtime for Dushich and LAN clients. It loads
-`qwen3.8:27b` on CUDA0 with a configured 131,072-token context. The lightweight
+`qwen3.8:27b` on CUDA0 with a configured 131,072-token context. Since
+2026-11-19 it may keep two models loaded (`OLLAMA_MAX_LOADED_MODELS=2` in
+`dushich/coding/ollama-override.conf`, installed as
+`/etc/systemd/system/ollama.service.d/noobia-dushich.conf`). The second is
+`qwen3-embedding:0.6b` (about 1 GB, 2,048-token context), loaded on first use
+by `forge-db` for meaning search. Together they use about 28.5 of 32.6 GiB.
+Do not load another large model next to Qwen; the
+backups of the one-model configuration are in `dushich/private/backups/`. The lightweight
 `noobia-inference-proxy.service` warms that model at boot and exposes the
 authenticated OpenAI-compatible API at `http://192.168.100.106:8080/v1` on
 the Noobia LAN; `http://127.0.0.1:8080/v1` works on Nexus. The proxy advertises

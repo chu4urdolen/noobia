@@ -6,6 +6,24 @@ submission, and there is no autonomous scheduler.
 
 ## Installed path
 
+### Native MCP catalog update, 2026-11-18
+
+Banshee's native MCP manifest format is installed on the current V53 Alpine
+boot. The guarded installer copied the updated agent and Noob runtime readers
+and all 15 tool manifests (17 files total), after checking the live baseline,
+manifest semantics, battery, health, and idle queue. It kept a persistent
+backup at `/usr/local/share/lynx/backups/native-mcp-1795034061636876835`.
+The 180-second rollback watchdog was cancelled after verification; no boot
+partition was changed. Deployment receipt:
+`lynx/logs/native-mcp-deploy-1795034061636565363/result.json`.
+
+The installed agent listed all 15 tools and ran `lynx_light_read` through the
+new catalog. Nexus authenticated NRP calls to `lynx_ping`,
+`lynx_agent_health`, and `lynx_queue_health` passed independently. Lynx stayed
+on the same boot, with no reported health or queue issues. The common MCP
+tests (7), agent tests (3), runtime tests (14), and installer integrity test
+(1) passed before deployment.
+
 - `/usr/local/bin/lynx-agent` runs the Responses function-call loop locally on
   Lynx. When Nexus `/health` responds, it uses the authenticated local proxy
   (`gpt-oss-20b`). When Nexus is unreachable it selects OpenAI Responses, but

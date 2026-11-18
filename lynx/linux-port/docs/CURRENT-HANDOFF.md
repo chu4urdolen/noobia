@@ -52,6 +52,13 @@ command; this is a checkpoint, not a live guarantee.
   `/usr/local/share/lynx/agent-tools` on the phone and
   `/noobia/lynx/tools/local_calls/` in source. The agent reads the catalog
   dynamically. Existing motion NRP/1 calls already serve remote and VM use.
+- On 2026-11-18 the native MCP manifest update was installed on the current
+  V53 Alpine boot: both catalog readers and 15 manifests. The guarded install
+  retained a persistent backup and cancelled its rollback watchdog after all
+  15 tools loaded, a light-read tool ran, and Nexus `lynx_ping`, agent health,
+  and queue health calls passed. Lynx remained healthy on the same boot. See
+  [agent notes](LYNX-AGENT.md) and
+  `lynx/logs/native-mcp-deploy-1795034061636565363/result.json`.
 
 ## Recent verified changes
 

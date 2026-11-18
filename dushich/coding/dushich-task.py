@@ -148,17 +148,21 @@ def codex_turn(prompt: str, thread_id: str | None, timeout: int,
 def verify(
     expected_paths: list[Path], tests: list[str], old_head: str,
     old_hashes: dict[str, str | None], require_commit: bool,
+    old_status: str = "",
 ) -> dict:
     missing = [str(path.relative_to(WORKSPACE)) for path in expected_paths if not path.is_file()]
     new_hashes = {
         str(path): hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
         for path in expected_paths
     }
-    expected_changed = any(new_hashes[key] != old_hashes[key] for key in new_hashes)
+    expected_changed = (
+        any(new_hashes[key] != old_hashes[key] for key in new_hashes)
+        if expected_paths else True
+    )
     head = git("rev-parse", "HEAD")
     status = git("status", "--porcelain")
-    changed = head != old_head or bool(status)
-    committed = head != old_head and not status
+    changed = head != old_head or status != old_status or expected_changed
+    committed = head != old_head
     test_results = []
     for test_command in tests:
         result = run(["/bin/bash", "-c", test_command], timeout=120)
@@ -196,7 +200,7 @@ def main() -> int:
     parser.add_argument("--timeout", type=int, default=120, metavar="SECONDS")
     parser.add_argument("--attempts", type=int, default=2, choices=(1, 2))
     parser.add_argument("--require-commit", action="store_true",
-                        help="Require a new commit and a clean Git tree")
+                        help="Require a new commit after tests pass")
     parser.add_argument("--thread-id", help="Resume an existing Dushich Codex thread")
     parser.add_argument("--run-id", help="Bridge handoff ID for live event monitoring")
     parser.add_argument("prompt", help="Coding task for Dushich")
@@ -221,9 +225,8 @@ def main() -> int:
     }
 
     try:
-        if git("status", "--porcelain"):
-            parser.error("workspace Git tree must be clean before a delegated task")
         old_head = git("rev-parse", "HEAD")
+        old_status = git("status", "--porcelain")
     except RuntimeError as exc:
         parser.error(str(exc))
 
@@ -253,7 +256,7 @@ def main() -> int:
         thread_id = turn.get("thread_id")
         try:
             check = verify(expected_paths, args.test, old_head, old_hashes,
-                           args.require_commit)
+                           args.require_commit, old_status)
         except (RuntimeError, subprocess.TimeoutExpired) as exc:
             check = {"passed": False, "error": str(exc)}
         attempts.append({"turn": turn, "verification": check})
@@ -284,7 +287,7 @@ def main() -> int:
         if not check.get("expected_changed"):
             failure.append("No expected file changed. Edit the specified files, not another test tree.")
         if args.require_commit and not check.get("committed"):
-            failure.append("A new commit and clean Git tree are required after tests pass.")
+            failure.append("A new commit is required after tests pass.")
         if check.get("error"):
             failure.append("Verification error: " + check["error"])
         prompt = (

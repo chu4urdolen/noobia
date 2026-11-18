@@ -69,13 +69,15 @@ class FrameCache:
         self.pics_dir = Path(pics_dir)
         self.agent = agent
         self.size = size
-        self._cache: dict[str, str] = {}
+        self._cache: dict[str, tuple[int, str]] = {}
 
     def get(self, frame_name: str) -> str:
-        if frame_name not in self._cache:
-            png = self.pics_dir / self.agent / f"{frame_name}.png"
-            self._cache[frame_name] = render_png_halfblocks(png, self.size)
-        return self._cache[frame_name]
+        png = self.pics_dir / self.agent / f"{frame_name}.png"
+        mtime = png.stat().st_mtime_ns if png.exists() else 0
+        cached = self._cache.get(frame_name)
+        if cached is None or cached[0] != mtime:
+            self._cache[frame_name] = (mtime, render_png_halfblocks(png, self.size))
+        return self._cache[frame_name][1]
 
 
 def read_pane_text(tmux_socket: str, target_pane: str) -> tuple[str | None, str]:

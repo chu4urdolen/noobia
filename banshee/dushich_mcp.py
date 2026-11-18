@@ -59,7 +59,7 @@ def call(name: str, args: dict) -> str:
         question = args.get('question')
         if not isinstance(question, str) or not question.strip() or len(question.encode()) > 8000:
             raise ValueError('question must contain up to 8 KB of text')
-        conversation_id, _ = bridge.conversation_context(current_session)
+        conversation_id, _ = bridge.conversation_context(current_session, summarize=False)
         if not conversation_id:
             raise ValueError('Banshee conversation ID is unavailable')
         process = subprocess.run(['/usr/bin/python3',

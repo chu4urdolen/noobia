@@ -310,6 +310,24 @@ class TestIncrementalSummarize(unittest.TestCase):
         self.assertEqual(state["last_cursor"], len(more_turns))
         self.assertEqual(state["summary"], "Compact summary.")
 
+    def test_huge_cold_start_backlog_is_bounded_to_two_context_windows(self) -> None:
+        from dushich_summarizer import incremental_summarize
+
+        prompts: list[str] = []
+        # 500 turns (~15,000 chars) with context_size=500 -> max_new_chars=1000
+        huge_turns = [f"Turn {i} with details here." for i in range(500)]
+        result = incremental_summarize(
+            "conv-huge",
+            huge_turns,
+            context_size=500,
+            desired_size=120,
+            state_dir=self.state_dir,
+            infer_fn=lambda prompt, context: prompts.append(prompt) or "Bounded cold summary.",
+        )
+        self.assertEqual(result, "Bounded cold summary.")
+        self.assertLessEqual(len(prompts), 5)
+        self.assertIn("Turn 499", prompts[-1])
+
 
 class TestCustomInstructions(unittest.TestCase):
     INSTRUCTIONS = "Focus only on mentions of Banshee."

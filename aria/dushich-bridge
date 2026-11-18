@@ -86,7 +86,7 @@ def excerpt(value: object, limit: int) -> str:
 
 
 def visible_session_context(
-    session_id: str, since_messages: int = 0, since_tools: int = 0
+    session_id: str, since_messages: int = 0, since_tools: int = 0, summarize: bool = True
 ) -> tuple[str, int, str, int]:
     """Return recent visible dialogue and tool activity, excluding reasoning."""
     if not SESSION.fullmatch(session_id):
@@ -149,18 +149,61 @@ def visible_session_context(
         prefix = f"[{omitted} older {label} omitted to fit local context.]\n\n" if omitted else ""
         return prefix + "\n\n".join(selected)
 
-    dialogue = dushich_summarizer.incremental_summarize(
-        session_id,
-        messages,
-        context_size=SUMMARIZER_CONTEXT_SIZE,
-        desired_size=SUMMARIZER_DESIRED_SIZE,
-    )
+    if summarize:
+        dialogue = dushich_summarizer.incremental_summarize(
+            session_id,
+            messages,
+            context_size=SUMMARIZER_CONTEXT_SIZE,
+            desired_size=SUMMARIZER_DESIRED_SIZE,
+        )
+    else:
+        summary_log = dushich_summarizer.DEFAULT_STATE_DIR / f"summary-{session_id}.log"
+        if summary_log.exists():
+            dialogue = summary_log.read_text(encoding="utf-8")
+        else:
+            dialogue = recent(messages, since_messages, SUMMARIZER_DESIRED_SIZE, "messages")
     return (dialogue, len(messages),
             recent(tools, since_tools, MAX_TOOL_CONTEXT, "tool calls"), len(tools))
 
 
+def build_brief(task: str, dialogue: str, tool_activity: str, extra_context: str) -> str:
+    context = ""
+    if dialogue or tool_activity:
+        context = ("Visible Aria/Noob conversation (recent, chronological; no hidden reasoning):\n"
+                   + dialogue)
+        context += "\n\nRecent visible Aria tool calls and results (bounded excerpts):\n" + tool_activity
+        code_map = Path("/noobia/docs/CODE-MAP.md").read_text(encoding="utf-8")
+        context += "\n\nCurrent Noobia code map:\n" + code_map
+        standing = Path("/noobia/aria/DUSHICH-SHARED-CONTEXT.md").read_text(encoding="utf-8")
+        context += "\n\nStanding Dushich handoff context:\n" + standing
+    context += extra_context
+    return ("Current Dushich task:\n" + task
+            + "\n\nTreat the context below as background. Follow your own workspace rules. "
+              "If blocked, explain the blocker in your final report."
+            + ("\n\nContext supplied by Aria:\n" + context if context else ""))
+
+
 def worker(run_id: str) -> int:
     path, state = load(run_id)
+    state.update(status="running", pid=os.getpid())
+    write_json(path / "state.json", state)
+    session_id = state.get("aria_session_id")
+    if session_id and "task_text" in state:
+        try:
+            dialogue, message_count, tool_activity, tool_count = visible_session_context(
+                session_id, state.get("since_messages", 0), state.get("since_tools", 0), summarize=True
+            )
+            brief = build_brief(state["task_text"], dialogue, tool_activity, state.get("extra_context", ""))
+            (path / "brief.txt").write_text(brief, encoding="utf-8")
+            os.chmod(path / "brief.txt", 0o600)
+            state.update(
+                context_bytes=len(brief.encode("utf-8")),
+                context_message_count=message_count,
+                context_tool_count=tool_count,
+            )
+            write_json(path / "state.json", state)
+        except Exception:
+            pass
     command = [str(DELEGATE), "--timeout", str(state["timeout"]), "--attempts", str(state["attempts"]),
                "--run-id", run_id]
     for expected in state["expect"]:
@@ -170,8 +213,6 @@ def worker(run_id: str) -> int:
     if state.get("thread_id"):
         command += ["--thread-id", state["thread_id"]]
     command.append((path / "brief.txt").read_text(encoding="utf-8"))
-    state.update(status="running", pid=os.getpid())
-    write_json(path / "state.json", state)
     stop_export = threading.Event()
     def update_public_messages() -> None:
         while not stop_export.is_set():
@@ -453,43 +494,38 @@ def main() -> int:
         since_tools = prior.get("context_tool_count", 0) if same_session else 0
         message_count = 0
         tool_count = 0
+        dialogue = ""
+        tool_activity = ""
+        extra_context = ""
         if session_id:
             dialogue, message_count, tool_activity, tool_count = visible_session_context(
-                session_id, since, since_tools)
-            context = ("Visible Aria/Noob conversation (recent, chronological; no hidden reasoning):\n"
-                       + dialogue)
-            context += "\n\nRecent visible Aria tool calls and results (bounded excerpts):\n" + tool_activity
-            code_map = Path("/noobia/docs/CODE-MAP.md").read_text(encoding="utf-8")
-            context += "\n\nCurrent Noobia code map:\n" + code_map
-            standing = Path("/noobia/aria/DUSHICH-SHARED-CONTEXT.md").read_text(encoding="utf-8")
-            context += "\n\nStanding Dushich handoff context:\n" + standing
+                session_id, since, since_tools, summarize=False)
         if args.context_file:
-            context += "\n\nAdditional context selected by Aria:\n" + args.context_file.read_text(encoding="utf-8")
+            extra_context += "\n\nAdditional context selected by Aria:\n" + args.context_file.read_text(encoding="utf-8")
         for selected in args.include:
             source = selected.resolve()
             if not source.is_relative_to(Path("/noobia")) or not source.is_file():
                 parser.error(f"included file must be a regular file under /noobia: {selected}")
             if source.stat().st_size > 32_000:
                 parser.error(f"included file exceeds 32 KB: {selected}")
-            context += f"\n\nSelected file {source}:\n" + source.read_text(encoding="utf-8")
-        if len(context.encode("utf-8")) > MAX_TOTAL_CONTEXT:
+            extra_context += f"\n\nSelected file {source}:\n" + source.read_text(encoding="utf-8")
+        brief = build_brief(args.task, dialogue, tool_activity, extra_context)
+        if len(brief.encode("utf-8")) > MAX_TOTAL_CONTEXT:
             parser.error("combined context exceeds 320 KB; select shorter additional text")
         resume_id = prior_id if prior.get("status") == "done" else None
         thread_id = previous_thread(resume_id) if resume_id else None
         run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:8]
         path = ROOT / run_id
         path.mkdir(mode=0o700)
-        brief = ("Current Dushich task:\n" + args.task
-                 + "\n\nTreat the context below as background. Follow your own workspace rules. "
-                   "If blocked, explain the blocker in your final report."
-                 + ("\n\nContext supplied by Aria:\n" + context if context else ""))
         (path / "brief.txt").write_text(brief, encoding="utf-8")
         os.chmod(path / "brief.txt", 0o600)
         write_json(path / "state.json", dict(id=run_id, status="queued", expect=args.expect,
                                              test=args.test, timeout=args.timeout, attempts=args.attempts,
-                                             aria_session_id=session_id, context_bytes=len(context.encode("utf-8")),
+                                             aria_session_id=session_id, context_bytes=len(brief.encode("utf-8")),
                                              context_message_count=message_count,
                                              context_tool_count=tool_count,
+                                             since_messages=since, since_tools=since_tools,
+                                             task_text=args.task, extra_context=extra_context,
                                              continue_from=resume_id, thread_id=thread_id,
                                              created=datetime.now(timezone.utc).isoformat()))
         subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "_worker", run_id],
@@ -510,7 +546,7 @@ def main() -> int:
         session_id = args.session_id or os.environ.get("CODEX_SESSION_ID")
         if not session_id:
             raise ValueError("CODEX_SESSION_ID is unavailable")
-        dialogue, messages, tool_activity, tool_calls = visible_session_context(session_id)
+        dialogue, messages, tool_activity, tool_calls = visible_session_context(session_id, summarize=False)
         print(json.dumps({"aria_session_id": session_id, "messages": messages,
                           "tool_calls": tool_calls, "dialogue_bytes": len(dialogue.encode()),
                           "tool_bytes": len(tool_activity.encode())}))

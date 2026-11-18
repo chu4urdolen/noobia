@@ -103,13 +103,16 @@ def cut_at_sentence_boundary(text: str, max_len: int) -> tuple[str, str]:
 
 
 def _ollama_infer(prompt: str, context_size: int, model: str = DEFAULT_MODEL) -> str:
-    """POST one prompt to the local Ollama chat endpoint and return the reply."""
+    """POST one prompt to the local Ollama chat endpoint and return the reply.
+
+    Does not override ``num_ctx`` so Ollama reuses the warm 131K runner shared
+    with Dushich's Codex CLI instead of unloading and reloading the model.
+    """
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "stream": False,
         "think": False,
-        "options": {"num_ctx": max(2048, context_size // 3)},
     }
     request = urllib.request.Request(
         OLLAMA_CHAT_URL,
@@ -117,7 +120,7 @@ def _ollama_infer(prompt: str, context_size: int, model: str = DEFAULT_MODEL) ->
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=60) as response:
+    with urllib.request.urlopen(request, timeout=180) as response:
         data = json.loads(response.read().decode("utf-8"))
     return data["message"]["content"].strip()
 
@@ -262,8 +265,18 @@ def incremental_summarize(
         new_slice = turns
         prior_summary = ""
 
+    if not new_slice and prior_summary and len(prior_summary) <= desired_size and not custom_instructions.strip():
+        return prior_summary
+
+    new_text = "\n\n".join(new_slice)
+    max_new_chars = context_size * 2
+    if len(new_text) > max_new_chars:
+        tail = new_text[-max_new_chars:]
+        newline = tail.find("\n")
+        new_text = tail[newline + 1:].strip() if 0 <= newline < len(tail) // 2 else tail.strip()
+
     combined = "\n\n".join(
-        [part for part in [prior_summary, "\n\n".join(new_slice)] if part]
+        [part for part in [prior_summary, new_text] if part]
     ).strip()
     if len(combined) > desired_size:
         updated_summary = summarize_this(
@@ -336,10 +349,16 @@ def main() -> int:
     if not text.strip():
         print("dushich-summarizer: no input", file=sys.stderr)
         return 1
+    effective_desired = args.desired_size
+    if effective_desired is None:
+        _, default_desired = calculate_model_context_size()
+        if args.context_size is not None:
+            default_desired = int(args.context_size * 0.25)
+        effective_desired = min(default_desired, max(1, int(len(text) * 0.6)))
     summary = summarize_this(
         text,
         context_size=args.context_size,
-        desired_size=args.desired_size,
+        desired_size=effective_desired,
         custom_instructions=args.instructions,
     )
     print(summary)

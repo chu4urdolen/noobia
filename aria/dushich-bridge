@@ -353,9 +353,39 @@ def full_event(event: dict) -> str:
 def monitor_full(session_id: str | None, run_id: str | None, once: bool) -> int:
     seen: dict[str, int] = {}
     reported: set[str] = set()
+    dialogue_offset = 0
+    dialogue_init = False
     print("DUSHICH • complete tool output (scroll up for history)", flush=True)
     print(f"Aria session: {session_id or 'all sessions'}", flush=True)
     while True:
+        dialogue_path = Path("/home/aria/.codex/dushich-bridge/direct-dialogue.jsonl")
+        if dialogue_path.exists():
+            try:
+                d_lines = dialogue_path.read_text(encoding="utf-8").splitlines()
+                if not dialogue_init:
+                    dialogue_offset = max(0, len(d_lines) - 8)
+                    dialogue_init = True
+                for line in d_lines[dialogue_offset:]:
+                    if not line.strip():
+                        continue
+                    try:
+                        record = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if session_id and record.get("aria_session_id") != session_id:
+                        continue
+                    role = record.get("role", "")
+                    text = record.get("text", "")
+                    ts = record.get("timestamp", "")
+                    t = ts[11:19] if len(ts) >= 19 else ""
+                    if role == "aria":
+                        print(f"\n[Aria • {t}] {text}", flush=True)
+                    elif role == "dushich":
+                        print(f"[Dushich • {t}] {text}\n", flush=True)
+                dialogue_offset = len(d_lines)
+            except Exception:
+                pass
+
         selected_jobs = [run_id] if run_id else (jobs_for_session(session_id) or jobs_for_session(None))
         if not selected_jobs and once:
             print("No Dushich handoff in this Aria conversation.", flush=True)

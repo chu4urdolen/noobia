@@ -239,9 +239,37 @@ def monitor(session_id: str, once: bool = False) -> None:
     require_session(session_id)
     offsets: dict[str, int] = {}
     completed: set[str] = set()
-    print("DUSHICH • local GPU coding activity", flush=True)
+    activity_offset = 0
+    activity_init = False
+    print("DUSHICH • local GPU activity & dialogue", flush=True)
     print(f"Gwyn session: {session_id}", flush=True)
     while True:
+        try:
+            cid, _ = conversation_context(session_id, summarize=False)
+            if cid:
+                act_file = Path(f"/home/aria/.codex/dushich-bridge/helper-mirror/gwyn/{cid}/activity.jsonl")
+                if act_file.exists():
+                    lines = act_file.read_text(encoding="utf-8").splitlines()
+                    if not activity_init:
+                        activity_offset = max(0, len(lines) - 8)
+                        activity_init = True
+                    for line in lines[activity_offset:]:
+                        if not line.strip():
+                            continue
+                        try:
+                            item = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        itype = item.get("type")
+                        t = item.get("time", "")
+                        if itype == "question":
+                            print(f"\n[Gwyn • {t}] {item.get('question', '')}", flush=True)
+                        elif itype == "answer":
+                            print(f"[Dushich • {t}] {item.get('answer', '')}\n", flush=True)
+                    activity_offset = len(lines)
+        except Exception:
+            pass
+
         current_jobs = jobs(session_id)
         if not current_jobs and once:
             print("Waiting for Gwyn's first handoff.", flush=True)

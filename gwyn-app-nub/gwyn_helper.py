@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
+from datetime import datetime, timezone
 import fcntl
 import json
 import os
@@ -33,6 +34,18 @@ def folder(conversation_id: str) -> Path:
     result = ROOT / conversation_id
     result.mkdir(mode=0o700, parents=True, exist_ok=True)
     return result
+
+
+def log_activity(conversation_id: str, entry: dict) -> None:
+    try:
+        path = folder(conversation_id) / 'activity.jsonl'
+        with path.open('a', encoding='utf-8') as stream:
+            os.fchmod(stream.fileno(), 0o600)
+            stream.write(json.dumps(entry, ensure_ascii=False) + '\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+    except Exception:
+        pass
 
 
 @contextmanager
@@ -62,6 +75,8 @@ def ask(conversation_id: str, question: str) -> str:
     path = CONVERSATIONS / (conversation_id + '.jsonl')
     if not path.is_file():
         raise ValueError('Gwyn conversation transcript is unavailable')
+    now_str = datetime.now(timezone.utc).strftime('%H:%M:%S')
+    log_activity(conversation_id, {'time': now_str, 'type': 'question', 'question': question.strip()})
     with locked(conversation_id):
         state = state_for(conversation_id)
         lines = [f"{'Noob' if turn['role'] == 'noob' else 'Gwyn'}: {shared.redact(turn['text'])}"
@@ -86,7 +101,10 @@ def ask(conversation_id: str, question: str) -> str:
                and event.get('item', {}).get('type') == 'agent_message']
     if not replies or not replies[-1]:
         raise RuntimeError('Helper Dushich did not send a visible answer')
-    return replies[-1]
+    answer = replies[-1]
+    now_str = datetime.now(timezone.utc).strftime('%H:%M:%S')
+    log_activity(conversation_id, {'time': now_str, 'type': 'answer', 'answer': answer})
+    return answer
 
 
 if __name__ == '__main__':

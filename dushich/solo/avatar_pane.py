@@ -2,16 +2,19 @@
 """Solo Dushich avatar pane: render PNG assets as TrueColor half-block art.
 
 Renders the square PNG states (idle, working_1..4, final) into terminal
-half-block (`▀`) art using 24-bit ANSI foreground/background colors, detects
-the agent state from pane text, and animates the working frames.
+half-block (`▀`) art using 24-bit ANSI foreground/background colors. The
+pane draws ONLY images (no text labels): the Dushich avatar on top and a
+Rose.png fill below it. State is tracked from the agent pane's text; the
+final image holds for `FINAL_DURATION` seconds before returning to idle.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
-import sys
+import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -20,17 +23,26 @@ from PIL import Image
 REQUIRED_FRAMES = ("idle", "working_1", "working_2", "working_3", "working_4", "final")
 BRAILLE_SPINNERS = set("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
 DEFAULT_PICS_DIR = "/noobia/pics"
-AGENT_LABELS = {"idle": "IDLE", "working": "WORKING", "final": "FINAL"}
+DEFAULT_SIZE = 18
+FINAL_DURATION = 2.0
+ROSE_PATH = Path("/noobia/pics/Rose/Rose.png")
 
 
-def render_png_halfblocks(png_path: str | Path, size: int = 28) -> str:
-    """Render a PNG as `size // 2` lines of TrueColor half-block characters."""
-    size = max(2, size - (size % 2))
-    img = Image.open(png_path).convert("RGB").resize((size, size), Image.Resampling.LANCZOS)
+def render_png_halfblocks(png_path: str | Path, size: int = 18, height_px: int | None = None) -> str:
+    """Render a PNG as `height_px // 2` lines of TrueColor half-block characters.
+
+    ``size`` is the grid width in pixels; ``height_px`` (default ``size``)
+    is the grid height. Both are clamped to even integers >= 2.
+    """
+    width_px = max(2, size - (size % 2))
+    if height_px is None:
+        height_px = size
+    height_px = max(2, int(height_px) - (int(height_px) % 2))
+    img = Image.open(png_path).convert("RGB").resize((width_px, height_px), Image.Resampling.LANCZOS)
     lines: list[str] = []
-    for y in range(0, size, 2):
+    for y in range(0, height_px, 2):
         row = []
-        for x in range(size):
+        for x in range(width_px):
             r1, g1, b1 = img.getpixel((x, y))
             r2, g2, b2 = img.getpixel((x, y + 1))
             row.append(
@@ -51,6 +63,31 @@ def detect_solo_state(screen_text: str, pane_title: str = "") -> str:
     if "worked for " in lower:
         return "final"
     return "idle"
+
+
+def is_pane_working(screen_text: str, pane_title: str = "") -> bool:
+    """True when the agent pane is currently working."""
+    return detect_solo_state(screen_text, pane_title) == "working"
+
+
+class StateTracker:
+    """State machine: working -> final (2.0s) -> idle, until the next work."""
+
+    def __init__(self) -> None:
+        self.was_working: bool = False
+        self.final_until: float = 0.0
+
+    def update(self, is_working: bool, now: float) -> str:
+        if is_working:
+            self.was_working = True
+            return "working"
+        if self.was_working:
+            self.was_working = False
+            self.final_until = now + FINAL_DURATION
+            return "final"
+        if now < self.final_until:
+            return "final"
+        return "idle"
 
 
 def select_frame_name(state: str, tick: int) -> str:
@@ -106,14 +143,33 @@ def read_pane_text(tmux_socket: str, target_pane: str) -> tuple[str | None, str]
     return text, title
 
 
-def draw_frame(art: str, agent: str, state: str) -> None:
-    """Erase the screen area and stamp the frame plus status line."""
-    status = f"{agent} • {AGENT_LABELS.get(state, 'IDLE')}"
-    art_lines = art.splitlines()
-    clear = "\033[H" + "\033[2K" * (len(art_lines) + 1)
-    out = clear + art + "\n" + f"\033[1m{status}\033[0m\n"
-    sys.stdout.write(out)
+def draw_frame(top_art: str, bottom_art: str = "", clear_all: bool = False) -> None:
+    """Stamp the image art with no text: images only.
+
+    Disables line wrap and hides the cursor. With ``clear_all`` the whole
+    screen and scrollback are cleared first; otherwise only the area below
+    the cursor is cleared before and after.
+    """
+    prefix = "\033[?7l\033[?25l"
+    if clear_all:
+        prefix += "\033[2J\033[3J\033[H"
+        suffix = ""
+    else:
+        prefix += "\033[H"
+        suffix = "\033[J"
+    parts = top_art
+    if bottom_art:
+        parts += "\n" + bottom_art
+    sys.stdout.write(prefix + parts + suffix)
     sys.stdout.flush()
+
+
+def render_bottom_fill(rows: int, size: int) -> str:
+    """Render the Rose.png fill for the rows below the avatar grid."""
+    bottom_px = max(0, (rows - (size // 2) - 1) * 2)
+    if bottom_px < 2 or not ROSE_PATH.exists():
+        return ""
+    return render_png_halfblocks(ROSE_PATH, size, bottom_px)
 
 
 def main() -> int:
@@ -122,32 +178,48 @@ def main() -> int:
     parser.add_argument("--pics-dir", default=DEFAULT_PICS_DIR)
     parser.add_argument("--tmux-socket", default=os.environ.get("TMUX_TMP_SOCKET", "dushich"))
     parser.add_argument("--target-pane", default="")
-    parser.add_argument("--size", type=int, default=28)
+    parser.add_argument("--size", type=int, default=DEFAULT_SIZE)
     parser.add_argument("--interval", type=float, default=0.4)
     parser.add_argument("--once", action="store_true", help="render one frame and exit")
     args = parser.parse_args()
 
     cache = FrameCache(args.pics_dir, args.agent, args.size)
-    if args.once:
-        text, title = (read_pane_text(args.tmux_socket, args.target_pane)
-                       if args.target_pane else ("", ""))
-        state = detect_solo_state(text, title)
-        frame = select_frame_name(state, 0)
-        draw_frame(cache.get(frame), args.agent, state)
-        return 0
+    tracker = StateTracker()
+    last_dims: tuple[int, int] | None = None
+    bottom_art = ""
 
-    tick = 0
     while True:
+        now = time.monotonic()
+        cols, rows = shutil.get_terminal_size((args.size, 24))
+        clear_all = False
+        if cols != args.size and args.target_pane:
+            self_pane = os.environ.get("TMUX_PANE") or (args.target_pane.rsplit(".", 1)[0] + ".1")
+            subprocess.run(
+                [
+                    "tmux", f"-L{args.tmux_socket}", "resize-pane",
+                    "-t", self_pane, "-x", str(args.size),
+                ],
+                capture_output=True,
+                timeout=5,
+            )
+            cols, rows = shutil.get_terminal_size((args.size, 24))
+            clear_all = True
+        if (cols, rows) != last_dims:
+            clear_all = True
+            last_dims = (cols, rows)
+            bottom_art = render_bottom_fill(rows, args.size)
+
         if args.target_pane:
             text, title = read_pane_text(args.tmux_socket, args.target_pane)
             if text is None:
                 return 0
         else:
             text, title = "", ""
-        state = detect_solo_state(text, title)
-        frame = select_frame_name(state, tick)
-        draw_frame(cache.get(frame), args.agent, state)
-        tick += 1
+        state = tracker.update(is_pane_working(text, title), now)
+        frame = select_frame_name(state, int(now / args.interval))
+        draw_frame(cache.get(frame), bottom_art, clear_all)
+        if args.once:
+            return 0
         time.sleep(args.interval)
 
 

@@ -35,8 +35,10 @@ class TestRequiredFrames(unittest.TestCase):
         )
 
     def test_braille_spinners_are_braille_chars(self):
-        self.assertEqual(len(BRAILLE_SPINNERS), 10)
+        self.assertEqual(len(BRAILLE_SPINNERS), 18)
         self.assertIn("⠋", BRAILLE_SPINNERS)
+        self.assertIn("⣾", BRAILLE_SPINNERS)
+        self.assertIn("⣽", BRAILLE_SPINNERS)
 
 
 class TestDetectSoloState(unittest.TestCase):
@@ -53,8 +55,14 @@ class TestDetectSoloState(unittest.TestCase):
     def test_working_by_braille_spinner_in_title(self):
         self.assertEqual(detect_solo_state("status…", "⠦ watchmaker"), "working")
 
+    def test_working_by_antigravity_spinners_and_hints(self):
+        self.assertEqual(detect_solo_state("⣾  Running command..."), "working")
+        self.assertEqual(detect_solo_state("⎿  Thinking..."), "working")
+        self.assertEqual(detect_solo_state("Running command..."), "working")
+
     def test_final(self):
         self.assertEqual(detect_solo_state("Worked for 5s"), "final")
+        self.assertEqual(detect_solo_state("Thought for 1m 20s"), "final")
 
     def test_working_beats_final(self):
         self.assertEqual(

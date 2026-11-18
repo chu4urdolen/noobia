@@ -199,6 +199,64 @@ def read_aria_tmux_state(socket: str = ARIA_TMUX_SOCKET) -> tuple:
     return aria_working, helper_working
 
 
+def read_banshee_tmux_state(socket: str = "default") -> tuple:
+    """Read the live Banshee tmux session (``noobia-banshee-*``) off-screen.
+
+    Returns a ``(banshee_working, dushich_helper_working)`` tuple derived from
+    the two panes of the most recent ``noobia-banshee-*`` session.
+    """
+    if not socket:
+        return False, False
+    socket = socket.lstrip("-L")
+    cmd_prefix = ["tmux", f"-L{socket}"] if socket != "default" else ["tmux"]
+    try:
+        out = subprocess.run(
+            cmd_prefix + ["list-sessions", "-F", "#{session_name}"],
+            capture_output=True, text=True, timeout=5,
+        ).stdout
+    except Exception:
+        return False, False
+    banshee_sessions = [
+        line.strip()
+        for line in out.splitlines()
+        if line.strip().startswith("noobia-banshee-")
+    ]
+    if not banshee_sessions:
+        return False, False
+    session = banshee_sessions[-1]
+    try:
+        panes_out = subprocess.run(
+            cmd_prefix + [
+                "list-panes", "-t", f"{session}:0",
+                "-F", "#{pane_index}\t#{pane_title}",
+            ],
+            capture_output=True, text=True, timeout=5,
+        ).stdout
+    except Exception:
+        return False, False
+
+    banshee_text = banshee_title = helper_text = helper_title = ""
+    for line in panes_out.splitlines():
+        if "\t" not in line:
+            continue
+        index, title = line.split("\t", 1)
+        target = f"{session}:0.{index}"
+        try:
+            text = subprocess.run(
+                cmd_prefix + ["capture-pane", "-t", target, "-p"],
+                capture_output=True, text=True, timeout=5,
+            ).stdout
+        except Exception:
+            text = ""
+        if "banshee" in title.lower() or "antigravity" in title.lower() or index == "0":
+            banshee_text, banshee_title = text, title
+        elif "dushich" in title.lower() or index == "1":
+            helper_text, helper_title = text, title
+    banshee_working = is_pane_working(banshee_text, banshee_title)
+    helper_working = is_dushich_helper_working(helper_text, helper_title)
+    return banshee_working, helper_working
+
+
 # ---------------------------------------------------------------------------
 # Reusable quadrant widget.  Defined only when the GTK stack is importable;
 # instantiating it (which requires a display) happens only in _run_gui.
@@ -350,7 +408,19 @@ if _GI_AVAILABLE:
                 except Exception:
                     aria_working = helper_tmux_working = False
 
-            primary_working = is_pane_working(text, title) or aria_working
+            banshee_working = False
+            if self.agent == "Banshee":
+                try:
+                    banshee_working, b_helper = read_banshee_tmux_state(
+                        self.aria_socket
+                    )
+                    helper_tmux_working = helper_tmux_working or b_helper
+                except Exception:
+                    banshee_working = False
+
+            primary_working = (
+                is_pane_working(text, title) or aria_working or banshee_working
+            )
             new_frame = select_frame_name(
                 self.tracker.update(primary_working, now), self.tick
             )
@@ -359,7 +429,7 @@ if _GI_AVAILABLE:
 
             if self.helper_agent and self.helper_tracker is not None:
                 helper_working = is_dushich_helper_working(text, title)
-                if self.agent == "Aria":
+                if self.agent in ("Aria", "Banshee"):
                     helper_working = helper_working or helper_tmux_working
                 h_frame = select_frame_name(
                     self.helper_tracker.update(helper_working, now), self.tick

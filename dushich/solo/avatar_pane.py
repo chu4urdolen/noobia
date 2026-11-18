@@ -23,7 +23,7 @@ import tempfile
 from PIL import Image
 
 REQUIRED_FRAMES = ("idle", "working_1", "working_2", "working_3", "working_4", "final")
-BRAILLE_SPINNERS = set("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
+BRAILLE_SPINNERS = set("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⣾⣷⣯⣟⡿⢿⣻⣽")
 DEFAULT_PICS_DIR = "/noobia/pics"
 DEFAULT_SIZE = 18
 FINAL_DURATION = 2.0
@@ -134,12 +134,17 @@ def render_composite_sixel(
 def detect_solo_state(screen_text: str, pane_title: str = "") -> str:
     """Classify pane content as 'working', 'final', or 'idle'."""
     lower = screen_text.lower()
-    if "esc to interrupt" in lower or (
-        any(ch in BRAILLE_SPINNERS for ch in pane_title)
-        or any(ch in BRAILLE_SPINNERS for ch in screen_text)
+    if (
+        "esc to interrupt" in lower
+        or "running command" in lower
+        or "thinking..." in lower
+        or (
+            any(ch in BRAILLE_SPINNERS for ch in pane_title)
+            or any(ch in BRAILLE_SPINNERS for ch in screen_text)
+        )
     ):
         return "working"
-    if "worked for " in lower:
+    if "worked for " in lower or "thought for " in lower:
         return "final"
     return "idle"
 

@@ -19,9 +19,19 @@ import subprocess
 import tempfile
 
 
+NODE_MAJORS = {
+    "v52": {"gpsdl0": 497, "gpsdl1": 497, "gps_emi": 496,
+            "gps_pwr": 495, "gps2scp": 493},
+    "v53": {"gpsdl0": 493, "gpsdl1": 493, "gps_emi": 492,
+            "gps_pwr": 491, "gps2scp": 489},
+}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path)
+    parser.add_argument("--candidate", choices=NODE_MAJORS, default="v52",
+                        help="pin observed device numbers for the selected boot")
     parser.add_argument("--audit-hal", action="store_true")
     parser.add_argument("--gpsdl0", action="store_true",
                         help="expose only the already loaded GPS data-link node")
@@ -44,6 +54,7 @@ def main():
     parser.add_argument("--capture-logd", action="store_true",
                         help="capture stock Android log datagrams in RAM")
     args = parser.parse_args()
+    majors = NODE_MAJORS[args.candidate]
     if args.sky_trial and not (args.start_mnl and args.gps_port2 and args.capture_mnl):
         raise RuntimeError("sky trial requires active receiver and both GPS links")
     source = args.source.resolve(strict=True)
@@ -81,29 +92,29 @@ def main():
         log_thread.start()
     if args.gpsdl0:
         node = os.stat("/dev/gpsdl0")
-        if not stat.S_ISCHR(node.st_mode) or os.major(node.st_rdev) != 497 or os.minor(node.st_rdev) != 0:
+        if not stat.S_ISCHR(node.st_mode) or os.major(node.st_rdev) != majors["gpsdl0"] or os.minor(node.st_rdev) != 0:
             raise RuntimeError("unexpected GPS data-link device")
         os.mknod(root / "dev/gpsdl0", stat.S_IFCHR | 0o600, node.st_rdev)
     if args.gps_power_nodes:
         if not args.gpsdl0:
             raise RuntimeError("GPS power nodes require the data-link node")
-        for name, major in (("gps_emi", 496), ("gps_pwr", 495)):
+        for name in ("gps_emi", "gps_pwr"):
             node = os.stat("/dev/" + name)
-            if not stat.S_ISCHR(node.st_mode) or os.major(node.st_rdev) != major or os.minor(node.st_rdev) != 0:
+            if not stat.S_ISCHR(node.st_mode) or os.major(node.st_rdev) != majors[name] or os.minor(node.st_rdev) != 0:
                 raise RuntimeError("unexpected " + name + " device")
             os.mknod(root / "dev" / name, stat.S_IFCHR | 0o600, node.st_rdev)
     if args.gps_scp_node:
         if not args.gps_power_nodes:
             raise RuntimeError("GPS SCP node requires power nodes")
         node = os.stat("/dev/gps2scp")
-        if not stat.S_ISCHR(node.st_mode) or os.major(node.st_rdev) != 493 or os.minor(node.st_rdev) != 0:
+        if not stat.S_ISCHR(node.st_mode) or os.major(node.st_rdev) != majors["gps2scp"] or os.minor(node.st_rdev) != 0:
             raise RuntimeError("unexpected GPS to SCP device")
         os.mknod(root / "dev/gps2scp", stat.S_IFCHR | 0o600, node.st_rdev)
     if args.gps_port2:
         if not args.gps_scp_node:
             raise RuntimeError("GPS port 2 requires the verified SCP node")
         node = os.stat("/dev/gpsdl1")
-        if not stat.S_ISCHR(node.st_mode) or os.major(node.st_rdev) != 497 or os.minor(node.st_rdev) != 1:
+        if not stat.S_ISCHR(node.st_mode) or os.major(node.st_rdev) != majors["gpsdl1"] or os.minor(node.st_rdev) != 1:
             raise RuntimeError("unexpected GPS data-link port 2")
         os.mknod(root / "dev/gpsdl1", stat.S_IFCHR | 0o600, node.st_rdev)
     if args.factory_gps:

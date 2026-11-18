@@ -17,6 +17,14 @@ V53_SHA = "c047455271828cf9bfa90984eea121d8ede8754f6297fc06f33f1e99fb23c75e"
 BOOT_SHAS = {"v52": V52_SHA, "v53": V53_SHA}
 ORDER = ("mtk-mbox", "mtk_rpmsg_mbox", "mtk_tinysys_ipi", "kernel_fb",
          "mtk-afe-external", "scp", "connscp", "gps_scp")
+V53_BOOT_PREFIX = ORDER[:6]
+
+
+def load_plan(candidate, reuse_v53_boot_stack):
+    if reuse_v53_boot_stack and candidate != "v53":
+        raise ValueError("boot stack reuse requires V53")
+    reused = V53_BOOT_PREFIX if reuse_v53_boot_stack else ()
+    return reused, ORDER[len(reused):]
 
 
 def phone(command, data=None, timeout=18):
@@ -28,7 +36,13 @@ def phone(command, data=None, timeout=18):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate", choices=BOOT_SHAS, default="v52")
+    parser.add_argument("--reuse-v53-boot-stack", action="store_true",
+                        help="require the first six SCP dependencies already loaded on V53")
     args = parser.parse_args()
+    try:
+        reused, pending = load_plan(args.candidate, args.reuse_v53_boot_stack)
+    except ValueError as exc:
+        parser.error(str(exc))
     graph = json.loads(GRAPH.read_text())["modules"]
     modules = {}
     for name in ORDER:
@@ -42,7 +56,8 @@ def main():
     remote = "/run/lynx-gps-scp-stack-" + str(time.time_ns())
     report = {"state": "preflight", "candidate": args.candidate, "partition_writes": False,
               "module_unload_attempted": False, "remote": remote,
-              "order": list(ORDER), "steps": []}
+              "order": list(ORDER), "reused_modules": list(reused),
+              "modules_to_load": list(pending), "steps": []}
     boot_id = None
     armed = False
 
@@ -85,9 +100,12 @@ def main():
              "test -c /dev/gps_pwr; test ! -e /dev/gps2scp")
         for name in ORDER:
             sysname = name.replace("-", "_")
-            step("absent_" + sysname, f"test ! -d /sys/module/{sysname}")
+            if name in reused:
+                step("present_" + sysname, f"test -d /sys/module/{sysname}")
+            else:
+                step("absent_" + sysname, f"test ! -d /sys/module/{sysname}")
         step("remote_dir", f"mkdir -m 700 {remote}")
-        for name in ORDER:
+        for name in pending:
             data, info = modules[name]
             step("stage_" + name.replace("-", "_"),
                  f"cat > {remote}/{name}.ko; "
@@ -103,7 +121,7 @@ def main():
              f"echo $! > {remote}/pid; sleep 0.1; kill -0 $(cat {remote}/pid)")
         report["state"] = "loading"
         save()
-        for name in ORDER:
+        for name in pending:
             sysname = name.replace("-", "_")
             step("load_" + sysname,
                  f"/usr/bin/timeout -k 2 12 insmod {remote}/{name}.ko; "

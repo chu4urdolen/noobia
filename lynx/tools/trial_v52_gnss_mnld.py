@@ -140,7 +140,8 @@ def main():
                    f"{' --capture-mnl' if args.capture_mnl else ''}"
                    f"{' --start-mnl' if args.start_mnl else ''}"
                    f"{' --capture-logd' if args.capture_logd else ''}"
-                   f"{' --sky-trial' if args.sky_trial else ''}",
+                   f"{' --sky-trial' if args.sky_trial else ''}"
+                   f" --candidate {args.candidate}",
                    timeout=90 if args.sky_trial else 42 if args.start_mnl else 24)
         report["sandbox"] = json.loads(raw)
         if args.start_mnl:

@@ -299,6 +299,22 @@ running Binder on Alpine.
 
 ### Native NMEA milestone, 2026-10-30
 
+On 2026-11-18 the V53 Alpine boot repeated this milestone from RAM. The data
+link opened in 0.013 seconds; the GPS power module and the two SCP modules
+missing from V53 loaded successfully. The first six SCP dependencies were
+already present on that boot, so the guarded V53 path requires them rather
+than trying to load them again. `/dev/gps2scp` appeared. The stock `mnld`
+sandbox emitted 108 checksum-valid NMEA sentences, with GGA fix quality 0,
+zero satellites in use, and no position. All watchdogs were canceled and
+same-boot Alpine health passed. The first sandbox attempt safely rejected
+V53's changed character-device majors before starting `mnld`; after a
+same-boot device inventory, the runner now pins the observed V53 node numbers.
+That pin may need refreshing on another boot. Receipts:
+`logs/v53-gnss-link-1795036129001406384/`,
+`logs/v53-gps-pwr-1795036197204221819/`,
+`logs/v53-gps-scp-stack-1795036323158051183/`, and
+`logs/v53-gnss-mnld-1795036478235543099/`. A clear-sky fix trial remains.
+
 `mnld`'s syscall trace showed it needed `/dev/gps_emi`, `/dev/gps_pwr`, and
 `/dev/gps2scp`. `tools/trial_v52_gps_pwr.py` loaded the exact power module in
 RAM. `tools/trial_v52_gps_scp_stack.py` then loaded the eight matching SCP

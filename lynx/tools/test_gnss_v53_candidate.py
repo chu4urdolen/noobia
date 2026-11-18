@@ -3,6 +3,7 @@
 import unittest
 
 import build_v53_precal_settle as build
+import lynx_gnss_sandbox_runner as sandbox
 import lynx_boot_a_v53_trial as image
 import stage_august_gnss_bundle as bundle
 import trial_v52_gnss_link as link
@@ -41,6 +42,20 @@ class TestGnssV53Candidate(unittest.TestCase):
         self.assertTrue(link.valid_bt_receipt(receipt, "v52"))
         receipt["watchdog_cancelled"] = False
         self.assertFalse(link.valid_bt_receipt(receipt, "v52"))
+
+    def test_v53_boot_stack_reuse_only_loads_missing_tail(self):
+        reused, pending = scp.load_plan("v53", True)
+        self.assertEqual(reused, scp.ORDER[:6])
+        self.assertEqual(pending, ("connscp", "gps_scp"))
+        self.assertEqual(scp.load_plan("v52", False), ((), scp.ORDER))
+        with self.assertRaises(ValueError):
+            scp.load_plan("v52", True)
+
+    def test_v53_node_guard_matches_observed_same_boot_nodes(self):
+        self.assertEqual(sandbox.NODE_MAJORS["v53"], {
+            "gpsdl0": 493, "gpsdl1": 493, "gps_emi": 492,
+            "gps_pwr": 491, "gps2scp": 489,
+        })
 
 
 if __name__ == "__main__":

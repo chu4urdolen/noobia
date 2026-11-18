@@ -94,10 +94,15 @@ command; this is a checkpoint, not a live guarantee.
    same V53 boot, with clean post-check health and RAM cleanup. A live CCCI
    kernel message reports
    `md_state = 0` repeatedly; firmware boot and radio function remain
-   unproven. See the cellular inventory record before any modem action.
+   unproven. Read-only CCCI sysfs says the bootloader loaded MD material, while
+   stock `ccci_mdinit` includes a modem-start path. Keep the SIM out and do not
+   run that daemon or write CCCI controls as a status probe. See the cellular
+   inventory record before any modem action.
    The documented GNSS outdoor trial in `LYNX-CONNECTIVITY-PRECAL.md` uses
    `trial_v52_gnss_mnld.py`, whose preflight requires the exact older V52
-   kernel hash; review its guard and RAM prerequisites for V53 before reuse.
+   kernel hash. On the current V53 boot, its GNSS modules, device nodes, and
+   RAM daemon bundle are absent; review the guard and prerequisites for V53
+   before reuse.
 2. Flashlight has a verified bounded pulse from one rear LED. The second rear
    light and safe persistent startup need separate investigation. Avoid the
    stock flashlight core unload sequence that previously lost SSH.

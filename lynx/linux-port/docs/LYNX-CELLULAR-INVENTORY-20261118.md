@@ -62,3 +62,21 @@ second. Five raw lines are saved in that receipt directory as
 `mddpw_drv_get_mddp_feature before MD ready!`. These observations do not prove
 modem firmware boot or a functioning radio; they strengthen the need for a
 status-only modem readiness investigation before inserting a SIM.
+
+## Bootloader and userspace boundary
+
+On the same V53 boot, read-only CCCI sysfs attributes reported
+`LK Load MD:[Enabled]`, `LK load MD success!`, one modem configured, and
+`md_en=E-D-D-D-D (1->5)`. The raw read is saved beside the inventory as
+`modem-sysfs.txt`. This is evidence that the bootloader loaded modem material,
+but does not establish that the modem reached its running state under Alpine.
+The repeated `md_state = 0` read failure and earlier `before MD ready` message
+remain unresolved.
+
+The stock `init.cccimdinit.rc` defines a `ccci_mdinit` service, and strings in
+the matching stock `/vendor/bin/ccci_mdinit` include `trigger modem to run!`,
+`modem boot up`, and `/sys/kernel/ccci/boot`. That supports treating this
+daemon and the writable `boot` sysfs attribute as modem-start controls. Do
+not execute the daemon, write that attribute, or open CCCI character nodes as
+an exploratory status check. The safe next work is to map their protocol and
+recovery path offline before a guarded modem startup trial.

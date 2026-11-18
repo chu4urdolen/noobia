@@ -116,12 +116,18 @@ def selected_context(context: str, files: list[str]) -> str:
 
 def conversation_context(session_id: str, summarize: bool = True) -> tuple[str, str]:
     """Pass bounded visible Gwyn dialogue to Dushich, never working steps."""
-    conversation_id = os.environ.get('NOOBIA_GWYN_CONVERSATION_ID')
+    # The SessionStart hook (session_link.py) records the transcript actually in
+    # use, which changes when Noob resumes another conversation inside Claude Code.
+    link = Path('/noobia/gwyn-app-nub/private/session-links') / session_id
+    conversation_id = (link.read_text().strip() if link.is_file()
+                       else os.environ.get('NOOBIA_GWYN_CONVERSATION_ID'))
     if not conversation_id:
         prior = jobs(session_id)
         if prior:
             conversation_id = state(prior[-1]).get('conversation_id')
-    path = CONVERSATIONS / f'{conversation_id}.jsonl' if conversation_id else latest()
+    path = CONVERSATIONS / f'{conversation_id}.jsonl' if conversation_id else None
+    if not path or not path.is_file():
+        path = latest()
     if not path or not path.is_file():
         return '', ''
     turns = visible_turns(path)

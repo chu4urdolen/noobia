@@ -45,6 +45,10 @@ Noobia remembers in `/noobia/dushich/workspace/forge.db` through the shared
   and `forge-db note add NAME "what happened, what was decided, what is next" --path PATH --by Dushich`.
   Cite the paths a note is about with `--path`, so notes and the atlas point at
   each other. Notes are short, dated facts, not transcripts.
+* **Tag what you record.** `forge-db tag list` shows the curated vocabulary
+  (`#ROSE`, `#SECURITY`, `#NETWORK`, `#ART`, ...). Add `--tag NAME` to
+  `path set`, or `forge-db tag attach NAME --path P --project N --by Dushich`.
+  Define a new tag with `forge-db tag add` only when nothing existing fits.
 * Add a project with `forge-db project add` only when no existing project fits,
   naming the inhabitant who actually works on it as executor. Never change the
   executor or receiver of an existing project.

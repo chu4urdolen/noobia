@@ -26,6 +26,7 @@ class ForgeDbTest(unittest.TestCase):
         db.executescript(forge_db.SCHEMA)
         db.execute("INSERT INTO projects VALUES ('Rose', 'Aria', 'Rose', 'Rose voice and screen', 0, '[]', NULL)")
         db.commit()
+        db.close()
 
     def tearDown(self):
         self.folder.cleanup()
@@ -56,6 +57,32 @@ class ForgeDbTest(unittest.TestCase):
         self.assertEqual(code, 0)
         _, out = run("note", "list", "Rose")
         self.assertIn("Dushich: Beat grid ready", out)
+
+    def test_tags_curated_attach_filter_and_cleanup(self):
+        # Attaching an undefined tag fails; names are normalized to UPPERCASE.
+        self.assertEqual(run("tag", "attach", "rose", "--project", "Rose", "--by", "G")[0], 2)
+        self.assertEqual(run("tag", "add", "rose", "-d", "Rose's world", "--by", "Dushich")[0], 0)
+        self.assertEqual(run("tag", "add", "#net-work", "-d", "Networking", "--by", "Dushich")[0], 0)
+        self.assertEqual(run("tag", "add", "x", "-d", "too short", "--by", "D")[0], 2)
+        run("path", "set", "/tmp", "-k", "dir", "-d", "scratch", "--tag", "ROSE", "--tag", "NET_WORK", "--by", "G")
+        code, out = run("tag", "attach", "ROSE", "--project", "Rose", "--path", "/tmp", "--by", "G")
+        self.assertIn("attached to 1 new item", out)  # /tmp already had it
+        _, out = run("--json", "path", "get", "/tmp")
+        self.assertEqual(json.loads(out)["tag_list"], ["NET_WORK", "ROSE"])
+        _, out = run("tag", "list")
+        self.assertIn("#ROSE (2)", out)
+        _, out = run("search", "--tag", "ROSE", "--tag", "NET_WORK")
+        self.assertIn("/tmp", out)
+        self.assertNotIn("Project Rose", out)
+        _, out = run("project", "get", "Rose")
+        self.assertIn("#ROSE", out)
+        run("tag", "detach", "ROSE", "--path", "/tmp", "--by", "G")
+        run("path", "remove", "/tmp", "--by", "G")
+        _, out = run("--json", "stats")
+        self.assertEqual(json.loads(out)["tag_links"], 1)
+        run("tag", "remove", "ROSE", "--by", "G")
+        _, out = run("--json", "stats")
+        self.assertEqual((json.loads(out)["tags"], json.loads(out)["tag_links"]), (1, 0))
 
     def test_check_marks_missing_and_changes_since(self):
         gone = os.path.join(self.folder.name, "gone")

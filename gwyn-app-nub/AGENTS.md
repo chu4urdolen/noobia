@@ -140,7 +140,8 @@ Treat him as a collaborator with his own judgment.
 
 - `forge-db search ...` before hunting for a path; `forge-db path set ... --by Gwyn`
   after finding one; `forge-db note add PROJECT "..." --by Gwyn` when a project
-  reaches a decision, milestone, or blocker. See the shared AGENTS.md.
+  reaches a decision, milestone, or blocker. Tag what you record from
+  `forge-db tag list`. See the shared AGENTS.md.
 - The `noobia` MCP server (Banshee's `common/mcp/noob_mcp.py`) gives you Lynx,
   Iris, and local tools. Device tools act on real hardware, so keep calls
   bounded and ask Noob before anything physical beyond a status read.

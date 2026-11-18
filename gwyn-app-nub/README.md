@@ -62,6 +62,11 @@ Dushich's workspace. The Nexus Forge bottom-right quadrant is now
 "Gwyn + Dushich Helper" and animates both avatars from the tmux panes.
 Dushich's local GPU runtime does not use Claude API tokens.
 
+A `SessionStart` hook in Gwyn's private settings runs `session_link.py` on
+every start and resume. It records which Claude Code transcript a launcher
+session is really using in `private/session-links/`, so the bridge follows a
+conversation resumed with `/resume` instead of the launcher's original ID.
+
 `dushich_explore` / `dushich_explore_wait` wrap the shared `dushich-explore`
 command: Dushich answers "where is / how does" questions about Nexus and
 records what he finds in the forge-db path atlas. Gwyn also has the user-scope

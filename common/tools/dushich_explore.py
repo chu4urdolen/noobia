@@ -46,7 +46,8 @@ How to work:
    description you find wrong:
    forge-db path set PATH -k KIND -o OWNER -d "what it is, one line" -t "tags" --by Dushich
    KIND is one of: dir file tool service db config doc device log link other.
-   Add --project NAME when the path belongs to a project from `forge-db project list`.
+   Add --project NAME when the path belongs to a project from `forge-db project list`,
+   and --tag NAME for fitting tags from `forge-db tag list` (repeatable).
    Record directories and key entry files, not every file.
 4. Finish with a short answer (under 1500 characters): the answer first, then
    the key paths, one line each. Say plainly if you could not find it."""

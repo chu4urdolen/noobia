@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Noobia's shared memory in forge.db: where things are, and what projects did.
 
-Three tables sit next to the Foreman's `projects` table:
+These tables sit next to the Foreman's `projects` table:
 
-* `nexus_paths`   one row per important path on Nexus with a description, so an
-                  agent can look something up instead of searching again.
+* `nexus_paths`   one row per important path on Nexus with a description and
+                  free-text search keywords, so an agent can look something up
+                  instead of searching again.
 * `project_notes` dated notes per project (decisions, state, handoffs) that may
                   cite rows in `nexus_paths`.
+* `tags`          a small curated vocabulary of UPPERCASE tags (ROSE, SECURITY,
+  `tag_links`     NETWORK, ART, ...); any path or project can carry several.
 * `embeddings`    sentence vectors for meaning-based search: Qwen3-Embedding on
                   the RTX 5090 through Ollama when Ollama may keep it loaded
                   next to Qwen, otherwise a small CPU model (forge venv).
@@ -65,6 +68,19 @@ CREATE TABLE IF NOT EXISTS project_notes (
     paths TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS project_notes_project ON project_notes(project_name, id);
+CREATE TABLE IF NOT EXISTS tags (
+    name TEXT PRIMARY KEY,
+    description TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS tag_links (
+    source TEXT NOT NULL CHECK (source IN ('path', 'project')),
+    key TEXT NOT NULL,
+    tag TEXT NOT NULL REFERENCES tags(name),
+    added_by TEXT NOT NULL,
+    added_at TEXT NOT NULL,
+    PRIMARY KEY (source, key, tag));
+CREATE INDEX IF NOT EXISTS tag_links_tag ON tag_links(tag);
 CREATE TABLE IF NOT EXISTS embeddings (
     source TEXT NOT NULL,
     key TEXT NOT NULL,
@@ -99,6 +115,42 @@ def require(value: str | None, name: str, limit: int = 4000) -> str:
     if len(value) > limit:
         raise ValueError(f"{name} exceeds {limit} characters")
     return value.strip()
+
+
+# -- tags ---------------------------------------------------------------------
+TAG = re.compile(r"^[A-Z][A-Z0-9_]{1,31}$")
+
+
+def tag_name(raw: str) -> str:
+    name = raw.strip().upper().replace("-", "_").replace(" ", "_").lstrip("#")
+    if not TAG.fullmatch(name):
+        raise ValueError(f"Tag names are 2-32 letters, digits, or _: {raw!r}")
+    return name
+
+
+def tag_map(db: sqlite3.Connection) -> dict[tuple[str, str], list[str]]:
+    found: dict[tuple[str, str], list[str]] = {}
+    for row in db.execute("SELECT source, key, tag FROM tag_links ORDER BY tag"):
+        found.setdefault((row["source"], row["key"]), []).append(row["tag"])
+    return found
+
+
+def tag_attach(db, tag: str, source: str, keys: list[str], by: str, commit: bool = True) -> int:
+    tag = tag_name(tag)
+    if not db.execute("SELECT 1 FROM tags WHERE name=?", (tag,)).fetchone():
+        raise ValueError(f"Unknown tag {tag}; define it first with `forge-db tag add {tag} -d ...`")
+    table, column = ("nexus_paths", "path") if source == "path" else ("projects", "project_name")
+    added = 0
+    for key in keys:
+        key = clean_path(key) if source == "path" else key
+        if not db.execute(f"SELECT 1 FROM {table} WHERE {column}=?", (key,)).fetchone():
+            raise ValueError(f"Unknown {source}: {key}")
+        added += db.execute("INSERT OR IGNORE INTO tag_links VALUES (?, ?, ?, ?, ?)",
+                            (source, key, tag, require(by, "--by", 80), now())).rowcount
+    if commit:
+        db.commit()
+        refresh_embeddings(db, [(source, k if source != "path" else clean_path(k)) for k in keys])
+    return added
 
 
 # -- optional meaning-based search ---------------------------------------------
@@ -171,18 +223,22 @@ def vectors(texts: list[str], query: bool = False):
     return result / numpy.linalg.norm(result, axis=1, keepdims=True)
 
 
-def entry_text(source: str, row: sqlite3.Row) -> str:
+def entry_text(source: str, row: sqlite3.Row, tags: list[str] = ()) -> str:
+    marks = "".join(f" #{t}" for t in tags)
     if source == "path":
-        return f"{row['path']} ({row['kind']}, {row['owner'] or 'shared'}): {row['description']} {row['tags']}"
+        return f"{row['path']} ({row['kind']}, {row['owner'] or 'shared'}): {row['description']} {row['tags']}{marks}"
     if source == "note":
         return f"Note on {row['project_name']} by {row['author']}: {row['note']}"
-    return f"Project {row['project_name']} ({row['executor']} for {row['receiver']}): {row['description'] or ''}"
+    return f"Project {row['project_name']} ({row['executor']} for {row['receiver']}): {row['description'] or ''}{marks}"
 
 
 def all_entries(db: sqlite3.Connection) -> list[tuple[str, str, str]]:
-    found = [("path", r["path"], entry_text("path", r)) for r in db.execute("SELECT * FROM nexus_paths")]
+    tagged = tag_map(db)
+    found = [("path", r["path"], entry_text("path", r, tagged.get(("path", r["path"]), [])))
+             for r in db.execute("SELECT * FROM nexus_paths")]
     found += [("note", str(r["id"]), entry_text("note", r)) for r in db.execute("SELECT * FROM project_notes")]
-    found += [("project", r["project_name"], entry_text("project", r)) for r in db.execute("SELECT * FROM projects")]
+    found += [("project", r["project_name"], entry_text("project", r, tagged.get(("project", r["project_name"]), [])))
+              for r in db.execute("SELECT * FROM projects")]
     return found
 
 
@@ -212,12 +268,28 @@ def refresh_embeddings(db: sqlite3.Connection, only: list[tuple[str, str]] | Non
 
 
 # -- search -------------------------------------------------------------------
-def search(db: sqlite3.Connection, query: str, limit: int = 10, sources=("path", "note", "project")) -> list[dict]:
-    words = [w for w in re.findall(r"[\w./-]+", query.lower()) if len(w) > 1]
+def tagged_keys(db: sqlite3.Connection, tags: list[str]) -> set[tuple[str, str]]:
+    """Entries carrying every given tag; a note counts when its project does."""
+    wanted = [tag_name(t) for t in tags]
+    keys = None
+    for tag in wanted:
+        found = {(r["source"], r["key"]) for r in
+                 db.execute("SELECT source, key FROM tag_links WHERE tag=?", (tag,))}
+        keys = found if keys is None else keys & found
+    projects = {k for s, k in keys if s == "project"}
+    keys |= {("note", str(r["id"])) for r in db.execute("SELECT id, project_name FROM project_notes")
+             if r["project_name"] in projects}
+    return keys
+
+
+def search(db: sqlite3.Connection, query: str, limit: int = 10, sources=("path", "note", "project"),
+           tags: list[str] = ()) -> list[dict]:
+    words = [w for w in re.findall(r"[\w./-]+", query.lower()) if len(w) > 1] or [""]
     scores: dict[tuple[str, str], float] = {}
     texts = {}
+    allowed = tagged_keys(db, list(tags)) if tags else None
     for source, key, text in all_entries(db):
-        if source not in sources:
+        if source not in sources or (allowed is not None and (source, key) not in allowed):
             continue
         texts[(source, key)] = text
         lowered = text.lower()
@@ -225,7 +297,7 @@ def search(db: sqlite3.Connection, query: str, limit: int = 10, sources=("path",
         if hits:
             scores[(source, key)] = hits / len(words)
     model = active_model()
-    query_vector = vectors([query], query=True) if model else None
+    query_vector = vectors([query], query=True) if model and query.strip() else None
     if query_vector is not None:
         import numpy
         floor, span = SIMILARITY_SCALE[model]
@@ -281,6 +353,7 @@ def project_view(db, name: str, notes: int) -> dict:
     if not row:
         raise ValueError(f"Unknown project: {name}")
     result = dict(row)
+    result["tag_list"] = tag_map(db).get(("project", name), [])
     result["paths"] = [dict(r) for r in db.execute(
         "SELECT path, kind, description FROM nexus_paths WHERE project=? ORDER BY path", (name,))]
     result["notes"] = [dict(r) for r in db.execute(
@@ -294,19 +367,22 @@ def render(value) -> str:
         return "\n".join(render(item) for item in value) or "(none)"
     if not isinstance(value, dict):
         return str(value)
+    marks = "".join(f" #{t}" for t in value.get("tag_list", []))
     if "source" in value and "score" in value:
         return f"[{value['source']} {value['score']}] {value['text']}"
+    if "name" in value and "uses" in value:
+        return f"#{value['name']} ({value['uses']}): {value['description']}"
     if "path" in value and "kind" in value:
         mark = "" if value.get("present", 1) else " (MISSING)"
         meta = ", ".join(x for x in (value["kind"], value.get("owner") or "", value.get("project") or "") if x)
-        return f"{value['path']}{mark} [{meta}] {value['description']}"
+        return f"{value['path']}{mark} [{meta}] {value['description']}{marks}"
     if "note" in value:
         cited = json.loads(value["paths"]) if isinstance(value["paths"], str) else value["paths"]
         return (f"#{value['id']} {value['created_at'][:16]} {value['author']}: {value['note']}"
                 + (f"\n    paths: {', '.join(cited)}" if cited else ""))
     if "project_name" in value:
         lines = [f"{value['project_name']} — {value['executor']} for {value['receiver']}"
-                 f"{'' if value['hardware_ready'] else ' (hardware not ready)'}: {value['description'] or ''}"]
+                 f"{'' if value['hardware_ready'] else ' (hardware not ready)'}: {value['description'] or ''}{marks}"]
         if "paths" in value:
             lines += ["  paths:"] + [f"    {p['path']} [{p['kind']}] {p['description']}" for p in value["paths"]]
             lines += ["  notes:"] + [f"    {render(n)}" for n in value["notes"]]
@@ -320,9 +396,10 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("search", help="find paths, notes, and projects by words and meaning")
-    s.add_argument("query", nargs="+")
+    s.add_argument("query", nargs="*")
     s.add_argument("--limit", type=int, default=10)
     s.add_argument("--only", choices=("path", "note", "project"))
+    s.add_argument("--tag", action="append", default=[], help="only entries with this tag (repeatable: all must match)")
 
     p = sub.add_parser("path", help="read or record a Nexus path")
     pa = p.add_subparsers(dest="action", required=True)
@@ -332,8 +409,10 @@ def main(argv: list[str] | None = None) -> int:
     ps.add_argument("--description", "-d", required=True)
     ps.add_argument("--kind", "-k", default="file", choices=KINDS)
     ps.add_argument("--owner", "-o")
-    ps.add_argument("--tags", "-t", default="")
+    ps.add_argument("--keywords", "--tags", "-t", dest="keywords", default="",
+                    help="free-text search words (not curated tags)")
     ps.add_argument("--project")
+    ps.add_argument("--tag", action="append", default=[], help="attach a curated tag (repeatable)")
     ps.add_argument("--by", required=True, help="your name, e.g. Dushich")
     pr = pa.add_parser("remove")
     pr.add_argument("path")
@@ -356,6 +435,26 @@ def main(argv: list[str] | None = None) -> int:
     jn.add_argument("--receiver", required=True)
     jn.add_argument("--description", "-d", required=True)
     jn.add_argument("--hardware-ready", action="store_true")
+    jn.add_argument("--tag", action="append", default=[], help="attach a curated tag (repeatable)")
+    jn.add_argument("--by", default="forge-db", help="your name")
+
+    t = sub.add_parser("tag", help="curated tags for paths and projects")
+    ta = t.add_subparsers(dest="action", required=True)
+    ta.add_parser("list")
+    td = ta.add_parser("add", help="define a tag or update its description")
+    td.add_argument("name")
+    td.add_argument("--description", "-d", required=True)
+    td.add_argument("--by", required=True)
+    for verb in ("attach", "detach"):
+        tv = ta.add_parser(verb)
+        tv.add_argument("name")
+        tv.add_argument("--path", action="append", default=[])
+        tv.add_argument("--project", action="append", default=[])
+        tv.add_argument("--by", required=True)
+    ta.add_parser("show", help="everything carrying a tag").add_argument("name")
+    tr = ta.add_parser("remove", help="delete a tag and all its links")
+    tr.add_argument("name")
+    tr.add_argument("--by", required=True)
 
     n = sub.add_parser("note", help="read or add project notes")
     na = n.add_subparsers(dest="action", required=True)
@@ -374,22 +473,34 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("stats")
 
     args = parser.parse_args(argv)
+    db = None
     try:
         db = connect()
         if args.cmd == "search":
             sources = (args.only,) if args.only else ("path", "note", "project")
-            result = search(db, " ".join(args.query), args.limit, sources)
+            if not args.query and not args.tag:
+                raise ValueError("Give search words, --tag, or both")
+            result = search(db, " ".join(args.query), args.limit if args.query else 500, sources, args.tag)
         elif args.cmd == "path" and args.action == "get":
-            row = db.execute("SELECT * FROM nexus_paths WHERE path=?", (clean_path(args.path),)).fetchone()
+            path = clean_path(args.path)
+            row = db.execute("SELECT * FROM nexus_paths WHERE path=?", (path,)).fetchone()
             if not row:
                 raise ValueError("Path is not recorded; try `forge-db search`")
-            result = dict(row)
+            result = {**dict(row), "tag_list": tag_map(db).get(("path", path), [])}
         elif args.cmd == "path" and args.action == "set":
+            for tag in args.tag:  # validate before writing anything
+                if not db.execute("SELECT 1 FROM tags WHERE name=?", (tag_name(tag),)).fetchone():
+                    raise ValueError(f"Unknown tag {tag_name(tag)}; define it with `forge-db tag add`")
             result = path_set(db, args.path, args.description, args.kind, args.owner,
-                              args.tags, args.project, args.by)
+                              args.keywords, args.project, args.by)
+            for tag in args.tag:
+                tag_attach(db, tag, "path", [result["path"]], args.by)
+            result["tag_list"] = tag_map(db).get(("path", result["path"]), [])
         elif args.cmd == "path" and args.action == "remove":
             require(args.by, "--by")
-            deleted = db.execute("DELETE FROM nexus_paths WHERE path=?", (clean_path(args.path),)).rowcount
+            path = clean_path(args.path)
+            deleted = db.execute("DELETE FROM nexus_paths WHERE path=?", (path,)).rowcount
+            db.execute("DELETE FROM tag_links WHERE source='path' AND key=?", (path,))
             db.commit()
             refresh_embeddings(db, [])
             result = f"removed {deleted} row(s)"
@@ -420,9 +531,63 @@ def main(argv: list[str] | None = None) -> int:
                        (require(args.name, "name", 80), args.executor, args.receiver,
                         require(args.description, "description"), int(args.hardware_ready),
                         json.dumps(["forge-db"])))
+            for tag in args.tag:
+                tag_attach(db, tag, "project", [args.name], args.by, commit=False)
             db.commit()
             refresh_embeddings(db, [("project", args.name)])
             result = project_view(db, args.name, 0)
+        elif args.cmd == "tag" and args.action == "list":
+            result = [dict(r) for r in db.execute(
+                "SELECT t.name, t.description, COUNT(l.tag) AS uses FROM tags t "
+                "LEFT JOIN tag_links l ON l.tag = t.name GROUP BY t.name ORDER BY uses DESC, t.name")]
+        elif args.cmd == "tag" and args.action == "add":
+            name = tag_name(args.name)
+            db.execute("INSERT INTO tags VALUES (?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET "
+                       "description=excluded.description",
+                       (name, require(args.description, "description", 300), require(args.by, "--by", 80), now()))
+            db.commit()
+            result = f"tag #{name} defined"
+        elif args.cmd == "tag" and args.action in ("attach", "detach"):
+            if not args.path and not args.project:
+                raise ValueError("Give at least one --path or --project")
+            if args.action == "attach":
+                added = (tag_attach(db, args.name, "path", args.path, args.by, commit=False)
+                         + tag_attach(db, args.name, "project", args.project, args.by, commit=False))
+                db.commit()
+                result = f"#{tag_name(args.name)} attached to {added} new item(s)"
+            else:
+                require(args.by, "--by")
+                name = tag_name(args.name)
+                removed = sum(db.execute("DELETE FROM tag_links WHERE source=? AND key=? AND tag=?",
+                                         (source, clean_path(k) if source == "path" else k, name)).rowcount
+                              for source, keys in (("path", args.path), ("project", args.project)) for k in keys)
+                db.commit()
+                result = f"#{name} detached from {removed} item(s)"
+            refresh_embeddings(db, [("path", clean_path(p)) for p in args.path]
+                               + [("project", p) for p in args.project])
+        elif args.cmd == "tag" and args.action == "show":
+            name = tag_name(args.name)
+            row = db.execute("SELECT * FROM tags WHERE name=?", (name,)).fetchone()
+            if not row:
+                raise ValueError(f"Unknown tag {name}")
+            tagged = tag_map(db)
+            result = [f"#{name}: {row['description']}"]
+            result += [render({**dict(r), "tag_list": tagged.get(("project", r["project_name"]), [])})
+                       for r in db.execute("SELECT p.* FROM projects p JOIN tag_links l ON l.source='project' "
+                                           "AND l.key=p.project_name WHERE l.tag=? ORDER BY 1", (name,))]
+            result += [render({**dict(r), "tag_list": tagged.get(("path", r["path"]), [])})
+                       for r in db.execute("SELECT n.* FROM nexus_paths n JOIN tag_links l ON l.source='path' "
+                                           "AND l.key=n.path WHERE l.tag=? ORDER BY 1", (name,))]
+            if args.json:
+                result = {"tag": dict(row), "items": result[1:]}
+        elif args.cmd == "tag" and args.action == "remove":
+            require(args.by, "--by")
+            name = tag_name(args.name)
+            links = db.execute("DELETE FROM tag_links WHERE tag=?", (name,)).rowcount
+            removed = db.execute("DELETE FROM tags WHERE name=?", (name,)).rowcount
+            db.commit()
+            refresh_embeddings(db)
+            result = f"removed tag #{name} ({removed} definition, {links} link(s))"
         elif args.cmd == "note" and args.action == "add":
             result = note_add(db, args.project, args.text, args.path, args.by)
         elif args.cmd == "note" and args.action == "list":
@@ -442,11 +607,14 @@ def main(argv: list[str] | None = None) -> int:
                       else "meaning search unavailable: run with /opt/noobia/forge-venv/bin/python")
         else:
             counts = {t: db.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
-                      for t in ("projects", "nexus_paths", "project_notes", "embeddings")}
+                      for t in ("projects", "nexus_paths", "project_notes", "tags", "tag_links", "embeddings")}
             result = {**counts, "db": str(DB), "meaning_model": active_model()}
     except (OSError, ValueError, sqlite3.Error) as exc:
         print(f"forge-db: {exc}", file=sys.stderr)
         return 2
+    finally:
+        if db is not None:
+            db.close()
     print(json.dumps(result, indent=1, default=str) if args.json else render(result))
     return 0
 

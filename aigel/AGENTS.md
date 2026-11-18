@@ -185,9 +185,13 @@ AIGEL_LOG_DIR=$(mktemp -d) timeout 8 /noobia/common/services/cpu_report.sh --int
 
 Reads the **newest sample from each of the five health stores**, the lighthouse
 LAN beacon, the newest `gpu_monitor` CSV row (plus an optional live
-`nvidia-smi` read), and recent error-level journal lines — then folds it all
-into a compact board with an overall **verdict (`ok` / `warn` / `fail`)** and
-short reasons. Strictly read-only.
+`nvidia-smi` read), recent error-level journal lines, **live state that
+outranks stale store samples** (Wi-Fi link via `ip`, RAM via `MemAvailable`
+from /proc/meminfo, applied GPU power limit via live `nvidia-smi`),
+**GPU longevity** (ECC aggregate counters and NVIDIA Xid events), and
+**per-disk SMART health** (smartctl, read-only) — then folds it all into a
+compact board with an overall **verdict (`ok` / `warn` / `fail`)** and short
+reasons. Strictly read-only.
 
 ```sh
 python3 /noobia/aigel/tools/aigel_vitals.py             # human-readable board
@@ -197,6 +201,17 @@ python3 /noobia/aigel/tools/aigel_vitals.py --json      # full JSON facts
 The board uses one convention: `used/total` — e.g. `vram 27048/32607MiB used
 (83%)`. The GPU line shows both the applied `limit` and the `policy` from
 `config.json`; when they disagree it is flagged `⚠ limit≠policy`.
+**Live-first:** the net line prefers the live Wi-Fi link state
+(`live=UP (store said DOWN — stale sample)` when they disagree), the mem line
+carries `MemAvailable …% (live)`, and the GPU limit is the live value when
+readable — the verdicts are driven by live state, stores stay as context.
+The GPU line also carries `ecc …` and `xid …`: this RTX 5090 has no ECC, so
+the honest line is `ecc n/a (not available on this card)` (never a fake
+zero), and Xid counts match the driver's `NVRM: Xid` pattern only — the
+Realtek NIC's `XID 541` PCI line is a false friend and never counts.
+The SMART line is one `key=value` string per disk
+(`health=PASSED temp=42C realloc=n/a pending=n/a media-errors=0
+spare=100% used=0%`); attributes a device does not expose are `n/a`.
 Exit codes: `0` = ok or warn, `1` = fail, `2` = no store readable.
 
 ### `aigel_sentinel.py` — threshold alerts over the newest sample
@@ -212,6 +227,15 @@ numeric `{"direction": "high"|"low", "warn": N, "fail": N}`, boolean
 `{"expect": true, "severity": "fail"}`, membership `{"bad": ["DOWN"], "severity": "fail"}`.
 Built-in defaults cover disk usage, free RAM, load per core, DNS RTT, GPU
 temperature, journal error count, Wi-Fi state, and `nexus_ready`.
+**Live-first:** `wifi_state` is read live from the kernel when possible,
+`ram_free_pct` is judged on `MemAvailable` (live /proc/meminfo) so reclaimable
+buff/cache does not manufacture a warning, and the GPU limit used for the
+`gpu_limit_policy_mismatch` check is the live `nvidia-smi` value when
+readable. New metrics: SMART `health` / `reallocated` / `pending` /
+`media_errors` / `percentage_used` (worst across disks; NVMe attributes the
+device does not expose simply do not fire), `nvidia_xid_count` (NVRM
+pattern only), `ecc_uncorrectable` / `ecc_correctable` (honest n/a on
+cards without ECC), and `gpu_limit_policy_mismatch`.
 
 ```sh
 python3 /noobia/aigel/tools/aigel_sentinel.py                 # one check
@@ -319,6 +343,11 @@ cd /noobia/aigel/tools && python3 -m unittest -v \
   `ss`, `ip`, `ping`, `iostat`, `free`, `df`, `ps`/`top`, `smartctl`, and
   `/proc` are your friends; the code map and each inhabitant's directory hold
   the device-specific notes.
+  Two local gotchas: `smartctl` lives at `/usr/sbin/smartctl` (not on the
+  bare non-login PATH our tools inherit) and NVMe queries need `sudo -n`;
+  the vitals board handles both itself. And on this box `nvidia-smi
+  --query-gpu=ecc.*` is rejected by the driver — read ECC via
+  `nvidia-smi -q -d ECC`, where this card honestly reports N/A.
 
 ## How a good investigation goes
 

@@ -246,5 +246,143 @@ class TestApplyCooldown(unittest.TestCase):
         self.assertEqual(state["alerts"]["gpu_temp_c"], 1.0)
 
 
+class TestExtractMetricLive(unittest.TestCase):
+    def test_wifi_prefers_live(self) -> None:
+        facts = dict(FACTS)
+        facts["wifi_live"] = {"state": "UP"}
+        value, detail = _extract_metric(facts, "wifi_state")
+        self.assertEqual(value, "UP")
+        self.assertIn("live", detail)
+        facts["wifi_live"] = {"state": "DOWN"}
+        value, _ = _extract_metric(facts, "wifi_state")
+        self.assertEqual(value, "DOWN")
+
+    def test_wifi_falls_back_to_store(self) -> None:
+        value, detail = _extract_metric(FACTS, "wifi_state")
+        self.assertEqual(value, "UP")
+        self.assertIn("store sample", detail)
+
+    def test_ram_prefers_mem_available(self) -> None:
+        facts = dict(FACTS)  # store says ram_free_pct 7.7 (would warn)
+        facts["ram_live"] = {"available_pct": 76.1}
+        value, detail = _extract_metric(facts, "ram_free_pct")
+        self.assertEqual(value, 76.1)
+        self.assertIn("MemAvailable", detail)
+
+    def test_ram_falls_back_to_store(self) -> None:
+        value, detail = _extract_metric(FACTS, "ram_free_pct")
+        self.assertEqual(value, 7.7)
+        self.assertIn("store sample", detail)
+
+
+class TestExtractMetricNew(unittest.TestCase):
+    def test_smart_health_takes_worst(self) -> None:
+        facts = {"smart": {"available": True, "disks": [
+            {"device": "/dev/sda", "health": "PASSED"},
+            {"device": "/dev/sdb", "health": "FAILED"},
+        ]}}
+        value, _ = _extract_metric(facts, "smart_health")
+        self.assertEqual(value, "FAILED")
+
+    def test_smart_max_counters(self) -> None:
+        facts = {"smart": {"disks": [
+            {"device": "/dev/sda", "reallocated": 0, "pending": 1},
+            {"device": "/dev/sdb", "reallocated": 4, "pending": 0},
+        ]}}
+        self.assertEqual(_extract_metric(facts, "smart_reallocated_sectors")[0], 4)
+        self.assertEqual(_extract_metric(facts, "smart_pending_sectors")[0], 1)
+
+    def test_smart_media_errors_and_percentage_used(self) -> None:
+        facts = {"smart": {"disks": [
+            {"device": "/dev/nvme0", "media_errors": 2, "nvme_percentage_used_pct": 85},
+        ]}}
+        self.assertEqual(_extract_metric(facts, "smart_media_errors")[0], 2)
+        self.assertEqual(_extract_metric(facts, "smart_percentage_used")[0], 85)
+
+    def test_smart_missing_or_unavailable_is_none(self) -> None:
+        self.assertIsNone(_extract_metric({}, "smart_health"))
+        self.assertIsNone(_extract_metric({"smart": {"available": False}}, "smart_health"))
+        # NVMe without realloc/pending attrs: metric absent, not zero
+        facts = {"smart": {"disks": [{"device": "/dev/nvme0", "health": "PASSED"}]}}
+        self.assertIsNone(_extract_metric(facts, "smart_reallocated_sectors"))
+
+    def test_nvidia_xid(self) -> None:
+        self.assertEqual(
+            _extract_metric({"gpu_longevity": {"xid_count": 3}}, "nvidia_xid_count")[0], 3)
+        self.assertIsNone(_extract_metric({}, "nvidia_xid_count"))
+        self.assertIsNone(
+            _extract_metric({"gpu_longevity": {"xid_count": None}}, "nvidia_xid_count"))
+
+    def test_ecc_honest_na(self) -> None:
+        facts = {"gpu_longevity": {"ecc": {"available": True,
+                                          "correctable": 12, "uncorrectable": 3}}}
+        self.assertEqual(_extract_metric(facts, "ecc_uncorrectable")[0], 3)
+        self.assertEqual(_extract_metric(facts, "ecc_correctable")[0], 12)
+        na = {"gpu_longevity": {"ecc": {"available": False,
+                                        "correctable": None, "uncorrectable": None}}}
+        self.assertIsNone(_extract_metric(na, "ecc_uncorrectable"))
+        self.assertIsNone(_extract_metric(na, "ecc_correctable"))
+
+    def test_limit_policy_mismatch(self) -> None:
+        facts = {"gpu": {"power_limit_w": 400.0}, "policy": {"power_limit_w": 500}}
+        value, detail = _extract_metric(facts, "gpu_limit_policy_mismatch")
+        self.assertTrue(value)
+        self.assertIn("500", detail)
+        # live limit matching the policy clears it, even with a stale store
+        facts["gpu_longevity"] = {"power_limit_w_live": 500.0}
+        self.assertFalse(_extract_metric(facts, "gpu_limit_policy_mismatch")[0])
+        self.assertIsNone(_extract_metric({}, "gpu_limit_policy_mismatch"))
+
+
+class TestEvaluateNew(unittest.TestCase):
+    def quiet_facts(self) -> dict:
+        return {
+            "cpu": {"ram_free_pct": 40.0, "load1": 0.5, "cores_count": 16},
+            "net": {"wifi_state": "UP", "dns_rtt_ms": 20.0},
+            "wifi_live": {"state": "UP"},
+            "ram_live": {"available_pct": 76.0},
+            "disk": {"max_used_pct": 40, "max_used_device": "/dev/sda1"},
+            "journal_errors": {"count": 0, "minutes": 60},
+            "lighthouse": {"nexus_ready": True, "offline": []},
+            "gpu": {"temp_c": 50.0, "power_limit_w": 500.0},
+            "policy": {"power_limit_w": 500},
+            "gpu_longevity": {"power_limit_w_live": 500.0, "xid_count": 0,
+                              "ecc": {"available": False, "correctable": None,
+                                      "uncorrectable": None}},
+            "smart": {"available": True, "disks": [
+                {"device": "/dev/nvme0", "health": "PASSED", "media_errors": 0,
+                 "nvme_percentage_used_pct": 0},
+            ]},
+        }
+
+    def test_healthy_new_metrics_stay_quiet(self) -> None:
+        self.assertEqual(evaluate(self.quiet_facts()), [])
+
+    def test_failed_smart_xid_and_realloc_alert(self) -> None:
+        facts = self.quiet_facts()
+        facts["gpu_longevity"] = {"xid_count": 2}
+        facts["smart"] = {"available": True, "disks": [
+            {"device": "/dev/sdb", "health": "FAILED", "pending": 3},
+        ]}
+        alerts = evaluate(facts)
+        severities = {a["metric"]: a["severity"] for a in alerts}
+        self.assertEqual(severities["smart_health"], "fail")
+        self.assertEqual(severities["smart_pending_sectors"], "fail")
+        self.assertEqual(severities["nvidia_xid_count"], "warn")
+
+    def test_ecc_uncorrectable_alerts(self) -> None:
+        facts = self.quiet_facts()
+        facts["gpu_longevity"] = {"ecc": {"available": True, "correctable": 0,
+                                          "uncorrectable": 1}}
+        severities = {a["metric"]: a["severity"] for a in evaluate(facts)}
+        self.assertEqual(severities["ecc_uncorrectable"], "fail")
+
+    def test_limit_mismatch_alerts(self) -> None:
+        facts = self.quiet_facts()
+        facts["gpu_longevity"] = {"power_limit_w_live": 400.0}
+        severities = {a["metric"]: a["severity"] for a in evaluate(facts)}
+        self.assertEqual(severities["gpu_limit_policy_mismatch"], "warn")
+
+
 if __name__ == "__main__":
     unittest.main()

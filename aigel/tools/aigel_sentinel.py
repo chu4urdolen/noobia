@@ -6,6 +6,15 @@ Strictly read-only. Gathers the newest sample from Aigel's health stores
 thresholds, and records one clear alert line per crossed threshold.
 It never heals anything — it only speaks.
 
+Live state outranks a possibly stale store sample: the Wi-Fi link is read
+live from the kernel (``ip``), RAM is judged on ``MemAvailable`` (live
+/proc/meminfo) rather than MemFree, and the GPU power limit comes from a
+live ``nvidia-smi`` read when available. New metrics cover per-disk SMART
+health (smartctl, read-only), NVIDIA Xid events (matched by the driver's
+``NVRM: Xid`` pattern only — never the Realtek NIC's ``XID 541`` line),
+ECC aggregate counters (honest n/a on cards without ECC), and the
+power-limit-vs-policy mismatch.
+
 Thresholds
 ----------
 Built-in defaults can be extended or overridden by the ``thresholds`` key
@@ -69,6 +78,15 @@ DEFAULT_THRESHOLDS: dict = {
     "journal_error_count": {"direction": "high", "warn": 10, "fail": 50},
     "wifi_state": {"bad": ["DOWN"], "severity": "fail"},
     "nexus_ready": {"expect": True, "severity": "fail"},
+    "smart_health": {"bad": ["FAILED"], "severity": "fail"},
+    "smart_reallocated_sectors": {"direction": "high", "warn": 1, "fail": 1},
+    "smart_pending_sectors": {"direction": "high", "warn": 1, "fail": 1},
+    "smart_media_errors": {"direction": "high", "warn": 1, "fail": 1},
+    "smart_percentage_used": {"direction": "high", "warn": 80, "fail": 100},
+    "nvidia_xid_count": {"direction": "high", "warn": 1, "fail": 10},
+    "ecc_uncorrectable": {"direction": "high", "warn": 1, "fail": 1},
+    "ecc_correctable": {"direction": "high", "warn": 100, "fail": 1000},
+    "gpu_limit_policy_mismatch": {"expect": False, "severity": "warn"},
 }
 
 
@@ -139,10 +157,13 @@ def _extract_metric(facts: dict, name: str) -> tuple[object, str] | None:
             return None
         return disk["max_used_pct"], f"{disk.get('max_used_device', 'disk')} at {disk['max_used_pct']}% used"
     if name == "ram_free_pct":
+        ram_live = facts.get("ram_live") or {}
+        if ram_live.get("available_pct") is not None:
+            return ram_live["available_pct"], "MemAvailable (live /proc/meminfo)"
         cpu = facts.get("cpu") or {}
         if cpu.get("ram_free_pct") is None:
             return None
-        return cpu["ram_free_pct"], f"ram free {cpu['ram_free_pct']}%"
+        return cpu["ram_free_pct"], f"ram free {cpu['ram_free_pct']}% (store sample)"
     if name == "load1_per_core":
         cpu = facts.get("cpu") or {}
         if cpu.get("load1") is None or not cpu.get("cores_count"):
@@ -169,16 +190,66 @@ def _extract_metric(facts: dict, name: str) -> tuple[object, str] | None:
             return None
         return errors["count"], f"error-level journal lines in the last {errors.get('minutes', '?')} min"
     if name == "wifi_state":
+        live = (facts.get("wifi_live") or {}).get("state")
+        if live:
+            return live, "Noobia Wi-Fi interface state (live)"
         net = facts.get("net") or {}
         if net.get("wifi_state") is None:
             return None
-        return net["wifi_state"], "Noobia Wi-Fi interface state"
+        return net["wifi_state"], "Noobia Wi-Fi interface state (store sample)"
     if name == "nexus_ready":
         beacon = facts.get("lighthouse") or {}
         if "nexus_ready" not in beacon:
             return None
         offline = ",".join(beacon.get("offline", [])) or "none"
         return beacon["nexus_ready"], f"LAN beacon; offline: {offline}"
+    if name in ("smart_health", "smart_reallocated_sectors", "smart_pending_sectors",
+                "smart_media_errors", "smart_percentage_used"):
+        disks = (facts.get("smart") or {}).get("disks") or []
+        if not disks:
+            return None
+        if name == "smart_health":
+            worst = "PASSED"
+            for disk in disks:
+                if str(disk.get("health") or "").upper() == "FAILED":
+                    worst = "FAILED"
+                    break
+            return worst, "SMART overall-health, worst of " + str(len(disks)) + " disk(s)"
+        key = {
+            "smart_reallocated_sectors": "reallocated",
+            "smart_pending_sectors": "pending",
+            "smart_media_errors": "media_errors",
+            "smart_percentage_used": "nvme_percentage_used_pct",
+        }[name]
+        values = [disk[key] for disk in disks
+                  if isinstance(disk.get(key), (int, float)) and not isinstance(disk.get(key), bool)]
+        if not values:
+            return None
+        return max(values), "SMART " + key + ", worst across disks"
+    if name == "nvidia_xid_count":
+        xid = (facts.get("gpu_longevity") or {}).get("xid_count")
+        if not isinstance(xid, int) or isinstance(xid, bool):
+            return None
+        return xid, "NVIDIA Xid events (NVRM: Xid) since boot"
+    if name in ("ecc_uncorrectable", "ecc_correctable"):
+        ecc = (facts.get("gpu_longevity") or {}).get("ecc") or {}
+        value = ecc.get("uncorrectable" if name == "ecc_uncorrectable" else "correctable")
+        if not isinstance(value, int) or isinstance(value, bool):
+            return None
+        return value, "ECC aggregate errors (nvidia-smi)"
+    if name == "gpu_limit_policy_mismatch":
+        longevity = facts.get("gpu_longevity") or {}
+        limit = longevity.get("power_limit_w_live")
+        if limit is None:
+            limit = (facts.get("gpu") or {}).get("power_limit_w")
+        policy = (facts.get("policy") or {}).get("power_limit_w")
+        if limit is None or policy is None:
+            return None
+        try:
+            mismatch = abs(float(limit) - float(policy)) > 0.01
+        except (TypeError, ValueError):
+            return None
+        return mismatch, f"gpu limit {limit}W vs policy {policy}W"
     return None
 
 

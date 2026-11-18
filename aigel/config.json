@@ -42,6 +42,51 @@
     "nexus_ready": {
       "expect": true,
       "severity": "fail"
+    },
+    "smart_health": {
+      "bad": [
+        "FAILED"
+      ],
+      "severity": "fail"
+    },
+    "smart_reallocated_sectors": {
+      "direction": "high",
+      "warn": 1,
+      "fail": 1
+    },
+    "smart_pending_sectors": {
+      "direction": "high",
+      "warn": 1,
+      "fail": 1
+    },
+    "smart_media_errors": {
+      "direction": "high",
+      "warn": 1,
+      "fail": 1
+    },
+    "smart_percentage_used": {
+      "direction": "high",
+      "warn": 80,
+      "fail": 100
+    },
+    "nvidia_xid_count": {
+      "direction": "high",
+      "warn": 1,
+      "fail": 10
+    },
+    "ecc_uncorrectable": {
+      "direction": "high",
+      "warn": 1,
+      "fail": 1
+    },
+    "ecc_correctable": {
+      "direction": "high",
+      "warn": 100,
+      "fail": 1000
+    },
+    "gpu_limit_policy_mismatch": {
+      "expect": false,
+      "severity": "warn"
     }
   }
 }

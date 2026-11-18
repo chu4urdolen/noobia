@@ -2,8 +2,9 @@
 """Offline unit tests for lynx_cellular_inventory using temp fixtures.
 
 These tests never touch a real device and never open a CCCI character device;
-they exercise absent nodes, observed nodes, and read-failure paths against
-temporary fixtures with injected roots.
+they exercise absent nodes, observed nodes, read-failure and permission-failure
+paths against temporary fixtures with injected roots. The CLI tests mock
+collect_inventory so the CLI can never redirect the /proc read.
 """
 
 import contextlib
@@ -14,6 +15,7 @@ import stat as stat_mod
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import lynx_cellular_inventory as inv
 
@@ -169,27 +171,141 @@ class TestReadFailure(unittest.TestCase):
             self.assertIn("FileNotFoundError", result["proc_modules"]["error"])
 
 
+class TestSimNodePermissionError(unittest.TestCase):
+    """lstat failures other than "not found" must be reported explicitly."""
+
+    def _make(self, tmp):
+        sysfs = Path(tmp) / "sysfs"
+        (sysfs / "devices").mkdir(parents=True)
+        (sysfs / "bus" / "platform" / "devices").mkdir(parents=True)
+        dev = Path(tmp) / "dev"
+        dev.mkdir()
+        proc = Path(tmp) / "modules"
+        proc.write_text("")
+        return sysfs, dev, proc
+
+    @unittest.skipIf(os.geteuid() == 0, "root ignores directory mode bits")
+    def test_permission_denied_is_reported_not_not_found(self):
+        with tempfile.TemporaryDirectory(prefix="lynx-sim-perm-") as tmp:
+            sysfs, dev, proc = self._make(tmp)
+            # Both candidate parents untraversable -> EACCES, not ENOENT.
+            os.chmod(sysfs / "devices", 0)
+            os.chmod(sysfs / "bus", 0)
+            try:
+                resolved, error = inv._resolve_sim_node(
+                    sysfs, "MD1_SIM1_HOT_PLUG_EINT", inv.DEFAULT_SIM_NODE_DIRS)
+                result = inv.collect_inventory(
+                    proc_modules=proc, sysfs_root=sysfs, dev_root=dev)
+            finally:
+                os.chmod(sysfs / "devices", 0o755)
+                os.chmod(sysfs / "bus", 0o755)
+            self.assertIsNone(resolved)
+            self.assertNotEqual(error, "not_found")
+            self.assertIn("PermissionError", error)
+            self.assertTrue(result["sim_nodes"])
+            for node in result["sim_nodes"]:
+                self.assertFalse(node["found"])
+                self.assertNotEqual(node["error"], "not_found")
+                self.assertIn("PermissionError", node["error"])
+
+    @unittest.skipIf(os.geteuid() == 0, "root ignores directory mode bits")
+    def test_found_node_wins_over_earlier_permission_error(self):
+        with tempfile.TemporaryDirectory(prefix="lynx-sim-perm-ok-") as tmp:
+            sysfs, dev, proc = self._make(tmp)
+            target = (sysfs / "bus" / "platform" / "devices"
+                      / "MD1_SIM2_HOT_PLUG_EINT")
+            target.mkdir(parents=True)
+            os.chmod(sysfs / "devices", 0)  # blocks candidate 1 only
+            try:
+                resolved, error = inv._resolve_sim_node(
+                    sysfs, "MD1_SIM2_HOT_PLUG_EINT", inv.DEFAULT_SIM_NODE_DIRS)
+                result = inv.collect_inventory(
+                    proc_modules=proc, sysfs_root=sysfs, dev_root=dev)
+            finally:
+                os.chmod(sysfs / "devices", 0o755)
+            self.assertEqual(resolved, target)
+            self.assertIsNone(error)
+            entry = next(n for n in result["sim_nodes"]
+                         if n["name"] == "MD1_SIM2_HOT_PLUG_EINT")
+            self.assertTrue(entry["found"])
+            self.assertIsNone(entry["error"])
+
+
 class TestMainCli(unittest.TestCase):
-    def test_main_prints_valid_json_and_constraints(self):
-        with tempfile.TemporaryDirectory(prefix="lynx-sim-main-") as tmp:
-            sysfs, dev = _make_root(tmp)
+    """CLI must stay mock-verified: it can never redirect the proc read."""
+
+    def _readable_fixture(self):
+        return {
+            "schema": inv.SCHEMA,
+            "tool": inv.TOOL,
+            "label": "inventory-only",
+            "cellular_function_validated": False,
+            "ccci_device_opened": False,
+            "radio_activated": False,
+            "constraints": {
+                "no_subprocess": True,
+                "no_ccci_device_open": True,
+            },
+            "proc_modules": {
+                "readable": True,
+                "module_count": 1,
+                "cellular_modules": ["ccci_md_all"],
+                "error": None,
+            },
+            "sim_nodes": [],
+            "ccci_devices": [],
+        }
+
+    def test_main_uses_fixed_roots_and_prints_compact_json(self):
+        with mock.patch.object(inv, "collect_inventory",
+                               return_value=self._readable_fixture()) as spy:
             buffer = io.StringIO()
             with contextlib.redirect_stdout(buffer):
-                rc = inv.main([
-                    "--proc-modules", str(Path(tmp) / "no-such-modules"),
-                    "--sysfs-root", str(sysfs),
-                    "--dev-root", str(dev),
-                    "--compact",
-                ])
-            self.assertEqual(rc, 0)
-            data = json.loads(buffer.getvalue())
-            self.assertEqual(data["schema"], inv.SCHEMA)
-            self.assertEqual(data["label"], "inventory-only")
-            self.assertFalse(data["cellular_function_validated"])
-            self.assertFalse(data["ccci_device_opened"])
-            self.assertFalse(data["radio_activated"])
-            self.assertTrue(data["constraints"]["no_subprocess"])
-            self.assertTrue(data["constraints"]["no_ccci_device_open"])
+                rc = inv.main([])
+        # Called with no arguments: the CLI can never redirect the proc read.
+        spy.assert_called_once_with()
+        self.assertEqual(rc, 0)
+        output = buffer.getvalue().strip()
+        self.assertEqual(output.count("\n"), 0)  # compact single line
+        data = json.loads(output)
+        self.assertEqual(data["schema"], inv.SCHEMA)
+        self.assertEqual(data["label"], "inventory-only")
+        self.assertFalse(data["cellular_function_validated"])
+        self.assertFalse(data["ccci_device_opened"])
+        self.assertFalse(data["radio_activated"])
+        self.assertTrue(data["constraints"]["no_subprocess"])
+        self.assertTrue(data["constraints"]["no_ccci_device_open"])
+
+    def test_main_rejects_path_override_options(self):
+        with mock.patch.object(inv, "collect_inventory") as spy:
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                with self.assertRaises(SystemExit) as caught:
+                    inv.main(["--proc-modules", "/dev/ccci_md1_sta"])
+        self.assertNotEqual(caught.exception.code, 0)
+        spy.assert_not_called()
+        self.assertEqual(buffer.getvalue(), "")
+
+    def test_main_exits_nonzero_with_error_json_when_proc_unreadable(self):
+        fixture = self._readable_fixture()
+        fixture["proc_modules"] = {
+            "readable": False,
+            "module_count": 0,
+            "cellular_modules": [],
+            "error": "PermissionError: [Errno 13] Permission denied",
+        }
+        with mock.patch.object(inv, "collect_inventory",
+                               return_value=fixture) as spy:
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                rc = inv.main([])
+        spy.assert_called_once_with()
+        self.assertEqual(rc, 1)
+        data = json.loads(buffer.getvalue().strip())
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["error"], "proc_modules_unreadable")
+        self.assertEqual(data["path"], str(inv.DEFAULT_PROC_MODULES))
+        self.assertIn("PermissionError", data["detail"])
 
 
 if __name__ == "__main__":

@@ -15,7 +15,9 @@ Hard safety constraints (enforced by design, asserted in the output):
   * it NEVER reads SIM identifiers (ICCID/IMSI/IMSI), never activates RF, never
     loads modules, never runs subprocesses, and never changes services.
 
-All source roots are injectable so offline tests can run against temp fixtures.
+Roots are injectable as ``collect_inventory()`` arguments so offline tests can
+run against temp fixtures. The CLI always reads the fixed on-device paths and
+deliberately accepts no path overrides.
 """
 
 from __future__ import annotations
@@ -123,26 +125,38 @@ def _read_module_names(path):
 
 
 def _resolve_sim_node(sysfs_root, name, sim_node_dirs):
-    """Find the first existing SIM node under the candidate parent dirs."""
+    """Find the first existing SIM node under the candidate parent dirs.
+
+    Returns ``(candidate, error)``: ``candidate`` is the resolved Path (or None);
+    ``error`` is None when found, ``"not_found"`` when every candidate is absent
+    (FileNotFoundError), or an explicit exception string when a candidate could
+    not be inspected (e.g. PermissionError) -- reported, not swallowed.
+    """
+    last_error = None
     for rel in sim_node_dirs:
         candidate = sysfs_root / rel / name
         try:
             os.lstat(candidate)
-        except OSError:
-            continue
-        return candidate
-    return None
+        except FileNotFoundError:
+            continue  # this candidate simply does not exist
+        except OSError as exc:
+            last_error = f"{type(exc).__name__}: {exc.strerror or exc}"
+            continue  # try the next candidate, remembering the failure
+        return candidate, None
+    return None, (last_error or "not_found")
 
 
-def _inspect_sim_node(resolved, name):
+def _inspect_sim_node(resolved, name, resolve_error=None):
     """Inspect one SIM platform node: found / type / driver symlink.
 
     Metadata only (lstat + readlink); the node is never opened or activated.
+    ``resolve_error`` carries an explicit resolution failure (e.g.
+    PermissionError) reported verbatim instead of a bare "not_found".
     """
     entry = {"name": name, "found": False, "type": None, "driver": None,
              "path": None, "error": None}
     if resolved is None:
-        entry["error"] = "not_found"
+        entry["error"] = resolve_error or "not_found"
         return entry
     entry["path"] = str(resolved)
     try:
@@ -215,8 +229,8 @@ def collect_inventory(proc_modules=DEFAULT_PROC_MODULES,
 
     sim_nodes = []
     for name in sim_node_names:
-        resolved = _resolve_sim_node(sysfs_root, name, sim_node_dirs)
-        sim_nodes.append(_inspect_sim_node(resolved, name))
+        resolved, resolve_error = _resolve_sim_node(sysfs_root, name, sim_node_dirs)
+        sim_nodes.append(_inspect_sim_node(resolved, name, resolve_error))
 
     ccci_devices = [_inspect_ccci_node(dev_root, name) for name in ccci_node_names]
 
@@ -255,33 +269,41 @@ def collect_inventory(proc_modules=DEFAULT_PROC_MODULES,
 
 
 def build_parser():
+    """Build the CLI parser.
+
+    The CLI deliberately accepts no options at all: it always reads the fixed
+    on-device roots, so no caller can redirect the /proc read or point the tool
+    at a character device.
+    """
     parser = argparse.ArgumentParser(
         prog=TOOL,
         description="Read-only Lynx cellular/SIM node and module inventory "
-                    "(never opens CCCI, never activates RF).",
+                    "(never opens CCCI, never activates RF). Fixed on-device "
+                    "paths; no overrides accepted.",
     )
-    parser.add_argument("--proc-modules", type=Path, default=DEFAULT_PROC_MODULES,
-                        help="path to the /proc/modules-like file (default: /proc/modules)")
-    parser.add_argument("--sysfs-root", type=Path, default=DEFAULT_SYSFS_ROOT,
-                        help="sysfs root to search for SIM platform nodes (default: /sys)")
-    parser.add_argument("--dev-root", type=Path, default=DEFAULT_DEV_ROOT,
-                        help="dev root holding CCCI status nodes (default: /dev)")
-    parser.add_argument("--compact", action="store_true",
-                        help="print single-line JSON instead of indented")
     return parser
 
 
 def main(argv=None):
-    args = build_parser().parse_args(argv)
-    result = collect_inventory(
-        proc_modules=args.proc_modules,
-        sysfs_root=args.sysfs_root,
-        dev_root=args.dev_root,
-    )
-    if args.compact:
-        print(json.dumps(result, separators=(",", ":"), sort_keys=False))
-    else:
-        print(json.dumps(result, indent=2, sort_keys=False))
+    """Run the tool: fixed on-device roots, compact JSON on stdout.
+
+    Exits nonzero with a useful error JSON if /proc/modules cannot be read.
+    """
+    build_parser().parse_args(argv)  # rejects any option, e.g. path overrides
+    result = collect_inventory()
+    if not result["proc_modules"]["readable"]:
+        error_payload = {
+            "schema": SCHEMA,
+            "tool": TOOL,
+            "ok": False,
+            "error": "proc_modules_unreadable",
+            "path": str(DEFAULT_PROC_MODULES),
+            "detail": result["proc_modules"]["error"],
+            "constraints": result["constraints"],
+        }
+        print(json.dumps(error_payload, separators=(",", ":")))
+        return 1
+    print(json.dumps(result, separators=(",", ":"), sort_keys=False))
     return 0
 
 

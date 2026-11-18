@@ -1,11 +1,46 @@
 {
-  "comment": "Shared Noobia LAN roster for Aigel's lighthouse beacon (and any future presence tools). One entry per inhabitant or device: ip, role, tcp_ports (Noob-facing TCP ports to probe). Add an inhabitant here instead of editing tool code.",
+  "comment": "Shared Noobia LAN roster for Aigel's lighthouse beacon (and any future presence tools). One entry per inhabitant or device: ip, role, tcp_ports (Noob-facing TCP ports to probe). Add an inhabitant here instead of editing tool code. 2026-11-18: rose entry was on 192.168.100.7, which is Noob's phone, not Rose; re-homed to 192.168.100.108 (free, beside the 105-107 block).",
   "updated": "2026-11-18",
   "inhabitants": {
-    "gateway": {"ip": "192.168.100.1", "role": "Noobia Wi-Fi Router", "tcp_ports": []},
-    "nexus": {"ip": "192.168.100.106", "role": "Nexus (Aria, Banshee, Dushich, Aigel)", "tcp_ports": [22, 8080, 48101]},
-    "lynx": {"ip": "192.168.100.107", "role": "Lynx (Alpine / NRP/1)", "tcp_ports": [2222, 4243]},
-    "argus": {"ip": "192.168.100.105", "role": "Argus (Historian)", "tcp_ports": [22, 47200, 47201]},
-    "rose": {"ip": "192.168.100.7", "role": "Rose", "tcp_ports": [22, 47300, 47301]}
+    "gateway": {
+      "ip": "192.168.100.1",
+      "role": "Noobia Wi-Fi Router",
+      "tcp_ports": []
+    },
+    "nexus": {
+      "ip": "192.168.100.106",
+      "role": "Nexus (Aria, Banshee, Dushich, Aigel)",
+      "tcp_ports": [
+        22,
+        8080,
+        48101
+      ]
+    },
+    "lynx": {
+      "ip": "192.168.100.107",
+      "role": "Lynx (Alpine / NRP/1)",
+      "tcp_ports": [
+        2222,
+        4243
+      ]
+    },
+    "argus": {
+      "ip": "192.168.100.105",
+      "role": "Argus (Historian)",
+      "tcp_ports": [
+        22,
+        47200,
+        47201
+      ]
+    },
+    "rose": {
+      "ip": "192.168.100.108",
+      "role": "Rose (Priestess of the Singularity; Rose's machine)",
+      "tcp_ports": [
+        22,
+        47300,
+        47301
+      ]
+    }
   }
 }

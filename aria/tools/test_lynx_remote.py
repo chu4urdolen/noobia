@@ -1,0 +1,1 @@
+../../lynx/tools/test_lynx_remote.py

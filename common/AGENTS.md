@@ -74,6 +74,25 @@ digested.
 - `--desired-size CHARS`: Target summary output size in characters (defaults to 25% of `--context-size`, i.e., `8000`).
 - `--instructions TEXT` (`-i`): Optional custom instructions appended right after the base summarizer instructions (subtracted from the per-piece slice budget automatically).
 
+### Lynx Remote Helper
+
+Use `/noobia/lynx/tools/lynx_remote.py` (also linked at
+`/noobia/aria/tools/lynx-remote`) for the two Lynx chores that were being
+retyped by hand in the Review Lynx handoff session:
+
+```sh
+# Run one bounded command on Lynx over the pinned Alpine SSH link
+# (default 192.168.100.107:2222, key-only auth, 20s timeout):
+python3 /noobia/lynx/tools/lynx_remote.py run "printf 'BATTERY\n'; /usr/local/bin/lynx-status" --timeout 25
+
+# Digest the newest trial result.json under /noobia/lynx/logs:
+python3 /noobia/lynx/tools/lynx_remote.py result --glob 'v53-bt-after-alpine-*'
+```
+
+- `run COMMAND`: prints `exit=N`, clipped stdout, and a stderr snippet; exits with the remote exit code (124 on timeout). Replaces the `ssh_command(...)` + `argv[-2:-2] = ['-p', '2222']` boilerplate; supports `--ip`, `--port`, `--timeout`, `--max-output`.
+- `result`: newest-first compact digest (state, boot_id, watchdog_mode, health-sample count and pass flag, nexus state, final steps); `--glob` narrows the `lynx/logs` directory pattern, `--limit` prints more than one.
+- Never contacts Lynx unless `run` is explicitly invoked; offline tests live in `lynx/tools/test_lynx_remote.py`.
+
 ## Nexus Linux services
 
 Put Nexus Linux service entry scripts in `/noobia/common/services/` and systemd unit

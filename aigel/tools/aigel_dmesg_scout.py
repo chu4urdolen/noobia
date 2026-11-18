@@ -129,8 +129,53 @@ def line_timestamp(line: str) -> str | None:
     return None
 
 
-def read_kernel_log(source: str, timeout: int = DEFAULT_TIMEOUT) -> tuple[list[str], str | None]:
-    """Return (bounded lines, backend) for the kernel log since boot, or ([], None)."""
+RELATIVE_SINCE_RE = re.compile(r"^\s*(\d+)\s*(s|m|h|d)\s*(?:ago)?\s*$", re.IGNORECASE)
+UNIT_SECONDS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+
+
+def parse_since(value: str | None) -> tuple[str | None, int | None]:
+    """Split a --since argument into (absolute_string, relative_seconds).
+
+    Relative forms like ``2h ago``, ``30m``, ``1d`` become seconds; anything
+    else is treated as an absolute time string for journalctl.
+    """
+    if not value:
+        return None, None
+    match = RELATIVE_SINCE_RE.match(value)
+    if match:
+        return None, int(match.group(1)) * UNIT_SECONDS[match.group(2).lower()]
+    return value.strip(), None
+
+
+def _uptime_seconds() -> float | None:
+    try:
+        return float(Path("/proc/uptime").read_text(encoding="utf-8").split()[0])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def _dmesg_line_boot_seconds(line: str) -> float | None:
+    match = re.match(r"^\[\s*([\d.]+)\]", line)
+    if not match:
+        return None
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return None
+
+
+def read_kernel_log(
+    source: str,
+    timeout: int = DEFAULT_TIMEOUT,
+    since_absolute: str | None = None,
+    since_relative_s: int | None = None,
+) -> tuple[list[str], str | None]:
+    """Return (bounded lines, backend) for the kernel log, or ([], None).
+
+    Without a since-window the scan covers the current boot. With one, the
+    journal backend gets ``--since`` directly; the dmesg backend (no dates)
+    keeps only lines whose boot-relative stamp falls inside the window.
+    """
     env = dict(os.environ)
     env["PATH"] = "/usr/sbin:/sbin:/usr/bin:/bin:" + env.get("PATH", "")
     backends = ["journal", "dmesg"] if source == "auto" else [source]
@@ -140,6 +185,11 @@ def read_kernel_log(source: str, timeout: int = DEFAULT_TIMEOUT) -> tuple[list[s
             if backend == "journal"
             else ["dmesg"]
         )
+        if backend == "journal":
+            if since_absolute:
+                cmd += ["--since", since_absolute]
+            elif since_relative_s is not None:
+                cmd += ["--since", f"-{since_relative_s}s"]
         try:
             proc = subprocess.run(
                 cmd, capture_output=True, text=True, timeout=timeout, check=False, env=env
@@ -147,19 +197,32 @@ def read_kernel_log(source: str, timeout: int = DEFAULT_TIMEOUT) -> tuple[list[s
         except (OSError, subprocess.SubprocessError):
             continue
         lines = [line for line in proc.stdout.splitlines() if line.strip()]
+        if not lines:
+            continue
+        if backend == "dmesg" and since_relative_s is not None:
+            uptime = _uptime_seconds()
+            if uptime is not None:
+                floor = max(0.0, uptime - since_relative_s)
+                kept = []
+                for line in lines:
+                    stamp = _dmesg_line_boot_seconds(line)
+                    if stamp is None or stamp >= floor:
+                        kept.append(line)
+                lines = kept
         if lines:
             return lines[-DEFAULT_MAX_SCAN_LINES:], backend
     return [], None
 
 
-def format_board(scanned: int, backend: str | None, digest: dict) -> str:
+def format_board(scanned: int, backend: str | None, digest: dict, window: str | None = None) -> str:
+    when = f"since boot" if window is None else f"in window '{window}'"
     if not digest:
         return (
-            f"[aigel-dmesg-scout] scanned {scanned} kernel lines since boot "
+            f"[aigel-dmesg-scout] scanned {scanned} kernel lines {when} "
             f"(backend={backend or 'none'}) — all quiet 🌸"
         )
     lines = [
-        f"[aigel-dmesg-scout] scanned {scanned} kernel lines since boot (backend={backend}) — "
+        f"[aigel-dmesg-scout] scanned {scanned} kernel lines {when} (backend={backend}) — "
         f"{sum(v['count'] for v in digest.values())} classified complaints"
     ]
     for category, entry in digest.items():
@@ -181,10 +244,14 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="Print a JSON digest")
     parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help="Max example lines per category")
     parser.add_argument("--source", choices=("auto", "journal", "dmesg"), default="auto")
+    parser.add_argument("--since",
+                        help="Start the scan at this time — absolute ('2026-11-18 02:00') "
+                             "or relative ('2h ago', '30m', '1d')")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="Bounded read timeout (s)")
     args = parser.parse_args()
 
-    lines, backend = read_kernel_log(args.source, args.timeout)
+    since_absolute, since_relative_s = parse_since(args.since)
+    lines, backend = read_kernel_log(args.source, args.timeout, since_absolute, since_relative_s)
     if not lines:
         message = "[aigel-dmesg-scout] could not read the kernel log (journalctl and dmesg both failed)"
         if args.json:
@@ -206,7 +273,7 @@ def main() -> int:
             indent=2,
         ))
     else:
-        print(format_board(len(lines), backend, digest))
+        print(format_board(len(lines), backend, digest, window=args.since))
     return 1 if digest else 0
 
 

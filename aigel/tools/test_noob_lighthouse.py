@@ -9,6 +9,7 @@ from pathlib import Path
 
 from noob_lighthouse import (
     KNOWN_INHABITANTS,
+    format_status_line,
     load_roster,
     parse_ping_rtt,
     summarize_beacon_results,
@@ -196,6 +197,43 @@ class TestParsePingRtt(unittest.TestCase):
 
     def test_empty_returns_none(self) -> None:
         self.assertIsNone(parse_ping_rtt(""))
+
+
+class TestFormatStatusLine(unittest.TestCase):
+    def base(self, **overrides) -> dict:
+        res = {
+            "nexus_ready": False,
+            "online_count": 0,
+            "total_count": 5,
+            "online": [],
+            "offline": ["argus", "gateway", "lynx", "nexus", "rose"],
+            "inhabitants": {},
+        }
+        res.update(overrides)
+        return res
+
+    def test_empty_online_reads_as_none(self) -> None:
+        line = format_status_line(self.base())
+        self.assertIn("online=(none)", line)
+
+    def test_offline_listed_when_present(self) -> None:
+        line = format_status_line(self.base())
+        self.assertIn("offline=argus,gateway,lynx,nexus,rose", line)
+
+    def test_rtt_bits_and_none_offline(self) -> None:
+        res = self.base(
+            nexus_ready=True,
+            online_count=2,
+            online=["gateway", "nexus"],
+            offline=[],
+            inhabitants={
+                "gateway": {"rtt_ms": 1.2},
+                "nexus": {"rtt_ms": 12.7},
+            },
+        )
+        line = format_status_line(res)
+        self.assertIn("rtt=gateway=1ms,nexus=12ms", line)
+        self.assertIn("offline=(none)", line)
 
 
 if __name__ == "__main__":

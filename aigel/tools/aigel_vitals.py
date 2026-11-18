@@ -109,11 +109,16 @@ def parse_mem_sample(sample: str) -> dict:
     if ram:
         facts["ram_used"] = ram.group(1)
         facts["ram_total"] = ram.group(2)
-        facts["ram_free"] = ram.group(3)
+        free = ram.group(3).strip()
+        if free.endswith(" free"):
+            free = free[: -len(" free")].strip()
+        facts["ram_free"] = free
     vram = re.search(r"vram: (\d+)MiB / (\d+)MiB used \(([^)]*)\)", sample)
     if vram:
-        facts["vram_used_mb"] = int(vram.group(1))
-        facts["vram_total_mb"] = int(vram.group(2))
+        # Store format is "vram: {total}MiB / {used}MiB used" — keep the
+        # board's used/total convention and label it.
+        facts["vram_total_mb"] = int(vram.group(1))
+        facts["vram_used_mb"] = int(vram.group(2))
     return facts
 
 
@@ -192,6 +197,19 @@ def recent_errors(minutes: int = DEFAULT_MINUTES, limit: int = 8, timeout: int =
         return {"minutes": minutes, "count": None, "lines": []}
     lines = [line for line in proc.stdout.splitlines() if line.strip()]
     return {"minutes": minutes, "count": len(lines), "lines": lines[-limit:]}
+
+
+def load_policy(config_path: str | None = None) -> dict:
+    """Aigel's shared config (aigel_sentinel's precedence), or {} on any problem."""
+    tools_dir = str(Path(__file__).resolve().parent)
+    if tools_dir not in sys.path:
+        sys.path.insert(0, tools_dir)
+    try:
+        import aigel_sentinel
+
+        return aigel_sentinel.load_config(config_path)
+    except Exception:
+        return {}
 
 
 def lighthouse_beacon(timeout: float = 0.5) -> dict | None:
@@ -312,6 +330,7 @@ def collect_facts(
     if include_beacon:
         facts["lighthouse"] = lighthouse_beacon()
     facts["gpu"] = latest_gpu_sample(gpu_log_dir)
+    facts["policy"] = load_policy()
     if include_live_gpu:
         facts["gpu_live"] = nvidia_smi_live()
     facts["journal_errors"] = recent_errors(minutes=minutes, timeout=timeout)
@@ -331,9 +350,13 @@ def format_board(facts: dict, verdict: str, reasons: list[str]) -> str:
         )
     mem = facts.get("mem")
     if mem:
+        vram_used, vram_total = mem.get("vram_used_mb"), mem.get("vram_total_mb")
+        vram_bits = f"vram {vram_used}/{vram_total}MiB used"
+        if vram_used and vram_total:
+            vram_bits += f" ({round(100.0 * vram_used / vram_total)}%)"
         lines.append(
             f"  mem   : ram {mem.get('ram_used', '?')}/{mem.get('ram_total', '?')} used "
-            f"({mem.get('ram_free', '?')} free) vram {mem.get('vram_used_mb', '?')}/{mem.get('vram_total_mb', '?')}MiB"
+            f"({mem.get('ram_free', '?')} free) {vram_bits}"
         )
     disk = facts.get("disk")
     if disk:
@@ -348,10 +371,21 @@ def format_board(facts: dict, verdict: str, reasons: list[str]) -> str:
         )
     gpu = facts.get("gpu")
     if gpu:
+        limit = gpu.get("power_limit_w")
+        policy = (facts.get("policy") or {}).get("power_limit_w")
+        policy_bits = ""
+        if policy is not None:
+            policy_bits = f" policy {policy}W"
+            if limit is not None:
+                try:
+                    if abs(float(limit) - float(policy)) > 0.01:
+                        policy_bits += " ⚠ limit≠policy"
+                except (TypeError, ValueError):
+                    pass
         lines.append(
             f"  gpu   : {gpu.get('power_w', '?')}W util {gpu.get('util_pct', '?')}% "
             f"{gpu.get('temp_c', '?')}C vram {gpu.get('vram_used_mb', '?')}MiB "
-            f"limit {gpu.get('power_limit_w', '?')}W  [{gpu.get('file', '?')}]"
+            f"limit {limit if limit is not None else '?'}W{policy_bits}  [{gpu.get('file', '?')}]"
         )
     gpu_live = facts.get("gpu_live")
     if gpu_live:

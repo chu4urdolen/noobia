@@ -194,6 +194,9 @@ python3 /noobia/aigel/tools/aigel_vitals.py             # human-readable board
 python3 /noobia/aigel/tools/aigel_vitals.py --json      # full JSON facts
 ```
 
+The board uses one convention: `used/total` — e.g. `vram 27048/32607MiB used
+(83%)`. The GPU line shows both the applied `limit` and the `policy` from
+`config.json`; when they disagree it is flagged `⚠ limit≠policy`.
 Exit codes: `0` = ok or warn, `1` = fail, `2` = no store readable.
 
 ### `aigel_sentinel.py` — threshold alerts over the newest sample
@@ -215,8 +218,11 @@ python3 /noobia/aigel/tools/aigel_sentinel.py                 # one check
 python3 /noobia/aigel/tools/aigel_sentinel.py --watch --interval 30 --cooldown-s 300
 ```
 
-`--watch` repeats every `--interval` seconds; `--cooldown-s` keeps a still-broken
-metric from re-alerting every cycle (state in `private/sentinel_state.json`).
+Cooldown applies to **manual and watch runs alike** (state in
+`private/sentinel_state.json`, default 300 s per metric): a metric already
+reported within its window stays quiet. `--no-cooldown` forces every crossed
+threshold through once (testing, or a fresh investigation). `--watch` repeats
+every `--interval` seconds.
 Exit codes: `0` = no alerts, `1` = alerts, `2` = no facts readable.
 
 ### `aigel_dmesg_scout.py` — the kernel-message scout
@@ -228,9 +234,10 @@ deduplicated to `×N`. Perfect for "something felt off around 02:14 — what did
 the kernel say?"
 
 ```sh
-python3 /noobia/aigel/tools/aigel_dmesg_scout.py            # classified summary
-python3 /noobia/aigel/tools/aigel_dmesg_scout.py --json     # for scripting
-python3 /noobia/aigel/tools/aigel_dmesg_scout.py --since "2026-11-18 02:00"
+python3 /noobia/aigel/tools/aigel_dmesg_scout.py             # classified summary (since boot)
+python3 /noobia/aigel/tools/aigel_dmesg_scout.py --json      # for scripting
+python3 /noobia/aigel/tools/aigel_dmesg_scout.py --since "2h ago"   # relative window
+python3 /noobia/aigel/tools/aigel_dmesg_scout.py --since "2026-11-18 02:00"  # absolute
 ```
 
 Exit codes: `0` = no complaints, `1` = complaints found, `2` = unreadable.

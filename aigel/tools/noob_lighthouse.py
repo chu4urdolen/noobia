@@ -100,6 +100,22 @@ def summarize_beacon_results(probes: dict[str, dict]) -> dict:
     }
 
 
+def format_status_line(res: dict) -> str:
+    """One compact human-readable status line for a beacon result."""
+    rtt_bits = [
+        f"{name}={int(res['inhabitants'][name]['rtt_ms'])}ms"
+        for name in res["online"]
+        if res["inhabitants"].get(name, {}).get("rtt_ms") is not None
+    ]
+    return (
+        f"[noob-lighthouse] nexus_ready={res['nexus_ready']} "
+        f"online={res['online_count']}/{res['total_count']} "
+        f"online={','.join(res['online']) or '(none)'} "
+        f"offline={','.join(res['offline']) or '(none)'}"
+        + (f" rtt={','.join(rtt_bits)}" if rtt_bits else "")
+    )
+
+
 def _run_ping(ip: str) -> tuple[bool, float | None]:
     """Ping once; return (reachable, average RTT in ms or None)."""
     env = dict(os.environ)
@@ -184,19 +200,7 @@ def main() -> int:
         if args.json:
             print(json.dumps(res, indent=2), flush=True)
         else:
-            rtt_bits = [
-                f"{name}={int(res['inhabitants'][name]['rtt_ms'])}ms"
-                for name in res["online"]
-                if res["inhabitants"].get(name, {}).get("rtt_ms") is not None
-            ]
-            print(
-                f"[noob-lighthouse] nexus_ready={res['nexus_ready']} "
-                f"online={res['online_count']}/{res['total_count']} "
-                f"online={','.join(res['online']) or '-'} "
-                f"offline={','.join(res['offline']) or '-'}"
-                + (f" rtt={','.join(rtt_bits)}" if rtt_bits else ""),
-                flush=True,
-            )
+            print(format_status_line(res), flush=True)
         if args.once or not args.watch:
             return 0 if res["nexus_ready"] else 1
         time.sleep(max(3, args.interval))

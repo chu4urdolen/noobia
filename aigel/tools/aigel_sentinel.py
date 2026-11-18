@@ -33,6 +33,13 @@ If the log directory of the log file exists (default
 otherwise the same lines go to standard output. ``--json`` always prints
 the full structure instead.
 
+Cooldown
+--------
+Each metric is reported at most once per ``--cooldown-s`` window (default
+300 s), for manual *and* watch runs alike — state lives in the JSON file
+given by ``--state`` (default ``/noobia/aigel/private/sentinel_state.json``).
+Pass ``--no-cooldown`` to force every crossed threshold through once.
+
 Exit codes: 0 = no alerts, 1 = one or more alerts (warn or fail),
 2 = could not read any facts at all.
 """
@@ -296,10 +303,11 @@ def run_once(args: argparse.Namespace, config: dict, state: dict, now: float) ->
     if not any((facts.get(name) or {}) for name in ("cpu", "net", "disk", "mem", "gpu")):
         return 2, [], state
 
+    cooldown_s = 0.0 if args.no_cooldown else args.cooldown_s
     suppressed = 0
-    if args.watch and args.cooldown_s > 0:
+    if cooldown_s > 0:
         before = len(alerts)
-        alerts, state = apply_cooldown(alerts, state, now, args.cooldown_s)
+        alerts, state = apply_cooldown(alerts, state, now, cooldown_s)
         suppressed = before - len(alerts)
 
     lines, written = record_alerts(alerts, args.log)
@@ -329,7 +337,9 @@ def main() -> int:
     parser.add_argument("--interval", type=float, default=DEFAULT_WATCH_INTERVAL_S,
                         help=f"Watch interval in seconds (default {DEFAULT_WATCH_INTERVAL_S})")
     parser.add_argument("--cooldown-s", type=float, default=DEFAULT_COOLDOWN_S,
-                        help=f"Per-metric alert cooldown in watch mode (default {DEFAULT_COOLDOWN_S}, 0 disables)")
+                        help=f"Per-metric alert cooldown, manual and watch runs (default {DEFAULT_COOLDOWN_S}, 0 disables)")
+    parser.add_argument("--no-cooldown", action="store_true",
+                        help="Force every crossed threshold to be reported this run (testing / fresh investigations)")
     parser.add_argument("--max-cycles", type=int, default=0, help="Stop after N watch cycles (0 = forever)")
     parser.add_argument("--no-beacon", action="store_true", help="Skip the LAN beacon probe")
     parser.add_argument("--no-live-gpu", action="store_true", help="Skip the live nvidia-smi read")
@@ -338,7 +348,9 @@ def main() -> int:
 
     config = load_config(args.config)
     if not args.watch:
-        code, _, _ = run_once(args, config, {}, time.time())
+        state = load_state(args.state)
+        code, _alerts, state = run_once(args, config, state, time.time())
+        save_state(args.state, state)
         return code
 
     state = load_state(args.state)

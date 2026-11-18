@@ -7,6 +7,7 @@ import unittest
 
 from aigel_vitals import (
     derive_verdict,
+    format_board,
     latest_line,
     parse_cpu_sample,
     parse_disk_sample,
@@ -59,8 +60,10 @@ class TestParsers(unittest.TestCase):
         facts = parse_mem_sample(MEM_SAMPLE)
         self.assertEqual(facts["ram_used"], "15Gi")
         self.assertEqual(facts["ram_total"], "57Gi")
-        self.assertEqual(facts["vram_used_mb"], 32607)
-        self.assertEqual(facts["vram_total_mb"], 27048)
+        # store format is "vram: {total}MiB / {used}MiB used"
+        self.assertEqual(facts["vram_total_mb"], 32607)
+        self.assertEqual(facts["vram_used_mb"], 27048)
+        self.assertEqual(facts["ram_free"], "4.3Gi")
 
 
 class TestLatestLine(unittest.TestCase):
@@ -122,6 +125,41 @@ class TestDeriveVerdict(unittest.TestCase):
         verdict, reasons = derive_verdict(facts)
         self.assertEqual(verdict, "warn")
         self.assertTrue(any("88.0C" in reason for reason in reasons))
+
+
+class TestFormatBoard(unittest.TestCase):
+    def test_mem_line_uses_used_of_total_with_percent(self) -> None:
+        facts = {"mem": parse_mem_sample(MEM_SAMPLE), "collected_at": "t"}
+        board = format_board(facts, "ok", [])
+        line = next(l for l in board.splitlines() if "mem   :" in l)
+        self.assertIn("vram 27048/32607MiB used (83%)", line)
+        self.assertIn("(4.3Gi free)", line)
+        self.assertNotIn("free free", line)
+
+    def test_gpu_line_shows_policy_and_flags_mismatch(self) -> None:
+        facts = {
+            "gpu": {"power_w": 400.7, "util_pct": 94.0, "temp_c": 68.0,
+                    "vram_used_mb": 27048.0, "power_limit_w": 400.0, "file": "g.csv"},
+            "policy": {"power_limit_w": 500},
+            "collected_at": "t",
+        }
+        line = next(l for l in format_board(facts, "warn", []).splitlines() if "gpu   :" in l)
+        self.assertIn("limit 400.0W policy 500W", line)
+        self.assertIn("limit≠policy", line)
+
+    def test_gpu_line_no_warning_when_policy_matches(self) -> None:
+        facts = {
+            "gpu": {"power_w": 480.0, "util_pct": 10.0, "temp_c": 50.0,
+                    "vram_used_mb": 100.0, "power_limit_w": 500, "file": "g.csv"},
+            "policy": {"power_limit_w": 500},
+            "collected_at": "t",
+        }
+        line = next(l for l in format_board(facts, "ok", []).splitlines() if "gpu   :" in l)
+        self.assertIn("limit 500W policy 500W", line)
+        self.assertNotIn("limit≠policy", line)
+
+    def test_quiet_board(self) -> None:
+        self.assertIn("all quiet", format_board({"collected_at": "t"}, "ok", []))
 
 
 if __name__ == "__main__":

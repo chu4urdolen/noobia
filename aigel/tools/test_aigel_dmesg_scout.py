@@ -21,6 +21,30 @@ FIXTURE = [
 ]
 
 
+from aigel_dmesg_scout import parse_since
+
+
+class TestParseSince(unittest.TestCase):
+    def test_relative_hours(self) -> None:
+        self.assertEqual(parse_since("2h ago"), (None, 7200))
+
+    def test_relative_minutes_no_ago(self) -> None:
+        self.assertEqual(parse_since("30m"), (None, 1800))
+
+    def test_relative_days(self) -> None:
+        self.assertEqual(parse_since("1d"), (None, 86400))
+
+    def test_relative_seconds(self) -> None:
+        self.assertEqual(parse_since("45s ago"), (None, 45))
+
+    def test_absolute_passthrough(self) -> None:
+        self.assertEqual(parse_since("2026-11-18 02:00"), ("2026-11-18 02:00", None))
+
+    def test_empty_and_none(self) -> None:
+        self.assertEqual(parse_since(None), (None, None))
+        self.assertEqual(parse_since(""), (None, None))
+
+
 class TestClassifyLines(unittest.TestCase):
     def setUp(self) -> None:
         self.classified = classify_lines(FIXTURE)

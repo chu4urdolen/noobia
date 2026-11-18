@@ -198,9 +198,10 @@ class FrameCache:
 
 def read_pane_text(tmux_socket: str, target_pane: str) -> tuple[str, str]:
     """Read the target pane's captured text and title via tmux."""
+    sock_args = [f"-L{tmux_socket}"] if tmux_socket and tmux_socket != "default" else []
     try:
         out = subprocess.run(
-            ["tmux", f"-L{tmux_socket}", "capture-pane", "-t", target_pane, "-p", "-J", "-S", "-60"],
+            ["tmux", *sock_args, "capture-pane", "-t", target_pane, "-p", "-J", "-S", "-60"],
             capture_output=True,
             text=True,
             timeout=5,
@@ -210,7 +211,7 @@ def read_pane_text(tmux_socket: str, target_pane: str) -> tuple[str, str]:
         text = ""
     try:
         title = subprocess.run(
-            ["tmux", f"-L{tmux_socket}", "display-message", "-t", target_pane, "-p", "#{pane_title}"],
+            ["tmux", *sock_args, "display-message", "-t", target_pane, "-p", "#{pane_title}"],
             capture_output=True,
             text=True,
             timeout=5,

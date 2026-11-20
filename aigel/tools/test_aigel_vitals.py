@@ -175,7 +175,7 @@ NVME_SMART_OUTPUT = (
     "smartctl 7.5 2025-04-30\n"
     "=== START OF INFORMATION SECTION ===\n"
     "Model Number:                       Samsung SSD 980 2TB\n"
-    "Serial Number:                      S69ENG0NC01229M\n"
+    "Serial Number:                      S0TESTSERIAL001\n"
     "=== START OF SMART DATA SECTION ===\n"
     "SMART overall-health self-assessment test result: PASSED\n"
     "SMART/Health Information (NVMe Log 0x02, NSID 0xffffffff)\n"
@@ -330,7 +330,7 @@ class TestLiveReaders(unittest.TestCase):
     def test_xid_counts_only_nvrm_pattern(self) -> None:
         journal = (
             "Nov 18 16:31:02 nexus kernel: "
-            "r8169 0000:22:00.0 eth0: RTL8168h/8111h, 34:5a:60:73:09:5f, XID 541, IRQ 61\n"
+            "r8169 0000:22:00.0 eth0: RTL8168h/8111h, 02:00:00:00:00:05, XID 541, IRQ 61\n"
             "Nov 18 16:31:05 nexus kernel: NVRM: Xid (PCI:0000:10:00): 31, Channel 0x00000004\n"
         )
         with mock.patch("aigel_vitals.subprocess.run", return_value=self.fake_proc(journal)):
@@ -339,7 +339,7 @@ class TestLiveReaders(unittest.TestCase):
     def test_xid_zero_when_only_the_r8169_false_friend(self) -> None:
         journal = (
             "Nov 18 16:31:02 nexus kernel: "
-            "r8169 0000:22:00.0 eth0: RTL8168h/8111h, 34:5a:60:73:09:5f, XID 541, IRQ 61\n"
+            "r8169 0000:22:00.0 eth0: RTL8168h/8111h, 02:00:00:00:00:05, XID 541, IRQ 61\n"
         )
         with mock.patch("aigel_vitals.subprocess.run", return_value=self.fake_proc(journal)):
             self.assertEqual(nvidia_xid_count(), 0)

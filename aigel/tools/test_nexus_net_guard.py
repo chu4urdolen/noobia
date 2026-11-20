@@ -112,7 +112,7 @@ class TestEvaluateWifiSignal(unittest.TestCase):
 
     def test_strong_signal(self) -> None:
         text = (
-            "Connected to 90:91:64:21:0f:3d (on wlx40a5ef5f66f1)\n"
+            "Connected to 02:00:00:00:00:01 (on wlx40a5ef5f66f1)\n"
             "\tSSID: Noobia\n"
             "\tsignal: -52 dBm\n"
         )
@@ -128,7 +128,7 @@ class TestEvaluateWifiSignal(unittest.TestCase):
         self.assertFalse(res["strong_signal"])
 
     def test_connected_without_signal_line(self) -> None:
-        text = "Connected to 90:91:64:21:0f:3d (on wlx40a5ef5f66f1)\n\tSSID: Noobia\n"
+        text = "Connected to 02:00:00:00:00:01 (on wlx40a5ef5f66f1)\n\tSSID: Noobia\n"
         res = evaluate_wifi_signal(text)
         self.assertTrue(res["ok"])
         self.assertIsNone(res["rssi_dbm"])
@@ -146,8 +146,8 @@ class TestEvaluateWifiSignal(unittest.TestCase):
 class TestEvaluateArpNeighbors(unittest.TestCase):
     def test_healthy_neighbors(self) -> None:
         text = (
-            "192.168.100.1 lladdr 48:ad:08:d8:1f:6c REACHABLE\n"
-            "192.168.100.107 lladdr AC:C0:48:6D:F1:FB STALE\n"
+            "192.168.100.1 lladdr 02:00:00:00:00:03 REACHABLE\n"
+            "192.168.100.107 lladdr 02:00:00:00:00:04 STALE\n"
             "192.168.100.7 lladdr aa:bb:cc:dd:ee:03 DELAY\n"
         )
         res = evaluate_arp_neighbors(text)
@@ -158,7 +158,7 @@ class TestEvaluateArpNeighbors(unittest.TestCase):
 
     def test_detects_arp_spoofing_duplicate_mac(self) -> None:
         text = (
-            "192.168.100.1 lladdr 48:ad:08:d8:1f:6c REACHABLE\n"
+            "192.168.100.1 lladdr 02:00:00:00:00:03 REACHABLE\n"
             "192.168.100.107 lladdr aa:bb:cc:dd:ee:02 STALE\n"
             "192.168.100.200 lladdr AA:BB:CC:DD:EE:02 REACHABLE\n"
         )
@@ -168,7 +168,7 @@ class TestEvaluateArpNeighbors(unittest.TestCase):
         self.assertEqual(res["duplicate_macs"], ["aa:bb:cc:dd:ee:02"])
 
     def test_missing_gateway(self) -> None:
-        text = "192.168.100.107 lladdr AC:C0:48:6D:F1:FB REACHABLE\n"
+        text = "192.168.100.107 lladdr 02:00:00:00:00:04 REACHABLE\n"
         res = evaluate_arp_neighbors(text)
         self.assertFalse(res["ok"])
         self.assertFalse(res["gateway_present"])
@@ -177,7 +177,7 @@ class TestEvaluateArpNeighbors(unittest.TestCase):
 
     def test_ignores_failed_entries_without_lladdr(self) -> None:
         text = (
-            "192.168.100.1 lladdr 48:ad:08:d8:1f:6c REACHABLE\n"
+            "192.168.100.1 lladdr 02:00:00:00:00:03 REACHABLE\n"
             "192.168.100.99 FAILED\n"
         )
         res = evaluate_arp_neighbors(text)

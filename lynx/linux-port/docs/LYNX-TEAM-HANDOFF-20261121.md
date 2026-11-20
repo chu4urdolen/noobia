@@ -94,7 +94,7 @@ note #60 is the pickup pointer.
 | Cameras and lights | Aria | Macro GC02M1 and wide IMX355 have optical frames via RAM patched ISP; main IMX890, front S5K3P9SP, second rear LED, safe persistent startup and agent capture/action interfaces remain |
 | Bluetooth | Aria | Manual link and 15-minute hold passed; autostart and long-uptime reboot behavior remain |
 | Audio, haptic, headset | Aria with Noob for perception | Noob confirmed speaker audibility and an isolated 80 ms Lynx haptic pulse; physical headset insertion/removal remains |
-| Power and diagnostics | Solo Dushich prototypes, Aria deploys | Portable passive health, battery reserve policy and charge behavior need validated Lynx-specific gates; no unattended service changes from the prototype |
+| Power and diagnostics | Solo Dushich prototypes, Aria deploys | Portable passive health board delivered 2026-11-21: `lynx/tools/health/` (portable_health.py, README, examples), 62 offline fixture tests OK (forge #75), commit `0685ee9` on main, live on origin/main as of `c3afc9f`. Battery reserve policy and charge behavior still need validated Lynx-specific gates; snapshot collector not yet built; no unattended service changes from the prototype |
 | Agent UI and tools | Gwyn prepares, Aria integrates | Catalog has 38 installed tools; preserve the distinction between interface inventory and functionally proven hardware |
 | GNSS | Aria, last | 108 checksum-valid NMEA sentences without fix; clear-sky position trial later |
 

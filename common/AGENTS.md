@@ -212,8 +212,10 @@ offers the same tools:
 - **Projects.** When you hand Dushich work on a project, name it; he records
   it with `forge-db project touch` and stops to ask Noob if another agent is
   working on that project (see Forge memory below).
-- **Non-coding tasks:** run the `dushich` CLI with an explicit scope and
-  expected evidence, then verify what he reports.
+- **Non-coding tasks:** run `dushich exec "task" < /dev/null` with an
+  explicit scope and expected evidence, then verify what he reports. Close
+  stdin: from a non-terminal caller, Codex otherwise waits for more input
+  and never starts.
 - **GitHub:** hand routine pushes to Dushich when his route is available;
   otherwise push from `/noobia`, never from an agent's isolated workspace
   (see Git and GitHub).

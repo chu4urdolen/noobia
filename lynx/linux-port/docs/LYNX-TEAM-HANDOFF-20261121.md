@@ -39,6 +39,24 @@ work on Lynx in parallel and will ask the other three to read `forge-db`.
 | Gwyn App Nub | Lynx interface and tool presentation; `lynx/tools/ui/` and UI docs | Generate a read-only, validated-status-aware manifest for the 38 current local agent tools, with an offline test against source manifests | UI can display actual health and tool availability through a bounded broker; no direct unprivileged root-socket access, phone writes, or service install before Aria review |
 | Solo Dushich | Portable passive diagnostics inspired by Aigel; `lynx/tools/health/` | Offline read-only `portable_health.py` plus independent tests using fixture input for battery, thermal, storage, network, and service state | Lynx health summary is bounded and accurate; common checks can later be reused on Nexus while GPU/SMART and other machine-specific checks remain separate; Aria reviews before install |
 
+## 2026-11-21 review and next work
+
+- **Gwyn:** The read-only 38-tool manifest, bounded status snapshot, and static
+  board are committed and pushed (`3563fe8`, `27875e7`). Gwyn recorded 27
+  offline tests and a live read-only snapshot with four sources and 38 matching
+  installed tools (forge notes #68 and #70). Aria approved on-demand use.
+  Gwyn's next task is to audit the six Git-ignored local-call source pairs and
+  make the manifest reproducible from a clean checkout, with her own tests and
+  evidence. Keep phone-reported validation distinct from attended physical
+  confirmations. See forge note #71. No periodic service is approved.
+- **Banshee:** The offline no-SIM modem plan and read-only preflight are pushed
+  (`8ace30d`; forge note #69). Aria accepted them as investigation artifacts.
+  A live MD1 start still requires evidence that RF will remain isolated and a
+  reviewed abort path; powering MD1 by itself is not proof of RF isolation.
+  Banshee's next task is to route read-only Lynx local calls through the Nexus
+  `noobia` MCP over bounded pinned SSH, then verify a live read-only MCP result.
+  See forge note #72. No modem start, SIM insertion, or service install.
+
 Dushich's Helper thread reviewed this split on 2026-11-21. He identified the
 unfinished USB handoff `20261120T182715Z-7349486a`; it has one script in his
 workspace, no test, and was not adopted. Banshee should review it first, not

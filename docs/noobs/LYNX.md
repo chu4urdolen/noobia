@@ -42,7 +42,7 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | Magnetometer local tool | `lynx/tools/lynx_magnetometer_read.py` and `local_calls/lynx_magnetometer_read.*`; raw bounded vector, [hardware status](../../lynx/linux-port/docs/LYNX-HARDWARE-STATUS.md) |
 | Motion local tool | `lynx/tools/lynx_motion_read.py` and `local_calls/lynx_motion_read.*`; bounded accelerometer or gyroscope vector |
 | Display, keyboard, scrolling | `lynx/tools/lynx_drm_dmabuf_pattern.c`; [`LYNX-CONSOLE.md`](../../lynx/linux-port/docs/LYNX-CONSOLE.md) |
-| Media control | `lynx/tools/lynx_media.py`; [`LYNX-MEDIA-CONTROL.md`](../../lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md) |
+| Media and haptic agent controls | `lynx/tools/lynx_media.py`, `lynx/tools/lynx_agent_media.py`, `lynx/tools/lynx_agent_haptic.py`; [`LYNX-MEDIA-CONTROL.md`](../../lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md) |
 | Microphone capture experiment | `lynx/tools/trial_v50_microphone.py`; external clap validated on V50 |
 | Flashlight control and safe OFF | `lynx/tools/lynx_flashlight_pulse.py`, `lynx/tools/local_calls/`; visual response validated, boot service staged but disabled |
 | Boot restoration | [`RECOVERY-AND-FIRST-BOOT.md`](../../lynx/linux-port/docs/RECOVERY-AND-FIRST-BOOT.md) and `lynx/tools/lynx_boot_a_v50_trial.py` |

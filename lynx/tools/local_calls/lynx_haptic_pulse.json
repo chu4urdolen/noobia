@@ -1,0 +1,1 @@
+{"name":"lynx_haptic_pulse","description":"Entity: Lynx. Request one 80 ms haptic pulse through the existing NRP runtime, then verify OFF.","inputSchema":{"type":"object","properties":{},"required":[],"additionalProperties":false},"timeout":6}

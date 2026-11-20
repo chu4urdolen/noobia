@@ -1,0 +1,1 @@
+{"name":"lynx_media_stop","description":"Entity: Lynx. Stop and clear Lynx's sound or image channel.","inputSchema":{"type":"object","properties":{"kind":{"type":"string","enum":["sound","image"]}},"required":["kind"],"additionalProperties":false},"timeout":8}

@@ -1,0 +1,1 @@
+{"name":"lynx_media_catalog","description":"Entity: Lynx. List installed sound and image item names.","inputSchema":{"type":"object","properties":{},"required":[],"additionalProperties":false},"timeout":8}

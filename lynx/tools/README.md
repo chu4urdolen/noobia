@@ -24,6 +24,13 @@ fingerprint, and headset switch state without activating them. The headset
 reader uses the kernel's read-only EVIOCGSW input ioctl. Its current zero
 switch state is a live read, not a validated insertion test. The additive
 installer is `agent/install_peripheral_status_tools.py`.
+`lynx_agent_media.py` exposes the existing bounded media catalog, status,
+play, and stop controls to the local agent. Its play gate checks battery,
+temperature, and Alpine health; the media service validates item names and
+limits WAV duration and amplitude. `lynx_agent_haptic.py` uses the root-only
+local NRP socket for a fixed 80 ms pulse, sends STOP in a `finally` path, and
+verifies OFF. The additive installers are `agent/install_media_agent_tools.py`
+and `agent/install_haptic_agent_tools.py`; no service restart is required.
 
 ## V53 Alpine, V50 recovery, and connectivity
 

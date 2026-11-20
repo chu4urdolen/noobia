@@ -1,0 +1,1 @@
+{"name":"lynx_haptic_stop","description":"Entity: Lynx. Request haptic OFF and verify it.","inputSchema":{"type":"object","properties":{},"required":[],"additionalProperties":false},"timeout":6}

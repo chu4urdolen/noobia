@@ -128,6 +128,13 @@ via read-only ioctl. None is functionally validated. The USB controller
 is registered. The exact stock `mtu3.ko` has matching V53 kernel version and
 no declared module dependencies, but a guarded live load has not been run.
 See `lynx/tools/lynx_peripheral_status.py`.
+On the same boot, four bounded media tools and two haptic action tools were
+added, bringing the catalog to 38. Agent calls played the short installed
+`beep` and a fixed 80 ms haptic pulse; playback stopped, both speaker mute
+switches returned to `On`, the haptic runtime reported OFF, and health stayed
+clear. These wrap previously verified services without restarting them or
+changing boot storage. See `lynx/tools/lynx_agent_media.py`,
+`lynx/tools/lynx_agent_haptic.py`, and [media control](LYNX-MEDIA-CONTROL.md).
 
 1. GNSS emits NMEA but has not produced a position fix. Bluetooth has passed
    HCI and authenticated NRP/1 GATT trials, but its automatic and long-uptime

@@ -1,0 +1,1 @@
+{"name":"lynx_media_status","description":"Entity: Lynx. Read sound and image playback state.","inputSchema":{"type":"object","properties":{},"required":[],"additionalProperties":false},"timeout":8}

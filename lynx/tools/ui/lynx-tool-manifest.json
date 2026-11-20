@@ -1,0 +1,833 @@
+{
+  "effects": {
+    "actuates": 3,
+    "read_only": 30,
+    "runs_task": 1,
+    "samples_microphone": 1,
+    "stops": 3
+  },
+  "entity": "Lynx",
+  "note": "Interface inventory is not proof of function. A tool's 'live' state comes only from a status snapshot.",
+  "schema_version": 1,
+  "source": "lynx/tools/local_calls",
+  "status_sources": {
+    "hardware": {
+      "command": "lynx-hardware",
+      "components": [
+        "microphone",
+        "flashlight",
+        "gnss",
+        "bluetooth",
+        "camera"
+      ]
+    },
+    "peripheral": {
+      "command": "lynx-peripheral-status",
+      "components": [
+        "nfc",
+        "fingerprint",
+        "headset"
+      ]
+    },
+    "platform": {
+      "command": "lynx-platform-status",
+      "components": [
+        "battery",
+        "thermal",
+        "storage",
+        "wifi",
+        "display",
+        "touch",
+        "audio",
+        "haptic",
+        "sensorhub",
+        "usb",
+        "cellular",
+        "sim"
+      ]
+    }
+  },
+  "tool_count": 38,
+  "tools": [
+    {
+      "component": null,
+      "description": "Entity: Lynx. Read whether the local AI agent is installed, its audit log exists, and Nexus is reachable. This does not run inference or activate hardware.",
+      "effect": "read_only",
+      "entry": {
+        "args": [],
+        "command": "inline-python"
+      },
+      "group": "agent",
+      "inputs": [],
+      "name": "lynx_agent_health",
+      "nrp_id": 500,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "0f255ec8896f920d6ac4b80af704da5128ede2266465153f1eca1865d6bd1af4",
+      "status_source": null,
+      "timeout_s": 5
+    },
+    {
+      "component": "audio",
+      "description": "Entity: Lynx. Read ALSA card and PCM interface readiness; does not play or record audio.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "audio"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "sound",
+      "inputs": [],
+      "name": "lynx_audio_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "322401193eafb07193f32ba0eda5b83798ff20c7f66ea82d85b67d9a2b057fb5",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "battery",
+      "description": "Entity: Lynx. Read gauge capacity, signed current, temperature and voltage. The 20% reserve policy may power off even while charging.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "battery"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "power",
+      "inputs": [],
+      "name": "lynx_battery_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "bf12c04f311f25038af2a4841f902e917876b18cbdf48c8f78d0a2376a8dd6a8",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "bluetooth",
+      "description": "Entity: Lynx. Read bluetooth interface status and validation state. This does not activate hardware or prove operation.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "tool",
+          "bluetooth"
+        ],
+        "command": "lynx-hardware"
+      },
+      "group": "radio",
+      "inputs": [],
+      "name": "lynx_bluetooth",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "1be9da6f795a2d91fa30b5fd12377a34454cdccd4eaab85469a91663549ae9cb",
+      "status_source": "hardware",
+      "timeout_s": 10
+    },
+    {
+      "component": "camera",
+      "description": "Entity: Lynx. Read camera interface status and validation state. This does not activate hardware or prove operation.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "tool",
+          "camera"
+        ],
+        "command": "lynx-hardware"
+      },
+      "group": "camera",
+      "inputs": [],
+      "name": "lynx_camera",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "d9dab35c20fb5bb0891a96618f640c0b74a8a985ddf3e1adeee9fe8794b66019",
+      "status_source": "hardware",
+      "timeout_s": 10
+    },
+    {
+      "component": "cellular",
+      "description": "Entity: Lynx. Read CCCI interface presence only. Does not start the modem or query a SIM.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "cellular"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "radio",
+      "inputs": [],
+      "name": "lynx_cellular_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "b13fbe0e115dd474066f69815cf4ac0c25292a017133966e7c143e3d12b31036",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": null,
+      "description": "Entity: Lynx. Run one bounded coding task with Codex CLI as the unprivileged lynx-coder user in her own workspace. The Codex binary is RAM-only and may be unavailable after a reboot. No system or boot partition writes are granted.",
+      "effect": "runs_task",
+      "entry": {
+        "args": [],
+        "command": "lynx-codex-tool"
+      },
+      "group": "agent",
+      "inputs": [
+        "model",
+        "prompt"
+      ],
+      "name": "lynx_codex",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [
+        "model",
+        "prompt"
+      ],
+      "source_sha256": "17b871a41d5af1bc0ac658c8507cce632a5227f73fd3da3bbb868c83901fcc40",
+      "status_source": null,
+      "timeout_s": 130
+    },
+    {
+      "component": "display",
+      "description": "Entity: Lynx. Read DRM display interface readiness; does not change the screen.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "display"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "display",
+      "inputs": [],
+      "name": "lynx_display_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "50a016d5f3e6b041cd58f0f14435a2d49b29f620b7ac3ee797559b7ff512ee7d",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "fingerprint",
+      "description": "Entity: Lynx. Read-only status for the fingerprint. Interface evidence does not validate function.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "fingerprint"
+        ],
+        "command": "lynx-peripheral-status"
+      },
+      "group": "display",
+      "inputs": [],
+      "name": "lynx_fingerprint_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "b570a218dac6b4ba2f1c34b1eab71f5b5428b3ac8d912d7164db99e7ac3d1229",
+      "status_source": "peripheral",
+      "timeout_s": 5
+    },
+    {
+      "component": "flashlight",
+      "description": "Entity: Lynx. Read flashlight interface status and validation state. This does not activate hardware or prove operation.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "tool",
+          "flashlight"
+        ],
+        "command": "lynx-hardware"
+      },
+      "group": "light",
+      "inputs": [],
+      "name": "lynx_flashlight",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "b74b85e483ddaec53db1b3c8afcb134ef2804fdb10721023a5b7cc741f17f11c",
+      "status_source": "hardware",
+      "timeout_s": 10
+    },
+    {
+      "component": "flashlight",
+      "description": "Entity: Lynx. Request one 100 ms flashlight pulse. Requires an active driver and healthy battery/thermal state; verifies OFF afterward and enforces a 10-second cooldown.",
+      "effect": "actuates",
+      "entry": {
+        "args": [
+          "--duration-ms",
+          "100"
+        ],
+        "command": "lynx-flashlight-pulse"
+      },
+      "group": "light",
+      "inputs": [],
+      "name": "lynx_flashlight_pulse",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "acac4e10189989ef2176bc8964e56b14873ca3aaf883b3203b663692953da9d4",
+      "status_source": "hardware",
+      "timeout_s": 8
+    },
+    {
+      "component": "flashlight",
+      "description": "Entity: Lynx. Request flashlight OFF and report whether a loaded driver verified it. Safe to call when the driver is absent.",
+      "effect": "stops",
+      "entry": {
+        "args": [
+          "--off"
+        ],
+        "command": "lynx-flashlight-pulse"
+      },
+      "group": "light",
+      "inputs": [],
+      "name": "lynx_flashlight_stop",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "fea83a30285adfbc3922263856897518f2750ac7a129a9e087d10c9d82454ea0",
+      "status_source": "hardware",
+      "timeout_s": 5
+    },
+    {
+      "component": "gnss",
+      "description": "Entity: Lynx. Read gnss interface status and validation state. This does not activate hardware or prove operation.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "tool",
+          "gnss"
+        ],
+        "command": "lynx-hardware"
+      },
+      "group": "radio",
+      "inputs": [],
+      "name": "lynx_gnss",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "565efb3071efb4a58b6048dab7673e9708fa520a7abe58aec34a502c0f1ec33b",
+      "status_source": "hardware",
+      "timeout_s": 10
+    },
+    {
+      "component": "haptic",
+      "description": "Entity: Lynx. Request one 80 ms haptic pulse through the existing NRP runtime, then verify OFF.",
+      "effect": "actuates",
+      "entry": {
+        "args": [
+          "pulse"
+        ],
+        "command": "lynx-agent-haptic"
+      },
+      "group": "haptic",
+      "inputs": [],
+      "name": "lynx_haptic_pulse",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "b3be78ff6c1d5315d8f3be1ff7fa13aa5f8682e559d62cf3ad4c839a9d7db03b",
+      "status_source": "platform",
+      "timeout_s": 6
+    },
+    {
+      "component": "haptic",
+      "description": "Entity: Lynx. Read vibration driver and LED interface readiness; does not activate the motor.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "haptic"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "haptic",
+      "inputs": [],
+      "name": "lynx_haptic_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "26bde9bfb22f43d331563096e51acae5399263588b7c2b64d1e4b6e9a22a3d66",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "haptic",
+      "description": "Entity: Lynx. Request haptic OFF and verify it.",
+      "effect": "stops",
+      "entry": {
+        "args": [
+          "stop"
+        ],
+        "command": "lynx-agent-haptic"
+      },
+      "group": "haptic",
+      "inputs": [],
+      "name": "lynx_haptic_stop",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "e4542202aab5f2a1ed5c445b54d173bf69cc467e153335558e85932c7d61ba9e",
+      "status_source": "platform",
+      "timeout_s": 6
+    },
+    {
+      "component": "headset",
+      "description": "Entity: Lynx. Read-only status for the headset. Interface evidence does not validate function.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "headset"
+        ],
+        "command": "lynx-peripheral-status"
+      },
+      "group": "sound",
+      "inputs": [],
+      "name": "lynx_headset_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "914d6108b187c50e5f1f57e49a42f3c0d8602a13bd43f2e53715cd229889c00d",
+      "status_source": "peripheral",
+      "timeout_s": 5
+    },
+    {
+      "component": "sensorhub",
+      "description": "Entity: Lynx. Read one raw rear light sensor sample. The lower pale rear circle has a verified optical response. Values are driver raw units, not calibrated lux or color temperature.",
+      "effect": "read_only",
+      "entry": {
+        "args": [],
+        "command": "lynx-light-read"
+      },
+      "group": "sensors",
+      "inputs": [],
+      "name": "lynx_light_read",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "c5802b4d13389da8f960498329b694e4d05ec6bbb2c935585943f1d4ce37a5ab",
+      "status_source": "platform",
+      "timeout_s": 5
+    },
+    {
+      "component": "sensorhub",
+      "description": "Entity: Lynx. Read one AKM09918 raw magnetometer vector. Values are driver raw units, not a calibrated compass heading.",
+      "effect": "read_only",
+      "entry": {
+        "args": [],
+        "command": "lynx-magnetometer-read"
+      },
+      "group": "sensors",
+      "inputs": [],
+      "name": "lynx_magnetometer_read",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "f60c8d25f5c15d263d659f08daa6c831990bf9d1d45b839fa8be2084e68fddca",
+      "status_source": "platform",
+      "timeout_s": 5
+    },
+    {
+      "component": "audio",
+      "description": "Entity: Lynx. List installed sound and image item names.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "catalog"
+        ],
+        "command": "lynx-agent-media"
+      },
+      "group": "sound",
+      "inputs": [],
+      "name": "lynx_media_catalog",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "cb29db54a0f6cdd06bb077abe556d5ad5c3f628090011934c71d7e09fc641950",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "audio",
+      "description": "Entity: Lynx. Play one bounded sound or selected image from Lynx's installed catalog.",
+      "effect": "actuates",
+      "entry": {
+        "args": [
+          "play"
+        ],
+        "command": "lynx-agent-media"
+      },
+      "group": "sound",
+      "inputs": [
+        "item",
+        "kind"
+      ],
+      "name": "lynx_media_play",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [
+        "item",
+        "kind"
+      ],
+      "source_sha256": "3997fc881ca70c3cc1bc42c1eca8d5c180da1577915ea62d60723c0982a03a0b",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "audio",
+      "description": "Entity: Lynx. Read sound and image playback state.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "status"
+        ],
+        "command": "lynx-agent-media"
+      },
+      "group": "sound",
+      "inputs": [],
+      "name": "lynx_media_status",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "a0fb671031325fc7f1e4d61d5928cfa47787a767eab7a5082bcd6ce9c60653bc",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "audio",
+      "description": "Entity: Lynx. Stop and clear Lynx's sound or image channel.",
+      "effect": "stops",
+      "entry": {
+        "args": [
+          "stop"
+        ],
+        "command": "lynx-agent-media"
+      },
+      "group": "sound",
+      "inputs": [
+        "kind"
+      ],
+      "name": "lynx_media_stop",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [
+        "kind"
+      ],
+      "source_sha256": "23de30069b1962ab9b339f72172a1f7423d0b293a336257265699babb442d691",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "microphone",
+      "description": "Entity: Lynx. Read microphone interface status and validation state. This does not activate hardware or prove operation.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "tool",
+          "microphone"
+        ],
+        "command": "lynx-hardware"
+      },
+      "group": "sound",
+      "inputs": [],
+      "name": "lynx_microphone",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "ecfb6e6c159ff8b9b5a920ac22bcccfdbb04b15fc3697d73c4b675f9ff35b781",
+      "status_source": "hardware",
+      "timeout_s": 10
+    },
+    {
+      "component": "microphone",
+      "description": "Entity: Lynx. Take one bounded microphone level sample. Returns late RMS and peak only, keeps no audio, and restores the mixer. External acoustic response is not yet validated.",
+      "effect": "samples_microphone",
+      "entry": {
+        "args": [
+          "tool",
+          "microphone_level"
+        ],
+        "command": "lynx-hardware"
+      },
+      "group": "sound",
+      "inputs": [],
+      "name": "lynx_microphone_level",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "1c749a33b3cbf14f87b1d9c9ea4fe3629e2187f132deef3620468e912a15f900",
+      "status_source": "hardware",
+      "timeout_s": 10
+    },
+    {
+      "component": "sensorhub",
+      "description": "Entity: Lynx. Read one raw accelerometer or gyroscope vector. Values are driver raw units and are not calibrated physical units.",
+      "effect": "read_only",
+      "entry": {
+        "args": [],
+        "command": "lynx-motion-read"
+      },
+      "group": "sensors",
+      "inputs": [
+        "choice"
+      ],
+      "name": "lynx_motion_read",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [
+        "choice"
+      ],
+      "source_sha256": "a72ca094c75fc0cabb5a4afdb0944ba1529aab7dcc6d29cf586ee9a25e671152",
+      "status_source": "platform",
+      "timeout_s": 5
+    },
+    {
+      "component": "nfc",
+      "description": "Entity: Lynx. Read-only status for the nfc. Interface evidence does not validate function.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "nfc"
+        ],
+        "command": "lynx-peripheral-status"
+      },
+      "group": "radio",
+      "inputs": [],
+      "name": "lynx_nfc_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "8f948f46d883d90d1d2feb0bfdf31a904a79a84501ff4f405e5f393727894bc0",
+      "status_source": "peripheral",
+      "timeout_s": 5
+    },
+    {
+      "component": "*",
+      "description": "Entity: Lynx. Read-only status for NFC, fingerprint, and headset. Interface evidence does not validate function.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "all"
+        ],
+        "command": "lynx-peripheral-status"
+      },
+      "group": "overview",
+      "inputs": [],
+      "name": "lynx_peripheral_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "661b6b7c8b73872d388153bbcfe1cf170c7c729a61bfc3a7e264fc34178eb0bf",
+      "status_source": "peripheral",
+      "timeout_s": 5
+    },
+    {
+      "component": "*",
+      "description": "Entity: Lynx. Read a bounded inventory of battery, thermal, storage, Wi-Fi, display, touch, audio, haptic, sensor hub, USB, cellular, and SIM status. Does not activate hardware.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "all"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "overview",
+      "inputs": [],
+      "name": "lynx_platform_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "4a22661d673b83bf7c0f54b827bbc977329a7e8b3006a3cd8b80e0c98d4f6eb8",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "sensorhub",
+      "description": "Entity: Lynx. Read one raw proximity sensor sample. Values are driver raw units, not a calibrated distance or a verified near/far interpretation.",
+      "effect": "read_only",
+      "entry": {
+        "args": [],
+        "command": "lynx-proximity-read"
+      },
+      "group": "sensors",
+      "inputs": [],
+      "name": "lynx_proximity_read",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "a6bd1b3838f4869adabb106b5a2af937baf4d335641ec03f65ada328065e3034",
+      "status_source": "platform",
+      "timeout_s": 5
+    },
+    {
+      "component": null,
+      "description": "Read Lynx agent queue counts, oldest pending age, stop state, and private-file integrity. Never reads prompts, replies, or job IDs.",
+      "effect": "read_only",
+      "entry": {
+        "args": [],
+        "command": "lynx-agent-health"
+      },
+      "group": "agent",
+      "inputs": [],
+      "name": "lynx_queue_health",
+      "nrp_id": 514,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "source_sha256": "bb330115208f0cde17dba8e2fc66e58da07a70691a543c86a620b30ca379599f",
+      "status_source": null,
+      "timeout_s": 5
+    },
+    {
+      "component": "sensorhub",
+      "description": "Entity: Lynx. Read hf_manager sensor-hub interface readiness; does not enable a sensor.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "sensorhub"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "sensors",
+      "inputs": [],
+      "name": "lynx_sensorhub_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "3185238d7c9078e30ff7d318516a2cd77650e4570a002d496301be865d6f8a44",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "sim",
+      "description": "Entity: Lynx. Report SIM trial state without touching the modem or SIM controls.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "sim"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "radio",
+      "inputs": [],
+      "name": "lynx_sim_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "7836e70472f5e1309c795c890e58c115686e5a68467248b40a9ee9090dc9cbd4",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "storage",
+      "description": "Entity: Lynx. Read ext4 root identity, error count and free space without touching storage.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "storage"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "system",
+      "inputs": [],
+      "name": "lynx_storage_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "fb519fa07fc23213d07aaf62667baa84c5ce80b799da4e4fb4643c0b87ebeb28",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "thermal",
+      "description": "Entity: Lynx. Read SoC temperature and cooling states without changing thermal policy.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "thermal"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "power",
+      "inputs": [],
+      "name": "lynx_thermal_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "3596286f673390b5cdc591148b33b7cc404577cc0dd10cb888fa43ba33e26153",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "touch",
+      "description": "Entity: Lynx. Read Synaptics touch driver and input-node presence; does not sample or inject touch.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "touch"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "display",
+      "inputs": [],
+      "name": "lynx_touch_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "cbbd40116f6634b4ede73211e025a90fbdd8328b7baabe1a7149300d71de047b",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "usb",
+      "description": "Entity: Lynx. Read USB device-controller inventory; native gadget and host enumeration remain unverified.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "usb"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "system",
+      "inputs": [],
+      "name": "lynx_usb_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "e7aa0daff1291f63cb9461800db3e2875956dce0040161ec173ef81beed89f3f",
+      "status_source": "platform",
+      "timeout_s": 8
+    },
+    {
+      "component": "wifi",
+      "description": "Entity: Lynx. Read Alpine Wi-Fi carrier and IP status without scanning or changing the network.",
+      "effect": "read_only",
+      "entry": {
+        "args": [
+          "wifi"
+        ],
+        "command": "lynx-platform-status"
+      },
+      "group": "radio",
+      "inputs": [],
+      "name": "lynx_wifi_status",
+      "nrp_id": null,
+      "reports_component_status": true,
+      "required_inputs": [],
+      "source_sha256": "90630c9a92be9d6a14deaf99fd04a5b93b537e545b6ade50444640b6a888f20e",
+      "status_source": "platform",
+      "timeout_s": 8
+    }
+  ],
+  "validation_states": [
+    "validated",
+    "interface_only",
+    "not_ready",
+    "unknown",
+    "malformed"
+  ]
+}

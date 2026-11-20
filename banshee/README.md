@@ -20,9 +20,7 @@ complete visible command and test activity. Reattach a detached two-pane
 session with the command printed by `noobia-banshee --detached`.
 
 `noobia-banshee --conversation ID` resumes an existing Antigravity conversation in a
-new two-pane session. The disabled [Dushich web monitor](../dushich/web/README.md)
-can display Banshee alongside Aria and merge visible Noob/Banshee/Dushich
-results when started manually. Messages are sent through the terminal CLI. Each Dushich
+new two-pane session. Each Dushich
 handoff now receives bounded recent visible Noob/Banshee dialogue
 automatically; intermediate Antigravity working steps are excluded.
 

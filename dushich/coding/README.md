@@ -68,13 +68,12 @@ used. Helper instructions live at [`AGENTS.md`](AGENTS.md), linked from
 `/noobia/dushich/coding/private/codex/AGENTS.md` so Codex loads
 them for helper sessions.
 The solo agent has separate instructions in [`../solo/AGENTS.md`](../solo/AGENTS.md),
-linked into its own Codex home. The planned foreman role has its own
-[`../foreman/AGENTS.md`](../foreman/AGENTS.md); no foreman launcher is active yet.
+linked into its own Codex home.
 The workspace has no shared `AGENTS.md`, preventing one role's instructions
 from appearing in the other role's context.
 The verified task workspace has a small private Git history in `.dushich-git/`.
 It is intentionally sparse: new task projects are created as needed, while
-`forge.db` and human-help flags remain ignored runtime data. The previous
+`forge.db` remains ignored runtime data. The previous
 task projects and helper scripts are preserved with a SHA-256 manifest under
 `/noobia/dushich/private/backups/task-workspace-files-20261117/`, and the
 pre-cleanup task Git history is in

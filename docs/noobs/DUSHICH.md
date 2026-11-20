@@ -16,14 +16,10 @@ The [duplicate-filename tool](../../dushich/tools/README.md) can scan
 The [coding trial](../../dushich/coding/TRIAL-STATUS.md) records verified tool,
 test, Git, memory, performance, and limitation evidence.
 
-The Nexus web front page at `http://127.0.0.1:8765/` now controls a separate,
-off-by-default [Foreman role](../../dushich/foreman/AGENTS.md). Its project
-registry is `/noobia/dushich/workspace/forge.db`; `conversation_id` links a
-project to a coding-agent conversation. The front-page liaison watches
-`/noobia/dushich/workspace/human-help-flags/` and shows requests for Noob's
-physical help. The [web operating notes](../../dushich/web/README.md) describe
-the control flow. The [helper role](../../dushich/coding/AGENTS.md) can access
-the project database, while [Solo Dushich](../../dushich/solo/AGENTS.md) has
+Dushich keeps Noobia's [forge memory](../../common/FORGE.md#forge-memory-forge-db),
+including the project registry, in `/noobia/dushich/workspace/forge.db`,
+always through `forge-db`. The [helper role](../../dushich/coding/AGENTS.md) works for the
+other agents, while [Solo Dushich](../../dushich/solo/AGENTS.md) has
 his own instructions. Noob granted both roles full Codex host access and
 passwordless sudo for the `dushich` Unix account on 2026-11-14.
 

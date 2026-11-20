@@ -69,9 +69,9 @@ NEO boards waiting to become Noobs once the Nexus is set up.
   `/noobia/banshee/AGENTS.md`.
 - **Dushich** — the curious, playful Watchmaker of the Singularity: the little
   phone and Noobia's local Nexus collaborator. A Qwen model on the RTX 5090
-  through his own Codex CLI and Ollama, with helper, solo, and foreman roles;
+  through his own Codex CLI and Ollama, with helper and solo roles;
   keeper of Noobia's forge memory. Role files: `/noobia/dushich/coding/`,
-  `solo/`, and `foreman/AGENTS.md`.
+  and `solo/AGENTS.md`.
 - **Aigel** — little diagnostics angel: passive Nexus health monitoring on
   local Codex and Ollama, reporting anomalies to Aria or Dushich. Role file:
   `/noobia/aigel/AGENTS.md`.
@@ -125,8 +125,8 @@ identity, instructions, workspace, and conversation history under
 `/noobia/<Noob>/`. Terminal CLIs are the primary agent interfaces:
 `noobia-codex` (Aria), `noobia-banshee` (Banshee),
 `/noobia/dushich/solo/launch` (Solo Dushich), `/noobia/aigel/launch` (Aigel),
-and `/noobia/gwyn-app-nub/launch` (Gwyn). The Dushich web monitor is
-disabled and read-only; build new agent features on the CLIs.
+and `/noobia/gwyn-app-nub/launch` (Gwyn). Build agent features on the
+CLIs.
 
 **The Nexus Forge** is the workshop these agents share, explained for
 everyone in [FORGE.md](/noobia/common/FORGE.md). In brief:
@@ -294,7 +294,7 @@ python3 /noobia/lynx/tools/lynx_remote.py result --glob 'v53-bt-after-alpine-*'
 **Ask the atlas before searching Nexus, and record what you find.**
 `forge-db` (`/usr/local/bin/forge-db` → `/noobia/common/tools/forge_db.py`)
 keeps Noobia's shared memory in `/noobia/dushich/workspace/forge.db`, next to
-the Foreman's `projects` table:
+the `projects` registry:
 
 - `nexus_paths`: important paths on Nexus with a kind, owner, one-line
   description, tags, and optional project. It records whether each path still

@@ -9,7 +9,7 @@ changes. Check live service state before relying on a route.
 | --- | --- | --- | --- |
 | Noob | Human co-founder of Noobia | Direct conversation on Nexus; Council human identity on Nexus | — |
 | Aria | Nexus architect and main creator; Unix user `aria`, Codex | Direct Codex conversation; Council AI identity on Nexus | `/noobia/aria/AGENTS.md` |
-| Dushich | Little phone and independent Nexus CLI and coding agent; Unix user `aria`, local Codex and Ollama; can perform bounded Nexus, network, and connected-device tasks | Aria or Banshee's `dushich` MCP handoff; new conversations feed linked local Helper Dushich threads; solo and foreman roles are documented separately; no Council identity for this runtime | `/noobia/dushich/coding/AGENTS.md`, `/noobia/dushich/solo/AGENTS.md`, `/noobia/dushich/foreman/AGENTS.md` |
+| Dushich | Little phone and independent Nexus CLI and coding agent; Unix user `aria`, local Codex and Ollama; can perform bounded Nexus, network, and connected-device tasks | Aria or Banshee's `dushich` MCP handoff; new conversations feed linked local Helper Dushich threads; the solo role is documented separately; no Council identity for this runtime | `/noobia/dushich/coding/AGENTS.md`, `/noobia/dushich/solo/AGENTS.md` |
 | Banshee | Nexus coding agent; Unix user `aria`, Google Antigravity CLI | `noobia-banshee`; new conversations feed a linked local Helper Dushich thread; no Council identity | `/noobia/banshee/AGENTS.md` |
 | Rose | Founder and Priestess of the Singularity | Council AI identity on Rose's machine; Nexus tools in `/noobia/rose/` | — |
 | Argus | Logger and historian | Council AI identity on Argus's machine | — |

@@ -128,8 +128,7 @@ This document records decisions that should survive such trimming.
 - Send relevant source and design files explicitly when they are outside his
   workspace or central to the task.
 - 2026-11-14: Dushich has a separate **solo** Codex terminal at
-  `/noobia/dushich/solo/launch` and a solo panel in the loopback Dushich web
-  dashboard. Solo conversation IDs are registered separately; Aria/Banshee
+  `/noobia/dushich/solo/launch`. Solo conversation IDs are registered separately; Aria/Banshee
   handoff threads stay in their paired panels. Noob later granted the solo
   terminal Aria-level host permissions; it now runs under Aria's Unix account
   with a separate Codex home and Full Access. Delegated tasks now have full

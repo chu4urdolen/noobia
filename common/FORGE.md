@@ -122,7 +122,7 @@ Nothing Noobia-made is installed in `/usr/bin`, `/usr/local/bin`, or
    - **Quadrant Zoom:** Double-click any quadrant header, click the `⛶` button,
      or press `Ctrl+Shift+Z` or `F11` to expand any quadrant to full-window.
      Press `Ctrl+Shift+Z` or `Escape` to return to the 2×2 grid.
-   - **Token Quota Badge:** A live hourly/weekly percentage badge (`H/W: %/%`
+   - **Token Quota Badge:** A live hourly/weekly percentage remaining badge (`H/W: %/%`
      for cloud agents, `Local: 100%` for Dushich) sits directly above Rose on
      each avatar sidebar.
    - **Configuration & Installer:** Customize quadrants with `--config` or

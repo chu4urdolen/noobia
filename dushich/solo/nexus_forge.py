@@ -239,9 +239,9 @@ def _get_agy_token_quota() -> str:
             pass
     if total_7d == 0 and total_1h == 0:
         return "H/W: --% / --%"
-    h_pct = min(100, int(round((total_1h / 1_000_000) * 100)))
-    w_pct = min(100, int(round((total_7d / 15_000_000) * 100)))
-    return f"H/W: {h_pct}% / {w_pct}%"
+    h_rem = max(0, 100 - min(100, int(round((total_1h / 1_000_000) * 100))))
+    w_rem = max(0, 100 - min(100, int(round((total_7d / 15_000_000) * 100))))
+    return f"H/W: {h_rem}% / {w_rem}%"
 
 
 def _get_claude_token_quota() -> str:
@@ -279,9 +279,9 @@ def _get_claude_token_quota() -> str:
             pass
     if total_7d == 0 and total_1h == 0:
         return "H/W: --% / --%"
-    h_pct = min(100, int(round((total_1h / 500_000) * 100)))
-    w_pct = min(100, int(round((total_7d / 5_000_000) * 100)))
-    return f"H/W: {h_pct}% / {w_pct}%"
+    h_rem = max(0, 100 - min(100, int(round((total_1h / 500_000) * 100))))
+    w_rem = max(0, 100 - min(100, int(round((total_7d / 5_000_000) * 100))))
+    return f"H/W: {h_rem}% / {w_rem}%"
 
 
 def resolve_token_badge(
@@ -292,6 +292,7 @@ def resolve_token_badge(
     """Return a short hourly/weekly token percentage string for the avatar pane.
 
     Format: 'H/W: %/%' (e.g. 'H/W: 100% / 64%'), or 'Local: 100%' for local models.
+    Values represent percentage of token quota remaining.
     """
     if explicit_badge:
         return explicit_badge
@@ -345,14 +346,24 @@ def resolve_token_badge(
                                     hp = p.get("used_percent")
                                     wp = sec.get("used_percent")
                                     if hp is not None or wp is not None:
-                                        h_str = (
-                                            f"{int(round(hp))}%"
+                                        h_rem = (
+                                            max(0, 100 - int(round(hp)))
                                             if hp is not None
+                                            else None
+                                        )
+                                        w_rem = (
+                                            max(0, 100 - int(round(wp)))
+                                            if wp is not None
+                                            else None
+                                        )
+                                        h_str = (
+                                            f"{h_rem}%"
+                                            if h_rem is not None
                                             else "--%"
                                         )
                                         w_str = (
-                                            f"{int(round(wp))}%"
-                                            if wp is not None
+                                            f"{w_rem}%"
+                                            if w_rem is not None
                                             else "--%"
                                         )
                                         result = f"H/W: {h_str} / {w_str}"

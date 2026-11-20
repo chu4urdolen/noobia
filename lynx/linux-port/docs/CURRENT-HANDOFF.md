@@ -137,7 +137,12 @@ added, bringing the catalog to 38. Agent calls played the short installed
 `beep` and a fixed 80 ms haptic pulse; playback stopped, both speaker mute
 switches returned to `On`, the haptic runtime reported OFF, and health stayed
 clear. These wrap previously verified services without restarting them or
-changing boot storage. See `lynx/tools/lynx_agent_media.py`,
+changing boot storage. An attended 2026-11-21 repeat confirmed that Noob
+heard the quiet `beep`; sound stopped, both speaker routes returned to mute,
+and same-boot health stayed clear. A second isolated 80 ms haptic pulse was
+felt by Noob from Lynx; the actuator returned OFF and health stayed clear.
+See
+`lynx/tools/lynx_agent_media.py`,
 `lynx/tools/lynx_agent_haptic.py`, and [media control](LYNX-MEDIA-CONTROL.md).
 
 1. GNSS emits NMEA but has not produced a position fix. Bluetooth has passed
@@ -193,11 +198,11 @@ changing boot storage. See `lynx/tools/lynx_agent_media.py`,
    Stage a guarded RAM-only driver trial only after a fresh >=50% charge,
    health check, watchdog, and attended recovery path; a bound driver alone
    would still not prove host enumeration.
-6. NFC has a stock `oplus_nfc.ko` platform driver and `nfc_i2c.ko` NCI driver,
-   but neither is bound on this boot. Stock `init.SN100x.nfc.rc` expects
-   `/dev/nq-nci`; this is an expected path, not a live node or verified chip
-   identity. Read-only active device-tree strings say `SN110T` for both
-   configured variants; see [NFC preflight](LYNX-NFC-PREFLIGHT-20261120.md).
+6. NFC has a stock `oplus_nfc.ko` platform driver and `nfc_i2c.ko` NCI driver.
+   Before the 2026-11-21 probe neither was bound and `/dev/nq-nci` was only
+   the node expected by stock `init.SN100x.nfc.rc`. Read-only active
+   device-tree strings say `SN110T` for both configured variants; see
+   [NFC preflight](LYNX-NFC-PREFLIGHT-20261120.md).
    A guarded RAM-only probe on 2026-11-21 loaded both matching stock modules,
    bound the platform driver, created `/dev/nq-nci`, and received a kernel
    GET_VERSION response. Health and Wi-Fi remained clear on the same boot and

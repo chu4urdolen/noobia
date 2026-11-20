@@ -24,6 +24,7 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | --- | --- |
 | Current hardware evidence | [`LYNX-HARDWARE-STATUS.md`](../../lynx/linux-port/docs/LYNX-HARDWARE-STATUS.md) |
 | Read-only cellular inventory and SIM gate | [`LYNX-CELLULAR-INVENTORY-20261118.md`](../../lynx/linux-port/docs/LYNX-CELLULAR-INVENTORY-20261118.md) |
+| Read-only NFC module preflight | [`LYNX-NFC-PREFLIGHT-20261120.md`](../../lynx/linux-port/docs/LYNX-NFC-PREFLIGHT-20261120.md) |
 | Why Lynx powers off | [Poweroff audit](../../lynx/linux-port/docs/LYNX-POWER-SHUTDOWNS-20261118.md); active 20% reserve and older charging policy |
 | Delayed audio and sensor startup | [Sensor retry](../../lynx/linux-port/docs/LYNX-SENSOR-RETRY-20261118.md); low-charge cold boot still unverified |
 | Kernel-to-agent gate and flash decision | [`LYNX-KERNEL-TO-AGENT-GATE.md`](../../lynx/linux-port/docs/LYNX-KERNEL-TO-AGENT-GATE.md) |

@@ -192,7 +192,9 @@ changing boot storage. See `lynx/tools/lynx_agent_media.py`,
 6. NFC has a stock `oplus_nfc.ko` platform driver and `nfc_i2c.ko` NCI driver,
    but neither is bound on this boot. Stock `init.SN100x.nfc.rc` expects
    `/dev/nq-nci`; this is an expected path, not a live node or verified chip
-   identity. Fingerprint driver candidates
+   identity. Read-only active device-tree strings say `SN110T` for both
+   configured variants; see [NFC preflight](LYNX-NFC-PREFLIGHT-20261120.md).
+   Fingerprint driver candidates
    `oplus_fp_common.ko` and `uff_fp_driver.ko` are in the stock vendor DLKM;
    their sensor identity and secure userspace path are unproven. The headset
    switch reader is live but still needs a physical plug/unplug observation.

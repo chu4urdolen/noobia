@@ -239,8 +239,8 @@ def _get_agy_token_quota() -> str:
             pass
     if total_7d == 0 and total_1h == 0:
         return "H/W: --% / --%"
-    h_rem = max(0, 100 - min(100, int(round((total_1h / 1_000_000) * 100))))
-    w_rem = max(0, 100 - min(100, int(round((total_7d / 15_000_000) * 100))))
+    h_rem = max(0, 100 - min(100, int(round((total_1h / 2_000_000) * 100))))
+    w_rem = max(0, 100 - min(100, int(round((total_7d / 50_000_000) * 100))))
     return f"H/W: {h_rem}% / {w_rem}%"
 
 

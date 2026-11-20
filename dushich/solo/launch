@@ -80,12 +80,12 @@ def wait_for_id(session: str) -> str:
         except subprocess.CalledProcessError:
             time.sleep(.2)
             continue
+        if 'Ask Codex to do anything' in screen:
+            break
         if 'Update available' in screen:
             run('tmux', '-L', 'dushich-clean', 'send-keys', '-t', session + ':0.0', 'Escape', check=False)
             time.sleep(.4)
             continue
-        if 'Ask Codex to do anything' in screen:
-            break
         time.sleep(.2)
     else:
         raise RuntimeError('Dushich prompt did not appear')

@@ -47,3 +47,11 @@ can be migrated safely.
 
 Build products, device backups, credentials, runtime logs, and captured media
 belong on their respective machines and are deliberately excluded from Git.
+
+## License
+
+Noobia's own work is free: do what you want with it, under the
+[WTFPL](LICENSE). Third-party code kept here for reference keeps its
+original license, for example the FriendlyELEC BakeBit samples in
+`neo/tests/friendlyelec-bakebit/` (MIT) and LAFVIN's stock spiderbot
+firmware in `lolth/firmware/lafvin_stock/`.

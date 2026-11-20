@@ -1,0 +1,12 @@
+[Unit]
+Description=Argus Pi 5 fan temperature control
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/argus-pi5-fan-control
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

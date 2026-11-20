@@ -17,7 +17,7 @@ from agents import HOME, NOOBIA
 
 CONVERSATIONS = HOME / '.gemini/antigravity-cli/conversations'
 HISTORY = HOME / '.gemini/antigravity-cli/history.jsonl'
-WORKSPACE = NOOBIA / 'banshee/workspace'
+WORKSPACE = NOOBIA / 'banshee'  # where Banshee's launcher starts Antigravity
 
 
 def _varint(data: bytes, offset: int) -> tuple[int, int]:

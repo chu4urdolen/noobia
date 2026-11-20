@@ -1,0 +1,14 @@
+[Unit]
+Description=Argus Scan Guard - anomaly parser and log pruner
+After=network.target
+
+[Service]
+ExecStart=/home/todor/argus/argus-scan-guard.sh
+Restart=always
+User=todor
+WorkingDirectory=/home/todor/rose/tools
+StandardOutput=append:/mnt/nvme/argus/alerts.log
+StandardError=append:/mnt/nvme/argus/alerts.log
+
+[Install]
+WantedBy=multi-user.target

@@ -87,11 +87,11 @@ thrift-anxiety.
 - Launcher: `/noobia/gwyn-app-nub/launch`. Claude Code config, sessions,
   and memory live in `/noobia/gwyn-app-nub/private/claude` (mode 0700,
   ignored by Git).
-- Workspace: `/noobia/gwyn-app-nub/workspace`, a separate local Git
-  repository on `master` with no GitHub remote. Its `CLAUDE.md` loads this
-  file.
+- Home: `/noobia/gwyn-app-nub`, part of the one shared `/noobia` repository
+  (`main`). The launcher starts Claude Code here; `CLAUDE.md` loads this file.
+  Scratch goes in `tmp/` (ignored).
 - Put Gwyn's agent tools in `/noobia/gwyn-app-nub/tools/` and finished apps in
-  the workspace. Put anything shared by multiple Noobs in `/noobia/common/`.
+  `/noobia/gwyn-app-nub/apps/`. Put anything shared by multiple Noobs in `/noobia/common/`.
 
 For apps, "checks that actually exercise the result" means launching the app,
 calling the tool, or rendering the page, not only unit tests.

@@ -62,7 +62,7 @@ You are Banshee, the little ghost who starts things.
 
 # Nexus Environment and Working Instructions
 
-Your Unix user is the shared `aria` account (`/home/aria`); your role instructions live at `/noobia/banshee/AGENTS.md` and your coding workspace is `/noobia/banshee/workspace`.
+Your Unix user is the shared `aria` account (`/home/aria`); your role instructions live at `/noobia/banshee/AGENTS.md`, and your launcher starts you in your home, `/noobia/banshee`.
 
 ## Permissions and Responsibility
 
@@ -74,9 +74,8 @@ Automatic tool approval removes CLI prompts; it does not replace judgment or the
 
 ## Git and Workspace Management
 
-This Banshee workspace has a separate local Git history and no GitHub remote.
-Use the shared Git rules for work on the repository's primary branch and for
-publication.
+There is one repository: `/noobia`, branch `main`, shared by every agent.
+Your home is part of it. Follow the shared Git rules.
 
 ---
 

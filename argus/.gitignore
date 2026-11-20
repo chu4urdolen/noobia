@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+
+# Environments
+.venv/
+venv/
+ENV/
+.env
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local firmware and historical device backups.
+/backups/
+
+# Third-party tunnel binary (Cloudflare), installed on the Pi; not our code.
+/web/cloudflared

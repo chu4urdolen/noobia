@@ -1,0 +1,13 @@
+[Unit]
+Description=Argus Temperature Guard
+After=multi-user.target
+
+[Service]
+ExecStart=/home/todor/argus/argus-temp-guard.py
+Restart=always
+User=todor
+StandardOutput=append:/mnt/nvme/argus/temp_guard.log
+StandardError=append:/mnt/nvme/argus/temp_guard.log
+
+[Install]
+WantedBy=multi-user.target

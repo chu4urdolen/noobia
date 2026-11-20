@@ -15,8 +15,8 @@ existing local directories; this map points to code and operating notes.
 | Argus | [Argus](noobs/ARGUS.md) | `argus/services/`, `argus/tools/`, `argus/web/` |
 | Dushich | [Dushich](noobs/DUSHICH.md) | `dushich/`, [local coding workshop](../dushich/coding/README.md), and [solo terminal](../dushich/solo/README.md); check device inventory before assuming a runtime |
 | Aigel | [Aigel](../aigel/README.md) | `aigel/`, Nexus nurse and diagnostics agent; local Codex and Ollama on the RTX 5090; passive monitoring, reports anomalies to Aria or Dushich |
-| Banshee | [Banshee](../banshee/README.md) | `banshee/workspace/`, Google Antigravity CLI coding workspace on Nexus |
-| Gwyn App Nub | [Gwyn](../gwyn-app-nub/README.md) | `gwyn-app-nub/workspace/`, Claude Code app-writing workspace with isolated configuration; role file `gwyn-app-nub/AGENTS.md` |
+| Banshee | [Banshee](../banshee/README.md) | `banshee/`, Google Antigravity CLI on Nexus; corner terminals in `banshee/nexus_startup/` |
+| Gwyn App Nub | [Gwyn](../gwyn-app-nub/README.md) | `gwyn-app-nub/`, Claude Code app-writer with isolated configuration; role file `gwyn-app-nub/AGENTS.md` |
 | Lolth | [Lolth](noobs/LOLTH.md) | `lolth/firmware/`, `lolth/tools/` |
 | Clover and Terpsi | [Other inhabitants](noobs/OTHER.md) | Locate the actual device repository before changing hardware |
 

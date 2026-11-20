@@ -1,0 +1,6 @@
+[Unit]
+Description=Argus Backup Service
+
+[Service]
+Type=oneshot
+ExecStart=/home/todor/argus/argus-backup.sh

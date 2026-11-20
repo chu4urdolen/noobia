@@ -1,0 +1,6 @@
+{
+  "name": "Noobia Corner Terminals",
+  "description": "Tile Noobia startup GNOME Terminal windows into the four screen corners",
+  "uuid": "noobia-corners@nexus.local",
+  "shell-version": ["46", "47", "48", "49", "50"]
+}

@@ -3,12 +3,13 @@
 Launch Banshee from a Nexus terminal with `noobia-banshee` (or
 `/noobia/banshee/launch`). This opens
 a two-pane tmux workshop: Google Antigravity CLI (`agy`) in
-`/noobia/banshee/workspace` on the left, and Dushich's live local coding
+`/noobia/banshee` on the left, and Dushich's live local coding
 activity on the right. Banshee's Antigravity process runs under the shared
-`aria` Unix user. Her [AGENTS.md](/noobia/banshee/AGENTS.md) is linked into
-the workspace and points to the [Noobia contact book](../common/CONTACT-BOOK.md).
-The workspace has its own Git history; the first smoke
-test is in `workspace/smoke-test/`.
+`aria` Unix user. Her [AGENTS.md](/noobia/banshee/AGENTS.md) is in the folder she starts in.
+Everything she makes is part of the one shared `/noobia` repository.
+[`nexus_startup/`](nexus_startup/) holds her corner-terminal launcher and its
+GNOME extension (test: `python3 -m unittest nexus_startup.test_corner_terminals`
+from this folder).
 
 The `dushich` MCP server gives Banshee `dushich_context_status`,
 `dushich_ask`, `dushich_start`, `dushich_status`, `dushich_wait`, and
@@ -37,7 +38,7 @@ dialogue reader. Check service health with
 The CLI binary is installed at `/home/aria/.local/bin/agy` (version 1.5.9
 on 2026-11-15). Banshee shares the `aria` Unix user and `/home/aria/.gemini`
 Antigravity state directory while keeping her own `/noobia/banshee/AGENTS.md`
-and `/noobia/banshee/workspace`. Her `dushich` MCP server is configured and enabled.
+and `/noobia/banshee`. Her `dushich` MCP server is configured and enabled.
 
 Noob confirmed the account has **Google AI Plus**, correcting an earlier Pro
 description. The CLI header showed **Antigravity Starter Quota**, and `/usage`

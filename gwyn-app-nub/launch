@@ -15,7 +15,7 @@ attach=""
 resume=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --plain) shift; cd "$root/workspace"; exec "$claude" "$@" ;;
+        --plain) shift; cd "$root"; exec "$claude" "$@" ;;
         --detached) detached=true; shift ;;
         --attach)
             [[ $# -ge 2 && "$2" =~ $uuid ]] || { echo "--attach needs a Gwyn session ID" >&2; exit 2; }
@@ -36,7 +36,7 @@ else
     attach="$(python3 -c 'import uuid; print(uuid.uuid4())')"
     session="noobia-gwyn-${attach:0:8}"
     if [[ -n "$resume" ]]; then
-        [[ -f "$CLAUDE_CONFIG_DIR/projects/-noobia-gwyn-app-nub-workspace/$resume.jsonl" ]] || {
+        [[ -f "$CLAUDE_CONFIG_DIR/projects/${root//\//-}/$resume.jsonl" ]] || {
             echo "Claude Code session is unavailable: $resume" >&2; exit 1
         }
         conversation="$resume"; claude_args="--resume $resume"
@@ -45,7 +45,7 @@ else
         # path is known before the first prompt.
         conversation="$attach"; claude_args="--session-id $attach"
     fi
-    tmux new-session -d -s "$session" -n workshop -c "$root/workspace" \
+    tmux new-session -d -s "$session" -n workshop -c "$root" \
         "exec env HOME=/home/aria USER=aria LOGNAME=aria CLAUDE_CONFIG_DIR=$CLAUDE_CONFIG_DIR GIT_AUTHOR_NAME='Gwyn App Nub' GIT_AUTHOR_EMAIL=gwyn@nexus.local GIT_COMMITTER_NAME='Gwyn App Nub' GIT_COMMITTER_EMAIL=gwyn@nexus.local GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes' NOOBIA_GWYN_SESSION=$attach NOOBIA_GWYN_CONVERSATION_ID=$conversation $claude $claude_args"
     tmux split-window -h -p 40 -t "$session":0 -c "$root" \
         "exec /usr/bin/python3 $NOOBIA/common/dushich/bridge.py --agent gwyn monitor --session-id $attach"

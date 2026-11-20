@@ -14,7 +14,7 @@ import sys
 from agents import NOOBIA
 
 # Claude Code names a project's transcript folder after its path, with / as -.
-WORKSPACE = NOOBIA / 'gwyn-app-nub/workspace'
+WORKSPACE = NOOBIA / 'gwyn-app-nub'  # where Gwyn's launcher starts Claude Code
 CONVERSATIONS = (NOOBIA / 'gwyn-app-nub/private/claude/projects'
                  / str(WORKSPACE).replace('/', '-'))
 

@@ -44,7 +44,7 @@ class Agent:
 
 
 AGENTS = {
-    "banshee": Agent("banshee", "Banshee", NOOBIA / "banshee", NOOBIA / "banshee/workspace",
+    "banshee": Agent("banshee", "Banshee", NOOBIA / "banshee", NOOBIA / "banshee",
                      "NOOBIA_BANSHEE_SESSION", "NOOBIA_BANSHEE_CONVERSATION_ID",
                      "transcript_antigravity", "helper_banshee", 200),
     "gwyn": Agent("gwyn", "Gwyn", NOOBIA / "gwyn-app-nub", NOOBIA / "gwyn-app-nub",

@@ -14,6 +14,7 @@ from lynx_usb_mtu3_preflight import (
     CONTROLLER_NAME,
     DEFAULT_LYNX_HOST,
     DEFAULT_LYNX_SSH_PORT,
+    DEFAULT_STOCK_MTU3_PATH,
     DUMMY_UDC_PREFIX,
     EXIT_BLOCKED,
     EXIT_ERROR,
@@ -29,6 +30,7 @@ from lynx_usb_mtu3_preflight import (
     evaluate_preflight,
     load_fixture,
     main,
+    parse_live_output,
 )
 
 
@@ -37,7 +39,7 @@ def valid_observations() -> dict:
         "boot_id": PINNED_V53_BOOT_ID,
         "kernel_release": "5.10.149-android12-9-o-g311738fbb5a8",
         "mtu3_sha256": PINNED_MTU3_SHA256,
-        "module_vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload aarch64",
+        "module_vermagic": "5.10.149-android12-9-o-g311738fbb5a8 SMP preempt mod_unload modversions aarch64",
         "battery_percent": 65.0,
         "charging": True,
         "safe_power": True,
@@ -46,6 +48,30 @@ def valid_observations() -> dict:
         "controller_bound_driver": "",
         "udc_devices": ["dummy_udc.0"],
     }
+
+
+def sample_alpine_stdout() -> str:
+    status_json = {
+        "boot_id": PINNED_V53_BOOT_ID,
+        "battery": {
+            "capacity_percent": 100,
+            "current_mA_signed": 0,
+            "temperature_mC": 29000,
+            "voltage_mV": 8708,
+        },
+        "issues": [],
+        "thermal": {"max_mC": 38453},
+        "wifi": {"carrier": True, "ipv4": "192.168.100.107/24"},
+    }
+    return (
+        "===LYNX_STATUS===\n"
+        + json.dumps(status_json)
+        + "\n===SYSFS===\n"
+        "KERNEL=5.10.149-android12-9-o-g311738fbb5a8\n"
+        "CTL_PRESENT=1\n"
+        "BOUND=\n"
+        "UDCS=dummy_udc.0,\n"
+    )
 
 
 class PureLogicTests(unittest.TestCase):
@@ -212,22 +238,44 @@ class FixtureAndCommandTests(unittest.TestCase):
         self.assertIn("-p", cmd)
         self.assertIn(str(DEFAULT_LYNX_SSH_PORT), cmd)
         self.assertIn(f"root@{DEFAULT_LYNX_HOST}", cmd)
-        # Check command has timeout
         last_arg = cmd[-1]
         self.assertTrue(last_arg.startswith("timeout 20 sh -c"))
 
     def test_live_script_read_only(self):
-        script = _live_script(DEFAULT_LYNX_HOST, DEFAULT_LYNX_SSH_PORT, "/vendor_dlkm/lib/modules/mtu3.ko")
-        # Ensure only read-only tools are invoked and no mutating operations exist
+        script = _live_script(CONTROLLER_NAME)
         for dangerous in ["insmod", "rmmod", "modprobe", "reboot", "poweroff", "dd", "rm ", "tee "]:
             self.assertNotIn(dangerous, script)
-        self.assertIn("sha256sum", script)
-        self.assertIn("modinfo -F vermagic", script)
-        self.assertIn("/proc/sys/kernel/random/boot_id", script)
+        self.assertIn("lynx-status", script)
+        self.assertIn("uname -r", script)
+        self.assertIn(CONTROLLER_NAME, script)
 
-    def test_live_script_traversal_rejected(self):
+
+class LiveParserTests(unittest.TestCase):
+    def test_parse_actual_alpine_layout(self):
+        raw_output = sample_alpine_stdout()
+        obs = parse_live_output(raw_output, DEFAULT_STOCK_MTU3_PATH)
+        self.assertEqual(obs["boot_id"], PINNED_V53_BOOT_ID)
+        self.assertEqual(obs["kernel_release"], "5.10.149-android12-9-o-g311738fbb5a8")
+        self.assertEqual(obs["mtu3_sha256"], PINNED_MTU3_SHA256)
+        self.assertEqual(obs["battery_percent"], 100.0)
+        self.assertTrue(obs["safe_power"])
+        self.assertTrue(obs["health_clear"])
+        self.assertTrue(obs["controller_present"])
+        self.assertEqual(obs["controller_bound_driver"], "")
+        self.assertEqual(obs["udc_devices"], ["dummy_udc.0"])
+
+        report = evaluate_preflight(obs)
+        self.assertEqual(report["state"], "ready")
+        self.assertTrue(report["ready"])
+
+    def test_parse_missing_module_raises(self):
         with self.assertRaises(LiveCollectionError):
-            _live_script(DEFAULT_LYNX_HOST, DEFAULT_LYNX_SSH_PORT, "/vendor_dlkm/../../etc/passwd")
+            parse_live_output(sample_alpine_stdout(), "/nonexistent/mtu3.ko")
+
+    def test_parse_corrupt_status_json_raises(self):
+        bad_output = "===LYNX_STATUS===\n{not valid json\n===SYSFS===\n"
+        with self.assertRaises(LiveCollectionError):
+            parse_live_output(bad_output, DEFAULT_STOCK_MTU3_PATH)
 
 
 class CLITests(unittest.TestCase):

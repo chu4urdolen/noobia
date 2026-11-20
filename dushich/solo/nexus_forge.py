@@ -13,20 +13,28 @@ Every quadrant reuses the pure helpers from `avatar_pane` / `dushich_window`
 (`StateTracker`, `is_pane_working`, `select_frame_name`,
 `compute_sidebar_layout`, `is_dushich_helper_working`, ...).  The sidebar
 draws the primary agent frame on top, an optional helper-agent frame in the
-middle, and `Rose.png` filling any remaining height at the bottom via the
-4-argument `Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, y)` call.
+middle, a one-line token quota badge (`H/W : %/%` or `Local: 100%`) right above
+`Rose.png`, and `Rose.png` filling any remaining height at the bottom.
 
-State is driven by polling each terminal's live text + window title (plus
-`tmux list-panes`/`capture-pane` for `noobia-aria-*` sessions when the
-quadrant's agent is Aria) every 0.4s.
+Features:
+- **Quadrant Zoom**: Press `Ctrl+Shift+Z` or `F11`, or double-click any quadrant
+  header to maximize that quadrant to fill the whole window.  Press again or
+  `Escape` to restore the 2x2 grid.
+- **Token Quota Badge**: Live hourly/weekly token quota or local indicator
+  rendered on a compact pill badge right above Rose.
+- **Session Resilience**: Reconnect/respawn overlay card on terminal child exit.
+- **Portable Configuration**: Load custom titles, paths, commands, and badges
+  via `--config <path>` or `~/.config/nexus-forge/config.json`.
 
 Run `nexus_forge.py --self-test` for a headless smoke test of the quadrant
-table, the sidebar layout math, and every agent/Rose pixbuf + Cairo paint.
+table, config loader, token quota resolver, layout math, and pixbuf Cairo paints.
 """
 
 from __future__ import annotations
 
 import argparse
+import glob
+import json
 import os
 import subprocess
 import sys
@@ -55,7 +63,8 @@ try:
     gi.require_version("Vte", "2.91")
     gi.require_version("Gdk", "3.0")
     gi.require_version("GdkPixbuf", "2.0")
-    from gi.repository import Gtk, Vte, Gdk, GdkPixbuf, GLib, Pango
+    gi.require_version("PangoCairo", "1.0")
+    from gi.repository import Gtk, Vte, Gdk, GdkPixbuf, GLib, Pango, PangoCairo
 
     _GI_AVAILABLE = True
 except Exception as _gi_import_error:  # pragma: no cover - environment specific
@@ -65,6 +74,7 @@ except Exception as _gi_import_error:  # pragma: no cover - environment specific
     GdkPixbuf = None
     GLib = None
     Pango = None
+    PangoCairo = None
     _GI_AVAILABLE = False
     _GI_IMPORT_ERROR = _gi_import_error
 
@@ -75,6 +85,8 @@ POLL_INTERVAL = 0.4
 BACKGROUND = "#121417"
 FOREGROUND = "#e6edf3"
 ARIA_TMUX_SOCKET = "default"
+DEFAULT_CONFIG_PATH = Path.home() / ".config" / "nexus-forge" / "config.json"
+DEFAULT_RATE_LIMITS_PATH = Path.home() / ".config" / "nexus-forge" / "rate_limits.json"
 
 # ---------------------------------------------------------------------------
 # The quadrant table: which agent, optional helper, and launch command each
@@ -85,6 +97,7 @@ DEFAULT_QUADRANTS = {
         "title": "Aria + Dushich Helper",
         "agent": "Aria",
         "helper_agent": "",
+        "badge": "",
         "command": [
             "/bin/bash",
             "-lc",
@@ -95,6 +108,7 @@ DEFAULT_QUADRANTS = {
         "title": "Dushich Solo",
         "agent": "Dushich",
         "helper_agent": "",
+        "badge": "Local: 100%",
         "command": [
             "/bin/bash",
             "-lc",
@@ -105,6 +119,7 @@ DEFAULT_QUADRANTS = {
         "title": "Banshee + Dushich Helper",
         "agent": "Banshee",
         "helper_agent": "",
+        "badge": "",
         "command": [
             "/bin/bash",
             "-lc",
@@ -115,6 +130,7 @@ DEFAULT_QUADRANTS = {
         "title": "Gwyn + Dushich Helper",
         "agent": "Gwyn",
         "helper_agent": "",
+        "badge": "",
         "command": [
             "/bin/bash",
             "-lc",
@@ -135,14 +151,129 @@ def quadrant_names(left_only: bool = False) -> list:
     return ["top_left", "top_right", "bottom_left", "bottom_right"]
 
 
+# ---------------------------------------------------------------------------
+# Configuration loading & merging
+# ---------------------------------------------------------------------------
+def load_config(
+    config_path: str | Path | None = None,
+    check_default: bool = True,
+) -> dict:
+    """Load configuration from a JSON file, or return empty dict if not found."""
+    target: Path | None = None
+    if config_path:
+        target = Path(config_path)
+    elif os.environ.get("NEXUS_FORGE_CONFIG"):
+        target = Path(os.environ["NEXUS_FORGE_CONFIG"])
+    elif check_default and DEFAULT_CONFIG_PATH.is_file():
+        target = DEFAULT_CONFIG_PATH
+
+    if target and target.is_file():
+        try:
+            with open(target, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+        except Exception as err:
+            print(f"Warning: failed to read config file {target}: {err}", file=sys.stderr)
+    return {}
+
+
+def build_quadrants_table(cfg: dict | None = None) -> dict:
+    """Return quadrants table merged from default and optional config dict."""
+    quads = {k: dict(v) for k, v in DEFAULT_QUADRANTS.items()}
+    if cfg and "quadrants" in cfg and isinstance(cfg["quadrants"], dict):
+        for q_name, q_val in cfg["quadrants"].items():
+            if isinstance(q_val, dict):
+                merged = dict(quads.get(q_name, {}))
+                merged.update(q_val)
+                quads[q_name] = merged
+    return quads
+
+
+# ---------------------------------------------------------------------------
+# Token quota / rate limits resolution
+# ---------------------------------------------------------------------------
+def resolve_token_badge(
+    agent: str,
+    explicit_badge: str = "",
+    rate_limits_path: Path | None = None,
+) -> str:
+    """Return a short hourly/weekly token percentage string for the avatar pane.
+
+    Format: 'H/W: %/%' (e.g. 'H/W: 100% / 64%'), or 'Local: 100%' for local models.
+    """
+    if explicit_badge:
+        return explicit_badge
+
+    agent_norm = (agent or "").strip().lower()
+    if agent_norm == "dushich":
+        return "Local: 100%"
+
+    # Check for an override / shared rate limits cache file if present
+    cache_file = rate_limits_path or DEFAULT_RATE_LIMITS_PATH
+    if cache_file.is_file():
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    val = data.get(agent) or data.get(agent_norm)
+                    if isinstance(val, str) and val.strip():
+                        return val.strip()
+        except Exception:
+            pass
+
+    if agent_norm == "aria":
+        try:
+            sessions = sorted(
+                glob.glob(
+                    str(Path.home() / ".codex" / "sessions" / "**" / "*.jsonl"),
+                    recursive=True,
+                ),
+                key=os.path.getmtime,
+            )
+            for s in reversed(sessions[-10:]):
+                try:
+                    with open(s, "r", encoding="utf-8", errors="ignore") as f:
+                        for line in reversed(f.readlines()[-100:]):
+                            if "rate_limits" in line:
+                                d = json.loads(line)
+                                payload = d.get("payload") or {}
+                                rl = payload.get("rate_limits") or (
+                                    payload.get("info") or {}
+                                ).get("rate_limits")
+                                if isinstance(rl, dict):
+                                    p = rl.get("primary") or {}
+                                    sec = rl.get("secondary") or {}
+                                    hp = p.get("used_percent")
+                                    wp = sec.get("used_percent")
+                                    if hp is not None or wp is not None:
+                                        h_str = (
+                                            f"{int(round(hp))}%"
+                                            if hp is not None
+                                            else "--%"
+                                        )
+                                        w_str = (
+                                            f"{int(round(wp))}%"
+                                            if wp is not None
+                                            else "--%"
+                                        )
+                                        return f"H/W: {h_str} / {w_str}"
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    return "H/W: --% / --%"
+
+
+# ---------------------------------------------------------------------------
+# Tmux state polling helpers
+# ---------------------------------------------------------------------------
 def read_aria_tmux_state(socket: str = ARIA_TMUX_SOCKET) -> tuple:
     """Read the live Aria tmux session (``noobia-aria-*``) off-screen.
 
     Returns a ``(aria_working, dushich_helper_working)`` tuple derived from
-    the two panes of the most recent ``noobia-aria-*`` session.  Panes are
-    located with ``tmux list-panes`` and read with ``capture-pane``.  Any
-    error (no tmux, no session, not attached) yields ``(False, False)`` so
-    callers can simply OR this with their local terminal state.
+    the two panes of the most recent ``noobia-aria-*`` session.
     """
     if not socket:
         return False, False
@@ -162,7 +293,6 @@ def read_aria_tmux_state(socket: str = ARIA_TMUX_SOCKET) -> tuple:
     ]
     if not aria_sessions:
         return False, False
-    # Most recently created session is the one we are wrapping.
     session = aria_sessions[-1]
     try:
         panes_out = subprocess.run(
@@ -193,7 +323,6 @@ def read_aria_tmux_state(socket: str = ARIA_TMUX_SOCKET) -> tuple:
         elif "dushich" in title.lower():
             helper_text, helper_title = text, title
         else:
-            # Fall back to pane position (0 = Aria, 1 = Dushich helper).
             if index == "0":
                 aria_text, aria_title = text, title
             elif index == "1":
@@ -204,20 +333,12 @@ def read_aria_tmux_state(socket: str = ARIA_TMUX_SOCKET) -> tuple:
 
 
 def read_banshee_tmux_state(socket: str = "default") -> tuple:
-    """Read the live Banshee tmux session (``noobia-banshee-*``) off-screen.
-
-    Returns a ``(banshee_working, dushich_helper_working)`` tuple derived from
-    the two panes of the most recent ``noobia-banshee-*`` session.
-    """
+    """Read the live Banshee tmux session (``noobia-banshee-*``) off-screen."""
     return _read_helper_tmux_state("noobia-banshee-", ("banshee", "antigravity"), socket)
 
 
 def read_gwyn_tmux_state(socket: str = "default") -> tuple:
-    """Read the live Gwyn tmux session (``noobia-gwyn-*``) off-screen.
-
-    Same pane layout as Banshee: Claude Code on the left (pane 0), the
-    Dushich helper monitor on the right (pane 1).
-    """
+    """Read the live Gwyn tmux session (``noobia-gwyn-*``) off-screen."""
     return _read_helper_tmux_state("noobia-gwyn-", ("gwyn", "claude"), socket)
 
 
@@ -313,7 +434,7 @@ def read_dushich_solo_tmux_state() -> bool:
 if _GI_AVAILABLE:
 
     class QuadrantPanel(Gtk.Box):
-        """One terminal + animated avatar sidebar, laid out horizontally."""
+        """One terminal + animated avatar sidebar, with header and reconnect overlay."""
 
         def __init__(
             self,
@@ -322,17 +443,20 @@ if _GI_AVAILABLE:
             sidebar_width: int = DEFAULT_SIDEBAR_WIDTH,
             interval: float = POLL_INTERVAL,
             aria_socket: str = ARIA_TMUX_SOCKET,
+            window: ForgeWindow | None = None,
         ) -> None:
-            Gtk.Box.__init__(self, orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+            super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
             self.spec = dict(spec)
             self.title = spec.get("title", "Quadrant")
             self.agent = spec.get("agent", "Dushich")
             self.helper_agent = spec.get("helper_agent", "")
             self.command = list(spec.get("command") or ["bash"])
+            self.explicit_badge = spec.get("badge", "")
             self.pics = Path(pics_dir)
             self.sidebar_width = int(sidebar_width)
             self.interval = float(interval)
             self.aria_socket = aria_socket
+            self.window = window
 
             self.tracker = StateTracker()
             self.helper_tracker = StateTracker() if self.helper_agent else None
@@ -341,6 +465,46 @@ if _GI_AVAILABLE:
             self.tick = 0
             self._pixbuf_cache: dict = {}
             self._poll_id = None
+            self.is_maximized = False
+
+            # Token badge resolution
+            self.token_badge = resolve_token_badge(self.agent, self.explicit_badge)
+
+            # ---- header bar -----------------------------------------------
+            self.header_event = Gtk.EventBox()
+            self.header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            self.header_box.set_margin_start(8)
+            self.header_box.set_margin_end(6)
+            self.header_box.set_margin_top(3)
+            self.header_box.set_margin_bottom(3)
+
+            self.status_dot = Gtk.Label(label="●")
+            self.status_dot.override_color(
+                Gtk.StateFlags.NORMAL, Gdk.RGBA(0.3, 0.35, 0.4, 1.0)
+            )
+
+            self.title_label = Gtk.Label(label=self.title)
+            self.title_label.set_halign(Gtk.Align.START)
+            self.title_label.set_hexpand(True)
+            self.title_label.override_color(
+                Gtk.StateFlags.NORMAL, Gdk.RGBA(0.8, 0.85, 0.9, 1.0)
+            )
+
+            self.zoom_btn = Gtk.Button(label="⛶")
+            self.zoom_btn.set_relief(Gtk.ReliefStyle.NONE)
+            self.zoom_btn.set_tooltip_text("Zoom Quadrant (Ctrl+Shift+Z or F11)")
+            self.zoom_btn.connect("clicked", self._on_zoom_btn_clicked)
+
+            self.header_box.pack_start(self.status_dot, False, False, 0)
+            self.header_box.pack_start(self.title_label, True, True, 0)
+            self.header_box.pack_start(self.zoom_btn, False, False, 0)
+            self.header_event.add(self.header_box)
+            self.header_event.connect("button-press-event", self._on_header_button_press)
+
+            # ---- content box: terminal + scrollbar + avatar sidebar --------
+            self.content_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+            self.content_box.set_hexpand(True)
+            self.content_box.set_vexpand(True)
 
             # ---- terminal -------------------------------------------------
             self.term = Vte.Terminal()
@@ -357,6 +521,35 @@ if _GI_AVAILABLE:
             self.term.connect("key-press-event", self._on_key_press)
             self.term.connect("child-exited", self._on_child_exited)
 
+            # Reconnect overlay container
+            self.term_overlay = Gtk.Overlay()
+            self.term_overlay.set_hexpand(True)
+            self.term_overlay.set_vexpand(True)
+            self.term_overlay.add(self.term)
+
+            # Clean exit overlay card
+            self.reconnect_box = Gtk.Box(
+                orientation=Gtk.Orientation.VERTICAL, spacing=8
+            )
+            self.reconnect_box.set_halign(Gtk.Align.CENTER)
+            self.reconnect_box.set_valign(Gtk.Align.CENTER)
+            self.reconnect_box.set_margin_start(24)
+            self.reconnect_box.set_margin_end(24)
+            self.reconnect_box.set_margin_top(16)
+            self.reconnect_box.set_margin_bottom(16)
+
+            self.reconnect_label = Gtk.Label(label="⚠️ Session terminated")
+            self.reconnect_label.override_color(
+                Gtk.StateFlags.NORMAL, Gdk.RGBA(0.9, 0.8, 0.4, 1.0)
+            )
+            self.reconnect_btn = Gtk.Button(label="↺ Reconnect / Respawn")
+            self.reconnect_btn.connect("clicked", self._on_reconnect_clicked)
+
+            self.reconnect_box.pack_start(self.reconnect_label, False, False, 0)
+            self.reconnect_box.pack_start(self.reconnect_btn, False, False, 0)
+            self.term_overlay.add_overlay(self.reconnect_box)
+            self.reconnect_box.hide()
+
             # ---- scrollbar ------------------------------------------------
             self.scrollbar = Gtk.Scrollbar(
                 orientation=Gtk.Orientation.VERTICAL,
@@ -372,14 +565,38 @@ if _GI_AVAILABLE:
             self.drawing_area.set_vexpand(True)
             self.drawing_area.connect("draw", self._on_draw)
 
-            self.pack_start(self.term, True, True, 0)
-            self.pack_start(self.scrollbar, False, True, 0)
-            self.pack_start(self.drawing_area, False, True, 0)
+            self.content_box.pack_start(self.term_overlay, True, True, 0)
+            self.content_box.pack_start(self.scrollbar, False, True, 0)
+            self.content_box.pack_start(self.drawing_area, False, True, 0)
 
-        # -- clipboard ------------------------------------------------------
+            self.pack_start(self.header_event, False, False, 0)
+            self.pack_start(self.content_box, True, True, 0)
+
+        # -- zoom & header events ------------------------------------------
+        def _on_zoom_btn_clicked(self, _btn) -> None:
+            if self.window is not None:
+                self.window.toggle_maximize(self)
+
+        def _on_header_button_press(self, _widget, event) -> bool:
+            if event.type == Gdk.EventType._2BUTTON_PRESS:
+                if self.window is not None:
+                    self.window.toggle_maximize(self)
+                return True
+            return False
+
+        def set_zoom_state(self, is_maximized: bool) -> None:
+            self.is_maximized = is_maximized
+            if is_maximized:
+                self.zoom_btn.set_label("❐")
+                self.zoom_btn.set_tooltip_text("Restore Grid (Ctrl+Shift+Z or Escape)")
+            else:
+                self.zoom_btn.set_label("⛶")
+                self.zoom_btn.set_tooltip_text("Zoom Quadrant (Ctrl+Shift+Z or F11)")
+
+        # -- clipboard & zoom shortcut --------------------------------------
         def _on_key_press(self, _term, event) -> bool:
             mask = Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK
-            if event.state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK) == mask:
+            if (event.state & mask) == mask:
                 key = event.keyval
                 if key in (Gdk.KEY_c, Gdk.KEY_C):
                     self.term.copy_clipboard_format(Vte.Format.TEXT)
@@ -387,23 +604,38 @@ if _GI_AVAILABLE:
                 if key in (Gdk.KEY_v, Gdk.KEY_V):
                     self.term.paste_clipboard()
                     return True
+                if key in (Gdk.KEY_z, Gdk.KEY_Z):
+                    if self.window is not None:
+                        self.window.toggle_maximize(self)
+                    return True
+            if event.keyval in (Gdk.KEY_F11,):
+                if self.window is not None:
+                    self.window.toggle_maximize(self)
+                return True
             return False
 
-        # -- terminal lifecycle --------------------------------------------
+        # -- terminal lifecycle & reconnect --------------------------------
         def _on_child_exited(self, _term, status) -> None:
+            self.reconnect_label.set_text(f"Session terminated (code {status})")
+            self.reconnect_box.show_all()
             if self.agent and status != 0:
-                GLib.timeout_add(1500, self._respawn)
+                GLib.timeout_add(2000, self._auto_respawn_if_visible)
                 return
             if self._poll_id is not None:
                 GLib.source_remove(self._poll_id)
                 self._poll_id = None
 
-        def _respawn(self) -> bool:
-            self.spawn()
+        def _auto_respawn_if_visible(self) -> bool:
+            if self.reconnect_box.get_visible():
+                self.spawn()
             return False
+
+        def _on_reconnect_clicked(self, _btn) -> None:
+            self.spawn()
 
         def spawn(self) -> None:
             """Launch the quadrant's command in the terminal (via idle)."""
+            self.reconnect_box.hide()
             argv = self.command or ["bash"]
 
             def _do_spawn() -> bool:
@@ -419,6 +651,7 @@ if _GI_AVAILABLE:
                     None,
                     None,
                 )
+                self.start_polling()
                 return False
 
             GLib.idle_add(_do_spawn)
@@ -491,6 +724,17 @@ if _GI_AVAILABLE:
                 or dushich_working
                 or gwyn_working
             )
+
+            # Update status dot in header bar
+            if primary_working:
+                self.status_dot.override_color(
+                    Gtk.StateFlags.NORMAL, Gdk.RGBA(0.25, 0.85, 0.4, 1.0)
+                )
+            else:
+                self.status_dot.override_color(
+                    Gtk.StateFlags.NORMAL, Gdk.RGBA(0.3, 0.35, 0.4, 1.0)
+                )
+
             new_frame = select_frame_name(
                 self.tracker.update(primary_working, now), self.tick
             )
@@ -507,12 +751,19 @@ if _GI_AVAILABLE:
                 changed = changed or h_frame != self.helper_frame
                 self.helper_frame = h_frame
 
+            # Periodically refresh token quota badge (every ~10 ticks = 4s)
+            if self.tick % 10 == 0:
+                new_badge = resolve_token_badge(self.agent, self.explicit_badge)
+                if new_badge != self.token_badge:
+                    self.token_badge = new_badge
+                    changed = True
+
             self.tick += 1
             if changed:
                 self.drawing_area.queue_draw()
             return True
 
-        # -- sidebar rendering ---------------------------------------------
+        # -- sidebar rendering with token quota badge -----------------------
         def _on_draw(self, area, cr):
             width = max(1, area.get_allocated_width())
             height = max(1, area.get_allocated_height())
@@ -522,6 +773,7 @@ if _GI_AVAILABLE:
                     Gdk.cairo_set_source_pixbuf(cr, rose, 0, 0)
                     cr.paint()
                 return False
+
             has_helper = bool(self.helper_agent)
             layout = compute_sidebar_layout(
                 width, height, aspect_ratio=ASPECT_RATIO, has_helper=has_helper
@@ -529,7 +781,9 @@ if _GI_AVAILABLE:
             y = 0
             panels = [("top_h", "top_w", self.frame, self.agent)]
             if self.helper_agent:
-                panels.append(("helper_h", "helper_w", self.helper_frame, self.helper_agent))
+                panels.append(
+                    ("helper_h", "helper_w", self.helper_frame, self.helper_agent)
+                )
             for h_key, w_key, frame, agent in panels:
                 panel_h = layout[h_key]
                 if agent and panel_h > 0:
@@ -541,13 +795,164 @@ if _GI_AVAILABLE:
                         Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, y)
                         cr.paint()
                         y += panel_h
-            if layout["bottom_h"] > 0 and ROSE_PATH.exists():
-                rose = self._get_pixbuf(
-                    str(ROSE_PATH), layout["bottom_w"], layout["bottom_h"]
-                )
-                Gdk.cairo_set_source_pixbuf(cr, rose, 0, y)
-                cr.paint()
+
+            bottom_h = layout["bottom_h"]
+            if bottom_h > 0:
+                # Render token quota badge directly above Rose on a compact line
+                badge_h = 20 if bottom_h >= 26 else 0
+                if badge_h > 0:
+                    badge_text = self.token_badge or "H/W: --% / --%"
+
+                    # Badge container card/pill
+                    cr.save()
+                    cr.set_source_rgba(0.08, 0.10, 0.13, 0.95)
+                    cr.rectangle(2, y + 1, width - 4, badge_h - 2)
+                    cr.fill_preserve()
+                    cr.set_source_rgba(0.20, 0.24, 0.29, 0.9)
+                    cr.set_line_width(1.0)
+                    cr.stroke()
+
+                    # Render text using Pango layout
+                    pango_layout = PangoCairo.create_layout(cr)
+                    font_desc = Pango.FontDescription("Monospace Bold 8")
+                    pango_layout.set_font_description(font_desc)
+                    pango_layout.set_text(badge_text, -1)
+                    _, extents = pango_layout.get_pixel_extents()
+
+                    tx = max(4, (width - extents.width) // 2)
+                    ty = y + max(1, (badge_h - extents.height) // 2)
+
+                    if "100%" in badge_text and "Local" in badge_text:
+                        cr.set_source_rgb(0.25, 0.85, 0.4)  # green
+                    elif "%" in badge_text and "--" not in badge_text:
+                        cr.set_source_rgb(0.35, 0.65, 0.95)  # blue
+                    else:
+                        cr.set_source_rgb(0.55, 0.60, 0.66)  # dim gray
+
+                    cr.move_to(tx, ty)
+                    PangoCairo.show_layout(cr, pango_layout)
+                    cr.restore()
+
+                    y += badge_h
+                    bottom_h -= badge_h
+
+                if bottom_h > 0 and ROSE_PATH.exists():
+                    rose = self._get_pixbuf(
+                        str(ROSE_PATH), layout["bottom_w"], bottom_h
+                    )
+                    Gdk.cairo_set_source_pixbuf(cr, rose, 0, y)
+                    cr.paint()
             return False
+
+    class ForgeWindow(Gtk.Window):
+        """Top-level Nexus Forge window managing 2x2 grid & quadrant zoom."""
+
+        def __init__(
+            self,
+            title: str,
+            quadrants: dict,
+            pics_dir: str = DEFAULT_PICS_DIR,
+            sidebar_width: int = DEFAULT_SIDEBAR_WIDTH,
+            interval: float = POLL_INTERVAL,
+            aria_socket: str = ARIA_TMUX_SOCKET,
+            left_only: bool = False,
+        ) -> None:
+            super().__init__(title=title)
+            self.base_title = title
+            self.left_only = left_only
+            self.maximized_panel: QuadrantPanel | None = None
+            self.panels: dict[str, QuadrantPanel] = {}
+
+            self.set_default_size(1600, 960)
+            self.maximize()
+            self.connect("destroy", Gtk.main_quit)
+            self.connect("key-press-event", self._on_window_key_press)
+
+            names = quadrant_names(left_only=left_only)
+            for name in names:
+                panel = QuadrantPanel(
+                    quadrants.get(name, DEFAULT_QUADRANTS.get(name, {})),
+                    pics_dir=pics_dir,
+                    sidebar_width=sidebar_width,
+                    interval=interval,
+                    aria_socket=aria_socket,
+                    window=self,
+                )
+                panel.set_hexpand(True)
+                panel.set_vexpand(True)
+                self.panels[name] = panel
+
+            self.grid = Gtk.Grid()
+            self.grid.set_row_homogeneous(True)
+            self.grid.set_column_homogeneous(True)
+            self.grid.set_row_spacing(4)
+            self.grid.set_column_spacing(4)
+
+            if left_only:
+                self.grid.attach(self.panels["top_left"], 0, 0, 1, 1)
+                self.grid.attach(self.panels["bottom_left"], 0, 1, 1, 1)
+            else:
+                self.grid.attach(self.panels["top_left"], 0, 0, 1, 1)
+                self.grid.attach(self.panels["bottom_left"], 0, 1, 1, 1)
+                self.grid.attach(self.panels["top_right"], 1, 0, 1, 1)
+                self.grid.attach(self.panels["bottom_right"], 1, 1, 1, 1)
+
+            self.add(self.grid)
+
+        def _on_window_key_press(self, _win, event) -> bool:
+            mask = Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK
+            if (event.state & mask) == mask and event.keyval in (Gdk.KEY_z, Gdk.KEY_Z):
+                self.toggle_maximize()
+                return True
+            if event.keyval in (Gdk.KEY_F11,):
+                self.toggle_maximize()
+                return True
+            if event.keyval in (Gdk.KEY_Escape,) and self.maximized_panel is not None:
+                self.toggle_maximize()
+                return True
+            return False
+
+        def toggle_maximize(self, panel: QuadrantPanel | None = None) -> None:
+            """Toggle full-window zoom for the given (or focused) quadrant."""
+            if self.maximized_panel is not None:
+                # Restore to 2x2 grid
+                self.grid.set_row_homogeneous(True)
+                self.grid.set_column_homogeneous(True)
+                for p in self.panels.values():
+                    p.show_all()
+                    p.set_zoom_state(False)
+                self.set_title(self.base_title)
+                self.maximized_panel = None
+            else:
+                target = panel
+                if target is None:
+                    # Find focused panel among visible quadrants
+                    for p in self.panels.values():
+                        if p.has_focus() or p.term.has_focus():
+                            target = p
+                            break
+                if target is None:
+                    target = next(iter(self.panels.values()), None)
+                if target is None:
+                    return
+
+                self.grid.set_row_homogeneous(False)
+                self.grid.set_column_homogeneous(False)
+                for p in self.panels.values():
+                    if p is not target:
+                        p.hide()
+                target.set_zoom_state(True)
+                self.maximized_panel = target
+                self.set_title(
+                    f"{self.base_title} - [{target.title}] (Ctrl+Shift+Z or Escape to restore)"
+                )
+
+        def start(self) -> None:
+            for panel in self.panels.values():
+                panel.spawn()
+                panel.start_polling()
+            self.show_all()
+
 else:  # pragma: no cover - GTK unavailable
 
     class QuadrantPanel:  # type: ignore[no-redef]
@@ -557,10 +962,17 @@ else:  # pragma: no cover - GTK unavailable
                 f"{_GI_IMPORT_ERROR!r}"
             )
 
+    class ForgeWindow:  # type: ignore[no-redef]
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError(
+                "GTK3/VTE is not available; nexus-forge GUI cannot start: "
+                f"{_GI_IMPORT_ERROR!r}"
+            )
+
 
 # ---------------------------------------------------------------------------
-# Headless self-test: verify the quadrant table, the layout math, and every
-# agent/Rose pixbuf + a Cairo paint (off-screen, no display required).
+# Headless self-test: verify the quadrant table, config loader, badge logic,
+# layout math, and agent/Rose pixbuf + Cairo text paints.
 # ---------------------------------------------------------------------------
 def _verify_quadrants() -> None:
     assert set(DEFAULT_QUADRANTS) == {
@@ -597,7 +1009,6 @@ def _verify_layout() -> None:
             assert layout["top_h"] >= 1
             if has_helper:
                 assert layout["helper_h"] >= 1
-            # A real sidebar (>=2px) is filled exactly with no wasted rows.
             if total_height >= 2:
                 used = layout["top_h"]
                 if has_helper:
@@ -606,8 +1017,38 @@ def _verify_layout() -> None:
                 assert used == total_height, (has_helper, total_height, layout)
 
 
+def _verify_token_badge() -> None:
+    # Explicit badge takes top precedence
+    assert resolve_token_badge("Aria", explicit_badge="Custom: 42%") == "Custom: 42%"
+    # Dushich Solo is local
+    assert resolve_token_badge("Dushich") == "Local: 100%"
+    # Unknown agent falls back gracefully
+    assert resolve_token_badge("UnknownAgent") == "H/W: --% / --%"
+
+
+def _verify_config_loader() -> None:
+    # Empty / none returns default
+    quads = build_quadrants_table(None)
+    assert set(quads) == {"top_left", "bottom_left", "top_right", "bottom_right"}
+    # Override top_left
+    custom_cfg = {
+        "quadrants": {
+            "top_left": {
+                "title": "Custom Shell",
+                "command": ["/bin/zsh"],
+                "badge": "H/W: 10% / 20%",
+            }
+        }
+    }
+    merged = build_quadrants_table(custom_cfg)
+    assert merged["top_left"]["title"] == "Custom Shell"
+    assert merged["top_left"]["command"] == ["/bin/zsh"]
+    assert merged["top_left"]["badge"] == "H/W: 10% / 20%"
+    assert merged["bottom_left"]["title"] == "Dushich Solo"
+
+
 def _self_test(args: argparse.Namespace) -> int:
-    """Headless smoke test: quadrant table, layout math, pixbufs + Cairo."""
+    """Headless smoke test: quadrant table, config loader, badges, layout, pixbufs + Cairo."""
     if not _GI_AVAILABLE:
         print("self-test FAILED: GTK3/PyGObject not importable", file=sys.stderr)
         return 1
@@ -615,15 +1056,18 @@ def _self_test(args: argparse.Namespace) -> int:
 
     gi.require_version("Gdk", "3.0")
     gi.require_version("GdkPixbuf", "2.0")
-    from gi.repository import GdkPixbuf, Gdk
+    gi.require_version("PangoCairo", "1.0")
+    from gi.repository import GdkPixbuf, Gdk, Pango, PangoCairo
 
     import cairo
 
     _verify_quadrants()
     _verify_layout()
+    _verify_token_badge()
+    _verify_config_loader()
 
     pics = Path(args.pics_dir)
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 10, 10)
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 140, 400)
     ctx = cairo.Context(surface)
     last = None
     for agent in ("Aria", "Banshee", "Dushich", "Gwyn"):
@@ -637,12 +1081,35 @@ def _self_test(args: argparse.Namespace) -> int:
     rose = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(ROSE_PATH), 140, 300, False)
     assert isinstance(rose, GdkPixbuf.Pixbuf), str(ROSE_PATH)
 
+    # Paint avatar, token badge, and Rose into off-screen surface
     ctx.save()
     Gdk.cairo_set_source_pixbuf(ctx, last, 0, 0)
     ctx.paint()
-    Gdk.cairo_set_source_pixbuf(ctx, rose, 0, 100)
+
+    # Draw badge pill
+    y = 210
+    width = 140
+    badge_h = 20
+    ctx.set_source_rgba(0.08, 0.10, 0.13, 0.95)
+    ctx.rectangle(2, y + 1, width - 4, badge_h - 2)
+    ctx.fill_preserve()
+    ctx.set_source_rgba(0.20, 0.24, 0.29, 0.9)
+    ctx.set_line_width(1.0)
+    ctx.stroke()
+
+    # Draw text via PangoCairo
+    pango_layout = PangoCairo.create_layout(ctx)
+    pango_layout.set_font_description(Pango.FontDescription("Monospace Bold 8"))
+    pango_layout.set_text("H/W: 100% / 64%", -1)
+    ctx.set_source_rgb(0.35, 0.65, 0.95)
+    ctx.move_to(10, y + 3)
+    PangoCairo.show_layout(ctx, pango_layout)
+
+    # Draw Rose below badge
+    Gdk.cairo_set_source_pixbuf(ctx, rose, 0, y + badge_h)
     ctx.paint()
     ctx.restore()
+
     print("self-test OK")
     return 0
 
@@ -663,46 +1130,25 @@ def _run_gui(args: argparse.Namespace) -> int:
         )
         return 1
 
-    names = quadrant_names(left_only=args.left_only)
-    window = Gtk.Window(title=args.title)
-    window.set_default_size(1600, 960)
-    window.maximize()
-    window.connect("destroy", Gtk.main_quit)
+    cfg = load_config(args.config)
+    quadrants = build_quadrants_table(cfg)
 
-    panels = {}
-    for name in names:
-        panel = QuadrantPanel(
-            DEFAULT_QUADRANTS[name],
-            pics_dir=args.pics_dir,
-            sidebar_width=args.sidebar_width,
-            interval=args.interval,
-            aria_socket=args.aria_socket,
-        )
-        panel.set_hexpand(True)
-        panel.set_vexpand(True)
-        panels[name] = panel
+    title = args.title or cfg.get("title", "nexus-forge")
+    pics_dir = args.pics_dir or cfg.get("pics_dir", DEFAULT_PICS_DIR)
+    sidebar_width = args.sidebar_width or cfg.get("sidebar_width", DEFAULT_SIDEBAR_WIDTH)
+    interval = args.interval or cfg.get("interval", POLL_INTERVAL)
+    aria_socket = args.aria_socket or cfg.get("aria_socket", ARIA_TMUX_SOCKET)
 
-    grid = Gtk.Grid()
-    grid.set_row_homogeneous(True)
-    grid.set_column_homogeneous(True)
-    grid.set_row_spacing(4)
-    grid.set_column_spacing(4)
-
-    if args.left_only:
-        grid.attach(panels["top_left"], 0, 0, 1, 1)
-        grid.attach(panels["bottom_left"], 0, 1, 1, 1)
-    else:
-        grid.attach(panels["top_left"], 0, 0, 1, 1)
-        grid.attach(panels["bottom_left"], 0, 1, 1, 1)
-        grid.attach(panels["top_right"], 1, 0, 1, 1)
-        grid.attach(panels["bottom_right"], 1, 1, 1, 1)
-    window.add(grid)
-
-    for panel in panels.values():
-        panel.spawn()
-        panel.start_polling()
-
-    window.show_all()
+    window = ForgeWindow(
+        title=title,
+        quadrants=quadrants,
+        pics_dir=pics_dir,
+        sidebar_width=sidebar_width,
+        interval=interval,
+        aria_socket=aria_socket,
+        left_only=args.left_only,
+    )
+    window.start()
     Gtk.main()
     return 0
 
@@ -711,13 +1157,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="nexus-forge: multi-terminal GTK3+VTE window for Noobia agents."
     )
-    parser.add_argument("--title", default="nexus-forge")
-    parser.add_argument("--pics-dir", default=DEFAULT_PICS_DIR)
-    parser.add_argument("--sidebar-width", type=int, default=DEFAULT_SIDEBAR_WIDTH)
-    parser.add_argument("--interval", type=float, default=POLL_INTERVAL)
+    parser.add_argument("--title", default=None)
+    parser.add_argument("--pics-dir", default=None)
+    parser.add_argument("--sidebar-width", type=int, default=None)
+    parser.add_argument("--interval", type=float, default=None)
     parser.add_argument(
         "--aria-socket",
-        default=ARIA_TMUX_SOCKET,
+        default=None,
         help="tmux socket that hosts the noobia-aria-* sessions",
     )
     parser.add_argument(
@@ -725,9 +1171,17 @@ def main() -> int:
         action="store_true",
         help="show only the two left quadrants (Aria+Dushich, Dushich Solo)",
     )
+    parser.add_argument(
+        "--config",
+        "-c",
+        default=None,
+        help="path to custom JSON configuration file",
+    )
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     if args.self_test:
+        if args.pics_dir is None:
+            args.pics_dir = DEFAULT_PICS_DIR
         return _self_test(args)
     return _run_gui(args)
 

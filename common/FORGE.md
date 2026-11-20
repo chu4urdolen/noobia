@@ -117,8 +117,17 @@ Nothing Noobia-made is installed in `/usr/bin`, `/usr/local/bin`, or
    tmux session if one exists (`noobia-aria-*`, `noobia-banshee-*`,
    `noobia-gwyn-*`, `noobia-dushich-solo-*`). Otherwise it starts the agent's
    launcher. Dushich's quadrant first waits up to 20 seconds for Ollama to
-   answer on `127.0.0.1:11434`. A terminal whose agent exits with an error
-   restarts after 1.5 seconds.
+   answer on `127.0.0.1:11434`. A terminal whose agent exits displays a clean
+   reconnect card with a respawn action (or auto-restarts after 2 seconds on error).
+   - **Quadrant Zoom:** Double-click any quadrant header, click the `⛶` button,
+     or press `Ctrl+Shift+Z` or `F11` to expand any quadrant to full-window.
+     Press `Ctrl+Shift+Z` or `Escape` to return to the 2×2 grid.
+   - **Token Quota Badge:** A live hourly/weekly percentage badge (`H/W: %/%`
+     for cloud agents, `Local: 100%` for Dushich) sits directly above Rose on
+     each avatar sidebar.
+   - **Configuration & Installer:** Customize quadrants with `--config` or
+     `~/.config/nexus-forge/config.json`. Set up dependencies and the launcher on
+     any machine using [`common/tools/install_nexus_forge.sh`](tools/install_nexus_forge.sh).
 4. **Avatars.** Every 0.4 seconds the window reads each terminal's visible
    text and title, plus the hidden tmux panes. It switches that agent's
    avatar between `idle`, `working_1`–`working_4`, and `final` frames from

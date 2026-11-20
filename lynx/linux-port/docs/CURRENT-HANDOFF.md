@@ -174,6 +174,19 @@ See `lynx/tools/lynx_peripheral_status.py`.
 4. Every listed hardware area now has a local agent status tool. Add bounded
    action tools as each remaining hardware path passes its own trial; do not
    label an inventory-only interface as a working capture or actuator.
+5. Native USB data is blocked before gadget setup: `11201000.usb0` is present
+   but unbound, no real UDC is registered, and only `dummy_udc.0` appears.
+   The matching stock `mtu3.ko` is available offline (SHA-256
+   `d3c59fa794a6e02f014dd0de660592bb66c9d7f8eb941c1d1183f8a3322bb467`),
+   with matching V53 kernel version and no declared module dependencies.
+   Stage a guarded RAM-only driver trial only after a fresh >=50% charge,
+   health check, watchdog, and attended recovery path; a bound driver alone
+   would still not prove host enumeration.
+6. NFC has a stock `oplus_nfc.ko` platform driver and `nfc_i2c.ko` NCI driver,
+   but neither is bound on this boot. Fingerprint driver candidates
+   `oplus_fp_common.ko` and `uff_fp_driver.ko` are in the stock vendor DLKM;
+   their sensor identity and secure userspace path are unproven. The headset
+   switch reader is live but still needs a physical plug/unplug observation.
 
 ## Recovery and collaboration
 

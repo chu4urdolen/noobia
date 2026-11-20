@@ -19,6 +19,11 @@ charging V53 Alpine boot without restarting services. It refuses existing
 targets, verifies hashes and live agent execution, and removes newly installed
 files if verification fails. `test_lynx_platform_status.py` checks the offline
 status semantics.
+`lynx_peripheral_status.py` and four more agent wrappers report NFC,
+fingerprint, and headset switch state without activating them. The headset
+reader uses the kernel's read-only EVIOCGSW input ioctl. Its current zero
+switch state is a live read, not a validated insertion test. The additive
+installer is `agent/install_peripheral_status_tools.py`.
 
 ## V53 Alpine, V50 recovery, and connectivity
 

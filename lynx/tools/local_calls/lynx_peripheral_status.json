@@ -1,0 +1,1 @@
+{"name":"lynx_peripheral_status","description":"Entity: Lynx. Read-only status for NFC, fingerprint, and headset. Interface evidence does not validate function.","inputSchema":{"type":"object","properties":{},"required":[],"additionalProperties":false},"timeout":5}

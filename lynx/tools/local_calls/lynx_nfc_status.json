@@ -1,0 +1,1 @@
+{"name":"lynx_nfc_status","description":"Entity: Lynx. Read-only status for the nfc. Interface evidence does not validate function.","inputSchema":{"type":"object","properties":{},"required":[],"additionalProperties":false},"timeout":5}

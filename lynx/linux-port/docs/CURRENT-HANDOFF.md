@@ -119,6 +119,15 @@ Bluetooth, and GNSS tools remain the action or focused status routes. See
 `lynx/tools/lynx_platform_status.py` and
 `lynx/tools/agent/install_platform_status_tools.py`. Dushich reconciled forge
 notes #13/#15 with this handoff and added missing prior facts in note #16.
+Four more read-only tools now cover NFC, fingerprint, and headset status,
+bringing the catalog to 32 on the same healthy boot. NFC has an unbound
+`odm:nfc_chipset` platform node and no known device node; fingerprint has no
+recognized interface; the MT6338 headset input reports all switch bits off
+via read-only ioctl. None is functionally validated. The USB controller
+`11201000.usb0` exists but has no bound `mtu3` driver; only `dummy_udc.0`
+is registered. The exact stock `mtu3.ko` has matching V53 kernel version and
+no declared module dependencies, but a guarded live load has not been run.
+See `lynx/tools/lynx_peripheral_status.py`.
 
 1. GNSS emits NMEA but has not produced a position fix. Bluetooth has passed
    HCI and authenticated NRP/1 GATT trials, but its automatic and long-uptime

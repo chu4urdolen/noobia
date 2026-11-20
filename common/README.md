@@ -1,6 +1,7 @@
 # Common Noobia resources
 
-The shared [coding agent instructions](AGENTS.md), readable
+The [Nexus Forge](FORGE.md) guide, the shared
+[coding agent instructions](AGENTS.md), readable
 [contact book](CONTACT-BOOK.md), [Nexus inference notes](NEXUS-INFERENCE.md),
 and [Linux service sources](services/README.md) live here.
 Inhabitant-specific work belongs in the

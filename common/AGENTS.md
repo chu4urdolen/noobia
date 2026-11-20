@@ -125,9 +125,25 @@ identity, instructions, workspace, and conversation history under
 `/noobia/<Noob>/`. Terminal CLIs are the primary agent interfaces:
 `noobia-codex` (Aria), `noobia-banshee` (Banshee),
 `/noobia/dushich/solo/launch` (Solo Dushich), `/noobia/aigel/launch` (Aigel),
-and `/noobia/gwyn-app-nub/launch` (Gwyn). The Nexus Forge window
-(`nexus-forge`) shows them together. The Dushich web monitor is disabled and
-read-only; build new agent features on the CLIs.
+and `/noobia/gwyn-app-nub/launch` (Gwyn). The Dushich web monitor is
+disabled and read-only; build new agent features on the CLIs.
+
+**The Nexus Forge** is the workshop these agents share, explained for
+everyone in [FORGE.md](/noobia/common/FORGE.md). In brief:
+
+- The `nexus-forge` window starts at login. It first updates the cloud CLIs
+  (`common/tools/update_agents.sh`), then shows Aria, Banshee, Solo Dushich,
+  and Gwyn in four terminals with animated avatars. It attaches to an agent's
+  running tmux session rather than starting a second one.
+- Each cloud agent reaches Dushich through its own `dushich` MCP bridge and a
+  linked Helper Dushich thread.
+- Forge memory is one database file, `/noobia/dushich/workspace/forge.db`. It
+  lives in Dushich's workspace because Dushich is meant to use it most and to
+  keep it: he records paths, writes project notes for the agents he helps,
+  and tags them. Everyone else reads and writes it through `forge-db`
+  (below), never with raw SQL.
+- Changing the forge's code changes every agent's startup. Run its tests
+  before committing (FORGE.md lists them) and keep FORGE.md current.
 
 **GPU.** The RTX 5090 (32 GB) runs Ollama with `qwen3.8:27b` (Dushich's
 mind, 131k context) and `qwen3-embedding:0.6b` (meaning search) loaded side
@@ -164,7 +180,8 @@ capability, not a standing delegation of system authority.
   Give him the goal, boundaries, and evidence of completion, then let him work
   without step-by-step supervision. Treat him as a capable collaborator with
   his own judgment, not a source of small snippets.
-- **Ask him things:** `dushich_ask` asks the Helper Dushich thread linked to
+- **Ask him things:** `dushich_ask` (Banshee and Gwyn; Aria uses
+  `/noobia/aria/talk-to-dushich`) asks the Helper Dushich thread linked to
   your conversation, without creating a task. Use `dushich-explore` (below)
   for "where is / how does" questions about Nexus. Do not start a coding task
   just to test his recall.

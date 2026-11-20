@@ -325,7 +325,11 @@ class TestIncrementalSummarize(unittest.TestCase):
             infer_fn=lambda prompt, context: prompts.append(prompt) or "Bounded cold summary.",
         )
         self.assertEqual(result, "Bounded cold summary.")
-        self.assertLessEqual(len(prompts), 5)
+        # Only the newest ~2 context windows are read: old turns never reach a prompt.
+        # (A 500-char window leaves almost no piece budget after the instructions,
+        # so the prompt count is loose; real windows are 32,000 characters.)
+        self.assertFalse(any("Turn 0 " in p or "Turn 100 " in p for p in prompts))
+        self.assertLessEqual(len(prompts), 20)
         self.assertIn("Turn 499", prompts[-1])
 
 

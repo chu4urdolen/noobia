@@ -9,6 +9,10 @@ at `private/codex`. This is full host authority, including Aria's existing
 passwordless sudo; use it only for solo work. The paired Dushich handoff
 runner now has full Codex and Unix account access too.
 
+This directory also holds the [Nexus Forge](../../common/FORGE.md) window
+(`nexus_forge.py`, its avatar helpers, and the `nexus-forge.desktop`
+autostart source).
+
 Solo role instructions are in [`AGENTS.md`](AGENTS.md), linked into
 `private/codex/AGENTS.md`. The helper has separate instructions in
 [`../coding/AGENTS.md`](../coding/AGENTS.md). The shared workspace no longer
@@ -21,7 +25,7 @@ or `--attach ID` for an earlier or running conversation. The earlier solo
 conversation was copied into the separate Codex home so it can resume with
 its history; the original transcript remains in Dushich's home as a backup.
 
-The Dushich web page has a **Solo Dushich** panel with the same conversation
+The disabled Dushich web page has a **Solo Dushich** panel with the same conversation
 selector and input. It reads visible user and assistant messages from
 Dushich's Codex transcripts. Paired Aria/Banshee handoffs continue to appear
 in their own panels; the solo panel excludes known handoff threads.

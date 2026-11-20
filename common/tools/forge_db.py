@@ -59,7 +59,10 @@ CREATE TABLE IF NOT EXISTS nexus_paths (
     updated_by TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     present INTEGER,
-    checked_at TEXT);
+    checked_at TEXT,
+    hit_count INTEGER NOT NULL DEFAULT 0,
+    last_hit_at TEXT,
+    last_hit_by TEXT);
 CREATE TABLE IF NOT EXISTS project_notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_name TEXT NOT NULL,
@@ -99,6 +102,13 @@ def connect() -> sqlite3.Connection:
     db = sqlite3.connect(DB, timeout=15)
     db.row_factory = sqlite3.Row
     db.executescript(SCHEMA)
+    # Atlases created before hit counting gain the columns in place.
+    columns = {r["name"] for r in db.execute("PRAGMA table_info(nexus_paths)")}
+    for column, spec in (("hit_count", "INTEGER NOT NULL DEFAULT 0"), ("last_hit_at", "TEXT"),
+                         ("last_hit_by", "TEXT")):
+        if column not in columns:
+            db.execute(f"ALTER TABLE nexus_paths ADD COLUMN {column} {spec}")
+    db.commit()
     return db
 
 
@@ -335,6 +345,25 @@ def path_set(db, path, description, kind, owner, tags, project, by) -> dict:
     return dict(db.execute("SELECT * FROM nexus_paths WHERE path=?", (path,)).fetchone())
 
 
+def path_hit(db, path: str, by: str) -> dict:
+    """Count one hit for a recorded path that still exists; refresh its presence either way.
+
+    A hit means an agent looked the path up and it was really there. Rows that
+    stay at zero hits for a long time are candidates for retirement.
+    """
+    path = clean_path(path)
+    if not db.execute("SELECT 1 FROM nexus_paths WHERE path=?", (path,)).fetchone():
+        return {"path": path, "hit": False, "reason": "not recorded"}
+    present, stamp = os.path.lexists(path), now()
+    db.execute("UPDATE nexus_paths SET present=?, checked_at=?, hit_count=hit_count+?, "
+               "last_hit_at=CASE WHEN ? THEN ? ELSE last_hit_at END, "
+               "last_hit_by=CASE WHEN ? THEN ? ELSE last_hit_by END WHERE path=?",
+               (int(present), stamp, int(present), int(present), stamp, int(present), by, path))
+    row = db.execute("SELECT hit_count FROM nexus_paths WHERE path=?", (path,)).fetchone()
+    return {"path": path, "hit": present, "hits": row["hit_count"],
+            **({} if present else {"reason": "missing on disk; fix or remove the row"})}
+
+
 def note_add(db, project, text, paths, by) -> dict:
     if not db.execute("SELECT 1 FROM projects WHERE project_name=?", (project,)).fetchone():
         raise ValueError(f"Unknown project: {project} (add it with `projects add`)")
@@ -372,9 +401,14 @@ def render(value) -> str:
         return f"[{value['source']} {value['score']}] {value['text']}"
     if "name" in value and "uses" in value:
         return f"#{value['name']} ({value['uses']}): {value['description']}"
+    if "path" in value and "hit" in value:
+        if value["hit"]:
+            return f"hit {value['path']} (hits={value['hits']})"
+        return f"no hit {value['path']}: {value['reason']}"
     if "path" in value and "kind" in value:
         mark = "" if value.get("present", 1) else " (MISSING)"
-        meta = ", ".join(x for x in (value["kind"], value.get("owner") or "", value.get("project") or "") if x)
+        meta = ", ".join(x for x in (value["kind"], value.get("owner") or "", value.get("project") or "",
+                                     f"hits={value['hit_count']}" if "hit_count" in value else "") if x)
         return f"{value['path']}{mark} [{meta}] {value['description']}{marks}"
     if "note" in value:
         cited = json.loads(value["paths"]) if isinstance(value["paths"], str) else value["paths"]
@@ -403,7 +437,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("path", help="read or record a Nexus path")
     pa = p.add_subparsers(dest="action", required=True)
-    pa.add_parser("get").add_argument("path")
+    pg = pa.add_parser("get", help="read one recorded path (counts a hit when it exists)")
+    pg.add_argument("path")
+    ph = pa.add_parser("hit", help="count a hit: you looked a path up and it was really there")
+    ph.add_argument("path", nargs="+")
+    ph.add_argument("--by", required=True, help="your name, e.g. Dushich")
     ps = pa.add_parser("set")
     ps.add_argument("path")
     ps.add_argument("--description", "-d", required=True)
@@ -420,6 +458,8 @@ def main(argv: list[str] | None = None) -> int:
     pl = pa.add_parser("list")
     pl.add_argument("--prefix", default="/")
     pl.add_argument("--limit", type=int, default=200)
+    pl.add_argument("--sort", choices=("path", "hits"), default="path",
+                    help="hits: least-hit first, oldest last hit first (retirement candidates)")
     pc = pa.add_parser("check", help="re-check that recorded paths exist")
     pc.add_argument("--prefix", default="/")
 
@@ -474,6 +514,7 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     db = None
+    failed = False
     try:
         db = connect()
         if args.cmd == "search":
@@ -486,7 +527,15 @@ def main(argv: list[str] | None = None) -> int:
             row = db.execute("SELECT * FROM nexus_paths WHERE path=?", (path,)).fetchone()
             if not row:
                 raise ValueError("Path is not recorded; try `forge-db search`")
+            path_hit(db, path, "(path get)")
+            db.commit()
+            row = db.execute("SELECT * FROM nexus_paths WHERE path=?", (path,)).fetchone()
             result = {**dict(row), "tag_list": tag_map(db).get(("path", path), [])}
+        elif args.cmd == "path" and args.action == "hit":
+            by = require(args.by, "--by", 80)
+            result = [path_hit(db, p, by) for p in args.path]
+            db.commit()
+            failed = not all(r["hit"] for r in result)
         elif args.cmd == "path" and args.action == "set":
             for tag in args.tag:  # validate before writing anything
                 if not db.execute("SELECT 1 FROM tags WHERE name=?", (tag_name(tag),)).fetchone():
@@ -506,8 +555,9 @@ def main(argv: list[str] | None = None) -> int:
             result = f"removed {deleted} row(s)"
         elif args.cmd == "path" and args.action == "list":
             prefix = clean_path(args.prefix)
+            order = "hit_count, last_hit_at IS NOT NULL, last_hit_at, path" if args.sort == "hits" else "path"
             result = [dict(r) for r in db.execute(
-                "SELECT * FROM nexus_paths WHERE path=? OR path LIKE ? ORDER BY path LIMIT ?",
+                f"SELECT * FROM nexus_paths WHERE path=? OR path LIKE ? ORDER BY {order} LIMIT ?",
                 (prefix, prefix.rstrip("/") + "/%", args.limit))]
         elif args.cmd == "path" and args.action == "check":
             prefix = clean_path(args.prefix)
@@ -616,7 +666,7 @@ def main(argv: list[str] | None = None) -> int:
         if db is not None:
             db.close()
     print(json.dumps(result, indent=1, default=str) if args.json else render(result))
-    return 0
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

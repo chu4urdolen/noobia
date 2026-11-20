@@ -304,6 +304,8 @@ forge-db project list
 forge-db project get Lynx                    # description, its paths, recent notes
 forge-db note add Lynx "V53 boots; USB console still unproven" --path /noobia/lynx --by Aria
 forge-db path check --prefix /noobia/lynx    # flag recorded paths that vanished
+forge-db path hit /noobia/rose/rose_composer --by Gwyn   # a found path was right: count it
+forge-db path list --prefix /noobia --sort hits          # least-used paths first
 forge-db tag list                            # vocabulary with usage counts
 forge-db tag show SECURITY                   # every project and path carrying it
 forge-db search --tag ROSE --tag AUDIO       # filter by tags, optionally with words
@@ -312,7 +314,10 @@ forge-db tag add MUSIC -d "Songs, beat grids, and sound for performances" --by G
 forge-db --json changes --since 2026-11-18T20:00:00+00:00
 ```
 
-`path set` also takes `--tag NAME` (repeatable). Its `-t` / `--keywords`
+Atlas rows can go stale. Check a found path briefly before relying on it,
+then count it with `path hit` (`path get` counts too). A hit needs the path to
+exist. Hits never change `updated_at`, and `--sort hits` lists rarely used
+rows that may be ready to retire. `path set` also takes `--tag NAME` (repeatable). Its `-t` / `--keywords`
 option is free-text search words, not curated tags. `--by` is required on
 every write: use your own name. Never store secrets or
 key contents in a description. Add projects with `forge-db project add` only

@@ -31,6 +31,12 @@ Noobia remembers in `/noobia/dushich/workspace/forge.db` through the shared
 
 * **Before searching Nexus, ask the atlas:** `forge-db search <words>`. It
   matches words and meaning, across paths, projects, and notes.
+* **An atlas path may be wrong.** It can be stale, moved, or badly described.
+  Before you rely on one, check it briefly: `ls -ld PATH`, or `head`/`sed -n`
+  for a file, enough to see it is what the description says. If it is right,
+  count the hit: `forge-db path hit PATH --by Dushich`. Hit counts show which
+  paths are actually used and help retire old ones later. If it is wrong, fix
+  the row with `forge-db path set`, or remove it with `forge-db path remove`.
 * **When you find or confirm something important, record it** so nobody has
   to look again:
   `forge-db path set PATH -k KIND -o OWNER -d "what it is" -t "tags" [--project NAME] --by Dushich`

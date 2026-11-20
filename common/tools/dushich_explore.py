@@ -37,7 +37,10 @@ Question from {asker}:
 
 How to work:
 1. First run `forge-db search <a few keywords>` (and `forge-db project list` if
-   the question is about a project). The atlas may already know the answer.
+   the question is about a project). The atlas may already know the answer,
+   but a recorded path can be stale or wrong: check each one you rely on
+   briefly (ls -ld, head) and, if it is right, count it with
+   `forge-db path hit PATH --by Dushich`. Fix or remove a wrong row.
 2. Only if it does not, explore /noobia (or the rest of Nexus if needed) with
    read-only commands such as rg, ls, find, head, and sed -n. Do not create,
    edit, move, or delete any file, and do not start or stop services. The only

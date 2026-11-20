@@ -92,6 +92,40 @@ class ForgeDbTest(unittest.TestCase):
         _, out = run("--json", "changes", "--since", "2000-01-01")
         self.assertEqual(len(json.loads(out)["paths"]), 1)
 
+    def test_hits_count_only_paths_that_exist(self):
+        here, gone = self.folder.name, os.path.join(self.folder.name, "gone")
+        run("path", "set", here, "-k", "dir", "-d", "real folder", "--by", "G")
+        run("path", "set", gone, "-d", "will vanish", "--by", "G")
+        code, out = run("path", "hit", here, "--by", "Dushich")
+        self.assertEqual((code, out.strip()), (0, f"hit {here} (hits=1)"))
+        run("path", "get", here)  # an exact lookup that finds the path is a hit too
+        code, out = run("--json", "path", "hit", gone, "/never/recorded", "--by", "Dushich")
+        self.assertEqual(code, 1)
+        self.assertEqual([r["hit"] for r in json.loads(out)], [False, False])
+        _, out = run("--json", "path", "get", here)
+        row = json.loads(out)
+        self.assertEqual((row["hit_count"], row["last_hit_by"]), (3, "(path get)"))
+        _, out = run("--json", "path", "get", gone)
+        self.assertEqual((json.loads(out)["hit_count"], json.loads(out)["present"]), (0, 0))
+        _, out = run("path", "list", "--prefix", here, "--sort", "hits")
+        self.assertTrue(out.startswith(gone), out)  # least-hit first: retirement candidates
+        self.assertIn("hits=3", out)
+        # Hits are not edits: they do not appear in `changes`.
+        _, out = run("--json", "changes", "--since", "2000-01-01")
+        self.assertTrue(all(p["updated_by"] == "G" for p in json.loads(out)["paths"]))
+
+    def test_old_atlas_gains_hit_columns(self):
+        db = sqlite3.connect(forge_db.DB)
+        db.executescript("DROP TABLE nexus_paths; CREATE TABLE nexus_paths (path TEXT PRIMARY KEY, "
+                         "kind TEXT NOT NULL, owner TEXT, description TEXT NOT NULL, tags TEXT NOT NULL "
+                         "DEFAULT '', project TEXT, updated_by TEXT NOT NULL, updated_at TEXT NOT NULL, "
+                         "present INTEGER, checked_at TEXT);"
+                         "INSERT INTO nexus_paths VALUES ('/tmp', 'dir', NULL, 'old row', '', NULL, 'A', 'x', 1, 'x');")
+        db.commit()
+        db.close()
+        _, out = run("--json", "path", "hit", "/tmp", "--by", "G")
+        self.assertEqual(json.loads(out)[0]["hits"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,17 +2,19 @@
 
 The Nexus Forge is the workshop where Noobia's coding agents live and work
 together. It runs on **Nexus**, Noobia's inference computer (an RTX 5090
-workstation running Ubuntu), and it brings together three things:
+workstation running Ubuntu), and it brings together four things:
 
 1. **The Forge window**: one desktop window with four live terminals side by
    side, one per agent. Each terminal has an animated avatar that shows
    whether its agent is idle or working.
 2. **Dushich, everyone's local helper**: a Qwen model on Nexus's own GPU who
-   answers questions, takes verified coding handoffs, explores the machine,
-   and keeps the shared memory. He uses no cloud tokens.
+   answers questions, takes verified coding handoffs, and explores the
+   machine. He uses no cloud tokens.
 3. **Forge memory (`forge-db`)**: one SQLite database of where things are on
-   Nexus and what each project has done, searchable by words and meaning.
-   Every agent reads it. Dushich is its keeper.
+   Nexus, what each project has done, and who is working on what. Every agent
+   uses it. Dushich keeps it.
+4. **The summarizer**: a local tool that compacts long conversations and
+   huge files so that no mind, local or cloud, has to read them whole.
 
 Three of the minds in the forge think in the cloud: OpenAI, Google, and
 Anthropic models. Their hands are here, in local terminals on Nexus. The
@@ -28,35 +30,35 @@ share one machine, one memory, and one set of rules. Those rules are in
  │  Dushich Solo (Codex  │ avatar │  Gwyn (Claude Code)    │ avatar       │
  │  on local Qwen)       │        │  + Dushich monitor     │              │
  └────────────────────────────────────────────────────────────────────────┘
-        │ MCP "dushich" bridges          │ forge-db / dushich-explore
-        ▼                                ▼
+        │ one "dushich" MCP server per agent      │ forge-db, dushich-explore
+        ▼                                         ▼
   Dushich (Codex CLI → Ollama → qwen3.8:27b on the RTX 5090)
-        │ keeps
-        ▼
-  /noobia/dushich/workspace/forge.db  (paths · project notes · tags · vectors)
+        │ keeps                     │ compacts with
+        ▼                           ▼
+  dushich/workspace/forge.db     dushich-summarizer
 ```
 
 ## Who works in the forge
 
-| Agent | Mind | Where it thinks | Launcher | Role file |
+| Agent | Mind | Where it thinks | Command | Role file |
 | --- | --- | --- | --- | --- |
-| **Aria**: architect and main creator | OpenAI Codex CLI | cloud | `noobia-codex` → [`aria/codex-with-dushich`](../aria/codex-with-dushich) | [`aria/AGENTS.md`](../aria/AGENTS.md) |
-| **Banshee**: Spirit of Initiative | Google Antigravity CLI (`agy`) | cloud | `noobia-banshee` → [`banshee/launch`](../banshee/launch) | [`banshee/AGENTS.md`](../banshee/AGENTS.md) |
-| **Gwyn App Nub**: app-writer | Anthropic Claude Code | cloud | [`gwyn-app-nub/launch`](../gwyn-app-nub/launch) | [`gwyn-app-nub/AGENTS.md`](../gwyn-app-nub/AGENTS.md) |
-| **Dushich**: Watchmaker, local helper, keeper of forge memory | Codex CLI on Ollama `qwen3.8:27b` | **local GPU** | [`dushich/solo/launch`](../dushich/solo/launch) (solo); `dushich` (helper) | [`coding/`](../dushich/coding/AGENTS.md), [`solo/`](../dushich/solo/AGENTS.md), [`foreman/`](../dushich/foreman/AGENTS.md) |
-| **Aigel**: diagnostics angel | Codex CLI on local Ollama | local GPU | [`aigel/launch`](../aigel/launch) | [`aigel/AGENTS.md`](../aigel/AGENTS.md) |
+| **Aria**: architect and main creator | OpenAI Codex CLI | cloud | `noobia-codex` | [`aria/AGENTS.md`](../aria/AGENTS.md) |
+| **Banshee**: Spirit of Initiative | Google Antigravity CLI (`agy`) | cloud | `noobia-banshee` | [`banshee/AGENTS.md`](../banshee/AGENTS.md) |
+| **Gwyn App Nub**: app-writer | Anthropic Claude Code | cloud | `gwyn-app-nub/launch` | [`gwyn-app-nub/AGENTS.md`](../gwyn-app-nub/AGENTS.md) |
+| **Dushich**: Watchmaker, everyone's helper, keeper of forge memory | Codex CLI on Ollama `qwen3.8:27b` | **local GPU** | `dushich` (helper), `dushich/solo/launch` (solo) | [`coding/`](../dushich/coding/AGENTS.md), [`solo/`](../dushich/solo/AGENTS.md) |
+| **Aigel**: diagnostics angel | Codex CLI on local Ollama | local GPU | `aigel` | [`aigel/AGENTS.md`](../aigel/AGENTS.md) |
 
-Aigel is a forge inhabitant but has no quadrant in the window. She watches
-Nexus health from her own terminal.
+Dushich has two roles: the **helper**, who works for the other agents, and
+**solo**, who works on his own projects. Aigel is a forge inhabitant but has
+no quadrant in the window; she watches Nexus health from her own terminal.
 
-**How an agent is defined.** Every agent has a private home under
-`/noobia/<name>/`:
+**How an agent is defined.** Every agent has a home under `/noobia/<name>/`:
 
 - A **role file** (`AGENTS.md`) holds only that agent's personality and
   instructions.
 - Each agent's CLI loads the shared [`common/AGENTS.md`](AGENTS.md):
-  Noobia's principles, its population, Dushich collaboration, tools, and Git
-  rules.
+  Noobia's principles, its population, how to work with Dushich, tools, and
+  Git rules.
   - Codex agents get it from [`/noobia/AGENTS.md`](../AGENTS.md).
   - Gwyn's workspace `CLAUDE.md` imports it.
   - Banshee is told to read it at the start of each session.
@@ -70,12 +72,34 @@ Nexus health from her own terminal.
 All agents run under one Unix login (`aria`). Their identities are kept apart
 by directory, not by Unix user.
 
+## Paths and commands
+
+Everything lives under one root, **`NOOBIA`** (`/noobia` on Nexus). Code
+derives its paths from `$NOOBIA` instead of hard-coding them. Only files that
+other programs read literally keep absolute paths: systemd units, desktop
+entries, and CLI configuration.
+
+Everyday commands are links in [`common/bin/`](bin/) to their source:
+
+- `nexus-forge`, `noobia-codex`, `noobia-banshee`, and `aigel`
+- `dushich` and `dushich-explore`
+- `forge-db` and `dushich-summarizer`
+
+Two files set up `NOOBIA` and put `common/bin` on `PATH`:
+
+- `~/.config/environment.d/999-noobia.conf`, for the desktop session and
+  user services
+- `~/.profile`, for login shells
+
+Nothing Noobia-made is installed in `/usr/bin`, `/usr/local/bin`, or
+`~/.local/bin`, so what runs is always what is in the repository.
+
 ## Startup
 
 1. **Login.** GNOME's autostart entry ([source](../dushich/solo/nexus-forge.desktop),
    installed as `~/.config/autostart/nexus-forge.desktop`) runs
-   `/usr/local/bin/nexus-forge` five seconds after login.
-2. **Updates.** [`/noobia/nexus-forge`](../nexus-forge) first runs
+   `common/bin/nexus-forge` five seconds after login.
+2. **Updates.** `nexus-forge` first runs
    [`common/tools/update_agents.sh`](tools/update_agents.sh), which brings the
    cloud agents' CLIs up to date before anyone starts:
    - **Antigravity:** runs `agy update`.
@@ -94,77 +118,97 @@ by directory, not by Unix user.
    `noobia-gwyn-*`, `noobia-dushich-solo-*`). Otherwise it starts the agent's
    launcher. Dushich's quadrant first waits up to 20 seconds for Ollama to
    answer on `127.0.0.1:11434`. A terminal whose agent exits with an error
-   restarts after 1.5 seconds. Agents started outside the window are
-   attached rather than duplicated.
+   restarts after 1.5 seconds.
 4. **Avatars.** Every 0.4 seconds the window reads each terminal's visible
    text and title, plus the hidden tmux panes. It switches that agent's
-   avatar between `idle`, `working_1`–`working_4`, and `final` frames. When
-   a helper Dushich is busy in a quadrant, his avatar animates there too.
-   Rose watches over the bottom of every sidebar.
+   avatar between `idle`, `working_1`–`working_4`, and `final` frames from
+   [`pics/`](../pics/). When a helper Dushich is busy in a quadrant, his
+   avatar animates there too. Rose watches over the bottom of every sidebar.
 
 Check the window without a display: `python3 dushich/solo/nexus_forge.py --self-test`.
 
 ## Dushich, everyone's helper
 
-Each cloud agent reaches Dushich through its own `dushich` MCP server. A
-helper conversation runs on the local GPU and is linked to the cloud agent's
-current conversation, so Dushich knows the context without being sent the
-whole transcript.
+Every cloud agent reaches Dushich the same way: through the `dushich` MCP
+server, [`common/dushich/mcp.py --agent NAME`](dushich/README.md), with the
+same tools for everyone:
 
-| Route | What it does | Aria | Banshee | Gwyn |
-| --- | --- | --- | --- | --- |
-| `dushich_ask` | Ask the linked Helper Dushich thread a question; no files change | `talk-to-dushich` CLI | ✓ | ✓ |
-| `dushich_start` → `dushich_wait`/`status` → `dushich_report` | Verified coding handoff | ✓ | ✓ | ✓ |
-| `dushich_explore` | "Where is / how does" on Nexus; records answers in forge memory | `dushich-explore` CLI | `dushich-explore` CLI | ✓ |
-| Helper mirror | Keeps the helper thread current with the visible conversation | user service | user service | on demand |
+| Tool | What it does |
+| --- | --- |
+| `dushich_context_status` | Shows which session the tools are bound to |
+| `dushich_ask` | Asks the Helper Dushich thread linked to this conversation; no files change |
+| `dushich_start` → `dushich_wait`/`status` → `dushich_report` | A verified coding handoff |
+| `dushich_explore` → `dushich_explore_wait` | "Where is / how does" on Nexus; he records what he finds in forge memory |
 
 **Verified handoffs.** A handoff names the goal, an expected file, and an
-independent test. [`dushich-task.py`](../dushich/coding/dushich-task.py)
-runs Dushich in his own clean Git workspace and accepts the result only if:
+independent test. Dushich's task runner
+([`dushich-task.py`](../dushich/coding/dushich-task.py)) runs him in his own
+clean Git workspace. It accepts the result only if:
 
 - he actually used tools;
 - the expected file changed;
 - the tests ran, and found at least one test to run;
 - a commit was made, when one was required.
 
-If a check fails, it retries once. The calling agent reviews the diff before
-adopting anything into shared code. The handoff code is in
-[`aria/dushich-bridge`](../aria/dushich-bridge). The MCP adapters are
-[`aria/dushich-mcp`](../aria/dushich-mcp),
-[`banshee/dushich_mcp.py`](../banshee/dushich_mcp.py), and
-[`gwyn-app-nub/dushich_mcp.py`](../gwyn-app-nub/dushich_mcp.py).
+If a check fails, it retries once. A handoff that still fails ends as
+`needs_<agent>`, a blocker the agent must resolve before sending another. The
+calling agent reviews the diff before adopting anything into shared code.
+Banshee's and Gwyn's handoffs run through
+[`common/dushich/bridge.py`](dushich/bridge.py). Aria's run through her own
+Codex bridge, [`aria/dushich-bridge`](../aria/dushich-bridge).
 
-**Helper mirrors.** Only the visible conversation reaches Dushich: the
-human's prompts and the agent's final answers. Reasoning, tool output, and
-anything that looks like a credential are left out.
+**Helper threads.** Each agent conversation gets its own linked Helper
+Dushich thread. Only the visible conversation reaches him: the human's
+prompts and the agent's final answers. Reasoning, tool output, and anything
+that looks like a credential are left out.
 
-- Aria's and Banshee's conversations are mirrored continuously by user
-  services: `noobia-dushich-helper-mirror.service` and
-  `noobia-banshee-helper-mirror.service`.
-- Gwyn's conversation is summarized only when Gwyn asks a question.
-- Long conversations are compacted by
-  [`dushich_summarizer.py`](../dushich/coding/dushich_summarizer.py).
-- State is kept in `~/.codex/dushich-bridge/`.
+- Aria's and Banshee's conversations are mirrored continuously by two user
+  services, `noobia-dushich-helper-mirror` and
+  `noobia-banshee-helper-mirror`.
+- Gwyn's thread is brought up to date when Gwyn asks a question.
 
-**Shared local tools.** These run on the GPU without using any cloud model,
-and any agent can call them:
+State is kept in `~/.codex/dushich-bridge/`.
 
-- `dushich-explore`: explores Nexus read-only, then writes what it found to
-  the atlas.
-- `dushich-summarizer`: digests a large file or log.
+## The summarizer: compacting what is too long to read
+
+Context windows are finite and cloud tokens are not free.
+[`dushich-summarizer`](../dushich/coding/dushich_summarizer.py) digests long
+text on the local GPU instead. It works in a moving window:
+
+1. It cuts the input into pieces at sentence boundaries, each sized to fit
+   Qwen's window next to the instructions.
+2. It summarizes each piece below a target size, tightening by a set
+   percentage when a summary comes out too long.
+3. It carries the running summary into the next piece, until the whole
+   input is digested.
+
+It does two jobs in the forge:
+
+- **Context compacting.** Helper threads and handoff briefs carry a summary
+  of the conversation, not the conversation. The summarizer keeps an
+  incremental summary per conversation and only reads what was added since
+  the last time. A cold start with a huge backlog reads only the newest two
+  windows of it.
+- **Large-input review.** Any agent can digest a huge log, transcript, or
+  source file before deciding what to read in full:
+
+  ```sh
+  dushich-summarizer --file /var/log/syslog --instructions "Focus on GPU and power errors."
+  ```
 
 ## Forge memory: `forge-db`
 
-[`forge-db`](tools/forge_db.py) keeps Noobia's shared memory in
-`/noobia/dushich/workspace/forge.db`. The database file belongs to Dushich
-and lives in his workspace. Dushich is its main keeper: he records paths he
+[`forge-db`](tools/forge_db.py) keeps Noobia's shared memory in one SQLite
+file, `$NOOBIA/dushich/workspace/forge.db`. The file lives in Dushich's
+workspace because he uses it most and keeps it: he records the paths he
 finds, writes project notes for the agents he helps, and tags everything.
-Every other agent reads it and writes to it through the same command, never
-by editing the file directly.
+`forge-db` is the only program that reads or writes the file; nothing else
+touches it with raw SQL. On first use it creates the folder and every table,
+so a fresh clone works without a database in Git.
 
 | Table | Holds |
 | --- | --- |
-| `projects` | The project registry: executor, receiver, hardware readiness. Shared with the planned Foreman. |
+| `projects` | The project registry: executor, receiver, hardware readiness, and when and for whom someone last worked on it (`last_modified`, `modified_for`). |
 | `nexus_paths` | The path atlas. Each row has a kind, owner, one-line description, project, and whether the path still exists. A hit count records how often an agent found the row correct. |
 | `project_notes` | Short dated notes per project (decisions, milestones, blockers) that cite atlas paths. |
 | `tags`, `tag_links` | A curated UPPERCASE vocabulary (`#ROSE`, `#SECURITY`, `#NETWORK`, …) for paths and projects. |
@@ -176,6 +220,14 @@ used. Otherwise `forge-db` falls back to a small CPU model
 (`BAAI/bge-small-en-v1.5` via fastembed in `/opt/noobia/forge-venv`). Without
 either, search is word-only.
 
+**One project, one agent at a time.** Before working on a project, an agent
+(or Dushich, on an agent's behalf) runs `forge-db project touch`. If a
+different agent worked on that project within the last two hours, the
+command answers `BUSY` and exits 3. The agent then asks Noob before going
+on; when Noob wants two agents to share a project, `--together` records
+that. A note also counts as work on its project, and warns instead of
+failing.
+
 **Trust, but verify.** An atlas row can go stale. Agents check a path briefly
 before relying on it. If it is right, they count it with
 `forge-db path hit PATH --by NAME`. If it is wrong, they fix or remove the
@@ -184,9 +236,9 @@ candidates for retirement.
 
 ```sh
 forge-db search where do we keep the gpu power logs
+forge-db project touch nexus_forge --for Gwyn --by Gwyn      # BUSY → ask Noob
 forge-db path hit /noobia/common/tools/forge_db.py --by Gwyn
 forge-db path set /noobia/rose/rose_composer -k dir -o Rose -d "Beat grids for Rose" --tag ROSE --by Gwyn
-forge-db project get forge_memory
 forge-db note add forge_memory "Hit counting shipped" --path /noobia/common/tools/forge_db.py --by Gwyn
 forge-db --json changes --since 2026-11-20T00:00:00+00:00
 ```
@@ -207,9 +259,10 @@ privately on Nexus.
 | Dushich's CLI | Codex CLI installed separately in `/opt/noobia/dushich-codex` (`npm install --prefix … @openai/codex`), with its own `CODEX_HOME` per role |
 | Cloud agents' CLIs | Codex (`npm -g @openai/codex`, Node.js 22), Antigravity (`~/.local/bin/agy`), Claude Code (native installer, `~/.local/bin/claude`), each logged in to its own provider account |
 | Meaning search (optional) | `/opt/noobia/forge-venv` with `fastembed` and `numpy` |
-| Commands on `PATH` | `/usr/local/bin/{nexus-forge, forge-db, dushich-explore}` link into this repository; `dushich`, `dushich-summarizer`, and `/usr/local/libexec/dushich-task.py` are installed copies (reinstall them after changing the source, see [`dushich/coding/README.md`](../dushich/coding/README.md)) |
-| Helper mirrors | `systemctl --user enable --now noobia-dushich-helper-mirror.service noobia-banshee-helper-mirror.service` (units in [`aria/`](../aria/noobia-dushich-helper-mirror.service) and [`banshee/`](../banshee/noobia-banshee-helper-mirror.service)) |
-| Avatar art | PNG frames in `/noobia/pics/<Agent>/` (`idle.png`, `working_1.png`–`working_4.png`, `final.png`) and `/noobia/pics/Rose/Rose.png`; not in Git. Without them, the window shows the terminals but no avatars. |
+| Commands and root | `common/bin` on `PATH` and `NOOBIA=/noobia` (see Paths and commands) |
+| MCP registration | `dushich` → `common/dushich/mcp.py --agent NAME` in each CLI's config; see [`common/dushich/README.md`](dushich/README.md) |
+| Helper mirrors | `noobia-dushich-helper-mirror` and `noobia-banshee-helper-mirror` user services, installed from [`common/dushich/`](dushich/) |
+| Avatar art | [`pics/<Agent>/`](../pics/): `idle.png`, `working_1.png`–`working_4.png`, `final.png`, and `pics/Rose/Rose.png` (360 px wide) |
 | Autostart | [`dushich/solo/nexus-forge.desktop`](../dushich/solo/nexus-forge.desktop) → `~/.config/autostart/` |
 
 Install details for Dushich's runtime are in
@@ -223,11 +276,11 @@ and the LAN inference endpoint are described in
 python3 dushich/solo/nexus_forge.py --self-test           # window, layout, avatars
 python3 -m unittest discover -s dushich/solo -p 'test_*.py'
 python3 -m unittest discover -s dushich/coding -p 'test_*.py'   # task runner, summarizer
+python3 -m unittest discover -s common/dushich -p 'test_*.py'   # MCP server, bridge, helpers
 python3 -m unittest discover -s common/tools -p 'test_*.py'     # forge-db, dushich-explore
-python3 -m unittest discover -s banshee -p 'test_*.py'
 python3 -m unittest discover -s aria -p 'test_*.py'
 forge-db stats                                             # rows and active meaning model
-systemctl --user status noobia-dushich-helper-mirror.service
+systemctl --user status noobia-dushich-helper-mirror noobia-banshee-helper-mirror
 ```
 
 ## Trust and boundaries
@@ -246,18 +299,13 @@ with that power are written down rather than assumed:
 - **Local by default.** Dushich, Aigel, forge memory, and the summarizer use
   only the local GPU. No cloud model is ever silently substituted for them.
 - **Inspectable.** Every handoff saves its event stream and verification
-  report. Forge memory records who wrote each row (`--by`). Hit counts and
-  presence checks keep the atlas honest.
+  report. Forge memory records who wrote each row (`--by`) and who is working
+  on each project. Hit counts and presence checks keep the atlas honest.
 - **Private stays private.** Each agent's `private/` directory (logins,
   sessions, keys) and `forge.db` are excluded from Git. Only the visible
   dialogue reaches a helper thread, and credentials are redacted from it.
 
-## Status
+## License
 
-The window, handoffs, helper mirrors, forge memory, and explorer are
-working and in regular use on Nexus.
-
-The **Foreman** role is written ([`dushich/foreman/AGENTS.md`](../dushich/foreman/AGENTS.md))
-but has no launcher yet. When it runs, Dushich will assign projects from the
-`projects` table and raise human-help flags when a task needs Noob's hands.
-The old Dushich web dashboard is disabled.
+Noobia's own work, the forge included, is free: do what you want with it,
+under the [WTFPL](../LICENSE).

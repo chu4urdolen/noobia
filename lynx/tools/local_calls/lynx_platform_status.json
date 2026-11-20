@@ -1,0 +1,11 @@
+{
+  "name": "lynx_platform_status",
+  "description": "Entity: Lynx. Read a bounded inventory of battery, thermal, storage, Wi-Fi, display, touch, audio, haptic, sensor hub, USB, cellular, and SIM status. Does not activate hardware.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

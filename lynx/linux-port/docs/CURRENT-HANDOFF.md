@@ -105,6 +105,21 @@ command; this is a checkpoint, not a live guarantee.
 
 ## Hardware still to finish
 
+**2026-11-20 agent catalog update:** On V53 Alpine boot
+`0fe847d2-44d6-4ac1-9000-2c99df1a51d8`, 13 read-only hardware status tools
+were installed, taking the native local agent catalog from 15 to 28 tools.
+They expose battery, thermal, storage, Wi-Fi, display, touch, audio, haptic,
+sensorhub, USB, cellular, and SIM status, plus one combined inventory. The
+installer verified all new file hashes, live agent catalog calls, same boot,
+and clear health; battery was 27% and charging. These tools perform no radio
+or actuator actions. Touch, audio, haptic, sensorhub, USB, cellular, and SIM
+status show interfaces only and are explicitly marked unvalidated by these
+readers. The existing bounded sensor, microphone, camera, flashlight,
+Bluetooth, and GNSS tools remain the action or focused status routes. See
+`lynx/tools/lynx_platform_status.py` and
+`lynx/tools/agent/install_platform_status_tools.py`. Dushich reconciled forge
+notes #13/#15 with this handoff and added missing prior facts in note #16.
+
 1. GNSS emits NMEA but has not produced a position fix. Bluetooth has passed
    HCI and authenticated NRP/1 GATT trials, but its automatic and long-uptime
    behavior remains unverified. SIM/cellular needs modem readiness and SIM
@@ -147,8 +162,8 @@ command; this is a checkpoint, not a live guarantee.
    IMX890 and front S5K3P9SP remain untested. A stock camera-control ioctl
    caused a kernel Oops; avoid repeating it. Package the patched module on
    Alpine only after a guarded cold-boot test and local disable switch.
-4. Continue adding small local agent tools for verified hardware, with the
-   same bounded behavior and explicit validation as the motion tool. Do not
+4. Every listed hardware area now has a local agent status tool. Add bounded
+   action tools as each remaining hardware path passes its own trial; do not
    label an inventory-only interface as a working capture or actuator.
 
 ## Recovery and collaboration

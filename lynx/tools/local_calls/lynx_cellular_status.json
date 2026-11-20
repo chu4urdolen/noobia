@@ -1,0 +1,11 @@
+{
+  "name": "lynx_cellular_status",
+  "description": "Entity: Lynx. Read CCCI interface presence only. Does not start the modem or query a SIM.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

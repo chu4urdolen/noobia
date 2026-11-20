@@ -8,6 +8,18 @@ him. Cached ARM64 BusyBox validation evidence remains available locally.
 recognizable camera modes. It performs no device action; an `allow` response
 does not replace a matching live receipt or attended trial.
 
+`lynx_platform_status.py` provides a bounded, read-only status inventory for
+battery, thermal, storage, Wi-Fi, display, touch, audio, haptic, sensorhub,
+USB, cellular, and SIM. Thirteen native agent catalog wrappers expose the
+individual areas and the combined inventory. Node presence is reported as
+interface readiness, not hardware validation: touch, audio, haptic,
+sensorhub, USB, cellular, and SIM remain unvalidated by these status readers.
+`agent/install_platform_status_tools.py` adds the wrappers on a healthy,
+charging V53 Alpine boot without restarting services. It refuses existing
+targets, verifies hashes and live agent execution, and removes newly installed
+files if verification fails. `test_lynx_platform_status.py` checks the offline
+status semantics.
+
 ## V53 Alpine, V50 recovery, and connectivity
 
 V53 is the current **trial** image: it adds a 30-second shared-radio

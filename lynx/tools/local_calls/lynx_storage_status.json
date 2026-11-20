@@ -1,0 +1,11 @@
+{
+  "name": "lynx_storage_status",
+  "description": "Entity: Lynx. Read ext4 root identity, error count and free space without touching storage.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

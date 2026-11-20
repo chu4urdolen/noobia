@@ -1,0 +1,11 @@
+{
+  "name": "lynx_sensorhub_status",
+  "description": "Entity: Lynx. Read hf_manager sensor-hub interface readiness; does not enable a sensor.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

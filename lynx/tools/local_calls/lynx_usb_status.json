@@ -1,0 +1,11 @@
+{
+  "name": "lynx_usb_status",
+  "description": "Entity: Lynx. Read USB device-controller inventory; native gadget and host enumeration remain unverified.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

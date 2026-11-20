@@ -1,0 +1,11 @@
+{
+  "name": "lynx_wifi_status",
+  "description": "Entity: Lynx. Read Alpine Wi-Fi carrier and IP status without scanning or changing the network.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

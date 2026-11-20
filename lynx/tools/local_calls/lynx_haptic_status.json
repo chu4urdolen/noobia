@@ -1,0 +1,11 @@
+{
+  "name": "lynx_haptic_status",
+  "description": "Entity: Lynx. Read vibration driver and LED interface readiness; does not activate the motor.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

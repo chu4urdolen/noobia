@@ -1,0 +1,11 @@
+{
+  "name": "lynx_touch_status",
+  "description": "Entity: Lynx. Read Synaptics touch driver and input-node presence; does not sample or inject touch.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

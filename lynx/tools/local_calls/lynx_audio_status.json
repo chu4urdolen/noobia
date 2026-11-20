@@ -1,0 +1,11 @@
+{
+  "name": "lynx_audio_status",
+  "description": "Entity: Lynx. Read ALSA card and PCM interface readiness; does not play or record audio.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

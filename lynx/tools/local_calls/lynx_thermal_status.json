@@ -1,0 +1,11 @@
+{
+  "name": "lynx_thermal_status",
+  "description": "Entity: Lynx. Read SoC temperature and cooling states without changing thermal policy.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

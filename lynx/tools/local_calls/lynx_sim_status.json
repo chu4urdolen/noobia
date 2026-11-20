@@ -1,0 +1,11 @@
+{
+  "name": "lynx_sim_status",
+  "description": "Entity: Lynx. Report SIM trial state without touching the modem or SIM controls.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

@@ -4,4 +4,4 @@ py=/opt/noobia/forge-venv/bin/python
 [[ -x "$py" ]] || py=/usr/bin/python3
 # Once the embedding model is cached, never reach the network for it.
 [[ -d /opt/noobia/forge-venv/models ]] && export HF_HUB_OFFLINE=1
-exec "$py" /noobia/common/tools/forge_db.py "$@"
+exec "$py" "$(dirname "$(readlink -f "$0")")/forge_db.py" "$@"

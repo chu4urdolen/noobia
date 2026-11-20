@@ -25,8 +25,12 @@ import sys
 import time
 from uuid import uuid4
 
-ROOT = Path("/home/aria/.codex/dushich-bridge/explore")
-FORGE_DB = "/usr/local/bin/forge-db"
+HOME = os.path.expanduser("~")
+
+ROOT = Path(HOME + "/.codex/dushich-bridge/explore")
+NOOBIA = Path(os.environ.get("NOOBIA", "/noobia"))
+FORGE_DB = str(NOOBIA / "common/tools/forge-db")
+DUSHICH = str(NOOBIA / "dushich/coding/dushich-launcher")
 JOB = re.compile(r"^\d{8}T\d{6}Z-[0-9a-f]{8}$")
 WORK_TIMEOUT = 1200
 
@@ -104,7 +108,7 @@ def worker(job_id: str) -> None:
     save_state(path, state)
     prompt = BRIEF.format(asker=state["asker"], question=state["question"])
     try:
-        process = subprocess.run(["/usr/local/bin/dushich", "exec", "--json", "-"], input=prompt,
+        process = subprocess.run([DUSHICH, "exec", "--json", "-"], input=prompt,
                                  capture_output=True, text=True, timeout=WORK_TIMEOUT, check=False)
         (path / "events.jsonl").write_text(process.stdout)
         events = []

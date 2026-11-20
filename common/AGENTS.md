@@ -258,13 +258,22 @@ is needed, so a password prompt cannot block the caller. For long
 work, return a job ID promptly and provide separate status and result commands;
 never leave the calling terminal blocked indefinitely.
 
+**Paths and commands.** `NOOBIA` names Noobia's root (`/noobia` on Nexus).
+Code derives every Noobia path from it (`${NOOBIA:-/noobia}` in shell,
+`os.environ.get("NOOBIA", "/noobia")` in Python) rather than hard-coding
+`/noobia`; only files other programs read literally (systemd units, desktop
+entries, CLI config) keep absolute paths. Commands meant for everyday use are
+links in [`common/bin/`](/noobia/common/bin) to their source, put on `PATH`
+together with `NOOBIA` by `~/.config/environment.d/999-noobia.conf` (desktop
+session and user services) and `~/.profile` (login shells). Never install
+Noobia's own tools into `/usr/bin`, `/usr/local/bin`, or `~/.local/bin`.
+
 ### Local Dushich Summarizer
 
 **Use this tool for yourself** whenever you only need an overview, digest, or
 focused summary of a large file, log, or transcript instead of reading the full
 file into your own context window. Any Noobia agent can call
-`/noobia/dushich/tools/dushich_summarizer.py` (also installed at
-`/usr/local/bin/dushich-summarizer` and importable from
+`dushich-summarizer` (source and importable module:
 `/noobia/dushich/coding/dushich_summarizer.py`) to compact a large string,
 file, or transcript on the local Nexus GPU without consuming cloud tokens. It
 uses an iterative context-shifting window: it cuts each piece at a sentence
@@ -275,14 +284,14 @@ digested.
 
 ```sh
 # Summarize a file with custom focus instructions:
-/noobia/dushich/tools/dushich_summarizer.py \
+dushich-summarizer \
   --file /path/to/file.py \
   --context-size 32000 \
   --desired-size 8000 \
   --instructions "Focus on the functions in the file."
 
 # Summarize a string directly (or pipe via stdin):
-/noobia/dushich/tools/dushich_summarizer.py \
+dushich-summarizer \
   --text "$LARGE_TEXT" \
   --instructions "Focus on the mentions of Banshee."
 ```
@@ -315,7 +324,7 @@ python3 /noobia/lynx/tools/lynx_remote.py result --glob 'v53-bt-after-alpine-*'
 ### Forge memory (`forge-db`)
 
 **Ask the atlas before searching Nexus, and record what you find.**
-`forge-db` (`/usr/local/bin/forge-db` → `/noobia/common/tools/forge_db.py`)
+`forge-db` (`common/bin/forge-db` → `/noobia/common/tools/forge_db.py`)
 keeps Noobia's shared memory in `/noobia/dushich/workspace/forge.db`, next to
 the `projects` registry:
 

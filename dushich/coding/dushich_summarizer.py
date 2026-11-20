@@ -21,6 +21,9 @@ import re
 import sys
 from pathlib import Path
 import urllib.request
+import os
+
+HOME = os.path.expanduser("~")
 
 AGENT_INSTRUCTIONS = (
     "You are Dushich Summarizer for Noobia. Preserve speaker names, decisions, "
@@ -221,7 +224,7 @@ def summarize_this(
     return running_summary
 
 
-DEFAULT_STATE_DIR = Path("/home/aria/.codex/dushich-bridge/summaries")
+DEFAULT_STATE_DIR = Path(HOME + "/.codex/dushich-bridge/summaries")
 
 
 def incremental_summarize(

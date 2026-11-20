@@ -21,6 +21,8 @@ import sys
 import time
 from pathlib import Path
 
+NOOBIA = os.environ.get("NOOBIA", "/noobia")
+
 KNOWN_INHABITANTS = {
     "gateway": {"ip": "192.168.100.1", "role": "Noobia Wi-Fi Router", "tcp_ports": []},
     "nexus": {"ip": "192.168.100.106", "role": "Nexus (Aria, Banshee, Dushich)", "tcp_ports": [22, 8080, 48101]},
@@ -29,7 +31,7 @@ KNOWN_INHABITANTS = {
     "rose": {"ip": "192.168.100.7", "role": "Rose", "tcp_ports": [22, 47300, 47301]},
 }
 
-DEFAULT_ROSTER_FILE = "/noobia/common/lighthouse_roster.json"
+DEFAULT_ROSTER_FILE = NOOBIA + "/common/lighthouse_roster.json"
 
 
 def load_roster(path: str | None = None) -> dict:

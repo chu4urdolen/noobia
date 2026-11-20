@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # update_agents.sh — Robust updater for AGY, Codex, and Claude Code before Forge starts
 set -u
+NOOBIA="${NOOBIA:-/noobia}"
 
-LOG_FILE="/home/aria/.local/state/noobia/agent_updates.log"
-mkdir -p "$(dirname "$LOG_FILE")" /home/aria/.local/bin 2>/dev/null || true
+LOG_FILE="$HOME/.local/state/noobia/agent_updates.log"
+mkdir -p "$(dirname "$LOG_FILE")" $HOME/.local/bin 2>/dev/null || true
 
 log() {
     local msg="[$(date -u +'%Y-%m-%d %H:%M:%SZ')] [update-agents] $*"
@@ -51,11 +52,11 @@ if command -v npm >/dev/null 2>&1; then
 
     # Ensure ~/.local/bin/codex points cleanly to the working global binary
     if [[ -x "/usr/local/bin/codex" ]]; then
-        ln -sf /usr/local/bin/codex /home/aria/.local/bin/codex
+        ln -sf /usr/local/bin/codex $HOME/.local/bin/codex
     fi
 
     # Pre-dismiss update notification in version.json so interactive prompt never blocks startup
-    for vfile in /home/aria/.codex/version.json /noobia/dushich/solo/private/codex/version.json; do
+    for vfile in $HOME/.codex/version.json $NOOBIA/dushich/solo/private/codex/version.json; do
         if [[ -f "$vfile" ]]; then
             python3 -c '
 import json, sys, pathlib
@@ -103,11 +104,11 @@ if command -v claude >/dev/null 2>&1; then
     fi
 
     # Ensure symlink points to newest version if a newer binary was installed
-    versions_dir="/home/aria/.local/share/claude/versions"
+    versions_dir="$HOME/.local/share/claude/versions"
     if [[ -d "$versions_dir" ]]; then
         newest_ver="$(ls -1v "$versions_dir" 2>/dev/null | tail -n 1 || true)"
         if [[ -n "$newest_ver" && -x "$versions_dir/$newest_ver" ]]; then
-            ln -sf "$versions_dir/$newest_ver" /home/aria/.local/bin/claude
+            ln -sf "$versions_dir/$newest_ver" $HOME/.local/bin/claude
         fi
     fi
 else

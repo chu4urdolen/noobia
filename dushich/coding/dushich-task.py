@@ -17,8 +17,9 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 
-WORKSPACE = Path("/noobia/dushich/workspace")
-CODEX_HOME = Path("/noobia/dushich/coding/private/codex")
+NOOBIA = Path(os.environ.get("NOOBIA", "/noobia"))
+WORKSPACE = NOOBIA / "dushich/workspace"
+CODEX_HOME = NOOBIA / "dushich/coding/private/codex"
 CODEX = Path("/opt/noobia/dushich-codex/node_modules/.bin/codex")
 MODEL = "qwen3.8:27b"
 os.environ["GIT_DIR"] = str(WORKSPACE / ".dushich-git")

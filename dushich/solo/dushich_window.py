@@ -15,6 +15,10 @@ import json
 import sys
 import time
 from pathlib import Path
+import os
+
+NOOBIA = os.environ.get("NOOBIA", "/noobia")
+HOME = os.path.expanduser("~")
 
 from avatar_pane import (
     DEFAULT_PICS_DIR,
@@ -28,9 +32,9 @@ from avatar_pane import (
 
 ASPECT_RATIO = 1.5
 ACTIVE_STATUSES = ("queued", "running")
-DEFAULT_BRIDGE_DIR = "/home/aria/.codex/dushich-bridge"
-DEFAULT_BANSHEE_RUNS_DIR = "/noobia/banshee/private/task-runs"
-DEFAULT_GWYN_RUNS_DIR = "/noobia/gwyn-app-nub/private/task-runs"
+DEFAULT_BRIDGE_DIR = HOME + "/.codex/dushich-bridge"
+DEFAULT_BANSHEE_RUNS_DIR = NOOBIA + "/banshee/private/task-runs"
+DEFAULT_GWYN_RUNS_DIR = NOOBIA + "/gwyn-app-nub/private/task-runs"
 
 
 def compute_sidebar_layout(

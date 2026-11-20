@@ -111,8 +111,6 @@ sudo install -o aria -g aria -m 600 dushich/coding/config.toml /noobia/dushich/c
 sudo install -o aria -g aria -m 644 dushich/coding/model.json /noobia/dushich/coding/private/codex/model.json
 ln -sfn /noobia/dushich/coding/AGENTS.md /noobia/dushich/coding/private/codex/AGENTS.md
 ln -sfn /noobia/dushich/solo/AGENTS.md /noobia/dushich/solo/private/codex/AGENTS.md
-sudo install -o root -g root -m 755 dushich/coding/dushich-launcher /usr/local/bin/dushich
-sudo install -o root -g root -m 755 dushich/coding/dushich-task.py /usr/local/libexec/dushich-task.py
 ```
 
 The Codex CLI installation runs as `aria` and can be updated with

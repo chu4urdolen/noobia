@@ -13,9 +13,11 @@ import sys
 import time
 from uuid import uuid4
 
+NOOBIA = os.environ.get("NOOBIA", "/noobia")
+
 UUID = re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
 PREFIX = 'noobia-dushich-solo-'
-REGISTRY = Path('/noobia/dushich/solo/private/conversations.json')
+REGISTRY = Path(NOOBIA + '/dushich/solo/private/conversations.json')
 
 
 def registered() -> list[str]:
@@ -106,8 +108,8 @@ def ensure_avatar_pane(session: str) -> None:
                 '-F', '#{pane_index}', check=False).stdout.splitlines()
     if len(panes) < 2:
         run('tmux', '-L', 'dushich-clean', 'split-window', '-h', '-l', '30',
-            '-t', session + ':0.0', '-c', '/noobia',
-            f'exec /usr/bin/python3 /noobia/dushich/solo/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane {session}:0.0 --size 28')
+            '-t', session + ':0.0', '-c', NOOBIA,
+            f'exec /usr/bin/python3 {NOOBIA}/dushich/solo/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane {session}:0.0 --size 28')
         run('tmux', '-L', 'dushich-clean', 'set-window-option', '-t', session + ':0', 'pane-border-status', 'top')
         run('tmux', '-L', 'dushich-clean', 'set-window-option', '-t', session + ':0', 'pane-border-format', ' #{pane_title} ')
         run('tmux', '-L', 'dushich-clean', 'select-pane', '-t', session + ':0.0', '-T', 'Solo Dushich • Codex')
@@ -140,14 +142,14 @@ def main() -> int:
         session = PREFIX + args.resume
         if run('tmux', '-L', 'dushich-clean', 'has-session', '-t', session, check=False).returncode:
             run('tmux', '-L', 'dushich-clean', 'new-session', '-d', '-s', session, '-n', 'workshop',
-                '-c', '/noobia',
-                f'exec /noobia/dushich/solo/codex-solo resume {args.resume}')
+                '-c', NOOBIA,
+                f'exec {NOOBIA}/dushich/solo/codex-solo resume {args.resume}')
         if not no_gui:
             ensure_avatar_pane(session)
     else:
         session = PREFIX + uuid4().hex[:8]
         run('tmux', '-L', 'dushich-clean', 'new-session', '-d', '-s', session, '-n', 'workshop',
-            '-c', '/noobia', 'exec /noobia/dushich/solo/codex-solo')
+            '-c', NOOBIA, f'exec {NOOBIA}/dushich/solo/codex-solo')
         try:
             ident = wait_for_id(session)
             named = PREFIX + ident
@@ -168,7 +170,7 @@ def main() -> int:
         run('tmux', '-L', 'dushich-clean', 'set-option', '-t', session, 'status', 'off', check=False)
         run('tmux', '-L', 'dushich-clean', 'set-window-option', '-t', session + ':0', 'pane-border-status', 'off', check=False)
         os.execvp('/usr/bin/python3', [
-            '/usr/bin/python3', '/noobia/dushich/solo/dushich_window.py',
+            '/usr/bin/python3', NOOBIA + '/dushich/solo/dushich_window.py',
             '--agent', 'Dushich', '--tmux-socket', 'dushich-clean',
             '--target-pane', f'{session}:0.0', '--sidebar-width', '180',
             '--title', f'Solo Dushich ({session.removeprefix(PREFIX)[:8]})',

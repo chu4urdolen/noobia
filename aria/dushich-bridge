@@ -17,17 +17,20 @@ import time
 from uuid import uuid4
 
 
-sys.path.insert(0, "/noobia/dushich/coding")
+NOOBIA = os.environ.get("NOOBIA", "/noobia")
+sys.path.insert(0, NOOBIA + "/dushich/coding")
 import compact_output
 import dushich_summarizer
 
-ROOT = Path("/home/aria/.codex/dushich-bridge")
-DELEGATE = Path(os.environ.get("NOOBIA", "/noobia")) / "common/dushich/delegate-dushich"
+HOME = os.path.expanduser("~")
+
+ROOT = Path(HOME + "/.codex/dushich-bridge")
+DELEGATE = Path(NOOBIA) / "common/dushich/delegate-dushich"
 ID = re.compile(r"^\d{8}T\d{6}Z-[0-9a-f]{8}$")
-REPORT = re.compile(r"^/noobia/dushich/coding/private/codex/task-runs/\d{8}T\d{6}Z-[0-9a-f]{8}\.json$")
+REPORT = re.compile(r"^" + re.escape(NOOBIA) + r"/dushich/coding/private/codex/task-runs/\d{8}T\d{6}Z-[0-9a-f]{8}\.json$")
 THREAD = re.compile(r"^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$")
 SESSION = THREAD
-SESSIONS = Path("/home/aria/.codex/sessions")
+SESSIONS = Path(HOME + "/.codex/sessions")
 SUMMARIZER_CONTEXT_SIZE = 32_000
 SUMMARIZER_DESIRED_SIZE = 8_000
 MAX_SESSION_CONTEXT = 32_000
@@ -172,9 +175,9 @@ def build_brief(task: str, dialogue: str, tool_activity: str, extra_context: str
         context = ("Visible Aria/Noob conversation (recent, chronological; no hidden reasoning):\n"
                    + dialogue)
         context += "\n\nRecent visible Aria tool calls and results (bounded excerpts):\n" + tool_activity
-        code_map = Path("/noobia/docs/CODE-MAP.md").read_text(encoding="utf-8")
+        code_map = Path(NOOBIA + "/docs/CODE-MAP.md").read_text(encoding="utf-8")
         context += "\n\nCurrent Noobia code map:\n" + code_map
-        standing = Path("/noobia/aria/DUSHICH-SHARED-CONTEXT.md").read_text(encoding="utf-8")
+        standing = Path(NOOBIA + "/aria/DUSHICH-SHARED-CONTEXT.md").read_text(encoding="utf-8")
         context += "\n\nStanding Dushich handoff context:\n" + standing
     context += extra_context
     return ("Current Dushich task:\n" + task
@@ -249,11 +252,11 @@ def worker(run_id: str) -> int:
 
 
 def read_dushich_events(run_id: str, report: str | None) -> str:
-    path = f"/noobia/dushich/coding/private/codex/task-runs/{run_id}.jsonl"
+    path = f"{NOOBIA}/dushich/coding/private/codex/task-runs/{run_id}.jsonl"
     if report and REPORT.fullmatch(report) and Path(report).name != f"{run_id}.json":
         try:
             candidate = json.loads(Path(report).read_text(encoding="utf-8")).get("events_path", "")
-            if re.fullmatch(r"/noobia/dushich/coding/private/codex/task-runs/[\w-]+\.jsonl", candidate):
+            if re.fullmatch(re.escape(NOOBIA) + r"/dushich/coding/private/codex/task-runs/[\w-]+\.jsonl", candidate):
                 path = candidate
         except (OSError, ValueError):
             pass
@@ -358,7 +361,7 @@ def monitor_full(session_id: str | None, run_id: str | None, once: bool) -> int:
     print("DUSHICH • complete tool output (scroll up for history)", flush=True)
     print(f"Aria session: {session_id or 'all sessions'}", flush=True)
     while True:
-        dialogue_path = Path("/home/aria/.codex/dushich-bridge/direct-dialogue.jsonl")
+        dialogue_path = Path(HOME + "/.codex/dushich-bridge/direct-dialogue.jsonl")
         if dialogue_path.exists():
             try:
                 d_lines = dialogue_path.read_text(encoding="utf-8").splitlines()
@@ -534,7 +537,7 @@ def main() -> int:
             extra_context += "\n\nAdditional context selected by Aria:\n" + args.context_file.read_text(encoding="utf-8")
         for selected in args.include:
             source = selected.resolve()
-            if not source.is_relative_to(Path("/noobia")) or not source.is_file():
+            if not source.is_relative_to(Path(NOOBIA)) or not source.is_file():
                 parser.error(f"included file must be a regular file under /noobia: {selected}")
             if source.stat().st_size > 32_000:
                 parser.error(f"included file exceeds 32 KB: {selected}")

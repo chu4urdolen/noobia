@@ -16,7 +16,9 @@ from pathlib import Path
 import re
 import sys
 
-LINKS = Path("/noobia/gwyn-app-nub/private/session-links")
+NOOBIA = os.environ.get("NOOBIA", "/noobia")
+
+LINKS = Path(NOOBIA + "/gwyn-app-nub/private/session-links")
 UUID = re.compile(r"^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$")
 
 

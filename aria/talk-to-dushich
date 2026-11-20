@@ -17,8 +17,11 @@ from uuid import uuid4
 sys.path.insert(0, os.path.join(os.environ.get('NOOBIA', '/noobia'), 'common/dushich'))
 import helper_mirror as mirror  # noqa: E402
 
-LOG = Path('/home/aria/.codex/dushich-bridge/direct-dialogue.jsonl')
-BRIDGE = '/noobia/aria/dushich-bridge'
+NOOBIA = os.environ.get("NOOBIA", "/noobia")
+HOME = os.path.expanduser("~")
+
+LOG = Path(HOME + '/.codex/dushich-bridge/direct-dialogue.jsonl')
+BRIDGE = NOOBIA + '/aria/dushich-bridge'
 
 
 def append(record: dict) -> None:

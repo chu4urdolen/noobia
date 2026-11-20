@@ -17,10 +17,12 @@ import sys
 import time
 from uuid import uuid4
 
+NOOBIA = os.environ.get("NOOBIA", "/noobia")
+
 UUID = re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
 PREFIX = 'noobia-aigel-'
 SOCKET = 'aigel-clean'
-REGISTRY = Path('/noobia/aigel/private/conversations.json')
+REGISTRY = Path(NOOBIA + '/aigel/private/conversations.json')
 
 
 def registered() -> list[str]:
@@ -121,7 +123,7 @@ def attach(session: str) -> int:
 def start_new() -> str:
     session = PREFIX + uuid4().hex[:8]
     run('tmux', '-L', SOCKET, 'new-session', '-d', '-s', session, '-n', 'nursery',
-        '-c', '/noobia', 'exec /noobia/aigel/codex-aigel')
+        '-c', NOOBIA, f'exec {NOOBIA}/aigel/codex-aigel')
     try:
         ident = wait_for_id(session)
     except Exception:
@@ -169,8 +171,8 @@ def main() -> int:
         session = PREFIX + args.resume
         if run('tmux', '-L', SOCKET, 'has-session', '-t', session, check=False).returncode:
             run('tmux', '-L', SOCKET, 'new-session', '-d', '-s', session, '-n', 'nursery',
-                '-c', '/noobia',
-                f'exec /noobia/aigel/codex-aigel resume {args.resume}')
+                '-c', NOOBIA,
+                f'exec {NOOBIA}/aigel/codex-aigel resume {args.resume}')
     else:
         live = running_sessions()
         if live and not args.new:

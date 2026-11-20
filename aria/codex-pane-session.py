@@ -9,11 +9,14 @@ import re
 import subprocess
 import sys
 import time
+import os
+
+HOME = os.path.expanduser("~")
 
 
 UUID = re.compile(r"^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$")
 TMUX = re.compile(r"^noobia-aria-[A-Za-z0-9-]+$")
-LOCKS = Path("/home/aria/.codex/thread-writer-locks")
+LOCKS = Path(HOME + "/.codex/thread-writer-locks")
 
 
 def recent_lock_session(started_at: float) -> str | None:

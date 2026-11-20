@@ -62,9 +62,11 @@ import sys
 import time
 from pathlib import Path
 
-DEFAULT_CONFIG = "/noobia/aigel/config.json"
-DEFAULT_LOG = "/noobia/aigel/logs/aigel.log"
-DEFAULT_STATE = "/noobia/aigel/private/sentinel_state.json"
+NOOBIA = os.environ.get("NOOBIA", "/noobia")
+
+DEFAULT_CONFIG = NOOBIA + "/aigel/config.json"
+DEFAULT_LOG = NOOBIA + "/aigel/logs/aigel.log"
+DEFAULT_STATE = NOOBIA + "/aigel/private/sentinel_state.json"
 DEFAULT_COOLDOWN_S = 300
 DEFAULT_WATCH_INTERVAL_S = 30
 

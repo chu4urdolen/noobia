@@ -31,21 +31,21 @@ class TestDefaultQuadrants(unittest.TestCase):
         self.assertEqual(q["title"], "Dushich Solo")
         self.assertEqual(q["agent"], "Dushich")
         self.assertEqual(q["helper_agent"], "")
-        self.assertIn("/noobia/dushich/solo/launch", q["command"][-1])
+        self.assertIn("/dushich/solo/launch", q["command"][-1])
 
     def test_top_right_is_banshee_plus_dushich(self):
         q = DEFAULT_QUADRANTS["top_right"]
         self.assertEqual(q["title"], "Banshee + Dushich Helper")
         self.assertEqual(q["agent"], "Banshee")
         self.assertEqual(q["helper_agent"], "")
-        self.assertIn("/noobia/banshee/launch", q["command"][-1])
+        self.assertIn("/banshee/launch", q["command"][-1])
 
     def test_bottom_right_is_gwyn_app_nub(self):
         q = DEFAULT_QUADRANTS["bottom_right"]
         self.assertEqual(q["title"], "Gwyn + Dushich Helper")
         self.assertEqual(q["agent"], "Gwyn")
         self.assertEqual(q["helper_agent"], "")
-        self.assertIn("/noobia/gwyn-app-nub/launch", q["command"][-1])
+        self.assertIn("/gwyn-app-nub/launch", q["command"][-1])
 
     def test_every_command_is_a_nonempty_list(self):
         for name, q in DEFAULT_QUADRANTS.items():

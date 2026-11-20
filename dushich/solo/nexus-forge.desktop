@@ -2,7 +2,7 @@
 Type=Application
 Name=Nexus Forge
 Comment=Start the 4-quadrant Nexus Forge multi-agent workspace on login
-Exec=/usr/local/bin/nexus-forge
+Exec=/noobia/common/bin/nexus-forge
 Icon=org.gnome.Terminal
 Terminal=false
 X-GNOME-Autostart-enabled=true

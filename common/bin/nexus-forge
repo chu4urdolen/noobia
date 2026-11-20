@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Start the Nexus Forge window: update the agent CLIs first, then open it.
+set -euo pipefail
+NOOBIA="${NOOBIA:-/noobia}"
+"$NOOBIA/common/tools/update_agents.sh" || true
+exec /usr/bin/python3 "$NOOBIA/dushich/solo/nexus_forge.py" "$@"

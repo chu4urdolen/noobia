@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+NOOBIA="${NOOBIA:-/noobia}"
+self="$(readlink -f "$0")"
+here="$(dirname "$self")"
 codex=/opt/noobia/dushich-codex/node_modules/.bin/codex
-helper_instructions=/noobia/dushich/coding/private/codex/AGENTS.md
+helper_instructions="$here/private/codex/AGENTS.md"
 
 if [[ ! -x "$codex" ]]; then
     echo "Dushich's Codex CLI is missing: $codex" >&2
@@ -30,7 +33,7 @@ done
 args=("$codex" --oss --local-provider ollama --model qwen3.8:27b)
 if [[ "${1:-}" == task ]]; then
     shift
-    args=(/usr/bin/python3 /usr/local/libexec/dushich-task.py)
+    args=(/usr/bin/python3 "$here/dushich-task.py")
 elif [[ "${1:-}" == exec ]]; then
     shift
     args+=(exec)
@@ -48,20 +51,20 @@ if [[ $# -eq 0 && -t 0 && -t 1 && -z "${NOOBIA_DUSHICH_TMUX_PANE:-}" ]] && comma
     session="noobia-dushich-$$"
     cols="$(tput cols 2>/dev/null || echo 100)"
     lines="$(tput lines 2>/dev/null || echo 24)"
-    tmux -L dushich-clean new-session -d -x "$cols" -y "$lines" -s "$session" -n workshop -c /noobia \
-        "exec env NOOBIA_DUSHICH_TMUX_PANE=1 /usr/local/bin/dushich"
+    tmux -L dushich-clean new-session -d -x "$cols" -y "$lines" -s "$session" -n workshop -c "$NOOBIA" \
+        "exec env NOOBIA_DUSHICH_TMUX_PANE=1 $self"
     if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" || -S "/run/user/$(id -u)/wayland-0" ]]; then
         tmux -L dushich-clean set-option -t "$session" status off
         tmux -L dushich-clean set-window-option -t "$session":0 pane-border-status off
-        /usr/bin/python3 /noobia/dushich/solo/dushich_window.py \
+        /usr/bin/python3 "$NOOBIA/dushich/solo/dushich_window.py" \
             --agent Dushich --tmux-socket dushich-clean --target-pane "${session}:0.0" \
             --sidebar-width 180 --title "Dushich" \
             --command /usr/bin/tmux -L dushich-clean attach-session -t "$session" || true
         tmux -L dushich-clean kill-session -t "$session" 2>/dev/null || true
         exit 0
     fi
-    tmux -L dushich-clean split-window -h -l 18 -t "$session":0.0 -c /noobia \
-        "exec /usr/bin/python3 /noobia/dushich/solo/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane ${session}:0.0 --size 18"
+    tmux -L dushich-clean split-window -h -l 18 -t "$session":0.0 -c "$NOOBIA" \
+        "exec /usr/bin/python3 $NOOBIA/dushich/solo/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane ${session}:0.0 --size 18"
     tmux -L dushich-clean set-hook -t "$session" client-attached "resize-pane -t ${session}:0.1 -x 18"
     tmux -L dushich-clean set-hook -t "$session" client-resized "resize-pane -t ${session}:0.1 -x 18"
     tmux -L dushich-clean set-hook -t "$session" window-resized "resize-pane -t ${session}:0.1 -x 18"
@@ -74,12 +77,12 @@ if [[ $# -eq 0 && -t 0 && -t 1 && -z "${NOOBIA_DUSHICH_TMUX_PANE:-}" ]] && comma
 fi
 exec /usr/bin/env -i \
     HOME=/home/aria USER=aria LOGNAME=aria \
-    CODEX_HOME=/noobia/dushich/coding/private/codex \
+    NOOBIA="$NOOBIA" CODEX_HOME="$here/private/codex" \
     GIT_AUTHOR_NAME=Dushich GIT_AUTHOR_EMAIL=dushich@nexus.local \
     GIT_COMMITTER_NAME=Dushich GIT_COMMITTER_EMAIL=dushich@nexus.local \
     OLLAMA_HOST=http://127.0.0.1:11434 \
     GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes' \
-    PATH=/opt/noobia/dushich-codex/node_modules/.bin:/usr/local/bin:/usr/bin:/bin \
+    PATH="/opt/noobia/dushich-codex/node_modules/.bin:$NOOBIA/common/bin:/usr/local/bin:/usr/bin:/bin" \
     TERM="${TERM:-xterm}" LANG="${LANG:-C.UTF-8}" \
-    /bin/bash -c 'cd /noobia && exec "$@"' \
+    /bin/bash -c 'cd "$NOOBIA" && exec "$@"' \
     dushich-launcher "${args[@]}" "$@"

@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-exec /noobia/banshee/with-dushich "$@"
+NOOBIA="${NOOBIA:-/noobia}"
+exec $NOOBIA/banshee/with-dushich "$@"

@@ -22,6 +22,8 @@ from pathlib import Path
 import tempfile
 from PIL import Image
 
+NOOBIA = os.environ.get("NOOBIA", "/noobia")
+
 REQUIRED_FRAMES = ("idle", "working_1", "working_2", "working_3", "working_4", "final")
 BRAILLE_SPINNERS = set("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⣾⣷⣯⣟⡿⢿⣻⣽")
 CLAUDE_WORKING_RE = re.compile(
@@ -32,10 +34,10 @@ CLAUDE_FINAL_RE = re.compile(
     r"\b(?:worked|thought|cooked|cogitated|baked|brewed|pondered|churned|twitched|simmered)\s+for\s+\d+|\bfor\s+\d+[smh]\b.*·\s*done",
     re.IGNORECASE,
 )
-DEFAULT_PICS_DIR = "/noobia/pics"
+DEFAULT_PICS_DIR = NOOBIA + "/pics"
 DEFAULT_SIZE = 18
 FINAL_DURATION = 2.0
-ROSE_PATH = Path("/noobia/pics/Rose/Rose.png")
+ROSE_PATH = Path(NOOBIA + "/pics/Rose/Rose.png")
 
 
 def render_png_halfblocks(png_path: str | Path, size: int = 18, height_px: int | None = None) -> str:

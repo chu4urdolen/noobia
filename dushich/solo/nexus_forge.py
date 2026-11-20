@@ -88,7 +88,7 @@ DEFAULT_QUADRANTS = {
         "command": [
             "/bin/bash",
             "-lc",
-            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-aria-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then if tmux list-panes -t \"$s\":0 -F '#{pane_current_command}' 2>/dev/null | grep -qx 'codex'; then exec tmux attach-session -t \"$s\"; else tmux kill-session -t \"$s\" 2>/dev/null || true; fi; fi; NOOBIA_ARIA_NO_GUI=1 exec /noobia/aria/codex-with-dushich",
+            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-aria-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then if tmux list-panes -t \"$s\":0 -F '#{pane_current_command}' 2>/dev/null | grep -qx 'codex'; then exec tmux attach-session -t \"$s\"; else tmux kill-session -t \"$s\" 2>/dev/null || true; fi; fi; NOOBIA_ARIA_NO_GUI=1 exec ${NOOBIA:-/noobia}/aria/codex-with-dushich",
         ],
     },
     "bottom_left": {
@@ -98,7 +98,7 @@ DEFAULT_QUADRANTS = {
         "command": [
             "/bin/bash",
             "-lc",
-            "for _ in $(seq 1 40); do /usr/bin/curl -fsS --max-time 1 http://127.0.0.1:11434/api/version >/dev/null 2>&1 && break; sleep 0.5; done; s=$(tmux -Ldushich-clean list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-dushich-solo-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux -Ldushich-clean attach-session -t \"$s\"; fi; NOOBIA_DUSHICH_NO_GUI=1 exec /noobia/dushich/solo/launch --no-gui",
+            "for _ in $(seq 1 40); do /usr/bin/curl -fsS --max-time 1 http://127.0.0.1:11434/api/version >/dev/null 2>&1 && break; sleep 0.5; done; s=$(tmux -Ldushich-clean list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-dushich-solo-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux -Ldushich-clean attach-session -t \"$s\"; fi; NOOBIA_DUSHICH_NO_GUI=1 exec ${NOOBIA:-/noobia}/dushich/solo/launch --no-gui",
         ],
     },
     "top_right": {
@@ -108,7 +108,7 @@ DEFAULT_QUADRANTS = {
         "command": [
             "/bin/bash",
             "-lc",
-            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-banshee-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux attach-session -t \"$s\"; fi; exec /noobia/banshee/launch",
+            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-banshee-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux attach-session -t \"$s\"; fi; exec ${NOOBIA:-/noobia}/banshee/launch",
         ],
     },
     "bottom_right": {
@@ -118,7 +118,7 @@ DEFAULT_QUADRANTS = {
         "command": [
             "/bin/bash",
             "-lc",
-            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-gwyn-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux attach-session -t \"$s\"; fi; exec /noobia/gwyn-app-nub/launch",
+            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-gwyn-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux attach-session -t \"$s\"; fi; exec ${NOOBIA:-/noobia}/gwyn-app-nub/launch",
         ],
     },
 }

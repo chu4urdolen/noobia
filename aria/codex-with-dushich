@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+NOOBIA="${NOOBIA:-/noobia}"
 
 detached=false
 resume_id=""
@@ -43,10 +44,10 @@ else
     session="noobia-aria-$(date -u +%Y%m%dT%H%M%S)-$$"
 fi
 # Auto-dismiss pending Codex update prompts so unattended/forge starts don't block
-if [[ -f "/home/aria/.codex/version.json" ]]; then
+if [[ -f "$HOME/.codex/version.json" ]]; then
     python3 -c '
 import json, pathlib
-p = pathlib.Path("/home/aria/.codex/version.json")
+p = pathlib.Path.home() / ".codex/version.json"
 try:
     data = json.loads(p.read_text(encoding="utf-8"))
     latest = data.get("latest_version")
@@ -59,7 +60,7 @@ except Exception:
 fi
 
 codex_bin=""
-for candidate in /usr/local/bin/codex /home/aria/.local/bin/codex $(command -v codex 2>/dev/null); do
+for candidate in /usr/local/bin/codex $HOME/.local/bin/codex $(command -v codex 2>/dev/null); do
     if [[ -x "$candidate" ]] && "$candidate" --version >/dev/null 2>&1; then
         codex_bin="$candidate"
         break
@@ -75,7 +76,7 @@ if [[ -n "$resume_id" ]]; then
     aria_command="exec $codex_bin --no-alt-screen -c 'mcp_servers.dushich.args=[\"--session-id\",\"$resume_id\"]' resume $resume_id"
 fi
 if ! tmux has-session -t "$session" 2>/dev/null; then
-    tmux new-session -d -s "$session" -n workshop -c /noobia \
+    tmux new-session -d -s "$session" -n workshop -c $NOOBIA \
         "$aria_command"
     sleep 0.3
     if ! tmux has-session -t "$session" 2>/dev/null; then
@@ -83,7 +84,7 @@ if ! tmux has-session -t "$session" 2>/dev/null; then
         exit 1
     fi
     if [[ -z "$resume_id" ]]; then
-        if resume_id="$(/noobia/aria/codex-pane-session.py "$session" 2>/dev/null)" && [[ -n "$resume_id" ]]; then
+        if resume_id="$($NOOBIA/aria/codex-pane-session.py "$session" 2>/dev/null)" && [[ -n "$resume_id" ]]; then
             if tmux has-session -t "$session" 2>/dev/null; then
                 tmux rename-session -t "$session" "noobia-aria-$resume_id"
                 session="noobia-aria-$resume_id"
@@ -97,11 +98,11 @@ if ! tmux has-session -t "$session" 2>/dev/null; then
         exit 1
     fi
     if [[ -n "$resume_id" ]]; then
-        monitor_command="exec /noobia/aria/dushich-bridge monitor --full --session-id $resume_id"
+        monitor_command="exec $NOOBIA/aria/dushich-bridge monitor --full --session-id $resume_id"
     else
-        monitor_command="exec /noobia/aria/dushich-bridge monitor --full"
+        monitor_command="exec $NOOBIA/aria/dushich-bridge monitor --full"
     fi
-    tmux split-window -h -p 50 -t "$session":0 -c /noobia \
+    tmux split-window -h -p 50 -t "$session":0 -c $NOOBIA \
         "$monitor_command"
     tmux set-window-option -t "$session":0 pane-border-status top
     tmux set-window-option -t "$session":0 pane-border-format ' #{pane_title} '
@@ -114,7 +115,7 @@ elif [[ -n "$resume_id" ]]; then
     # A session can survive after its Codex pane exits because the Dushich
     # monitor is still running. Recreate the missing coding pane in place.
     if ! tmux list-panes -t "$session":0 -F '#{pane_current_command}' | rg -qx 'codex'; then
-        tmux split-window -h -b -p 50 -t "$session":0.0 -c /noobia \
+        tmux split-window -h -b -p 50 -t "$session":0.0 -c $NOOBIA \
             "$aria_command"
         tmux select-pane -t "$session":0.0 -T 'Aria + Noob • Codex'
         tmux select-pane -t "$session":0.0
@@ -124,7 +125,7 @@ fi
 if "$detached"; then
     echo "Two-pane session ready: $session"
 elif [[ -z "${NOOBIA_ARIA_NO_GUI:-}" && ( -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" || -S "/run/user/$(id -u)/wayland-0" ) ]]; then
-    /usr/bin/python3 /noobia/dushich/solo/dushich_window.py \
+    /usr/bin/python3 $NOOBIA/dushich/solo/dushich_window.py \
         --agent Aria \
         --tmux-socket default \
         --target-pane "${session}:0.0" \

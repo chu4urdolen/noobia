@@ -105,28 +105,69 @@ confirming touch input. The camera frames were judged recognizable, but no
 record names an attending observer. Per Aria's note #61, add entries only with
 a specific receipt.
 
+## `lynx_tool_coverage.py`: coverage audit
+
+A read-only gap report built from the tracked manifest, the attended file, and
+a saved snapshot. It never contacts Lynx. To audit live state, capture first
+with `lynx_status_snapshot.py`.
+
+```sh
+lynx/tools/ui/lynx_tool_coverage.py --text           # uses state/latest.json if present
+lynx/tools/ui/lynx_tool_coverage.py --status FILE    # JSON for a specific snapshot
+lynx/tools/ui/lynx_tool_coverage.py --no-status      # source-only; every phone state is unknown
+```
+
+For each of the 20 components, plus `agent/*` for the agent tools, it lists
+the status, read, action and stop tools, the phone state, and attended IDs.
+Gaps:
+
+- **components without tools** and **status-only components** (no separate
+  read or action tool, e.g. camera, gnss, bluetooth, nfc);
+- **actions missing companions**: every `actuates`/`runs_task` tool needs a
+  stop tool and a read-only status in its component;
+- **catalog drift**: tools that differ from source, tools missing on the
+  phone, and tools installed only on the phone;
+- **unverified**: phone state not `validated`, with earlier-success evidence
+  flags and attended IDs listed beside it, never merged into it;
+- **not ready**, with a cause: `no_tool_source`, `tool_not_installed`,
+  `driver_not_loaded` (a driver flag is false on this boot), or
+  `interface_absent`. A false driver flag does not prove a driver ever worked.
+  Earlier success is shown separately.
+
+The 2026-11-21 result from the 23:55 UTC snapshot:
+- No component lacks a tool, and installed copies show no drift.
+- `lynx_codex` has no stop tool. It kills itself after 120 s, but NRP's
+  `AGENT_CANCEL` has no agent tool.
+- Flashlight, gnss, camera and fingerprint have no driver loaded on this boot.
+  Only flashlight (visual confirmation) and gnss (NMEA trial) record earlier
+  success.
+- The SIM interface is absent.
+
 ## Tests
 
 ```sh
 python3 -m unittest discover -s lynx/tools/ui -p 'test_*.py'
 ```
 
-These 33 tests are all offline. Status fixtures come from the real `inventory()`
-functions run over temporary directory trees, and the broker uses a fake
-runner. The tests check agreement with all 38 source manifests and the phone's
-component lists, catch source drift and stale committed manifests, check that every
-`local_calls` file is tracked by Git (clean-checkout parity), check attended
-evidence rules, and cover
-partial and malformed snapshots. For the broker they cover the exact command
-list, timeouts, bad JSON, oversized output, hostile catalog lines, atomic
-writes, and install drift. For the board they check HTML escaping and that
-the page has no scripts or controls.
+These 44 tests are all offline. Status fixtures come from the real
+`inventory()` functions run over temporary directory trees, and the broker
+uses a fake runner.
+
+- **Manifest:** agreement with all 38 source manifests and the phone's
+  component lists, source drift, stale committed manifests, every
+  `local_calls` file tracked by Git (clean-checkout parity), attended evidence
+  rules, and partial or malformed snapshots.
+- **Broker:** the exact command list, timeouts, bad JSON, oversized output,
+  hostile catalog lines, atomic writes, and install drift.
+- **Board:** HTML escaping, and no scripts or controls.
+- **Coverage:** companion rules, missing tools, the different not-ready
+  causes, drift, keeping attended evidence separate, and JSON output that
+  repeats exactly for the same input.
 
 ## Known gaps
 
-- The Nexus `noobia` MCP loads these phone-side wrappers and runs them on
-  Nexus, where `/usr/local/bin/lynx-*` does not exist, so
-  `lynx_platform_status` and similar tools fail there. Banshee owns that MCP.
+- Banshee routed the Nexus `noobia` MCP's Lynx status tools over pinned SSH
+  in `c3afc9f`. Before that they ran on Nexus and failed.
 - The status code reports touch, haptic and audio `validated: false` despite
   attended confirmations. The board mirrors the code.
 - `lynx_agent_health.sh` checks for `/usr/local/bin/lynx-agent`, whose source

@@ -1,4 +1,4 @@
-# Lynx handoff — 2026-11-18
+# Lynx handoff — updated 2026-11-20
 
 Read this first in the next conversation. Confirm live state before any phone
 command; this is a checkpoint, not a live guarantee.
@@ -34,6 +34,14 @@ command; this is a checkpoint, not a live guarantee.
 - The previous conversation found `/noobia` clean on `main` at `f76b6b6` and
   confirmed `origin/main` there. Other resident agents share `main`, so
   recheck Git status, remote, and HEAD before any new commit or push.
+- On 2026-11-20 Lynx began boot `0fe847d2-44d6-4ac1-9000-2c99df1a51d8`.
+  At first she answered with the pinned host key on RAM-stage SSH port 22;
+  Alpine handoff began around uptime 212 seconds. She then answered on
+  Alpine port 2222 with a healthy ext4 root, 22% battery, positive charging
+  current near 322 mA, and no health issues. Nexus presence reported
+  `alpine_wifi`. No hardware trial was run on this boot. Noob deferred the
+  clear-sky GNSS and other live trials. The installed reserve guard can still
+  request shutdown at 20% even while charging; monitor charge before trials.
 
 ## Working hardware and software
 
@@ -59,10 +67,9 @@ command; this is a checkpoint, not a live guarantee.
   and queue health calls passed. Lynx remained healthy on the same boot. See
   [agent notes](LYNX-AGENT.md) and
   `lynx/logs/native-mcp-deploy-1795034061636565363/result.json`.
-- V53 GNSS trial scripts now have an offline-checked `--candidate v53` path
-  pinned to the verified V53 boot image and same-boot Bluetooth evidence.
-  This is preparation only: no V53 GNSS modules have been loaded. The live
-  trials use reboot watchdogs and need an attended recovery window.
+- V53 GNSS trial scripts pin the verified boot image and same-boot Bluetooth
+  evidence. The successful RAM-only V53 module and NMEA trials are recorded
+  below; the clear-sky position-fix trial remains deferred.
 
 ## Recent verified changes
 

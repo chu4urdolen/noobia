@@ -24,6 +24,8 @@ fingerprint, and headset switch state without activating them. The headset
 reader uses the kernel's read-only EVIOCGSW input ioctl. Its current zero
 switch state is a live read, not a validated insertion test. The additive
 installer is `agent/install_peripheral_status_tools.py`.
+The fingerprint reader also reports the live `spi7.0` device-tree compatible
+and driver binding separately; that interface is presently unbound.
 `lynx_agent_media.py` exposes the existing bounded media catalog, status,
 play, and stop controls to the local agent. Its play gate checks battery,
 temperature, and Alpine health; the media service validates item names and

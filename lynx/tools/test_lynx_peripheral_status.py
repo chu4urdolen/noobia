@@ -44,6 +44,20 @@ class PeripheralStatusTest(unittest.TestCase):
         self.assertFalse(state["headset"]["interface_ready"])
         self.assertEqual(state["headset"]["evidence"]["switch_read_error"], "PermissionError")
 
+    def test_fingerprint_device_tree_is_not_a_bound_sensor(self):
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            node = root / "sys/firmware/devicetree/base/spi7@11017000/fingerprint@0"
+            node.mkdir(parents=True)
+            (node / "compatible").write_bytes(b"oplus,fp_spi\0")
+            (root / "sys/bus/spi/devices/spi7.0").mkdir(parents=True)
+            state = inventory(root)
+        self.assertEqual(state["fingerprint"]["evidence"]["device_tree_compatible"],
+                         "oplus,fp_spi")
+        self.assertTrue(state["fingerprint"]["evidence"]["spi_device"])
+        self.assertFalse(state["fingerprint"]["evidence"]["driver_bound"])
+        self.assertFalse(state["fingerprint"]["validated"])
+
 
 if __name__ == "__main__":
     unittest.main()

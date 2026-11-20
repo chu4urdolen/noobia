@@ -36,6 +36,13 @@ def inventory(root=Path("/"), switch_reader=read_switches):
     fingerprint_nodes = [name for name in ("/dev/fpsensor", "/dev/goodix_fp",
                                                  "/dev/egis_fp", "/dev/fingerprint")
                          if at(name).exists()]
+    fingerprint_spi = at("/sys/bus/spi/devices/spi7.0")
+    fingerprint_driver = fingerprint_spi / "driver"
+    fingerprint_dt = at("/sys/firmware/devicetree/base/spi7@11017000/fingerprint@0")
+    try:
+        fingerprint_compatible = (fingerprint_dt / "compatible").read_bytes()[:80].split(b"\0", 1)[0].decode("ascii")
+    except (OSError, UnicodeDecodeError):
+        fingerprint_compatible = None
     event = None
     for candidate in sorted(at("/sys/class/input").glob("event*")):
         try:
@@ -58,9 +65,12 @@ def inventory(root=Path("/"), switch_reader=read_switches):
                 "evidence": {"platform_node": nfc_platform.exists(),
                              "driver_bound": nfc_driver.exists(), "device_nodes": nfc_nodes},
                 "next": "stock oplus_nfc and nfc_i2c modules need a guarded driver trial"},
-        "fingerprint": {"interface_ready": bool(fingerprint_nodes),
+        "fingerprint": {"interface_ready": fingerprint_driver.exists() and bool(fingerprint_nodes),
                         "validated": False,
-                        "evidence": {"device_nodes": fingerprint_nodes},
+                        "evidence": {"device_nodes": fingerprint_nodes,
+                                     "spi_device": fingerprint_spi.exists(),
+                                     "driver_bound": fingerprint_driver.exists(),
+                                     "device_tree_compatible": fingerprint_compatible},
                         "next": "identify exact sensor and secure userspace route before activation"},
         "headset": {"interface_ready": headset_bits is not None,
                     "validated": False,

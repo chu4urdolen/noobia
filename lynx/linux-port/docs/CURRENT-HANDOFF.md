@@ -196,7 +196,10 @@ changing boot storage. See `lynx/tools/lynx_agent_media.py`,
    configured variants; see [NFC preflight](LYNX-NFC-PREFLIGHT-20261120.md).
    Fingerprint driver candidates
    `oplus_fp_common.ko` and `uff_fp_driver.ko` are in the stock vendor DLKM;
-   their sensor identity and secure userspace path are unproven. The headset
+   the active tree has an enabled `oplus,fp_spi` device at `spi7.0`, but its
+   driver is unbound and no fingerprint device node is present. The agent's
+   `lynx_fingerprint_status` now reports that distinction. Sensor identity and
+   secure userspace remain unproven. The headset
    switch reader is live but still needs a physical plug/unplug observation.
 
 ## Recovery and collaboration

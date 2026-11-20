@@ -166,3 +166,41 @@ class ForgeDbTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ForgeDbProjectSetTest(ForgeDbTest):
+    """`project set` updates hardware readiness and description."""
+
+    def test_set_updates_hardware_flag_and_description(self):
+        code, _ = run("project", "set", "Rose", "--hardware-ready", "--by", "Dushich")
+        self.assertEqual(code, 0)
+        db = sqlite3.connect(forge_db.DB)
+        self.assertEqual(db.execute("SELECT hardware_ready FROM projects").fetchone()[0], 1)
+        db.close()
+        code, out = run("project", "set", "Rose", "--no-hardware-ready",
+                        "--description", "Rose voice, screen, and lights", "--by", "Dushich")
+        self.assertEqual(code, 0)
+        self.assertIn("Rose voice, screen, and lights", out)
+        self.assertIn("hardware not ready", out)
+
+    def test_set_requires_something_to_set_and_known_project(self):
+        self.assertEqual(run("project", "set", "Rose", "--by", "D")[0], 2)
+        self.assertEqual(run("project", "set", "Nope", "--hardware-ready", "--by", "D")[0], 2)
+
+
+class ForgeDbColumnRemovalTest(ForgeDbTest):
+    """Older atlases that still carry conversation_id lose it on open."""
+
+    def test_old_atlas_loses_conversation_id(self):
+        db = sqlite3.connect(forge_db.DB)
+        db.execute("ALTER TABLE projects ADD COLUMN conversation_id TEXT")
+        db.execute("UPDATE projects SET conversation_id='019f0000-0000-7000-8000-000000000000'")
+        db.commit()
+        db.close()
+        code, out = run("--json", "project", "get", "Rose")
+        self.assertEqual(code, 0)
+        self.assertNotIn("conversation_id", out)
+        db = sqlite3.connect(forge_db.DB)
+        columns = {r[1] for r in db.execute("PRAGMA table_info(projects)")}
+        db.close()
+        self.assertNotIn("conversation_id", columns)

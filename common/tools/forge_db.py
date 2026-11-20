@@ -57,7 +57,6 @@ CREATE TABLE IF NOT EXISTS projects (
     description TEXT,
     hardware_ready INTEGER NOT NULL,
     agentic_tools TEXT,
-    conversation_id TEXT,
     last_modified TEXT,
     modified_for TEXT);
 CREATE TABLE IF NOT EXISTS nexus_paths (
@@ -114,6 +113,9 @@ ADDED_COLUMNS = {  # columns newer than the first atlases; added in place
                     ("last_hit_by", "TEXT")),
     "projects": (("last_modified", "TEXT"), ("modified_for", "TEXT")),
 }
+REMOVED_COLUMNS = {  # columns older atlases still carry; dropped in place
+    "projects": ("conversation_id",),
+}
 
 
 def connect() -> sqlite3.Connection:
@@ -126,6 +128,11 @@ def connect() -> sqlite3.Connection:
         for column, spec in added:
             if column not in columns:
                 db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {spec}")
+    for table, columns in REMOVED_COLUMNS.items():
+        present = {r["name"] for r in db.execute(f"PRAGMA table_info({table})")}
+        for column in columns:
+            if column in present:
+                db.execute(f"ALTER TABLE {table} DROP COLUMN {column}")
     db.commit()
     return db
 
@@ -537,6 +544,15 @@ def main(argv: list[str] | None = None) -> int:
     jn.add_argument("--hardware-ready", action="store_true")
     jn.add_argument("--tag", action="append", default=[], help="attach a curated tag (repeatable)")
     jn.add_argument("--by", default="forge-db", help="your name")
+    js = ja.add_parser("set", help="update a project's description or hardware readiness")
+    js.add_argument("name")
+    hw = js.add_mutually_exclusive_group()
+    hw.add_argument("--hardware-ready", dest="hardware_ready", action="store_true", default=None,
+                    help="the project's hardware exists and works")
+    hw.add_argument("--no-hardware-ready", dest="hardware_ready", action="store_false", default=None,
+                    help="the project's hardware is not ready yet")
+    js.add_argument("--description", "-d", help="replace the project description")
+    js.add_argument("--by", required=True)
     jt = ja.add_parser("touch", help="record that you are working on a project for an agent; "
                                      f"exit 3 if another agent worked on it in the last {ACTIVE_HOURS} h")
     jt.add_argument("name")
@@ -656,6 +672,21 @@ def main(argv: list[str] | None = None) -> int:
                         json.dumps(["forge-db"]), now(), args.executor))
             for tag in args.tag:
                 tag_attach(db, tag, "project", [args.name], args.by, commit=False)
+            db.commit()
+            refresh_embeddings(db, [("project", args.name)])
+            result = project_view(db, args.name, 0)
+        elif args.cmd == "project" and args.action == "set":
+            require(args.by, "--by", 80)
+            if args.hardware_ready is None and not args.description:
+                raise ValueError("Nothing to set: pass --hardware-ready, --no-hardware-ready, or --description")
+            if not db.execute("SELECT 1 FROM projects WHERE project_name=?", (args.name,)).fetchone():
+                raise ValueError(f"Unknown project: {args.name}")
+            if args.hardware_ready is not None:
+                db.execute("UPDATE projects SET hardware_ready=? WHERE project_name=?",
+                           (int(args.hardware_ready), args.name))
+            if args.description:
+                db.execute("UPDATE projects SET description=? WHERE project_name=?",
+                           (require(args.description, "--description"), args.name))
             db.commit()
             refresh_embeddings(db, [("project", args.name)])
             result = project_view(db, args.name, 0)

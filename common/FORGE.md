@@ -60,9 +60,9 @@ no quadrant in the window; she watches Nexus health from her own terminal.
   Noobia's principles, its population, how to work with Dushich, tools, and
   Git rules.
   - Codex agents get it from [`/noobia/AGENTS.md`](../AGENTS.md).
-  - Gwyn's workspace `CLAUDE.md` imports it.
+  - Gwyn's `CLAUDE.md` imports it.
   - Banshee is told to read it at the start of each session.
-- A **launcher** starts the CLI in that agent's own workspace, usually as a
+- A **launcher** starts the CLI in that agent's home folder, usually as a
   two-pane tmux session with the agent on the left and Dushich's live
   activity on the right.
 - A **private, Git-ignored directory** holds the CLI's configuration,
@@ -71,6 +71,12 @@ no quadrant in the window; she watches Nexus health from her own terminal.
 
 All agents run under one Unix login (`aria`). Their identities are kept apart
 by directory, not by Unix user.
+
+**One repository.** All of this is one Git repository, `/noobia` on `main`,
+which GitHub mirrors. Every agent works and commits in it directly; nobody
+has a private copy or a nested repository. The one deliberate exception is
+Dushich's task workspace, `dushich/workspace`: a small repo of its own so the
+handoff runner can prove that he changed the expected files and committed.
 
 ## Paths and commands
 
@@ -93,6 +99,13 @@ Two files set up `NOOBIA` and put `common/bin` on `PATH`:
 
 Nothing Noobia-made is installed in `/usr/bin`, `/usr/local/bin`, or
 `~/.local/bin`, so what runs is always what is in the repository.
+
+**Runtimes.** The third-party software the forge runs on is built inside
+[`common/runtime/`](runtime/README.md), not in `/opt`: Dushich's and Aigel's
+Codex CLI, the Python environment for meaning search and its model, and
+Playwright with Chromium. Git holds each one's pinned recipe and
+`install.sh`, which rebuilds them; the built files (about 1.5 GB) stay out of
+Git.
 
 ## Startup
 
@@ -223,11 +236,39 @@ so a fresh clone works without a database in Git.
 | `tags`, `tag_links` | A curated UPPERCASE vocabulary (`#ROSE`, `#SECURITY`, `#NETWORK`, …) for paths and projects. |
 | `embeddings` | Sentence vectors for meaning search. |
 
-**Search** combines word matches with meaning. If the GPU embedding model
-(`qwen3-embedding:0.6b`) can load without evicting Dushich's Qwen, it is
-used. Otherwise `forge-db` falls back to a small CPU model
-(`BAAI/bge-small-en-v1.5` via fastembed in `/opt/noobia/forge-venv`). Without
-either, search is word-only.
+### How meaning search works
+
+Ordinary search finds words. Meaning search finds *ideas*: ask for "graphics
+card heat" and it finds `/var/log/noobia_gpu`, described as "GPU monitor
+CSVs: power, usage, temperature", although the two share no word.
+
+1. **Every entry becomes a sentence.** Each atlas path, note, and project is
+   written out as one line of text: its path, kind, owner, description, and
+   tags.
+2. **An embedding model turns each sentence into a vector**, a list of
+   numbers (1,024 of them for the GPU model) that encodes what the sentence
+   is about. Sentences with similar meanings get vectors that point in
+   similar directions, whatever words they use.
+3. **Vectors are stored** in the `embeddings` table, about 300 of them today.
+   A vector is recomputed only when its entry's text changes (`forge-db`
+   keeps a hash of each text), so writes stay cheap.
+4. **A search embeds the question the same way** and measures how closely
+   its direction matches every stored vector (cosine similarity). That score
+   is rescaled to roughly 0–1 and added to an ordinary word-match score, so an
+   exact name still wins and a vague question still finds its answer. The
+   best few are returned.
+
+Two models can do step 2, both local:
+
+- **On the GPU:** `qwen3-embedding:0.6b` through Ollama. It is used only when
+  it cannot push Dushich's Qwen out of video memory (Ollama keeps two models
+  loaded: `OLLAMA_MAX_LOADED_MODELS=2`).
+- **On the CPU:** `BAAI/bge-small-en-v1.5` (fastembed, in
+  `common/runtime/forge-venv`, with the model in `common/runtime/models`).
+
+The two models' vectors don't mix: switching models re-embeds everything on
+the next write or `forge-db embed`. `forge-db stats` shows which model is
+active. With neither model available, search is word-only and still works.
 
 **One project, one agent at a time.** Before working on a project, an agent
 (or Dushich, on an agent's behalf) runs `forge-db project touch`. If a
@@ -265,9 +306,10 @@ privately on Nexus.
 | Window | `python3-gi`, `gir1.2-gtk-3.0`, `gir1.2-vte-2.91`, `python3-gi-cairo`, `python3-pil` |
 | Terminals | `tmux` 3.6, `curl`, `sqlite3` |
 | Local inference | Ollama service on `127.0.0.1:11434` with `qwen3.8:27b` (131k context) and `qwen3-embedding:0.6b`; override [`dushich/coding/ollama-override.conf`](../dushich/coding/ollama-override.conf) → `/etc/systemd/system/ollama.service.d/noobia-dushich.conf` (`OLLAMA_MAX_LOADED_MODELS=2`) |
-| Dushich's CLI | Codex CLI installed separately in `/opt/noobia/dushich-codex` (`npm install --prefix … @openai/codex`), with its own `CODEX_HOME` per role |
+| Dushich's CLI | Codex CLI 0.169.0 built in `common/runtime/codex` (`common/runtime/install.sh codex`), with its own `CODEX_HOME` per role |
 | Cloud agents' CLIs | Codex (`npm -g @openai/codex`, Node.js 22), Antigravity (`~/.local/bin/agy`), Claude Code (native installer, `~/.local/bin/claude`), each logged in to its own provider account |
-| Meaning search (optional) | `/opt/noobia/forge-venv` with `fastembed` and `numpy` |
+| Meaning search (optional) | `common/runtime/forge-venv` and `common/runtime/models` (`install.sh forge`) |
+| App checks (optional) | Playwright and Chromium in `common/runtime/web-venv` and `common/runtime/playwright` (`install.sh web`) |
 | Commands and root | `common/bin` on `PATH` and `NOOBIA=/noobia` (see Paths and commands) |
 | MCP registration | `dushich` → `common/dushich/mcp.py --agent NAME` in each CLI's config; see [`common/dushich/README.md`](dushich/README.md) |
 | Helper mirrors | `noobia-dushich-helper-mirror` and `noobia-banshee-helper-mirror` user services, installed from [`common/dushich/`](dushich/) |

@@ -1,0 +1,6 @@
+# Built from the pinned recipes by install.sh; never committed.
+/codex/node_modules/
+/forge-venv/
+/web-venv/
+/models/
+/playwright/

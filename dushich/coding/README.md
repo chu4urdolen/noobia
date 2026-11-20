@@ -63,9 +63,9 @@ the saved report and Git history before the next delegated task.
 
 The launcher runs under the shared `aria` Unix account. Its own
 `CODEX_HOME` at `/noobia/dushich/coding/private/codex` holds configuration and persistent
-session history. Codex is installed separately at
-`/opt/noobia/dushich-codex`; Aria's installation and configuration are not
-used. Helper instructions live at [`AGENTS.md`](AGENTS.md), linked from
+session history. Codex is built separately in
+[`common/runtime/codex`](../../common/runtime/README.md) from a pinned recipe;
+Aria's installation and configuration are not used. Helper instructions live at [`AGENTS.md`](AGENTS.md), linked from
 `/noobia/dushich/coding/private/codex/AGENTS.md` so Codex loads
 them for helper sessions.
 The solo agent has separate instructions in [`../solo/AGENTS.md`](../solo/AGENTS.md),
@@ -113,8 +113,8 @@ ln -sfn /noobia/dushich/coding/AGENTS.md /noobia/dushich/coding/private/codex/AG
 ln -sfn /noobia/dushich/solo/AGENTS.md /noobia/dushich/solo/private/codex/AGENTS.md
 ```
 
-The Codex CLI installation runs as `aria` and can be updated with
-`npm install --prefix /opt/noobia/dushich-codex @openai/codex@latest`.
+Dushich's Codex CLI is pinned in `common/runtime/codex/package.json`; to
+upgrade it, see [`common/runtime/README.md`](../../common/runtime/README.md).
 Ollama's service has the context and loopback settings in
 `/etc/systemd/system/ollama.service.d/noobia-dushich.conf`, installed from the
 override file here. The previous `gpt-oss:20b` model can be reconstructed with

@@ -3,7 +3,7 @@ set -euo pipefail
 NOOBIA="${NOOBIA:-/noobia}"
 
 # Solo Dushich runs with Aria's Unix authority and a separate Codex home.
-codex=/opt/noobia/dushich-codex/node_modules/.bin/codex
+codex=$NOOBIA/common/runtime/codex/node_modules/.bin/codex
 home=$NOOBIA/dushich/solo/private/codex
 [[ -x "$codex" ]] || { echo "Dushich Codex CLI is missing" >&2; exit 1; }
 [[ -f "$home/config.toml" ]] || { echo "Solo Dushich config is missing" >&2; exit 1; }
@@ -40,7 +40,7 @@ exec /usr/bin/env -i \
     GIT_COMMITTER_NAME=Dushich GIT_COMMITTER_EMAIL=dushich@nexus.local \
     GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes' \
     OLLAMA_HOST=http://127.0.0.1:11434 \
-    PATH="/opt/noobia/dushich-codex/node_modules/.bin:$NOOBIA/common/bin:/usr/local/bin:/usr/bin:/bin" \
+    PATH="$NOOBIA/common/runtime/codex/node_modules/.bin:$NOOBIA/common/bin:/usr/local/bin:/usr/bin:/bin" \
     TERM="${TERM:-xterm}" LANG="${LANG:-C.UTF-8}" \
-    /bin/bash -c 'cd "$NOOBIA" && exec /opt/noobia/dushich-codex/node_modules/.bin/codex --oss --local-provider ollama --model qwen3.8:27b --sandbox danger-full-access --ask-for-approval never "$@"' \
+    /bin/bash -c 'cd "$NOOBIA" && exec $NOOBIA/common/runtime/codex/node_modules/.bin/codex --oss --local-provider ollama --model qwen3.8:27b --sandbox danger-full-access --ask-for-approval never "$@"' \
     dushich-solo "$@"

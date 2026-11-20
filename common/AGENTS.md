@@ -226,8 +226,25 @@ offers the same tools:
 
 ## Where work belongs
 
+**One repository.** `/noobia` is Noobia's only Git repository, on `main`, and
+GitHub holds its copy. Every agent works in it directly: each starts in its
+own folder (`/noobia/<Noob>/`), but there is one history and one `main` for
+everyone, which is how we collaborate. Do not create Git repositories inside
+it. The one exception is Dushich's task workspace (`dushich/workspace`), a
+small repo the verified-handoff runner needs so it can check that he changed
+the expected files and committed.
+
+**Everything under `/noobia`.** Noobia's code, tools, data, and the runtimes
+they need live under `/noobia`, not in `/opt`, `/usr/local`, or hidden home
+folders. Third-party software our tools run on is built inside
+[`common/runtime/`](/noobia/common/runtime/README.md) from recipes kept in Git
+(pinned versions plus `install.sh`); the built files stay out of Git because
+they are large and machine-specific. Only the operating system and its
+packages, the Ollama service and its models, the cloud agents' own CLIs, and
+`uv` (which builds the runtimes) live outside.
+
 Start with [the code map](/noobia/docs/CODE-MAP.md) and the relevant inhabitant
-page before changing a device or live service. Work under `/noobia/`. Put each
+page before changing a device or live service. Put each
 inhabitant's source, instructions, tests, documents, task worktrees, and local
 artifacts in `/noobia/<Noob>/`. Put material genuinely shared by multiple
 inhabitants in `/noobia/common/`. The readable
@@ -244,6 +261,26 @@ created once they are no longer needed. Keep any artifact that must persist in
 the owning inhabitant's ignored private area, with a clear purpose. Check Git
 status for leftover task files before committing and before handing off; do
 not sweep away another agent's active work.
+
+## Shared tools that save time, tokens, and effort
+
+Before reading a huge file, sweeping the file system, or writing yet another
+helper, reach for what we already have. Most of these run on Nexus's own GPU
+and cost no cloud tokens.
+
+| Need | Tool |
+| --- | --- |
+| Where is something on Nexus? | `forge-db search WORDS` (meaning search over the atlas, notes, and projects), then `dushich-explore ask "..."` if the atlas does not know |
+| What happened in a project, and who is working on it? | `forge-db project get NAME` |
+| Digest a huge log, transcript, or file | `dushich-summarizer --file PATH --instructions "focus..."` |
+| Discuss something with a local mind | `dushich_ask` (MCP); for coding work, a verified handoff (`dushich_start`) |
+| See a web app or page for real | Playwright: `common/runtime/web-venv/bin/python check.py` (headless Chromium) |
+| A clean Python environment for a project | `uv venv`, `uv pip install ...`, `uv run` |
+| Audio, video, databases | `ffmpeg`, `sqlite3` |
+| Lynx, Iris, Rose, Lolth hardware | the `noobia` MCP server (`common/mcp/`); `lynx/tools/lynx_remote.py` |
+
+Details for each follow. When you build a tool others could use, put it in
+`common/`, link it from `common/bin/`, and add it to this table.
 
 ## Agent-facing tools
 
@@ -341,7 +378,7 @@ the `projects` registry:
   `qwen3-embedding:0.6b` on the RTX 5090 through Ollama only when that cannot
   evict Dushich's Qwen (the model is already loaded, or
   `OLLAMA_MAX_LOADED_MODELS` is at least 2). Otherwise it uses the CPU model
-  `BAAI/bge-small-en-v1.5` (fastembed in `/opt/noobia/forge-venv`).
+  `BAAI/bge-small-en-v1.5` (fastembed in `common/runtime/forge-venv`).
   `forge-db stats` shows which model is active, and switching models
   re-embeds on the next `forge-db embed`.
 
@@ -400,9 +437,10 @@ is kept in `/home/aria/.codex/dushich-bridge/explore/`.
 
 - `ffmpeg` and `sqlite3` are installed system-wide for audio, video, and
   database work.
-- Playwright with its own headless Chromium lives in `/opt/noobia/web-venv`.
-  Use it to open, click through, and screenshot web apps:
-  `/opt/noobia/web-venv/bin/python your_check.py` with
+- Playwright with its own headless Chromium lives in `common/runtime/web-venv`
+  (browsers in `common/runtime/playwright`, found through
+  `PLAYWRIGHT_BROWSERS_PATH`). Use it to open, click through, and screenshot
+  web apps: `common/runtime/web-venv/bin/python your_check.py` with
   `from playwright.sync_api import sync_playwright`.
 - `uv` and `uvx` (`/home/aria/.local/bin`, uv 0.13.9) create fast, clean
   Python environments for a project: `uv venv`, `uv pip install ...`,

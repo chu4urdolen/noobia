@@ -119,7 +119,7 @@ described once, for every agent, in the shared file. Gwyn's launcher is
 - The `noobia` MCP server (Banshee's `common/mcp/noob_mcp.py`) gives you Lynx,
   Iris, and local tools. Device tools act on real hardware, so keep calls
   bounded and ask Noob before anything physical beyond a status read.
-- Check your apps for real with Playwright in `/opt/noobia/web-venv`: open
+- Check your apps for real with Playwright in `common/runtime/web-venv`: open
   them, click through, and screenshot them before calling them done.
 
 ---

@@ -41,7 +41,7 @@ DB = Path(os.environ.get("FORGE_DB") or NOOBIA / "dushich/workspace/forge.db")
 ACTIVE_HOURS = 2
 GPU_MODEL = "qwen3-embedding:0.6b"
 CPU_MODEL = "BAAI/bge-small-en-v1.5"
-MODEL_CACHE = "/opt/noobia/forge-venv/models"
+MODEL_CACHE = str(NOOBIA / "common/runtime/models")  # fastembed's downloaded CPU model
 OLLAMA = "http://127.0.0.1:11434"
 QUERY_INSTRUCTION = ("Instruct: Given a question about the Noobia computer Nexus, retrieve the "
                      "paths, projects, and notes that answer it\nQuery: ")
@@ -749,7 +749,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd == "embed":
             changed = refresh_embeddings(db)
             result = (f"refreshed {changed} vector(s) with {active_model()}" if active_model()
-                      else "meaning search unavailable: run with /opt/noobia/forge-venv/bin/python")
+                      else "meaning search unavailable: build it with common/runtime/install.sh forge")
         else:
             counts = {t: db.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
                       for t in ("projects", "nexus_paths", "project_notes", "tags", "tag_links", "embeddings")}

@@ -28,6 +28,9 @@ class PlatformStatusTest(unittest.TestCase):
             root = Path(temp)
             (root / "dev").mkdir()
             (root / "dev/ccci_0_200").touch()
+            (root / "sys/kernel/ccci").mkdir(parents=True)
+            (root / "sys/kernel/ccci/boot").write_text(
+                "md1:0 | md2:n/a | md3:n/a | md4:n/a | md5:n/a\n")
             (root / "sys/class/udc").mkdir(parents=True)
             (root / "sys/class/udc/dummy_udc.0").touch()
             state = inventory(root, HEALTH)
@@ -36,7 +39,18 @@ class PlatformStatusTest(unittest.TestCase):
             self.assertFalse(state[name]["validated"], name)
         self.assertFalse(state["usb"]["interface_ready"])
         self.assertTrue(state["cellular"]["interface_ready"])
+        self.assertEqual(state["cellular"]["evidence"]["md1_state_code"], 0)
         self.assertFalse(state["sim"]["evidence"]["card_presence_checked"])
+
+    def test_modem_status_reader_does_not_turn_ready_code_into_validation(self):
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            boot = root / "sys/kernel/ccci/boot"
+            boot.parent.mkdir(parents=True)
+            boot.write_text("md1:4 | md2:n/a\n")
+            state = inventory(root, HEALTH)
+        self.assertEqual(state["cellular"]["evidence"]["md1_state_code"], 4)
+        self.assertFalse(state["cellular"]["validated"])
 
     def test_live_interfaces_and_health_are_reported_without_controls(self):
         with TemporaryDirectory() as temp:

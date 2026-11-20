@@ -161,7 +161,11 @@ See
    unproven. Read-only CCCI sysfs says the bootloader loaded MD material, while
    stock `ccci_mdinit` includes a modem-start path. Keep the SIM out and do not
    run that daemon or write CCCI controls as a status probe. See the cellular
-   inventory record before any modem action.
+   inventory record before any modem action. A 2026-11-21 read-only follow-up
+   found `/sys/kernel/ccci/boot` at `md1:0` on the current boot. Matching
+   OnePlus source labels 0 `INVALID` and routes actual startup through CCCI
+   ioctls and Android `ccci_mdinit`; the agent's cellular status now exposes
+   this raw code while retaining `validated=false`. No radio was started.
    The documented GNSS outdoor trial in `LYNX-CONNECTIVITY-PRECAL.md` uses
    `trial_v52_gnss_mnld.py`; its `--candidate v53` preflight pins the exact
    V53 boot hash. Offline checks confirmed V52 and V53 kernel bytes match

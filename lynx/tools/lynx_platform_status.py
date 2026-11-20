@@ -8,6 +8,7 @@ remain unvalidated even when their kernel interfaces are visible.
 import argparse
 import json
 from pathlib import Path
+import re
 import subprocess
 
 
@@ -32,6 +33,15 @@ def inventory(root=Path("/"), health=None):
             return needle in path(name).read_text()
         except OSError:
             return False
+
+    def modem_state():
+        try:
+            with path("/sys/kernel/ccci/boot").open(encoding="ascii") as handle:
+                raw = handle.read(256)
+        except (OSError, UnicodeError):
+            return None
+        match = re.search(r"(?:^|\s)md1:(\d+)(?=\s|\||$)", raw)
+        return int(match.group(1)) if match else None
 
     health = health or {}
     battery = health.get("battery") or {}
@@ -59,6 +69,7 @@ def inventory(root=Path("/"), health=None):
     udcs = names("/sys/class/udc", "*")
     real_udcs = [name for name in udcs if not name.startswith("dummy_udc")]
     ccci_nodes = names("/dev", "ccci*")
+    md1_state = modem_state()
 
     result = {
         "battery": {"interface_ready": power_ok, "validated": power_ok,
@@ -109,8 +120,9 @@ def inventory(root=Path("/"), health=None):
                 "next": "native Alpine USB gadget and host enumeration remain unproven"},
         "cellular": {"interface_ready": bool(ccci_nodes), "validated": False,
                      "evidence": {"ccci_node_count": len(ccci_nodes),
+                                  "md1_state_code": md1_state,
                                   "modem_runtime_verified": False},
-                     "next": "do not start ccci_mdinit or write CCCI controls as a status probe"},
+                     "next": "modem startup and radio function remain unverified; do not start ccci_mdinit or write CCCI controls as a status probe"},
         "sim": {"interface_ready": False, "validated": False,
                 "evidence": {"ccci_nodes_present": bool(ccci_nodes),
                              "card_presence_checked": False},

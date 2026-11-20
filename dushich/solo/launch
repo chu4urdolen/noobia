@@ -163,7 +163,7 @@ def main() -> int:
             raise
     if args.detached:
         print('Solo Dushich session ready: ' + session)
-        print('Reattach: /noobia/dushich/solo/launch --attach ' + session.removeprefix(PREFIX))
+        print(f'Reattach: {NOOBIA}/dushich/solo/launch --attach ' + session.removeprefix(PREFIX))
     elif not no_gui and (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')
           or Path(f'/run/user/{os.getuid()}/wayland-0').exists()):
         run('tmux', '-L', 'dushich-clean', 'kill-pane', '-t', session + ':0.1', check=False)

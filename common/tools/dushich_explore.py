@@ -128,12 +128,13 @@ def worker(job_id: str) -> None:
         state.update(status="failed", error=f"Dushich did not finish within {WORK_TIMEOUT} s")
     except OSError as exc:
         state.update(status="failed", error=str(exc))
-    changes = subprocess.run([FORGE_DB, "--json", "changes", "--since", state["started"]],
-                             capture_output=True, text=True, timeout=120, check=False)
+    # Listing the atlas rows he wrote is a courtesy; it must never lose the answer.
     try:
+        changes = subprocess.run([FORGE_DB, "--json", "changes", "--since", state["started"]],
+                                 capture_output=True, text=True, timeout=120, check=False)
         written = json.loads(changes.stdout)
         state["recorded"] = [row["path"] for row in written["paths"] if row["updated_by"] == "Dushich"]
-    except (json.JSONDecodeError, KeyError):
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError, KeyError):
         state["recorded"] = []
     state["finished"] = stamp()
     save_state(path, state)

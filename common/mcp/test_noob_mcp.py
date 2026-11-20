@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import MagicMock, patch
 
 from noob_mcp import NoobMCPServer, load_native_mcp_tools
 from mcp_client import InProcessMCPServerAdapter, MCPClient
@@ -88,6 +89,105 @@ class TestNoobMCPServer(unittest.TestCase):
         self.assertEqual(len(defs), len(tools))
         self.assertEqual(defs[0]["type"], "function")
         self.assertIn("parameters", defs[0])
+
+
+class TestLynxRemoteRouting(unittest.TestCase):
+    def test_extract_remote_command(self):
+        with tempfile.NamedTemporaryFile("w+", delete=False) as f:
+            f.write("#!/bin/sh\n# Test wrapper\nexec /usr/bin/python3 /usr/local/bin/lynx-test-tool arg1\n")
+            f.flush()
+            tmp_path = Path(f.name)
+        try:
+            cmd = NoobMCPServer._extract_remote_command(tmp_path)
+            self.assertEqual(cmd, "/usr/bin/python3 /usr/local/bin/lynx-test-tool arg1")
+        finally:
+            tmp_path.unlink()
+
+    def test_extract_remote_command_without_exec(self):
+        with tempfile.NamedTemporaryFile("w+", delete=False) as f:
+            f.write("/usr/bin/python3 /usr/local/bin/lynx-direct-tool\n")
+            f.flush()
+            tmp_path = Path(f.name)
+        try:
+            cmd = NoobMCPServer._extract_remote_command(tmp_path)
+            self.assertEqual(cmd, "/usr/bin/python3 /usr/local/bin/lynx-direct-tool")
+        finally:
+            tmp_path.unlink()
+
+    def test_lynx_remote_script_handler_success(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td)
+            sh_file = p / "lynx_dummy.sh"
+            sh_file.write_text("#!/bin/sh\nexec /usr/bin/python3 /usr/local/bin/lynx-dummy\n")
+            meta = {"name": "lynx_dummy", "timeout": 5}
+            handler = NoobMCPServer._make_lynx_remote_script_handler(sh_file, meta)
+
+            mock_res = MagicMock()
+            mock_res.returncode = 0
+            mock_res.stdout = '{"status": "ready", "temperature": 32.5}\n'
+            mock_res.stderr = ""
+
+            with patch("subprocess.run", return_value=mock_res) as mock_run:
+                out = handler({})
+                parsed = json.loads(out)
+                self.assertTrue(parsed["ok"])
+                self.assertEqual(parsed["result"]["status"], "ready")
+                self.assertEqual(parsed["result"]["temperature"], 32.5)
+
+                # Verify ssh command was called with port 2222
+                mock_run.assert_called_once()
+                args, kwargs = mock_run.call_args
+                cmd_argv = args[0]
+                self.assertEqual(cmd_argv[0], "ssh")
+                self.assertIn("-p", cmd_argv)
+                idx = cmd_argv.index("-p")
+                self.assertEqual(cmd_argv[idx + 1], "2222")
+                self.assertIn("/usr/bin/python3 /usr/local/bin/lynx-dummy", cmd_argv)
+
+    def test_lynx_remote_script_handler_error_exit(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td)
+            sh_file = p / "lynx_dummy.sh"
+            sh_file.write_text("#!/bin/sh\nexec /usr/bin/python3 /usr/local/bin/lynx-dummy\n")
+            handler = NoobMCPServer._make_lynx_remote_script_handler(sh_file, {})
+
+            mock_res = MagicMock()
+            mock_res.returncode = 1
+            mock_res.stdout = ""
+            mock_res.stderr = "Permission denied"
+
+            with patch("subprocess.run", return_value=mock_res):
+                out = handler({})
+                parsed = json.loads(out)
+                self.assertFalse(parsed["ok"])
+                self.assertEqual(parsed["exit_code"], 1)
+                self.assertIn("Permission denied", parsed["error"])
+
+    def test_lynx_remote_script_handler_timeout(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td)
+            sh_file = p / "lynx_dummy.sh"
+            sh_file.write_text("#!/bin/sh\nexec /usr/bin/python3 /usr/local/bin/lynx-dummy\n")
+            handler = NoobMCPServer._make_lynx_remote_script_handler(sh_file, {"timeout": 3})
+
+            with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="ssh", timeout=3)):
+                out = handler({})
+                parsed = json.loads(out)
+                self.assertFalse(parsed["ok"])
+                self.assertIn("timed out", parsed["error"])
+
+    def test_live_lynx_platform_status(self):
+        server = NoobMCPServer()
+        self.assertIn("lynx_platform_status", server.tools)
+        text, is_err = server.call_tool("lynx_platform_status", {})
+        self.assertFalse(is_err)
+        data = json.loads(text)
+        self.assertTrue(data.get("ok"), f"Tool call failed: {text}")
+        result = data.get("result", {})
+        self.assertIn("battery", result)
+        self.assertIn("thermal", result)
+        self.assertIn("wifi", result)
 
 
 class TestMCPClientSubprocess(unittest.TestCase):

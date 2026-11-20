@@ -71,6 +71,7 @@ except ImportError:
 
 LYNX_HOST = "192.168.100.107"
 LYNX_PORT = 4243
+LYNX_SSH_PORT = 2222
 LYNX_KEY_PATH = ROOT / "lynx" / "private" / "nrp-nexus.key"
 
 
@@ -635,17 +636,90 @@ class NoobMCPServer:
             self.handlers[name] = handler
 
         # 2. Register Dynamic Manifest Tools from Directories
-        dirs = manifest_dirs or [LOCAL_CALLS, ROSE_CALLS]
+        dirs = manifest_dirs if manifest_dirs is not None else [LOCAL_CALLS, ROSE_CALLS]
         for d in dirs:
-            if not Path(d).is_dir():
+            dir_path = Path(d)
+            if not dir_path.is_dir():
                 continue
-            loaded = load_native_mcp_tools(d)
+            is_lynx_dir = (
+                dir_path.resolve() == LOCAL_CALLS.resolve()
+                or ("lynx" in dir_path.parts and "local_calls" in dir_path.parts)
+            )
+            loaded = load_native_mcp_tools(dir_path)
             for name, (script, mcp_spec) in loaded.items():
                 if name in self.tools:
                     # Built-in takes precedence unless local script is specifically wanted
                     continue
                 self.tools[name] = mcp_spec
-                self.handlers[name] = self._make_local_script_handler(script, mcp_spec)
+                if is_lynx_dir:
+                    self.handlers[name] = self._make_lynx_remote_script_handler(script, mcp_spec)
+                else:
+                    self.handlers[name] = self._make_local_script_handler(script, mcp_spec)
+
+    @staticmethod
+    def _extract_remote_command(script: Path) -> str:
+        text = script.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            line = line.strip()
+            if line.startswith("exec "):
+                return line[5:].strip()
+        return text.strip()
+
+    @classmethod
+    def _make_lynx_remote_script_handler(
+        cls, script: Optional[Path], meta: Dict[str, Any]
+    ) -> Callable[[Dict[str, Any]], str]:
+        def handler(args: Dict[str, Any]) -> str:
+            if not script or not script.is_file():
+                return json.dumps({"ok": False, "error": "No remote script found for tool"})
+            remote_cmd = cls._extract_remote_command(script)
+            timeout = min(60, max(1, int(meta.get("timeout", 10))))
+
+            # Formulate pinned SSH command
+            try:
+                from lynx_wifi_v19_contact import ssh_command  # type: ignore
+                argv = ssh_command(LYNX_HOST, remote_cmd)
+                argv[-2:-2] = ["-p", str(LYNX_SSH_PORT)]
+            except Exception:
+                argv = [
+                    "ssh",
+                    "-o", "BatchMode=yes",
+                    "-o", "IdentitiesOnly=yes",
+                    "-o", "StrictHostKeyChecking=yes",
+                    "-o", "GlobalKnownHostsFile=/dev/null",
+                    "-o", "HostKeyAlias=lynx",
+                    "-o", f"UserKnownHostsFile={ROOT}/lynx/secrets/lynx_known_hosts",
+                    "-o", "ConnectTimeout=5",
+                    "-i", f"{ROOT}/lynx/secrets/nexus_lynx_ed25519",
+                    "-p", str(LYNX_SSH_PORT),
+                    f"root@{LYNX_HOST}",
+                    remote_cmd,
+                ]
+
+            try:
+                stdin_data = json.dumps(args) if args else None
+                res = subprocess.run(
+                    argv,
+                    input=stdin_data,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout + 3,
+                    check=False,
+                )
+                output = res.stdout.strip()
+                if res.returncode != 0:
+                    err = res.stderr.strip() or f"exit code {res.returncode}"
+                    return json.dumps({"ok": False, "exit_code": res.returncode, "error": err})
+                try:
+                    return json.dumps({"ok": True, "result": json.loads(output)})
+                except Exception:
+                    return json.dumps({"ok": True, "output": output})
+            except subprocess.TimeoutExpired:
+                return json.dumps({"ok": False, "error": f"Lynx remote tool execution timed out after {timeout}s"})
+            except Exception as exc:
+                return json.dumps({"ok": False, "error": str(exc)})
+
+        return handler
 
     @staticmethod
     def _make_local_script_handler(

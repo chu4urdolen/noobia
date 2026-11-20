@@ -31,3 +31,10 @@
 !/tools/ram-log-reader/*.c
 !/tools/ram-log-reader/*.h
 !/tools/ram-log-reader/README.md
+!/tools/health/
+/tools/health/*
+!/tools/health/*.py
+!/tools/health/README.md
+!/tools/health/examples/
+/tools/health/examples/*
+!/tools/health/examples/*.json

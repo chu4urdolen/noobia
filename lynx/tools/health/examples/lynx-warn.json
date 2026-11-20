@@ -1,0 +1,19 @@
+{
+  "schema": "portable-health/1",
+  "host": "lynx",
+  "profile": "lynx",
+  "captured_at": "2026-11-21T09:12:00+03:00",
+  "facts": {
+    "battery": {"capacity_percent": 22, "current_ma": -151, "charging": false,
+                "gauge_read_errors": 0},
+    "thermal": {"max_c": 45.5, "throttled": false},
+    "storage": {"used_percent": 88, "free_mib": 1400, "fs_errors": 0},
+    "network": {"link_state": "wifi", "carrier": true, "ipv4": "192.168.100.107"},
+    "services": {"required": ["sshd", "lynx-noobd"],
+                 "running": ["sshd", "lynx-noobd"], "failed": []}
+  },
+  "machine": {
+    "lynx": {"modem_md1_state": 1, "pending": 1, "running": 0,
+             "oldest_pending_seconds": 2400}
+  }
+}

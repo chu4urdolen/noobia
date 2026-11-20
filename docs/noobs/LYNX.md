@@ -1,6 +1,7 @@
 # Lynx code map
 
 **Current conversation handoff:** [Lynx handoff](../../lynx/linux-port/docs/CURRENT-HANDOFF.md).
+**Team work queue:** [2026-11-21 handoff](../../lynx/linux-port/docs/LYNX-TEAM-HANDOFF-20261121.md).
 
 Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the 2026-11-20
 checkpoint, trial V53 Alpine is healthy on a new boot, charging at 22%, with

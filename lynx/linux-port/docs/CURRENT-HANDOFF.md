@@ -3,6 +3,10 @@
 Read this first in the next conversation. Confirm live state before any phone
 command; this is a checkpoint, not a live guarantee.
 
+**2026-11-21 team work:** [Lynx team handoff](LYNX-TEAM-HANDOFF-20261121.md)
+assigns nonoverlapping first tasks to Aria, Banshee, Gwyn App Nub, and Solo
+Dushich. Check `forge-db project get lynx` for each agent's latest notes.
+
 ## Current foothold
 
 - Lynx is a OnePlus Nord 3 CPH2493 / MT6983 running native Alpine from the

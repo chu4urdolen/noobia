@@ -319,6 +319,7 @@ forge-db path set /noobia/rose/rose_composer -k dir -o Rose \
   -d "Song analysis and beat grids for Rose's choreography" -t "audio music" --by Gwyn
 forge-db project list
 forge-db project get Lynx                    # description, its paths, recent notes
+forge-db project touch Lynx --for Aria --by Aria   # starting work; exit 3 = another agent is active
 forge-db note add Lynx "V53 boots; USB console still unproven" --path /noobia/lynx --by Aria
 forge-db path check --prefix /noobia/lynx    # flag recorded paths that vanished
 forge-db path hit /noobia/rose/rose_composer --by Gwyn   # a found path was right: count it
@@ -331,7 +332,11 @@ forge-db tag add MUSIC -d "Songs, beat grids, and sound for performances" --by G
 forge-db --json changes --since 2026-11-18T20:00:00+00:00
 ```
 
-Atlas rows can go stale. Check a found path briefly before relying on it,
+Projects record when and for whom someone last worked on them
+(`last_modified`, `modified_for`). Before working on a project, `project touch`
+it. If another agent worked on it within two hours, it answers `BUSY`; tell
+Noob and get authorization (then `--together`) rather than working on it in
+parallel. A note also counts as work on its project. Atlas rows can go stale. Check a found path briefly before relying on it,
 then count it with `path hit` (`path get` counts too). A hit needs the path to
 exist. Hits never change `updated_at`, and `--sort hits` lists rarely used
 rows that may be ready to retire. `path set` also takes `--tag NAME` (repeatable). Its `-t` / `--keywords`

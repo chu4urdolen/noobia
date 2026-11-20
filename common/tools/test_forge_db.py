@@ -24,7 +24,7 @@ class ForgeDbTest(unittest.TestCase):
         forge_db._model = forge_db._gpu = False  # keyword search only in tests
         db = sqlite3.connect(forge_db.DB)
         db.executescript(forge_db.SCHEMA)
-        db.execute("INSERT INTO projects VALUES ('Rose', 'Aria', 'Rose', 'Rose voice and screen', 0, '[]', NULL)")
+        db.execute("INSERT INTO projects (project_name, executor, receiver, description, hardware_ready, agentic_tools) VALUES ('Rose', 'Aria', 'Rose', 'Rose voice and screen', 0, '[]')")
         db.commit()
         db.close()
 
@@ -125,6 +125,43 @@ class ForgeDbTest(unittest.TestCase):
         db.close()
         _, out = run("--json", "path", "hit", "/tmp", "--by", "G")
         self.assertEqual(json.loads(out)[0]["hits"], 1)
+
+    def test_project_activity_warns_when_two_agents_overlap(self):
+        code, out = run("project", "touch", "Rose", "--for", "Banshee", "--by", "Dushich")
+        self.assertEqual((code, out.strip()), (0, "Rose: working for Banshee"))
+        code, out = run("project", "touch", "Rose", "--for", "Gwyn", "--by", "Dushich")
+        self.assertEqual(code, 3)
+        self.assertIn("BUSY: Rose is busy: work for Banshee", out)
+        _, out = run("--json", "project", "list")
+        self.assertEqual(json.loads(out)[0]["modified_for"], "Banshee")  # refused touch records nothing
+        code, out = run("project", "touch", "Rose", "--for", "Gwyn", "--together", "--by", "Dushich")
+        self.assertEqual(code, 0)
+        self.assertIn("before: Banshee", out)
+        # A note records work too, and warns instead of failing.
+        code, out = run("note", "add", "Rose", "Lights", "--for", "Aria", "--by", "Dushich")
+        self.assertEqual(code, 0)
+        self.assertIn("WARNING: Rose is busy: work for Gwyn", out)
+        _, out = run("project", "get", "Rose")
+        self.assertIn("for Aria]", out)
+        _, out = run("--json", "changes", "--since", "2000-01-01")
+        self.assertEqual(len(json.loads(out)["projects"]), 1)
+
+    def test_old_work_is_not_a_conflict_and_projects_can_be_removed(self):
+        db = sqlite3.connect(forge_db.DB)
+        db.execute("UPDATE projects SET last_modified='2026-01-01T00:00:00+00:00', modified_for='Aria'")
+        db.commit()
+        db.close()
+        self.assertEqual(run("project", "touch", "Rose", "--for", "Gwyn", "--by", "G")[0], 0)
+        run("note", "add", "Rose", "x", "--by", "G")
+        self.assertEqual(run("project", "remove", "Rose", "--by", "G")[0], 2)  # has notes
+        self.assertEqual(run("project", "remove", "Rose", "--with-notes", "--by", "G")[0], 0)
+        _, out = run("--json", "stats")
+        self.assertEqual((json.loads(out)["projects"], json.loads(out)["project_notes"]), (0, 0))
+
+    def test_fresh_clone_creates_folder_and_schema(self):
+        forge_db.DB = Path(self.folder.name) / "new" / "dushich" / "workspace" / "forge.db"
+        code, out = run("--json", "stats")
+        self.assertEqual((code, json.loads(out)["projects"]), (0, 0))
 
 
 if __name__ == "__main__":

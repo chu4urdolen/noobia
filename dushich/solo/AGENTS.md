@@ -43,6 +43,14 @@ Noobia remembers in `/noobia/dushich/workspace/forge.db` through the shared
   (KIND: dir file tool service db config doc device log link other). Fix wrong
   descriptions when you notice them; record directories and entry points, not
   every file. Never put secrets or key contents in a description.
+* **One project, one agent at a time.** When you start work on a project
+  for yourself, record it:
+  `forge-db project touch NAME --for Dushich --by Dushich`. If it answers
+  `BUSY` (exit 3), another agent worked on that project within the last two
+  hours. Stop and get Noob's authorization
+  before continuing. Sometimes Noob wants two agents on one project; then
+  repeat the command with `--together`. `forge-db project get NAME` shows
+  when, and for whom, a project was last worked on.
 * **Keep project notes:** `forge-db project list`, `forge-db project get NAME`,
   and `forge-db note add NAME "what happened, what was decided, what is next" --path PATH --by Dushich`.
   Cite the paths a note is about with `--path`, so notes and the atlas point at

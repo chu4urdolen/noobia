@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Noobia's shared memory in forge.db: where things are, and what projects did.
 
-These tables sit next to the Foreman's `projects` table:
+Tables:
 
+* `projects`      the project registry: executor, receiver, and when (and for
+                  whom) someone last worked on it, so agents notice when two
+                  of them are about to work on one project at once.
 * `nexus_paths`   one row per important path on Nexus with a description and
                   free-text search keywords, so an agent can look something up
                   instead of searching again.
@@ -15,12 +18,15 @@ These tables sit next to the Foreman's `projects` table:
                   next to Qwen, otherwise a small CPU model (forge venv).
 
 Every command is non-interactive and prints concise text, or JSON with --json.
+forge-db is the only program that reads or writes forge.db. The database lives
+at $NOOBIA/dushich/workspace/forge.db (NOOBIA defaults to /noobia; FORGE_DB
+overrides the whole path) and is created, with every table, on first use.
 """
 
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import os
@@ -29,7 +35,10 @@ import re
 import sqlite3
 import sys
 
-DB = Path(os.environ.get("FORGE_DB", "/noobia/dushich/workspace/forge.db"))
+NOOBIA = Path(os.environ.get("NOOBIA", "/noobia"))
+DB = Path(os.environ.get("FORGE_DB") or NOOBIA / "dushich/workspace/forge.db")
+# Work on a project for one agent counts as ongoing for this long.
+ACTIVE_HOURS = 2
 GPU_MODEL = "qwen3-embedding:0.6b"
 CPU_MODEL = "BAAI/bge-small-en-v1.5"
 MODEL_CACHE = "/opt/noobia/forge-venv/models"
@@ -48,7 +57,9 @@ CREATE TABLE IF NOT EXISTS projects (
     description TEXT,
     hardware_ready INTEGER NOT NULL,
     agentic_tools TEXT,
-    conversation_id TEXT);
+    conversation_id TEXT,
+    last_modified TEXT,
+    modified_for TEXT);
 CREATE TABLE IF NOT EXISTS nexus_paths (
     path TEXT PRIMARY KEY,
     kind TEXT NOT NULL,
@@ -98,16 +109,23 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+ADDED_COLUMNS = {  # columns newer than the first atlases; added in place
+    "nexus_paths": (("hit_count", "INTEGER NOT NULL DEFAULT 0"), ("last_hit_at", "TEXT"),
+                    ("last_hit_by", "TEXT")),
+    "projects": (("last_modified", "TEXT"), ("modified_for", "TEXT")),
+}
+
+
 def connect() -> sqlite3.Connection:
+    DB.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(DB, timeout=15)
     db.row_factory = sqlite3.Row
     db.executescript(SCHEMA)
-    # Atlases created before hit counting gain the columns in place.
-    columns = {r["name"] for r in db.execute("PRAGMA table_info(nexus_paths)")}
-    for column, spec in (("hit_count", "INTEGER NOT NULL DEFAULT 0"), ("last_hit_at", "TEXT"),
-                         ("last_hit_by", "TEXT")):
-        if column not in columns:
-            db.execute(f"ALTER TABLE nexus_paths ADD COLUMN {column} {spec}")
+    for table, added in ADDED_COLUMNS.items():
+        columns = {r["name"] for r in db.execute(f"PRAGMA table_info({table})")}
+        for column, spec in added:
+            if column not in columns:
+                db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {spec}")
     db.commit()
     return db
 
@@ -364,17 +382,54 @@ def path_hit(db, path: str, by: str) -> dict:
             **({} if present else {"reason": "missing on disk; fix or remove the row"})}
 
 
-def note_add(db, project, text, paths, by) -> dict:
+def ago(stamp: str) -> str:
+    minutes = int((datetime.now(timezone.utc) - datetime.fromisoformat(stamp)).total_seconds() // 60)
+    return f"{minutes} min ago" if minutes < 120 else (
+        f"{minutes // 60} h ago" if minutes < 48 * 60 else f"{minutes // 1440} days ago")
+
+
+def project_touch(db, name: str, agent: str, together: bool = False) -> dict:
+    """Record that someone is working on a project for `agent`.
+
+    If a different agent worked on it within ACTIVE_HOURS, nothing is recorded
+    and the result carries `conflict`, unless `together` says Noob authorized
+    the two agents to share it.
+    """
+    row = db.execute("SELECT last_modified, modified_for FROM projects WHERE project_name=?",
+                     (name,)).fetchone()
+    if not row:
+        raise ValueError(f"Unknown project: {name}")
+    agent = require(agent, "--for", 80)
+    previous, when = row["modified_for"], row["last_modified"]
+    recent = when and datetime.fromisoformat(when) > datetime.now(timezone.utc) - timedelta(hours=ACTIVE_HOURS)
+    if previous and previous.lower() != agent.lower() and recent and not together:
+        return {"project": name, "conflict": True, "modified_for": previous, "last_modified": when,
+                "message": (f"{name} is busy: work for {previous} was recorded {ago(when)}. Two agents "
+                            f"should not work on one project at once. Tell {agent}, and ask Noob before "
+                            f"continuing; once authorized, repeat with --together.")}
+    db.execute("UPDATE projects SET last_modified=?, modified_for=? WHERE project_name=?",
+               (now(), agent, name))
+    return {"project": name, "conflict": False, "modified_for": agent, "last_modified": now(),
+            "message": f"{name}: working for {agent}"
+                       + (f" (before: {previous}, {ago(when)})" if previous and when else "")}
+
+
+def note_add(db, project, text, paths, by, agent=None) -> dict:
     if not db.execute("SELECT 1 FROM projects WHERE project_name=?", (project,)).fetchone():
-        raise ValueError(f"Unknown project: {project} (add it with `projects add`)")
+        raise ValueError(f"Unknown project: {project} (add it with `project add`)")
     cited = [clean_path(p) for p in paths]
     cursor = db.execute("INSERT INTO project_notes (project_name, author, note, paths, created_at) "
                         "VALUES (?, ?, ?, ?, ?)",
                         (project, require(by, "--by", 80), require(text, "note", 6000),
                          json.dumps(cited), now()))
+    # A note is work on the project: record it, and warn if another agent is active.
+    activity = project_touch(db, project, agent or by)
+    if activity["conflict"]:
+        project_touch(db, project, agent or by, together=True)
     db.commit()
     refresh_embeddings(db, [("note", str(cursor.lastrowid))])
-    return dict(db.execute("SELECT * FROM project_notes WHERE id=?", (cursor.lastrowid,)).fetchone())
+    note = dict(db.execute("SELECT * FROM project_notes WHERE id=?", (cursor.lastrowid,)).fetchone())
+    return {**note, "warning": activity["message"]} if activity["conflict"] else note
 
 
 def project_view(db, name: str, notes: int) -> dict:
@@ -401,6 +456,8 @@ def render(value) -> str:
         return f"[{value['source']} {value['score']}] {value['text']}"
     if "name" in value and "uses" in value:
         return f"#{value['name']} ({value['uses']}): {value['description']}"
+    if "conflict" in value and "message" in value:
+        return ("BUSY: " if value["conflict"] else "") + value["message"]
     if "path" in value and "hit" in value:
         if value["hit"]:
             return f"hit {value['path']} (hits={value['hits']})"
@@ -413,10 +470,13 @@ def render(value) -> str:
     if "note" in value:
         cited = json.loads(value["paths"]) if isinstance(value["paths"], str) else value["paths"]
         return (f"#{value['id']} {value['created_at'][:16]} {value['author']}: {value['note']}"
-                + (f"\n    paths: {', '.join(cited)}" if cited else ""))
+                + (f"\n    paths: {', '.join(cited)}" if cited else "")
+                + (f"\nWARNING: {value['warning']}" if value.get("warning") else ""))
     if "project_name" in value:
         lines = [f"{value['project_name']} — {value['executor']} for {value['receiver']}"
-                 f"{'' if value['hardware_ready'] else ' (hardware not ready)'}: {value['description'] or ''}{marks}"]
+                 f"{'' if value['hardware_ready'] else ' (hardware not ready)'}: {value['description'] or ''}{marks}"
+                 + (f" [last worked on {ago(value['last_modified'])} for {value['modified_for']}]"
+                    if value.get("last_modified") and value.get("modified_for") else "")]
         if "paths" in value:
             lines += ["  paths:"] + [f"    {p['path']} [{p['kind']}] {p['description']}" for p in value["paths"]]
             lines += ["  notes:"] + [f"    {render(n)}" for n in value["notes"]]
@@ -463,7 +523,7 @@ def main(argv: list[str] | None = None) -> int:
     pc = pa.add_parser("check", help="re-check that recorded paths exist")
     pc.add_argument("--prefix", default="/")
 
-    j = sub.add_parser("project", help="read or add Foreman projects")
+    j = sub.add_parser("project", help="read, add, or track work on projects")
     ja = j.add_subparsers(dest="action", required=True)
     ja.add_parser("list")
     jg = ja.add_parser("get")
@@ -477,6 +537,16 @@ def main(argv: list[str] | None = None) -> int:
     jn.add_argument("--hardware-ready", action="store_true")
     jn.add_argument("--tag", action="append", default=[], help="attach a curated tag (repeatable)")
     jn.add_argument("--by", default="forge-db", help="your name")
+    jt = ja.add_parser("touch", help="record that you are working on a project for an agent; "
+                                     f"exit 3 if another agent worked on it in the last {ACTIVE_HOURS} h")
+    jt.add_argument("name")
+    jt.add_argument("--for", dest="agent", required=True, help="the agent the work is for, e.g. Gwyn")
+    jt.add_argument("--together", action="store_true", help="Noob authorized sharing the project")
+    jt.add_argument("--by", required=True)
+    jr = ja.add_parser("remove", help="delete a project, its tag links, and (with --with-notes) its notes")
+    jr.add_argument("name")
+    jr.add_argument("--with-notes", action="store_true")
+    jr.add_argument("--by", required=True)
 
     t = sub.add_parser("tag", help="curated tags for paths and projects")
     ta = t.add_subparsers(dest="action", required=True)
@@ -502,6 +572,7 @@ def main(argv: list[str] | None = None) -> int:
     nn.add_argument("project")
     nn.add_argument("text")
     nn.add_argument("--path", action="append", default=[])
+    nn.add_argument("--for", dest="agent", help="the agent the work was for (default: --by)")
     nn.add_argument("--by", required=True)
     nl = na.add_parser("list")
     nl.add_argument("project")
@@ -515,6 +586,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     db = None
     failed = False
+    code = 0
     try:
         db = connect()
         if args.cmd == "search":
@@ -577,15 +649,36 @@ def main(argv: list[str] | None = None) -> int:
             result = project_view(db, args.name, args.notes)
         elif args.cmd == "project" and args.action == "add":
             db.execute("INSERT INTO projects (project_name, executor, receiver, description, "
-                       "hardware_ready, agentic_tools) VALUES (?, ?, ?, ?, ?, ?)",
+                       "hardware_ready, agentic_tools, last_modified, modified_for) "
+                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                        (require(args.name, "name", 80), args.executor, args.receiver,
                         require(args.description, "description"), int(args.hardware_ready),
-                        json.dumps(["forge-db"])))
+                        json.dumps(["forge-db"]), now(), args.executor))
             for tag in args.tag:
                 tag_attach(db, tag, "project", [args.name], args.by, commit=False)
             db.commit()
             refresh_embeddings(db, [("project", args.name)])
             result = project_view(db, args.name, 0)
+        elif args.cmd == "project" and args.action == "touch":
+            require(args.by, "--by", 80)
+            result = project_touch(db, args.name, args.agent, args.together)
+            db.commit()
+            code = 3 if result["conflict"] else 0
+        elif args.cmd == "project" and args.action == "remove":
+            require(args.by, "--by", 80)
+            if not db.execute("SELECT 1 FROM projects WHERE project_name=?", (args.name,)).fetchone():
+                raise ValueError(f"Unknown project: {args.name}")
+            notes = db.execute("SELECT COUNT(*) FROM project_notes WHERE project_name=?",
+                               (args.name,)).fetchone()[0]
+            if notes and not args.with_notes:
+                raise ValueError(f"{args.name} has {notes} note(s); add --with-notes to delete them too")
+            db.execute("DELETE FROM project_notes WHERE project_name=?", (args.name,))
+            db.execute("DELETE FROM tag_links WHERE source='project' AND key=?", (args.name,))
+            db.execute("UPDATE nexus_paths SET project=NULL WHERE project=?", (args.name,))
+            db.execute("DELETE FROM projects WHERE project_name=?", (args.name,))
+            db.commit()
+            refresh_embeddings(db)
+            result = f"removed project {args.name} and {notes} note(s)"
         elif args.cmd == "tag" and args.action == "list":
             result = [dict(r) for r in db.execute(
                 "SELECT t.name, t.description, COUNT(l.tag) AS uses FROM tags t "
@@ -639,7 +732,7 @@ def main(argv: list[str] | None = None) -> int:
             refresh_embeddings(db)
             result = f"removed tag #{name} ({removed} definition, {links} link(s))"
         elif args.cmd == "note" and args.action == "add":
-            result = note_add(db, args.project, args.text, args.path, args.by)
+            result = note_add(db, args.project, args.text, args.path, args.by, args.agent)
         elif args.cmd == "note" and args.action == "list":
             result = [dict(r) for r in db.execute(
                 "SELECT * FROM (SELECT * FROM project_notes WHERE project_name=? ORDER BY id DESC LIMIT ?) "
@@ -647,10 +740,12 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd == "changes":
             result = {"paths": [dict(r) for r in db.execute(
                           "SELECT * FROM nexus_paths WHERE updated_at>=? ORDER BY updated_at", (args.since,))],
+                      "projects": [dict(r) for r in db.execute(
+                          "SELECT * FROM projects WHERE last_modified>=? ORDER BY last_modified", (args.since,))],
                       "notes": [dict(r) for r in db.execute(
                           "SELECT * FROM project_notes WHERE created_at>=? ORDER BY id", (args.since,))]}
             if not args.json:
-                result = result["paths"] + result["notes"]
+                result = result["projects"] + result["paths"] + result["notes"]
         elif args.cmd == "embed":
             changed = refresh_embeddings(db)
             result = (f"refreshed {changed} vector(s) with {active_model()}" if active_model()
@@ -666,7 +761,7 @@ def main(argv: list[str] | None = None) -> int:
         if db is not None:
             db.close()
     print(json.dumps(result, indent=1, default=str) if args.json else render(result))
-    return 1 if failed else 0
+    return 1 if failed else code
 
 
 if __name__ == "__main__":

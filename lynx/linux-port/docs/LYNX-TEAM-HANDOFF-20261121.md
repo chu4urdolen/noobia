@@ -34,8 +34,8 @@ work on Lynx in parallel and will ask the other three to read `forge-db`.
 
 | Owner | Work and owned source | First reviewable result | Completion gate |
 | --- | --- | --- | --- |
-| Aria | Live hardware trials, integration, recovery and acceptance; `lynx/tools/trial_*`, device deployment, hardware handoff docs | Recheck Lynx health, then decide the guarded NFC RAM trial; review Banshee's USB preflight before any USB trial | Bounded receipts, health and recovery evidence, agent tool for each newly proven path |
-| Banshee | USB controller and gadget preflight, then offline fingerprint route analysis; later read-only cellular route analysis and shared MCP integration; new `lynx/tools/usb_*`, fingerprint preflight doc, and `common/mcp/` changes | Review Dushich's incomplete `dushich/workspace/lynx/tools/lynx_usb_mtu3_preflight.py`; adopt a corrected script into `lynx/tools/` with an independent offline test and a no-write default | Preflight identifies exact module/DT/UDC state and safe stop conditions; Aria reviews before live driver load or gadget bind |
+| Aria | Live hardware trials, integration, recovery and acceptance; `lynx/tools/trial_*`, device deployment, hardware handoff docs | Review the no-SIM modem plan when ready and prepare the guarded live trial; continue remaining NFC, camera, radio and power work | Bounded receipts, health and recovery evidence, agent tool for each newly proven path |
+| Banshee | USB controller and gadget work, offline fingerprint analysis, then offline cellular startup design; `lynx/tools/usb_*`, fingerprint and modem plan docs, later shared MCP work | Produce and test the no-SIM modem startup and stop plan from the current cellular record | Own tests and forge receipts; Aria reviews before modem activation or any persistent phone change |
 | Gwyn App Nub | Lynx interface and tool presentation; `lynx/tools/ui/` and UI docs | Generate a read-only, validated-status-aware manifest for the 38 current local agent tools, with an offline test against source manifests | UI can display actual health and tool availability through a bounded broker; no direct unprivileged root-socket access, phone writes, or service install before Aria review |
 | Solo Dushich | Portable passive diagnostics inspired by Aigel; `lynx/tools/health/` | Offline read-only `portable_health.py` plus independent tests using fixture input for battery, thermal, storage, network, and service state | Lynx health summary is bounded and accurate; common checks can later be reused on Nexus while GPU/SMART and other machine-specific checks remain separate; Aria reviews before install |
 
@@ -53,16 +53,29 @@ device tree, expected node, and secure userspace or TEE requirements. Mark
 uncertainties and propose a bounded first trial. This is offline analysis; no
 module load or biometric access. Forge note #39 is the pickup pointer.
 
+**Next Banshee task, requested by Noob after the cellular read-only check:**
+Prepare `LYNX-MODEM-START-PLAN-20261121.md` here and, if useful, a no-write
+preflight tool under `lynx/tools/`. Use the current
+[cellular record](LYNX-CELLULAR-INVENTORY-20261118.md) and the matching
+OnePlus CCCI sources to map Android `ccci_mdinit` dependencies, the first
+startup action, observable MD1 state transitions, a bounded stop/rollback,
+and failure recovery. A successful write to `/sys/kernel/ccci/boot` is not
+proof of startup; the source callback returns `-EACCES` while its wrapper
+returns the write count. Keep the SIM out, do not open CCCI character devices,
+start the modem, enable RF, or install a service during this offline task.
+Banshee runs and records her own tests. Aria owns the later live trial. Forge
+note #60 is the pickup pointer.
+
 ## Remaining hardware and acceptance ownership
 
 | Area | Lead | Outstanding evidence |
 | --- | --- | --- |
 | NFC; fingerprint | Aria live; Banshee fingerprint preflight | Guarded NFC RAM probe on 2026-11-21 bound the driver and got a chip GET_VERSION response, but no tag exchange; fingerprint `spi7.0` has no bound driver or verified identity, secure userspace or function |
-| USB data | Banshee prepares, Aria trials | `11201000.usb0` is unbound; only `dummy_udc.0` is registered; actual host enumeration and gadget data need proof |
-| Cellular and SIM | Banshee inventories, Aria trials | CCCI nodes exist but `md_state=0`; no modem start, network registration, or SIM path verified; no SIM installed |
+| USB data | Banshee | Banshee reports physical high-speed enumeration and bidirectional ACM serial on 2026-11-21 (forge note #58); assess persistence, safe disconnect, and agent-facing use before calling USB finished |
+| Cellular and SIM | Banshee startup plan, Aria live trial | CCCI nodes exist but `md1:0`; no modem start, network registration, or SIM path verified; no SIM installed |
 | Cameras and lights | Aria | Macro GC02M1 and wide IMX355 have optical frames via RAM patched ISP; main IMX890, front S5K3P9SP, second rear LED, safe persistent startup and agent capture/action interfaces remain |
 | Bluetooth | Aria | Manual link and 15-minute hold passed; autostart and long-uptime reboot behavior remain |
-| Audio, haptic, headset | Aria with Noob for perception | Tool calls have stopped cleanly; speaker audibility, haptic perception, and physical headset insertion/removal need attended confirmation |
+| Audio, haptic, headset | Aria with Noob for perception | Noob confirmed speaker audibility and an isolated 80 ms Lynx haptic pulse; physical headset insertion/removal remains |
 | Power and diagnostics | Solo Dushich prototypes, Aria deploys | Portable passive health, battery reserve policy and charge behavior need validated Lynx-specific gates; no unattended service changes from the prototype |
 | Agent UI and tools | Gwyn prepares, Aria integrates | Catalog has 38 installed tools; preserve the distinction between interface inventory and functionally proven hardware |
 | GNSS | Aria, last | 108 checksum-valid NMEA sentences without fix; clear-sky position trial later |

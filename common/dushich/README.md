@@ -53,7 +53,6 @@ Then register `mcp.py --agent NAME` in the agent's CLI and start
 python3 -m unittest discover -s common/dushich -p 'test_*.py'
 ```
 
-`banshee/dushich_bridge.py`, `gwyn-app-nub/dushich_bridge.py`,
-`banshee/banshee_helper_mirror.py`, `gwyn-app-nub/gwyn_helper.py`, and
+`banshee/dushich_bridge.py`, `banshee/banshee_helper_mirror.py`, and
 `aria/delegate-dushich` are temporary compatibility shims for sessions started
 before 2026-11-20. Remove them once every agent has been restarted.

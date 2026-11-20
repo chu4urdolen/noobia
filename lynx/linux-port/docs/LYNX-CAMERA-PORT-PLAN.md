@@ -578,6 +578,14 @@ same boot. Receipt and preview:
 `logs/camera-wide-frame-1793970498449657635/sensor2-preview-lifted.png`.
 No boot partition or recovery partition was written.
 
+An offline planning gate in `tools/lynx_camera_gate.py` now distinguishes the
+two previously recognizable routes (GC02M1 1600×1200 BA81 and IMX355
+3264×2448 BA81) from untested main/front routes and unknown formats. Dushich
+prepared it in his separate workspace; Aria reviewed and adopted the pure
+parser. Its input includes a caller assertion of optical verification, so an
+`allow` result is not evidence from a live receipt and must not authorize a
+camera action by itself. It makes no phone calls or hardware changes.
+
 ## 2026-11-15 new-boot read-only preflight
 
 On boot `0aa70b0f-1449-43e7-acf5-1bb5680c2a0f`,

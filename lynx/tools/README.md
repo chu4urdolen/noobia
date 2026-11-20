@@ -4,6 +4,10 @@ All phone-work artifacts are kept under `/noobia/lynx`. Argus is powered
 off after archive restoration; these tools and the Linux build do not require
 him. Cached ARM64 BusyBox validation evidence remains available locally.
 
+`lynx_camera_gate.py` is an offline planning check for the two previously
+recognizable camera modes. It performs no device action; an `allow` response
+does not replace a matching live receipt or attended trial.
+
 ## Current V50 recovery and V52 Bluetooth work (2026-10-31)
 
 V53 is the current **trial** image: it adds a 30-second shared-radio

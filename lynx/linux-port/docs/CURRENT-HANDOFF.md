@@ -73,6 +73,12 @@ command; this is a checkpoint, not a live guarantee.
 
 ## Recent verified changes
 
+- Dushich prepared an offline camera route planning gate; Aria adopted it as
+  `lynx/tools/lynx_camera_gate.py` after 23 tests passed. It recognizes only
+  the previously optically validated GC02M1 macro and IMX355 wide geometry,
+  and refuses untested IMX890 and S5K3P9SP modes. Its caller-provided optical
+  flag is not receipt evidence, so the result does not authorize a live camera
+  action. No camera module or route was changed on the Nov 20 boot.
 - Installed a bounded local magnetometer reader. A live AKM09918 raw vector,
   existing authenticated `MAG_STATUS`/`MAG_VECTOR`, and same-boot health passed.
   Five offline tests passed. See [hardware status](LYNX-HARDWARE-STATUS.md).

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import visible_dialogue as dialogue
+import transcript_antigravity as dialogue
 
 
 def varint(number):

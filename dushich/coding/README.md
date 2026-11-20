@@ -29,7 +29,8 @@ A separate Dushich GitHub key pair is registered at
 or print private key contents. GitHub API actions such as managing issues and pull requests
 will need separate authentication; the SSH key covers Git transport.
 
-Aria can invoke the same local runner through `/noobia/aria/delegate-dushich`,
+Every agent's bridge invokes the same local runner through
+`/noobia/common/dushich/delegate-dushich`,
 which reads the private verification report and prints Dushich's final reply.
 For quiet background work, `/noobia/aria/dushich-bridge start` returns a task
 ID; `status`, `report`, and `events` expose progress and audit data. Handoffs

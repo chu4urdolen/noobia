@@ -47,7 +47,7 @@ else
     tmux new-session -d -s "$session" -n workshop -c "$root/workspace" \
         "exec env HOME=/home/aria USER=aria LOGNAME=aria CLAUDE_CONFIG_DIR=$CLAUDE_CONFIG_DIR GIT_AUTHOR_NAME='Gwyn App Nub' GIT_AUTHOR_EMAIL=gwyn@nexus.local GIT_COMMITTER_NAME='Gwyn App Nub' GIT_COMMITTER_EMAIL=gwyn@nexus.local GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes' NOOBIA_GWYN_SESSION=$attach NOOBIA_GWYN_CONVERSATION_ID=$conversation $claude $claude_args"
     tmux split-window -h -p 40 -t "$session":0 -c "$root" \
-        "exec /usr/bin/python3 $root/dushich_bridge.py monitor --session-id $attach"
+        "exec /usr/bin/python3 ${NOOBIA:-/noobia}/common/dushich/bridge.py --agent gwyn monitor --session-id $attach"
     tmux set-window-option -t "$session":0 pane-border-status top
     tmux set-window-option -t "$session":0 pane-border-format ' #{pane_title} '
     tmux select-pane -t "$session":0.0 -T 'Gwyn + Noob • Claude Code'

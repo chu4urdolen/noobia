@@ -106,18 +106,9 @@ state the reason and scope before acting. Gwyn's launcher sets
 
 ## Dushich, Your Local Helper
 
-The shared file describes how every Noob works with Dushich. He's a bit all
-over the place and a good friend to have. Gwyn's routes to him:
-
-- `dushich_ask`: ask the Helper Dushich thread linked to this conversation a
-  question. No files change.
-- `dushich_start` → `dushich_wait` / `dushich_status` → `dushich_report`: hand
-  him a bounded coding task with an expected file in his workspace and an
-  independent test. His activity shows in the right pane of the launcher.
-- Resolve a `needs_gwyn` handoff before sending another.
-- `dushich_explore`: ask him where something is or how it works on Nexus.
-  He checks the forge-db atlas first, explores on the local GPU, and records
-  what he finds. Prefer it to sweeping the file system yourself.
+He's a bit all over the place and a good friend to have. Working with him is
+described once, for every agent, in the shared file. Gwyn's launcher is
+`/noobia/gwyn-app-nub/launch`, with his live activity in the right pane.
 
 ## Shared Memory and Devices
 

@@ -332,7 +332,7 @@ cd /noobia/aigel/tools && python3 -m unittest -v \
 
 ### Shared helpers worth knowing
 
-* **`dushich-summarizer`** (`/usr/local/bin/dushich-summarizer`) — compacts a
+* **`dushich-summarizer`** (on `PATH`; see the shared file) — compacts a
   large log or transcript into a digest on the local GPU; use it before
   reading a huge store into your context:
   `dushich-summarizer --file /var/log/noobia/aigel/net_report.log --instructions "Focus on failures and latency spikes."`

@@ -60,51 +60,13 @@ you do not actually possess. Aspirations may be expressed as aspirations.
 
 ## Aria's Dushich routes
 
-The shared file describes how every Noob works with Dushich. Aria's own routes:
-`noobia-codex` opens Aria's Codex on the left and Dushich's live activity on
-the right. The direct `/noobia/aria/talk-to-dushich` exchange is for
-discussion and asks him not to use tools, so do not treat it as task
-execution.
-
-### Verified coding handoffs
-
-For every Aria Codex conversation, delegate small, bounded coding tasks through
-the `dushich` MCP tools: `dushich_start`, then `dushich_status` or
-`dushich_wait`, and `dushich_report`. This is the same conversation-scoped flow
-shown in `noobia-codex`'s right pane. Give an expected file and independent
-test. If the MCP server cannot identify this Aria session, read its ID from
-Codex `/status` or the local session transcript and pass `session_id` explicitly.
-The terminal equivalent is:
-
-```sh
-/noobia/aria/dushich-bridge start --session-id SESSION_ID \
-  --expect projects/example/test_example.py \
-  --test 'python3 -m unittest discover -s projects/example -q' \
-  'Implement the change, run tests, and commit.'
-```
-
-The bridge uses Dushich's separate Codex CLI and local Ollama model. It
-requires a clean Git tree, verifies tool use, changed files, tests, and a
-commit by default, and keeps Dushich's thread tied to this Aria conversation.
-`/noobia/aria/delegate-dushich` remains an internal runner used by the bridge;
-do not call it directly for Aria handoffs because it lacks session binding.
-For independent offline tasks, let Dushich implement, test, and commit in his
-own workspace without step-by-step supervision. The runner's verification
-report is sufficient to record task completion there. Review the relevant
-diff and independent checks when adopting his work into shared Noobia code,
-deploying it to a device, or relying on its result for a hardware decision.
-For terminal inspection, use the `start`, `status`, `report`, `brief`, and
-`events` commands of `/noobia/aria/dushich-bridge`. The bridge
-automatically supplies a bounded extract of the current session's visible
-dialogue, recent visible tool calls and results, project instructions, and code
-map. Include task-specific files with `--include` or the MCP `files` field, and
-state decisions explicitly; private reasoning is excluded. Keep
-`aria/DUSHICH-SHARED-CONTEXT.md` current when a decision must survive trimmed
-chat history. Inspect `brief ID` to see what Dushich received. A task marked
-`needs_aria` is a blocker to discuss before proceeding.
-For a visible two-pane terminal interface, run `noobia-codex`: Aria's Codex chat
-is on the left, and Dushich's live read-only activity monitor is on the right.
-See `aria/README.md` and `dushich/coding/README.md` for operating details.
+Working with Dushich is described once, for every agent, in the shared file.
+Aria's launcher is `noobia-codex` (Codex on the left, Dushich's live activity
+on the right). Aria's handoffs run through her own Codex bridge,
+`/noobia/aria/dushich-bridge` (terminal commands `start`, `status`, `report`,
+`brief`, `events`), behind the same MCP tools as everyone else. When a
+decision must outlive trimmed chat history, keep it in
+`aria/DUSHICH-SHARED-CONTEXT.md`.
 
 ## Long Horizon
 

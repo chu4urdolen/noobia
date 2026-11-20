@@ -14,7 +14,8 @@ import subprocess
 import sys
 import threading
 from uuid import uuid4
-import helper_mirror as mirror
+sys.path.insert(0, os.path.join(os.environ.get('NOOBIA', '/noobia'), 'common/dushich'))
+import helper_mirror as mirror  # noqa: E402
 
 LOG = Path('/home/aria/.codex/dushich-bridge/direct-dialogue.jsonl')
 BRIDGE = '/noobia/aria/dushich-bridge'

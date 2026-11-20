@@ -13,7 +13,11 @@ import json
 import sqlite3
 import sys
 
-CONVERSATIONS = Path('/home/aria/.gemini/antigravity-cli/conversations')
+from agents import HOME, NOOBIA
+
+CONVERSATIONS = HOME / '.gemini/antigravity-cli/conversations'
+HISTORY = HOME / '.gemini/antigravity-cli/history.jsonl'
+WORKSPACE = NOOBIA / 'banshee/workspace'
 
 
 def _varint(data: bytes, offset: int) -> tuple[int, int]:
@@ -114,7 +118,14 @@ def latest_for_workspace(workspace: Path, history: Path) -> Path | None:
     return max(matching, key=lambda p: p.stat().st_mtime) if matching else None
 
 
+def locate(conversation_id: str | None) -> Path | None:
+    """The conversation's database, or the newest one used in Banshee's workspace."""
+    if conversation_id:
+        return CONVERSATIONS / f'{conversation_id}.db'
+    return latest_for_workspace(WORKSPACE, HISTORY)
+
+
 if __name__ == '__main__':
     if len(sys.argv) != 2 or not all(c in '0123456789abcdef-' for c in sys.argv[1]):
-        raise SystemExit('Usage: visible_dialogue.py CONVERSATION_ID')
+        raise SystemExit('Usage: transcript_antigravity.py CONVERSATION_ID')
     print(json.dumps(read(CONVERSATIONS / (sys.argv[1] + '.db')), ensure_ascii=False))

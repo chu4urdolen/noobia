@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-import visible_dialogue
+import transcript_claude as visible_dialogue
 
 
 def entry(kind, content, **extra):

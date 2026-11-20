@@ -4,7 +4,7 @@ After=default.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /noobia/banshee/banshee_helper_mirror.py watch
+ExecStart=/usr/bin/python3 /noobia/common/dushich/helper_banshee.py watch
 Restart=on-failure
 RestartSec=5
 

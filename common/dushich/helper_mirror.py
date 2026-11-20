@@ -15,11 +15,13 @@ import subprocess
 import sys
 import time
 
-sys.path.insert(0, '/noobia/dushich/coding')
+from agents import DUSHICH_CODING, HOME, STATE
+
+sys.path.insert(0, str(DUSHICH_CODING))
 import dushich_summarizer
 
-SESSIONS = Path('/home/aria/.codex/sessions')
-ROOT = Path('/home/aria/.codex/dushich-bridge/helper-mirror')
+SESSIONS = HOME / '.codex/sessions'
+ROOT = STATE / 'helper-mirror'
 UUID = re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
 ROLLOUT = re.compile(r'([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\.jsonl$')
 MAX_BATCH = 32_000
@@ -178,7 +180,18 @@ def records(session_id: str) -> list[dict]:
 
 
 def run_turn(prompt: str, thread_id: str | None) -> tuple[str, list[dict]]:
-    command = ['dushich', 'exec']
+    try:
+        return _run_turn(prompt, thread_id)
+    except RuntimeError as exc:
+        # A helper thread whose Codex session file is missing or empty can never
+        # be resumed; retrying it would fail forever. Start a fresh thread once.
+        if thread_id and 'thread/resume failed' in str(exc):
+            return _run_turn(prompt, None)
+        raise
+
+
+def _run_turn(prompt: str, thread_id: str | None) -> tuple[str, list[dict]]:
+    command = [str(DUSHICH_CODING / 'dushich-launcher'), 'exec']
     if thread_id:
         command += ['resume', thread_id]
     command += ['--json', '-']

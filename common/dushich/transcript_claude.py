@@ -11,7 +11,12 @@ from pathlib import Path
 import json
 import sys
 
-CONVERSATIONS = Path('/noobia/gwyn-app-nub/private/claude/projects/-noobia-gwyn-app-nub-workspace')
+from agents import NOOBIA
+
+# Claude Code names a project's transcript folder after its path, with / as -.
+WORKSPACE = NOOBIA / 'gwyn-app-nub/workspace'
+CONVERSATIONS = (NOOBIA / 'gwyn-app-nub/private/claude/projects'
+                 / str(WORKSPACE).replace('/', '-'))
 
 
 def _prompt_text(content) -> str:
@@ -65,7 +70,13 @@ def latest() -> Path | None:
     return max(found, key=lambda p: p.stat().st_mtime) if found else None
 
 
+def locate(conversation_id: str | None) -> Path | None:
+    """The conversation's transcript, or the newest one if it is unknown."""
+    path = CONVERSATIONS / f'{conversation_id}.jsonl' if conversation_id else None
+    return path if path and path.is_file() else latest()
+
+
 if __name__ == '__main__':
     if len(sys.argv) != 2 or not all(c in '0123456789abcdef-' for c in sys.argv[1]):
-        raise SystemExit('Usage: visible_dialogue.py SESSION_ID')
+        raise SystemExit('Usage: transcript_claude.py SESSION_ID')
     print(json.dumps(read(CONVERSATIONS / (sys.argv[1] + '.jsonl')), ensure_ascii=False))

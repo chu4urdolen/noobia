@@ -82,17 +82,9 @@ publication.
 
 # Banshee's Dushich Routes
 
-The shared file describes how every Noob works with Dushich, high-impact
-operations (which Banshee co-owns with Aria), and GitHub. Banshee's own routes:
-
-- Your CLI entry is `/noobia/banshee/launch` (`noobia-banshee`): Antigravity on
-  the left, Dushich's live activity in the right pane.
-- For a coding handoff, call `dushich_context_status` to verify the current
-  Banshee session, then `dushich_start`, `dushich_wait` or `dushich_status`,
-  and `dushich_report`. `dushich_ask` asks the Helper Dushich thread linked to
-  this Banshee conversation.
-- Hand routine pushes to Dushich when his route is available; otherwise push
-  from `/noobia`, never from Banshee's isolated workspace.
+Working with Dushich is described once, for every agent, in the shared file.
+Banshee's launcher is `/noobia/banshee/launch` (`noobia-banshee`): Antigravity
+on the left, Dushich's live activity on the right.
 
 ---
 

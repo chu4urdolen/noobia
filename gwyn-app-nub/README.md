@@ -37,24 +37,13 @@ Start Gwyn with `/noobia/gwyn-app-nub/launch`.
 
 ## Dushich helper
 
-The user-scope `dushich` MCP server (`dushich_mcp.py`, registered with
-`claude mcp add --scope user`) gives Gwyn the same tools as Banshee:
-`dushich_context_status`, `dushich_ask`, `dushich_start`, `dushich_status`,
-`dushich_wait`, and `dushich_report`. They need `NOOBIA_GWYN_SESSION`, which
-the launcher sets; `--plain` sessions see the tools but get a clear error.
-
-- `dushich_bridge.py` is Banshee's verified bridge adapted for Gwyn: handoffs
-  under `private/task-runs/`, run through `/noobia/aria/delegate-dushich`
-  with an expected file and independent test, and a bounded summary of
-  visible Noob/Gwyn dialogue in the brief.
-- `visible_dialogue.py` reads Claude Code JSONL transcripts and keeps only
-  Noob's prompts and Gwyn's final answer per turn; thinking, tool calls,
-  tool results, and meta entries are excluded (`test_visible_dialogue.py`).
-- `gwyn_helper.py` answers `dushich_ask` on one persistent Helper Dushich
-  Codex thread per Gwyn conversation (state under
-  `/home/aria/.codex/dushich-bridge/helper-mirror/gwyn/`). There is no
-  watcher service; each question updates the incremental summary first, so
-  the first question in a long conversation can take several minutes.
+Gwyn reaches Dushich through the shared `dushich` MCP server,
+[`common/dushich/mcp.py --agent gwyn`](../common/dushich/README.md),
+registered with `claude mcp add --scope user`. It gives Gwyn the same tools
+as every agent. They need `NOOBIA_GWYN_SESSION`, which the launcher sets;
+`--plain` sessions see the tools but get a clear error. Gwyn's helper thread
+is updated only when Gwyn asks a question, so the first question in a long
+conversation can take several minutes.
 
 Verified 2026-11-18: `dushich_ask` answered about this conversation, and
 handoff `20261118T201446Z-0b57ea1f` passed independent verification in

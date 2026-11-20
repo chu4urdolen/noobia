@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import banshee_helper_mirror as mirror
+import helper_banshee as mirror
 
 
 SESSION = '11111111-1111-1111-1111-111111111111'

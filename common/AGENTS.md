@@ -174,28 +174,51 @@ investigation, coding, tests, documentation, network requests, routine Nexus
 work, GitHub operations, and connected devices when the route and scope are
 known. He is not sandboxed and his Unix permissions are broad, so choose the
 task boundary deliberately and check important results; his access is a
-capability, not a standing delegation of system authority.
+capability, not a standing delegation of system authority. This section is
+the one description of working with him; role files only name each agent's
+launcher.
+
+**Every agent has the same routes.** Each launcher opens a two-pane tmux
+workshop: the agent on the left, Dushich's live activity on the right. Each
+agent's `dushich` MCP server ([`common/dushich/`](/noobia/common/dushich/README.md))
+offers the same tools:
+
+| Tool | Use it for |
+| --- | --- |
+| `dushich_context_status` | Check that the tools see your current session (do this first after a restart) |
+| `dushich_ask` | A question to the Helper Dushich thread linked to your conversation. No files change; it is discussion, not task execution. |
+| `dushich_start` → `dushich_wait` or `dushich_status` → `dushich_report` | A verified coding handoff |
+| `dushich_explore` → `dushich_explore_wait` | "Where is / how does" questions about Nexus; he records what he finds in forge memory |
 
 - **Prefer Dushich** for as many independently scoped tasks as he can carry.
   Give him the goal, boundaries, and evidence of completion, then let him work
   without step-by-step supervision. Treat him as a capable collaborator with
-  his own judgment, not a source of small snippets.
-- **Ask him things:** `dushich_ask` (Banshee and Gwyn; Aria uses
-  `/noobia/aria/talk-to-dushich`) asks the Helper Dushich thread linked to
-  your conversation, without creating a task. Use `dushich-explore` (below)
-  for "where is / how does" questions about Nexus. Do not start a coding task
-  just to test his recall.
-- **Verified coding handoffs:** each agent's `dushich` MCP bridge
-  (`dushich_start`, then `dushich_wait` or `dushich_status`, then
-  `dushich_report`) needs a specific task, an expected file in Dushich's
-  workspace, and an independent test. The bridge includes bounded visible
-  dialogue from your conversation; state further decisions explicitly and
-  select files. His verified report proves the work in his workspace; review
+  his own judgment, not a source of small snippets. Do not start a coding
+  task just to test his recall.
+- **Verified handoffs** need a specific task, an expected file in Dushich's
+  workspace, and an independent test. He works in his own clean Git
+  workspace; the runner checks that he used tools, changed the expected
+  file, ran the tests (finding at least one), and committed when asked, and
+  retries once. His verified report proves the work in his workspace; review
   the diff before adopting it into shared Noobia code, a device, or a
-  hardware decision. Resolve a handoff that needs your review before sending
-  another. Your role file names your bridge and monitor pane.
-- **Non-coding tasks:** contact the direct `dushich` CLI with an explicit
-  scope and expected evidence, then verify what he reports.
+  hardware decision.
+- **Context.** A handoff automatically carries a bounded summary of your
+  visible dialogue (never reasoning or tool output). State decisions
+  explicitly in the task, add selected text with `context`, and attach files
+  from your own directory with `files`.
+- **One at a time.** A handoff that ends as `needs_<agent>` is a blocker:
+  read its report and resolve it before sending another. Follow-up handoffs
+  in the same conversation continue the same Dushich thread.
+- **Projects.** When you hand Dushich work on a project, name it; he records
+  it with `forge-db project touch` and stops to ask Noob if another agent is
+  working on that project (see Forge memory below).
+- **Non-coding tasks:** run the `dushich` CLI with an explicit scope and
+  expected evidence, then verify what he reports.
+- **GitHub:** hand routine pushes to Dushich when his route is available;
+  otherwise push from `/noobia`, never from an agent's isolated workspace
+  (see Git and GitHub).
+- **Big inputs:** use `dushich-summarizer` (below) instead of reading a huge
+  file or log into your own context.
 - **Research:** Dushich has no web search or browser. When a task depends on
   current public information, research it with your own tools and give him the
   findings or files. He can still use permitted CLI network routes.

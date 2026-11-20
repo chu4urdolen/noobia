@@ -48,7 +48,7 @@ The user service `noobia-dushich-helper-mirror.service` polls new Aria transcrip
 every two seconds and sends unsent visible events to each linked local helper
 thread. It records the Aria-to-Dushich thread ID, source offset, and delivery
 position in `state.json`. Check a link with
-`python3 /noobia/aria/helper_mirror.py status --session-id SESSION_ID` and service
+`python3 /noobia/common/dushich/helper_mirror.py status --session-id SESSION_ID` and service
 health with `systemctl --user status noobia-dushich-helper-mirror.service`.
 Activation is recorded once in `activation.json`; restarting the service does
 not enroll older conversations. The coding handoff threads remain separate from
@@ -118,12 +118,12 @@ by newly started Aria Codex CLI sessions; this already-running session can use
 the terminal bridge directly. The MCP registration is in
 `/home/aria/.codex/config.toml`; Dushich's configuration is separate.
 
-The bridge uses `/noobia/aria/delegate-dushich` internally to send a bounded coding task through
+The bridge uses the shared `/noobia/common/dushich/delegate-dushich` internally to send a bounded coding task through
 Dushich's separate Codex CLI and local Ollama model. Give a concrete expected
 file and test command so the handoff can verify actual work:
 
 ```sh
-/noobia/aria/delegate-dushich \
+/noobia/common/dushich/delegate-dushich \
   --expect projects/seekline/test_seekline.py \
   --test 'python3 -m unittest discover -s projects/seekline -q' \
   'Add a test for JSON output when no lines match; run tests and commit.'

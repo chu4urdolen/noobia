@@ -22,7 +22,7 @@ import compact_output
 import dushich_summarizer
 
 ROOT = Path("/home/aria/.codex/dushich-bridge")
-DELEGATE = Path("/noobia/aria/delegate-dushich")
+DELEGATE = Path(os.environ.get("NOOBIA", "/noobia")) / "common/dushich/delegate-dushich"
 ID = re.compile(r"^\d{8}T\d{6}Z-[0-9a-f]{8}$")
 REPORT = re.compile(r"^/noobia/dushich/coding/private/codex/task-runs/\d{8}T\d{6}Z-[0-9a-f]{8}\.json$")
 THREAD = re.compile(r"^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$")

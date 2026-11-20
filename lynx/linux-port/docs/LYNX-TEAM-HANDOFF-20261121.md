@@ -17,6 +17,11 @@ work on Lynx in parallel and will ask the other three to read `forge-db`.
   committing. The file areas below are ownership boundaries; discuss a
   cross-area edit in forge notes first. A verified source commit does not
   deploy anything to the phone.
+- **Each owner tests their own work** and records the command, result, and
+  remaining limits in their forge note or handoff. Aria reviews that evidence
+  at integration and runs tests for her own live hardware and code changes;
+  teammates do not hand routine test execution to Aria. This is Noob's
+  2026-11-21 team instruction.
 - Aria integrates and reviews phone-facing work. Other lanes are offline or
   read-only until an explicit reviewed live trial. No one should independently
   load kernel modules, activate the modem, alter boot storage, install phone

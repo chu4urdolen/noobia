@@ -3,8 +3,10 @@
 # install_nexus_forge.sh - Portable installer for Nexus Forge
 #
 # Sets up system prerequisites (GTK3, VTE 2.91, PyGObject, tmux, chafa),
-# generates ~/.config/nexus-forge/config.json, and installs the ~/.local/bin/nexus-forge
-# command launcher.
+# generates ~/.config/nexus-forge/config.json, and puts Noobia's commands
+# ($NOOBIA/common/bin, including nexus-forge) on PATH. Nothing is copied out of
+# the repository: Noobia's tools never go in /usr/bin, /usr/local/bin, or
+# ~/.local/bin.
 # ==============================================================================
 
 set -euo pipefail
@@ -13,8 +15,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NOOBIA_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nexus-forge"
 CONFIG_FILE="$CONFIG_DIR/config.json"
-BIN_DIR="${HOME}/.local/bin"
-LAUNCHER="$BIN_DIR/nexus-forge"
+BIN_DIR="$NOOBIA_DIR/common/bin"
+ENV_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/environment.d/999-noobia.conf"
+PROFILE="$HOME/.profile"
+MARK_BEGIN="# >>> noobia >>>"
+MARK_END="# <<< noobia <<<"
 
 usage() {
     cat <<EOF
@@ -23,8 +28,7 @@ Usage: $(basename "$0") [OPTIONS]
 Options:
     --check          Check system dependencies and display configuration status
     --config-only    Only create or reset the default ~/.config/nexus-forge/config.json
-    --prefix DIR     Install launcher into DIR instead of ~/.local/bin
-    --uninstall      Remove ~/.local/bin/nexus-forge launcher
+    --uninstall      Remove the NOOBIA/PATH setup this installer added
     -h, --help       Show this help message
 
 Nexus Forge pairs 4 terminal quadrants with live AI avatar sidebars:
@@ -49,11 +53,6 @@ while [[ $# -gt 0 ]]; do
             CONFIG_ONLY=1
             shift
             ;;
-        --prefix)
-            BIN_DIR="$2"
-            LAUNCHER="$BIN_DIR/nexus-forge"
-            shift 2
-            ;;
         --uninstall)
             UNINSTALL=1
             shift
@@ -71,8 +70,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$UNINSTALL" -eq 1 ]]; then
-    echo "Uninstalling Nexus Forge launcher from $LAUNCHER..."
-    rm -f "$LAUNCHER"
+    echo "Removing Noobia's environment setup..."
+    if [[ -f "$ENV_FILE" ]] && grep -q "$MARK_BEGIN" "$ENV_FILE"; then
+        rm -- "$ENV_FILE"
+        echo "  [✓] Removed $ENV_FILE"
+    fi
+    if [[ -f "$PROFILE" ]] && grep -q "$MARK_BEGIN" "$PROFILE"; then
+        sed -i "/$MARK_BEGIN/,/$MARK_END/d" "$PROFILE"
+        echo "  [✓] Removed the Noobia block from $PROFILE"
+    fi
     echo "Done. Config directory remains at $CONFIG_DIR."
     exit 0
 fi
@@ -202,6 +208,8 @@ setup_config() {
   }
 }
 EOF
+        # The default points at this checkout's avatars, wherever it lives.
+        sed -i "s#\"/noobia/pics\"#\"$NOOBIA_DIR/pics\"#" "$CONFIG_FILE"
         echo "  [✓] Config written: $CONFIG_FILE"
     else
         echo "  [✓] Existing configuration found at $CONFIG_FILE"
@@ -209,33 +217,30 @@ EOF
 }
 
 # ------------------------------------------------------------------------------
-# Install Launcher Command
+# Put Noobia's commands on PATH
 # ------------------------------------------------------------------------------
-install_launcher() {
-    mkdir -p "$BIN_DIR"
-    echo "Installing launcher to $LAUNCHER..."
-    cat > "$LAUNCHER" <<EOF
-#!/usr/bin/env bash
-# Launcher for Nexus Forge
-set -euo pipefail
-
-export NOOBIA="\${NOOBIA:-$NOOBIA_DIR}"
-
-if [[ -f "\$NOOBIA/common/tools/update_agents.sh" ]]; then
-    "\$NOOBIA/common/tools/update_agents.sh" || true
-fi
-
-exec /usr/bin/python3 "\$NOOBIA/dushich/solo/nexus_forge.py" "\$@"
-EOF
-    chmod +x "$LAUNCHER"
-    echo "  [✓] Executable launcher installed: $LAUNCHER"
-
-    if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
-        echo
-        echo "NOTE: $BIN_DIR is not currently in your PATH."
-        echo "Add it to your ~/.bashrc or ~/.zshrc:"
-        echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
+setup_environment() {
+    echo "Putting $BIN_DIR on PATH (NOOBIA=$NOOBIA_DIR)..."
+    # The desktop session and systemd --user services read environment.d.
+    if [[ -f "$ENV_FILE" ]] && ! grep -q "$MARK_BEGIN" "$ENV_FILE"; then
+        echo "  [=] $ENV_FILE exists and was not written by this installer; left as is"
+    else
+        mkdir -p "$(dirname "$ENV_FILE")"
+        printf '%s\n' "$MARK_BEGIN" "NOOBIA=$NOOBIA_DIR" "PATH=$BIN_DIR:\${PATH}" \
+            "PLAYWRIGHT_BROWSERS_PATH=$NOOBIA_DIR/common/runtime/playwright" "$MARK_END" > "$ENV_FILE"
+        echo "  [✓] $ENV_FILE"
     fi
+    # Login shells read ~/.profile.
+    if [[ -f "$PROFILE" ]] && grep -q "export NOOBIA=" "$PROFILE"; then
+        echo "  [=] $PROFILE already sets NOOBIA"
+    else
+        printf '\n%s\n' "$MARK_BEGIN" >> "$PROFILE"
+        printf '%s\n' "export NOOBIA=\"$NOOBIA_DIR\"" \
+            'case ":$PATH:" in *":$NOOBIA/common/bin:"*) ;; *) PATH="$NOOBIA/common/bin:$PATH" ;; esac' \
+            'export PLAYWRIGHT_BROWSERS_PATH="$NOOBIA/common/runtime/playwright"' "$MARK_END" >> "$PROFILE"
+        echo "  [✓] $PROFILE"
+    fi
+    echo "  Log out and back in (or run: source $PROFILE) to pick it up."
 }
 
 # ------------------------------------------------------------------------------
@@ -264,7 +269,7 @@ main() {
         exit 0
     fi
 
-    install_launcher
+    setup_environment
 
     echo
     echo "================================================================================"

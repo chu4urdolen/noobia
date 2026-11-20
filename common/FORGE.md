@@ -139,8 +139,8 @@ Git.
      for cloud agents, `Local: 100%` for Dushich) sits directly above Rose on
      each avatar sidebar.
    - **Configuration & Installer:** Customize quadrants with `--config` or
-     `~/.config/nexus-forge/config.json`. Set up dependencies and the launcher on
-     any machine using [`common/tools/install_nexus_forge.sh`](tools/install_nexus_forge.sh).
+     `~/.config/nexus-forge/config.json`. Set up dependencies and put Noobia's
+     commands on `PATH` on any machine using [`common/tools/install_nexus_forge.sh`](tools/install_nexus_forge.sh).
 4. **Avatars.** Every 0.4 seconds the window reads each terminal's visible
    text and title, plus the hidden tmux panes. It switches that agent's
    avatar between `idle`, `working_1`–`working_4`, and `final` frames from

@@ -7,6 +7,12 @@
     "stops": 3
   },
   "entity": "Lynx",
+  "install_states": [
+    "current",
+    "differs",
+    "missing",
+    "unknown"
+  ],
   "note": "Interface inventory is not proof of function. A tool's 'live' state comes only from a status snapshot.",
   "schema_version": 1,
   "source": "lynx/tools/local_calls",
@@ -57,13 +63,16 @@
         "args": [],
         "command": "inline-python"
       },
+      "files_sha256": {
+        "json": "62bd33685e1d44dd6992231e591e4c52476f679aad1eeeec8a11b5a3139039ff",
+        "sh": "3376c510fbf0de29916553c94b666af9f01e6a268ad0107b7572a29a81f4b5f7"
+      },
       "group": "agent",
       "inputs": [],
       "name": "lynx_agent_health",
       "nrp_id": 500,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "0f255ec8896f920d6ac4b80af704da5128ede2266465153f1eca1865d6bd1af4",
       "status_source": null,
       "timeout_s": 5
     },
@@ -77,13 +86,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "fb86440193be7a4114ad697b5dc4daf484de8d0eca41f157bf2da9bcb0793598",
+        "sh": "f0e9cceb7717187ac6678cf4985a99aba9eb428e1defda0f58b2bca795ab2b31"
+      },
       "group": "sound",
       "inputs": [],
       "name": "lynx_audio_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "322401193eafb07193f32ba0eda5b83798ff20c7f66ea82d85b67d9a2b057fb5",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -97,13 +109,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "3096eca23bfb0c7216cd9ef9956cf69205c207e02d8e97e4246ab0afaa9ce822",
+        "sh": "71b10e5511bbc65a1f0843f99f1ca408160da8761f9902f015873614d47a7825"
+      },
       "group": "power",
       "inputs": [],
       "name": "lynx_battery_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "bf12c04f311f25038af2a4841f902e917876b18cbdf48c8f78d0a2376a8dd6a8",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -118,13 +133,16 @@
         ],
         "command": "lynx-hardware"
       },
+      "files_sha256": {
+        "json": "dacea4e89a89763468aa7ff97d1ff7e8f8dddbd950804c40af558e4b6fab7b66",
+        "sh": "160068099fd22602a7938330083536d00976209bc8a8d412afb047b6a2051ea6"
+      },
       "group": "radio",
       "inputs": [],
       "name": "lynx_bluetooth",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "1be9da6f795a2d91fa30b5fd12377a34454cdccd4eaab85469a91663549ae9cb",
       "status_source": "hardware",
       "timeout_s": 10
     },
@@ -139,13 +157,16 @@
         ],
         "command": "lynx-hardware"
       },
+      "files_sha256": {
+        "json": "a6f647fcfb61a6b355bb97e296afcfb1d1d3f130d534f030be65fa23451cf136",
+        "sh": "1c365595945c35808b899fc565438ebd429dbfc86fdd17114eb4e9ee4fc688be"
+      },
       "group": "camera",
       "inputs": [],
       "name": "lynx_camera",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "d9dab35c20fb5bb0891a96618f640c0b74a8a985ddf3e1adeee9fe8794b66019",
       "status_source": "hardware",
       "timeout_s": 10
     },
@@ -159,13 +180,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "d610d76e781b04a3e9b413af3edc76de4af52dd48df5e12bf9b1946ce5a24335",
+        "sh": "db7b2a466af6002af27390333af2cfeef7ba030c9b72206af9b2ea76138fd330"
+      },
       "group": "radio",
       "inputs": [],
       "name": "lynx_cellular_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "b13fbe0e115dd474066f69815cf4ac0c25292a017133966e7c143e3d12b31036",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -176,6 +200,10 @@
       "entry": {
         "args": [],
         "command": "lynx-codex-tool"
+      },
+      "files_sha256": {
+        "json": "a5dcba2426b0c8c98cca8ae147074cc2f3787a9bc8a3349e29dd6813bd644a55",
+        "sh": "68edbd2948c6d81d2d9c5f89a0579180061e372f1eb4c6f06fdc35c4fcef76c4"
       },
       "group": "agent",
       "inputs": [
@@ -189,7 +217,6 @@
         "model",
         "prompt"
       ],
-      "source_sha256": "17b871a41d5af1bc0ac658c8507cce632a5227f73fd3da3bbb868c83901fcc40",
       "status_source": null,
       "timeout_s": 130
     },
@@ -203,13 +230,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "32bc6ec484b2498727e5b4b333ef826d65bb2b64b61047f8d45e2a8457bcaa55",
+        "sh": "e1e282b8eb754d646893449f705f1664683fef221e6a84710e25f0624410551c"
+      },
       "group": "display",
       "inputs": [],
       "name": "lynx_display_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "50a016d5f3e6b041cd58f0f14435a2d49b29f620b7ac3ee797559b7ff512ee7d",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -223,13 +253,16 @@
         ],
         "command": "lynx-peripheral-status"
       },
+      "files_sha256": {
+        "json": "02334f06020194f0205d8fa624baac9ef607dcc18542d14bcc75e3e1cc1320fd",
+        "sh": "644c9fe7291414cbe6b32e5ce7db6b72da454d851bc45faf94afa32303830ad0"
+      },
       "group": "display",
       "inputs": [],
       "name": "lynx_fingerprint_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "b570a218dac6b4ba2f1c34b1eab71f5b5428b3ac8d912d7164db99e7ac3d1229",
       "status_source": "peripheral",
       "timeout_s": 5
     },
@@ -244,13 +277,16 @@
         ],
         "command": "lynx-hardware"
       },
+      "files_sha256": {
+        "json": "cb77883dcb0cc8faa65af696d05d00e95105093f6d860a84f6692d4dbe94930b",
+        "sh": "5a3dd00a1c976e5f1895332fda5ca51acdf957e33e44b870139313a968ba96f3"
+      },
       "group": "light",
       "inputs": [],
       "name": "lynx_flashlight",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "b74b85e483ddaec53db1b3c8afcb134ef2804fdb10721023a5b7cc741f17f11c",
       "status_source": "hardware",
       "timeout_s": 10
     },
@@ -265,13 +301,16 @@
         ],
         "command": "lynx-flashlight-pulse"
       },
+      "files_sha256": {
+        "json": "9228c32b7f7657756f07ec5994a980ed46e603dea8321c6cf7cee0e3f51f7c1b",
+        "sh": "2c1f8c9598ac9d2a94d447c6bd8d0ffb7b755ce4c4572e6fa5689105c47e44cc"
+      },
       "group": "light",
       "inputs": [],
       "name": "lynx_flashlight_pulse",
       "nrp_id": null,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "acac4e10189989ef2176bc8964e56b14873ca3aaf883b3203b663692953da9d4",
       "status_source": "hardware",
       "timeout_s": 8
     },
@@ -285,13 +324,16 @@
         ],
         "command": "lynx-flashlight-pulse"
       },
+      "files_sha256": {
+        "json": "67d2ad3a42ad910e7e2000a2d6161f750ab3e8736ab8d6247d2ae2fe54231c7a",
+        "sh": "e4caae86a6d9f4deb5abe9212a10ba93c94073803d76f525835845b50c6bed8f"
+      },
       "group": "light",
       "inputs": [],
       "name": "lynx_flashlight_stop",
       "nrp_id": null,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "fea83a30285adfbc3922263856897518f2750ac7a129a9e087d10c9d82454ea0",
       "status_source": "hardware",
       "timeout_s": 5
     },
@@ -306,13 +348,16 @@
         ],
         "command": "lynx-hardware"
       },
+      "files_sha256": {
+        "json": "b9b5ea6a464f2a89135f96ec1772bff62f8c33e76dd4d10b44b5738e9d3edc99",
+        "sh": "bdf1249ce7d6bf0ab2f057bb05366463ea6d8091a461c520ed85ec489f0fa134"
+      },
       "group": "radio",
       "inputs": [],
       "name": "lynx_gnss",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "565efb3071efb4a58b6048dab7673e9708fa520a7abe58aec34a502c0f1ec33b",
       "status_source": "hardware",
       "timeout_s": 10
     },
@@ -326,13 +371,16 @@
         ],
         "command": "lynx-agent-haptic"
       },
+      "files_sha256": {
+        "json": "66266db3975f1ec14e8ab38babc43da6bad80c05e8e776f12ccf84f3a3b4c5a8",
+        "sh": "1e6abacee7ea41fb9a037506a22edde638e348ea13d0d27ad6abd33229789146"
+      },
       "group": "haptic",
       "inputs": [],
       "name": "lynx_haptic_pulse",
       "nrp_id": null,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "b3be78ff6c1d5315d8f3be1ff7fa13aa5f8682e559d62cf3ad4c839a9d7db03b",
       "status_source": "platform",
       "timeout_s": 6
     },
@@ -346,13 +394,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "f6d5f522050c336aa07aac26d6813fbf952f9cc569c02590cc58dab7cb2fa6e0",
+        "sh": "2f35b1df3131e089ca8ba9b4c9456100f95d2cc426bd3ec85fcd10c7d7d77d60"
+      },
       "group": "haptic",
       "inputs": [],
       "name": "lynx_haptic_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "26bde9bfb22f43d331563096e51acae5399263588b7c2b64d1e4b6e9a22a3d66",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -366,13 +417,16 @@
         ],
         "command": "lynx-agent-haptic"
       },
+      "files_sha256": {
+        "json": "fb4cfb59dca3b29aa7943077f0d01ae7752c02ccf75bccae3b84bbf0aaad7065",
+        "sh": "fd61321cf5fe605c952c19b6bc5212bbe741175f5fa7f30af90a9c241386623a"
+      },
       "group": "haptic",
       "inputs": [],
       "name": "lynx_haptic_stop",
       "nrp_id": null,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "e4542202aab5f2a1ed5c445b54d173bf69cc467e153335558e85932c7d61ba9e",
       "status_source": "platform",
       "timeout_s": 6
     },
@@ -386,13 +440,16 @@
         ],
         "command": "lynx-peripheral-status"
       },
+      "files_sha256": {
+        "json": "812b6a45aa4475eb79a2ff67cf5ffe53d8d235f81b18cb5f0f5c6274b601f095",
+        "sh": "1ade158b4d77cba72b7a230f0a1d9c4e930c409ec2b1a442ce2fb16077270f0c"
+      },
       "group": "sound",
       "inputs": [],
       "name": "lynx_headset_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "914d6108b187c50e5f1f57e49a42f3c0d8602a13bd43f2e53715cd229889c00d",
       "status_source": "peripheral",
       "timeout_s": 5
     },
@@ -404,13 +461,16 @@
         "args": [],
         "command": "lynx-light-read"
       },
+      "files_sha256": {
+        "json": "8df80bdb7fa8dcb5d71ed2de1848a86a842210203d014382fcd5482ebb860e84",
+        "sh": "34dd4d5f2d3a71d913d807689a9debcb83b1a5029235379694e19cd346a870f8"
+      },
       "group": "sensors",
       "inputs": [],
       "name": "lynx_light_read",
       "nrp_id": null,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "c5802b4d13389da8f960498329b694e4d05ec6bbb2c935585943f1d4ce37a5ab",
       "status_source": "platform",
       "timeout_s": 5
     },
@@ -422,13 +482,16 @@
         "args": [],
         "command": "lynx-magnetometer-read"
       },
+      "files_sha256": {
+        "json": "73de8d7738771e49ed15d9719793b0ef1dc858604a5626dac46ccd837605fea1",
+        "sh": "91c2d12cc1d4d1f529d61f8625b4e86fbe839dd0761706a7ed78d198d4d39268"
+      },
       "group": "sensors",
       "inputs": [],
       "name": "lynx_magnetometer_read",
       "nrp_id": null,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "f60c8d25f5c15d263d659f08daa6c831990bf9d1d45b839fa8be2084e68fddca",
       "status_source": "platform",
       "timeout_s": 5
     },
@@ -442,13 +505,16 @@
         ],
         "command": "lynx-agent-media"
       },
+      "files_sha256": {
+        "json": "191e78bb337118765405bbee42631a569803ea653db9b8e32d615b45b8160acf",
+        "sh": "e2cc8f0674199ce0dd4e0b286a69ed8d33817badca1be4a1e35f0c60c8c14c79"
+      },
       "group": "sound",
       "inputs": [],
       "name": "lynx_media_catalog",
       "nrp_id": null,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "cb29db54a0f6cdd06bb077abe556d5ad5c3f628090011934c71d7e09fc641950",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -462,6 +528,10 @@
         ],
         "command": "lynx-agent-media"
       },
+      "files_sha256": {
+        "json": "8b859e68a99843a9679881d8baddf98301b87ca0e995369eac7f77a507e0220f",
+        "sh": "bf507400ba28a68518366e19d2a864c701896748fccbf89b4fb56ac7eaa23912"
+      },
       "group": "sound",
       "inputs": [
         "item",
@@ -474,7 +544,6 @@
         "item",
         "kind"
       ],
-      "source_sha256": "3997fc881ca70c3cc1bc42c1eca8d5c180da1577915ea62d60723c0982a03a0b",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -488,13 +557,16 @@
         ],
         "command": "lynx-agent-media"
       },
+      "files_sha256": {
+        "json": "e7835a02c5cd45dfe64d96afbe5bf65164c6ad43de305c6baed9d5ac69a0dec2",
+        "sh": "5751080b938fee19d188353f9576ee3a3f2ad546be8d3b3ffb21ea516d7c2f47"
+      },
       "group": "sound",
       "inputs": [],
       "name": "lynx_media_status",
       "nrp_id": null,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "a0fb671031325fc7f1e4d61d5928cfa47787a767eab7a5082bcd6ce9c60653bc",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -508,6 +580,10 @@
         ],
         "command": "lynx-agent-media"
       },
+      "files_sha256": {
+        "json": "703c6b1df508cf40c7af9f33bb65973e724d0985a9f330ca3ce8111945aef91c",
+        "sh": "7fb9c358c008dd5fa2d3e813aaa97ae274fe8a8e411f313f309689b3a4e6e120"
+      },
       "group": "sound",
       "inputs": [
         "kind"
@@ -518,7 +594,6 @@
       "required_inputs": [
         "kind"
       ],
-      "source_sha256": "23de30069b1962ab9b339f72172a1f7423d0b293a336257265699babb442d691",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -533,13 +608,16 @@
         ],
         "command": "lynx-hardware"
       },
+      "files_sha256": {
+        "json": "2a2e75694fe454c0670a48ded5e2f1e694675c8be14f7277151a6d2accb0295b",
+        "sh": "71296d87763261a0a9293e3119c7d764d04ea64dfb18a6b48635f8ae1a35a5cd"
+      },
       "group": "sound",
       "inputs": [],
       "name": "lynx_microphone",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "ecfb6e6c159ff8b9b5a920ac22bcccfdbb04b15fc3697d73c4b675f9ff35b781",
       "status_source": "hardware",
       "timeout_s": 10
     },
@@ -554,13 +632,16 @@
         ],
         "command": "lynx-hardware"
       },
+      "files_sha256": {
+        "json": "805e5ff52fd6ce8d0d2d0d3505a543b7805a9708ec943eeea1b584da1232ada4",
+        "sh": "e7ec7c7684d8899a2b1a36d2586cb69d960a36731d4b6f821a773f9cf04b1851"
+      },
       "group": "sound",
       "inputs": [],
       "name": "lynx_microphone_level",
       "nrp_id": null,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "1c749a33b3cbf14f87b1d9c9ea4fe3629e2187f132deef3620468e912a15f900",
       "status_source": "hardware",
       "timeout_s": 10
     },
@@ -572,6 +653,10 @@
         "args": [],
         "command": "lynx-motion-read"
       },
+      "files_sha256": {
+        "json": "247a784d37107b1a33165d6af13fc18a13fe687fda76957ce097276865057690",
+        "sh": "e6c1b645fee622e41b4d3a44c3f9d899242d5bb450c78681319e020ed2eaee1c"
+      },
       "group": "sensors",
       "inputs": [
         "choice"
@@ -582,7 +667,6 @@
       "required_inputs": [
         "choice"
       ],
-      "source_sha256": "a72ca094c75fc0cabb5a4afdb0944ba1529aab7dcc6d29cf586ee9a25e671152",
       "status_source": "platform",
       "timeout_s": 5
     },
@@ -596,13 +680,16 @@
         ],
         "command": "lynx-peripheral-status"
       },
+      "files_sha256": {
+        "json": "14aea998bf5bb60f502fc0b30889a4641ac864b7c0f6c93e42f2d1e610644ffb",
+        "sh": "bc52d54a7b5bd3869a8ac95643685ad000c479e92ad3b8c2fd185e94e78074b2"
+      },
       "group": "radio",
       "inputs": [],
       "name": "lynx_nfc_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "8f948f46d883d90d1d2feb0bfdf31a904a79a84501ff4f405e5f393727894bc0",
       "status_source": "peripheral",
       "timeout_s": 5
     },
@@ -616,13 +703,16 @@
         ],
         "command": "lynx-peripheral-status"
       },
+      "files_sha256": {
+        "json": "6f1971924af90b0fd90f19d221861c4d0f03b5c26e22a05ef48abffb45ea6ade",
+        "sh": "09e6ac4a1a4cb50bfe56dd183cdeeef8166de28bc9e2d3b32fdc1dd750be0527"
+      },
       "group": "overview",
       "inputs": [],
       "name": "lynx_peripheral_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "661b6b7c8b73872d388153bbcfe1cf170c7c729a61bfc3a7e264fc34178eb0bf",
       "status_source": "peripheral",
       "timeout_s": 5
     },
@@ -636,13 +726,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "254e6fded69cb08373a978028aab5189a2fef7adf6977b868e2664f31c5cfca8",
+        "sh": "372bc8702666723e230f957afe6d70a7f455cb4b99db28a1567b40366f695c66"
+      },
       "group": "overview",
       "inputs": [],
       "name": "lynx_platform_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "4a22661d673b83bf7c0f54b827bbc977329a7e8b3006a3cd8b80e0c98d4f6eb8",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -654,13 +747,16 @@
         "args": [],
         "command": "lynx-proximity-read"
       },
+      "files_sha256": {
+        "json": "94b7115a420028dc15cf2a10eb0b6186f9dd085ab6a34b02eb90926cb2b7d334",
+        "sh": "727721223e59557ac169a69fe12f899954762cddc354baf8be5ec0b0137c7816"
+      },
       "group": "sensors",
       "inputs": [],
       "name": "lynx_proximity_read",
       "nrp_id": null,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "a6bd1b3838f4869adabb106b5a2af937baf4d335641ec03f65ada328065e3034",
       "status_source": "platform",
       "timeout_s": 5
     },
@@ -672,13 +768,16 @@
         "args": [],
         "command": "lynx-agent-health"
       },
+      "files_sha256": {
+        "json": "950319b19718062babdeeacc1793428b95a66c4aea4ab6e5ab65bdba9afde4c4",
+        "sh": "ec16ace742fb2f17764e5b0f7c44b5c4b67f4b5de35048d57b61aa361074d04a"
+      },
       "group": "agent",
       "inputs": [],
       "name": "lynx_queue_health",
       "nrp_id": 514,
       "reports_component_status": false,
       "required_inputs": [],
-      "source_sha256": "bb330115208f0cde17dba8e2fc66e58da07a70691a543c86a620b30ca379599f",
       "status_source": null,
       "timeout_s": 5
     },
@@ -692,13 +791,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "fbed1d27eba531218fcab289847ee3dbd32b2be4edaaff83f7ef580a139bb48c",
+        "sh": "778ecf4e9e63dfa6405bff9186485193f35e37ec69f220d11a3e35a1ccbd9e6e"
+      },
       "group": "sensors",
       "inputs": [],
       "name": "lynx_sensorhub_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "3185238d7c9078e30ff7d318516a2cd77650e4570a002d496301be865d6f8a44",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -712,13 +814,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "356f2885c573c7b4aab0014c9b4c717c7f6f1c024c6e2305f738738dbae9b230",
+        "sh": "240c10aa0c98b141558a46ba4b95fcc1fd0728fa2172a1fa25f0c2ab71ef9458"
+      },
       "group": "radio",
       "inputs": [],
       "name": "lynx_sim_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "7836e70472f5e1309c795c890e58c115686e5a68467248b40a9ee9090dc9cbd4",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -732,13 +837,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "9f7e769e798ab1985146c99bf558bab5418dece3701865261d2228fff230f409",
+        "sh": "e4c4f7e5c5924abb86abf8e7aaa6eb589766c8dd346166bfb692133b15bb10e8"
+      },
       "group": "system",
       "inputs": [],
       "name": "lynx_storage_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "fb519fa07fc23213d07aaf62667baa84c5ce80b799da4e4fb4643c0b87ebeb28",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -752,13 +860,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "7d992520a81d66b28a82179f5eff3d33f85cf15c4a8fcb81e02a0ed75ca10ef0",
+        "sh": "8d6abe09c8b2f633b3a956840eceac53243910d6fab288e64926649d1046c0e2"
+      },
       "group": "power",
       "inputs": [],
       "name": "lynx_thermal_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "3596286f673390b5cdc591148b33b7cc404577cc0dd10cb888fa43ba33e26153",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -772,13 +883,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "71dbbcde93ae14cd8464234493e3251f6e86dd8be96513c1e6b90d56e3db0628",
+        "sh": "3509cca00e9e444ade44b01c17204fe8595287cc1c22ae8131479cf5a0ee5c7c"
+      },
       "group": "display",
       "inputs": [],
       "name": "lynx_touch_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "cbbd40116f6634b4ede73211e025a90fbdd8328b7baabe1a7149300d71de047b",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -792,13 +906,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "79b91d73c264f31b72a2fb375edb5e49ab8981c86eeb7d0cbf542f0881edada1",
+        "sh": "100160f1533d9c88487b0d62e5b364d63c14e6b33fbe4e5c716aa6939de2232a"
+      },
       "group": "system",
       "inputs": [],
       "name": "lynx_usb_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "e7aa0daff1291f63cb9461800db3e2875956dce0040161ec173ef81beed89f3f",
       "status_source": "platform",
       "timeout_s": 8
     },
@@ -812,13 +929,16 @@
         ],
         "command": "lynx-platform-status"
       },
+      "files_sha256": {
+        "json": "e3cb9f8b502344ac8bce24a0ef83cafabb42d1263104c37831f011c7b6a521e4",
+        "sh": "0f7d46243750fee2c2b8a27dc6b29bcf88ba583f8dccbbbe88b50c92735a95dc"
+      },
       "group": "radio",
       "inputs": [],
       "name": "lynx_wifi_status",
       "nrp_id": null,
       "reports_component_status": true,
       "required_inputs": [],
-      "source_sha256": "90630c9a92be9d6a14deaf99fd04a5b93b537e545b6ade50444640b6a888f20e",
       "status_source": "platform",
       "timeout_s": 8
     }

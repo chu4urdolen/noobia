@@ -8,6 +8,9 @@ actuates, stops, runs a task), the status component it reports on
 or depends on, and a source hash so a UI can detect drift from the installed
 catalog.
 
+With a snapshot that includes the installed catalog's file hashes, each tool
+also gets ``installed``: ``current``, ``differs``, ``missing`` or ``unknown``.
+
 Validation is never inferred from the manifests. Without ``--status`` every
 tool's live state is ``unknown``. With ``--status FILE`` the manifest joins a
 saved status snapshot (the JSON printed by ``lynx-platform-status all``,
@@ -177,7 +180,8 @@ def source_tools(source_dir=SOURCE_DIR):
             "timeout_s": timeout,
             "nrp_id": spec.get("nrp_id"),
             "entry": entry,
-            "source_sha256": hashlib.sha256(raw_json + b"\0" + raw_sh).hexdigest(),
+            "files_sha256": {"json": hashlib.sha256(raw_json).hexdigest(),
+                             "sh": hashlib.sha256(raw_sh).hexdigest()},
         })
     return tools
 
@@ -197,6 +201,7 @@ def build(source_dir=SOURCE_DIR):
                            for name, (cmd, parts) in SOURCES.items()},
         "validation_states": ["validated", "interface_only", "not_ready",
                               "unknown", "malformed"],
+        "install_states": ["current", "differs", "missing", "unknown"],
         "note": ("Interface inventory is not proof of function. A tool's "
                  "'live' state comes only from a status snapshot."),
         "tools": tools,
@@ -211,9 +216,9 @@ def load_snapshot(path):
         data = json.loads(path.read_text(encoding="utf-8"))
     except (ValueError, UnicodeError) as exc:
         raise ManifestError(f"status snapshot is not JSON: {exc}") from None
-    if not isinstance(data, dict) or not set(data) & set(SOURCES):
-        raise ManifestError("status snapshot needs a 'platform', 'peripheral' "
-                            "or 'hardware' object")
+    if not isinstance(data, dict) or not set(data) & (set(SOURCES) | {"catalog"}):
+        raise ManifestError("status snapshot needs a 'platform', 'peripheral', "
+                            "'hardware' or 'catalog' object")
     return data
 
 
@@ -256,6 +261,25 @@ def apply_snapshot(manifest, snapshot):
             tool["live"] = {"state": state}
             if nxt:
                 tool["live"]["next"] = nxt
+    catalog = snapshot.get("catalog")
+    files = catalog.get("files") if isinstance(catalog, dict) else None
+    if not isinstance(files, dict):
+        files = None
+    installs = {}
+    for tool in result["tools"]:
+        if files is None:
+            state = "unknown"
+        else:
+            got = [files.get(f"{tool['name']}.{ext}") for ext in ("json", "sh")]
+            want = [tool["files_sha256"][ext] for ext in ("json", "sh")]
+            state = ("missing" if None in got else
+                     "current" if got == want else "differs")
+        tool["installed"] = state
+        installs[state] = installs.get(state, 0) + 1
+    extra = []
+    if files is not None:
+        known = {t["name"] for t in result["tools"]}
+        extra = sorted({name.rsplit(".", 1)[0] for name in files} - known)
     summary = {}
     for state, _ in components.values():
         summary[state] = summary.get(state, 0) + 1
@@ -263,6 +287,9 @@ def apply_snapshot(manifest, snapshot):
         "captured_at": snapshot.get("captured_at") if isinstance(
             snapshot.get("captured_at"), str) else None,
         "component_states": dict(sorted(summary.items())),
+        "install_states": dict(sorted(installs.items())),
+        "installed_not_in_source": extra,
+        "errors": snapshot.get("errors") if isinstance(snapshot.get("errors"), dict) else {},
         "components": {f"{src}/{part}": state
                        for (src, part), (state, _) in sorted(components.items())},
     }
@@ -317,7 +344,8 @@ def main(argv=None):
                 where = (f"{tool['status_source']}/{tool['component']}"
                          if tool["status_source"] else "-")
                 live = tool.get("live", {}).get("state", "unknown")
-                print(f"{tool['name']}\t{tool['effect']}\t{where}\t{live}")
+                installed = tool.get("installed", "unknown")
+                print(f"{tool['name']}\t{tool['effect']}\t{where}\t{live}\t{installed}")
             return 0
         sys.stdout.write(render(manifest))
         return 0

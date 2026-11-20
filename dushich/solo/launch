@@ -109,7 +109,7 @@ def ensure_avatar_pane(session: str) -> None:
     if len(panes) < 2:
         run('tmux', '-L', 'dushich-clean', 'split-window', '-h', '-l', '30',
             '-t', session + ':0.0', '-c', NOOBIA,
-            f'exec /usr/bin/python3 {NOOBIA}/dushich/solo/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane {session}:0.0 --size 28')
+            f'exec /usr/bin/python3 {NOOBIA}/common/nexus_forge/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane {session}:0.0 --size 28')
         run('tmux', '-L', 'dushich-clean', 'set-window-option', '-t', session + ':0', 'pane-border-status', 'top')
         run('tmux', '-L', 'dushich-clean', 'set-window-option', '-t', session + ':0', 'pane-border-format', ' #{pane_title} ')
         run('tmux', '-L', 'dushich-clean', 'select-pane', '-t', session + ':0.0', '-T', 'Solo Dushich • Codex')
@@ -170,7 +170,7 @@ def main() -> int:
         run('tmux', '-L', 'dushich-clean', 'set-option', '-t', session, 'status', 'off', check=False)
         run('tmux', '-L', 'dushich-clean', 'set-window-option', '-t', session + ':0', 'pane-border-status', 'off', check=False)
         os.execvp('/usr/bin/python3', [
-            '/usr/bin/python3', NOOBIA + '/dushich/solo/dushich_window.py',
+            '/usr/bin/python3', NOOBIA + "/common/nexus_forge/dushich_window.py",
             '--agent', 'Dushich', '--tmux-socket', 'dushich-clean',
             '--target-pane', f'{session}:0.0', '--sidebar-width', '180',
             '--title', f'Solo Dushich ({session.removeprefix(PREFIX)[:8]})',

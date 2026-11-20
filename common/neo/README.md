@@ -83,7 +83,7 @@ not forward inbound TCP. Neo therefore opens an outbound SSH tunnel to Nexus,
 bound to its USB address `192.168.77.2`. The tunnel exposes Neo's SSH only on
 Nexus loopback port 2222; it is not open on the LAN. On Nexus, use:
 
-    /noobia/neo/ssh-neo
+    /noobia/common/neo/ssh-neo
 
 The private tunnel key stays on Neo at `/home/noob/.ssh/noobia_tunnel`. Nexus
 authorizes it only for port forwarding to loopback port 2222. The reconnect

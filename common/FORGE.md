@@ -109,7 +109,7 @@ Git.
 
 ## Startup
 
-1. **Login.** GNOME's autostart entry ([source](../dushich/solo/nexus-forge.desktop),
+1. **Login.** GNOME's autostart entry ([source](nexus_forge/nexus-forge.desktop),
    installed as `~/.config/autostart/nexus-forge.desktop`) runs
    `common/bin/nexus-forge` five seconds after login.
 2. **Updates.** `nexus-forge` first runs
@@ -125,7 +125,7 @@ Git.
    Every step has a timeout, and a failure is logged and skipped. The forge
    still starts with the old version. Log:
    `~/.local/state/noobia/agent_updates.log`.
-3. **Window.** [`dushich/solo/nexus_forge.py`](../dushich/solo/nexus_forge.py)
+3. **Window.** [`common/nexus_forge/nexus_forge.py`](nexus_forge/nexus_forge.py)
    opens the 2×2 window. For each quadrant it attaches to the agent's running
    tmux session if one exists (`noobia-aria-*`, `noobia-banshee-*`,
    `noobia-gwyn-*`, `noobia-dushich-solo-*`). Otherwise it starts the agent's
@@ -147,7 +147,7 @@ Git.
    [`pics/`](../pics/). When a helper Dushich is busy in a quadrant, his
    avatar animates there too. Rose watches over the bottom of every sidebar.
 
-Check the window without a display: `python3 dushich/solo/nexus_forge.py --self-test`.
+Check the window without a display: `python3 common/nexus_forge/nexus_forge.py --self-test`.
 
 ## Dushich, everyone's helper
 
@@ -314,7 +314,7 @@ privately on Nexus.
 | MCP registration | `dushich` → `common/dushich/mcp.py --agent NAME` in each CLI's config; see [`common/dushich/README.md`](dushich/README.md) |
 | Helper mirrors | `noobia-dushich-helper-mirror` and `noobia-banshee-helper-mirror` user services, installed from [`common/dushich/`](dushich/) |
 | Avatar art | [`pics/<Agent>/`](../pics/): `idle.png`, `working_1.png`–`working_4.png`, `final.png`, and `pics/Rose/Rose.png` (360 px wide) |
-| Autostart | [`dushich/solo/nexus-forge.desktop`](../dushich/solo/nexus-forge.desktop) → `~/.config/autostart/` |
+| Autostart | [`common/nexus_forge/nexus-forge.desktop`](nexus_forge/nexus-forge.desktop) → `~/.config/autostart/` |
 
 Install details for Dushich's runtime are in
 [`dushich/coding/README.md`](../dushich/coding/README.md). Measured VRAM use
@@ -324,8 +324,8 @@ and the LAN inference endpoint are described in
 ## Checking that it works
 
 ```sh
-python3 dushich/solo/nexus_forge.py --self-test           # window, layout, avatars
-python3 -m unittest discover -s dushich/solo -p 'test_*.py'
+python3 common/nexus_forge/nexus_forge.py --self-test           # window, layout, avatars
+python3 -m unittest discover -s common/nexus_forge -p 'test_*.py'
 python3 -m unittest discover -s dushich/coding -p 'test_*.py'   # task runner, summarizer
 python3 -m unittest discover -s common/dushich -p 'test_*.py'   # MCP server, bridge, helpers
 python3 -m unittest discover -s common/tools -p 'test_*.py'     # forge-db, dushich-explore

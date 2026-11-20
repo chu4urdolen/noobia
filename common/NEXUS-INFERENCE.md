@@ -49,14 +49,14 @@ rollback path.
 
 The API continues to use the key stored at `/home/aria/.config/noobia/gpt-oss-20b.api-key` (mode `0600`, outside the repository), preserving existing clients. Keep that key private when configuring another client. `/health` is public; authenticated clients can use `/v1/models` and `/v1/chat/completions`. The LAN endpoint uses HTTP, so use an SSH tunnel for access from outside the Noobia LAN.
 
-The service source files are `aria/inference/ollama-proxy.py` and
-`aria/inference/noobia-inference-proxy.service`; `aria/inference/run-server`
-and `aria/inference/noobia-llama-server.service` record the previous direct
-llama.cpp setup. The example client is `aria/inference/chat.py`. On Nexus:
+The service source files are `common/inference/ollama-proxy.py` and
+`common/inference/noobia-inference-proxy.service`; `common/inference/run-server`
+and `common/inference/noobia-llama-server.service` record the previous direct
+llama.cpp setup. The example client is `common/inference/chat.py`. On Nexus:
 
 ```sh
-/noobia/aria/inference/chat.py
-/noobia/aria/inference/chat.py --prompt 'Say hello to Noobia.'
+/noobia/common/inference/chat.py
+/noobia/common/inference/chat.py --prompt 'Say hello to Noobia.'
 sudo systemctl status noobia-inference-proxy.service ollama.service
 ```
 

@@ -9,9 +9,9 @@ at `private/codex`. This is full host authority, including Aria's existing
 passwordless sudo; use it only for solo work. The paired Dushich handoff
 runner now has full Codex and Unix account access too.
 
-This directory also holds the [Nexus Forge](../../common/FORGE.md) window
-(`nexus_forge.py`, its avatar helpers, and the `nexus-forge.desktop`
-autostart source).
+The [Nexus Forge](../common/FORGE.md) window source lives in
+`common/nexus_forge/` (`nexus_forge.py`, its avatar helpers, the
+`nexus-forge.desktop` autostart source, and the tests).
 
 Solo role instructions are in [`AGENTS.md`](AGENTS.md), linked into
 `private/codex/AGENTS.md`. The helper has separate instructions in

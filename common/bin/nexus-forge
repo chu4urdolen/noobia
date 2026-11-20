@@ -3,4 +3,4 @@
 set -euo pipefail
 NOOBIA="${NOOBIA:-/noobia}"
 "$NOOBIA/common/tools/update_agents.sh" || true
-exec /usr/bin/python3 "$NOOBIA/dushich/solo/nexus_forge.py" "$@"
+exec /usr/bin/python3 "$NOOBIA/common/nexus_forge/nexus_forge.py" "$@"

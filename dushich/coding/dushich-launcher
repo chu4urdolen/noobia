@@ -56,7 +56,7 @@ if [[ $# -eq 0 && -t 0 && -t 1 && -z "${NOOBIA_DUSHICH_TMUX_PANE:-}" ]] && comma
     if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" || -S "/run/user/$(id -u)/wayland-0" ]]; then
         tmux -L dushich-clean set-option -t "$session" status off
         tmux -L dushich-clean set-window-option -t "$session":0 pane-border-status off
-        /usr/bin/python3 "$NOOBIA/dushich/solo/dushich_window.py" \
+        /usr/bin/python3 "$NOOBIA/common/nexus_forge/dushich_window.py" \
             --agent Dushich --tmux-socket dushich-clean --target-pane "${session}:0.0" \
             --sidebar-width 180 --title "Dushich" \
             --command /usr/bin/tmux -L dushich-clean attach-session -t "$session" || true
@@ -64,7 +64,7 @@ if [[ $# -eq 0 && -t 0 && -t 1 && -z "${NOOBIA_DUSHICH_TMUX_PANE:-}" ]] && comma
         exit 0
     fi
     tmux -L dushich-clean split-window -h -l 18 -t "$session":0.0 -c "$NOOBIA" \
-        "exec /usr/bin/python3 $NOOBIA/dushich/solo/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane ${session}:0.0 --size 18"
+        "exec /usr/bin/python3 $NOOBIA/common/nexus_forge/avatar_pane.py --agent Dushich --tmux-socket dushich-clean --target-pane ${session}:0.0 --size 18"
     tmux -L dushich-clean set-hook -t "$session" client-attached "resize-pane -t ${session}:0.1 -x 18"
     tmux -L dushich-clean set-hook -t "$session" client-resized "resize-pane -t ${session}:0.1 -x 18"
     tmux -L dushich-clean set-hook -t "$session" window-resized "resize-pane -t ${session}:0.1 -x 18"

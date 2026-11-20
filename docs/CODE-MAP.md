@@ -34,7 +34,7 @@ existing local directories; this map points to code and operating notes.
 | Noobia and agent conventions | [Shared instructions](../common/AGENTS.md) | What Noobia is, its principles and population, how Noobs work together, Dushich collaboration, shared tools, Git, and Nexus Linux services; role files hold only each Noob's own personality and instructions |
 | Nexus Linux services | [Service sources](../common/services/README.md) | Shared entry scripts and installable systemd unit sources |
 | Nexus GPU inference | [Nexus inference](../common/NEXUS-INFERENCE.md) | AMD TV output, RTX 5090 CUDA runtime, LAN inference service and chat client |
-| Nexus Forge | [FORGE.md](../common/FORGE.md) | `nexus-forge` window (`dushich/solo/nexus_forge.py`), commands in `common/bin/`, the shared Dushich connection in `common/dushich/` (MCP server, bridge, helpers), startup CLI updates (`common/tools/update_agents.sh`) |
+| Nexus Forge | [FORGE.md](../common/FORGE.md) | `nexus-forge` window (`common/nexus_forge/nexus_forge.py`), commands in `common/bin/`, the shared Dushich connection in `common/dushich/` (MCP server, bridge, helpers), startup CLI updates (`common/tools/update_agents.sh`) |
 | Forge memory | [FORGE.md](../common/FORGE.md#forge-memory-forge-db) | `forge-db` path atlas and project notes in `dushich/workspace/forge.db`; `dushich-explore` asks local Dushich to find and record things |
 | Contact book | [Noobia contact book](../common/CONTACT-BOOK.md) | Readable inhabitant roles and routes; Council authentication keys remain separate |
 

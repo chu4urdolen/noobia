@@ -194,6 +194,7 @@ changing boot storage. See `lynx/tools/lynx_agent_media.py`,
    `/dev/nq-nci`; this is an expected path, not a live node or verified chip
    identity. Read-only active device-tree strings say `SN110T` for both
    configured variants; see [NFC preflight](LYNX-NFC-PREFLIGHT-20261120.md).
+   The guarded RAM-only probe script is prepared but its live mode has not run.
    Fingerprint driver candidates
    `oplus_fp_common.ko` and `uff_fp_driver.ko` are in the stock vendor DLKM;
    the active tree has an enabled `oplus,fp_spi` device at `spi7.0`, but its

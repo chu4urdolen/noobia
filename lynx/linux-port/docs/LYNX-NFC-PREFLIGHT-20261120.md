@@ -32,3 +32,8 @@ modules under `/run`, verify hashes and vermagic again, load one at a time,
 and record timing, kernel messages, driver binding, expected node, and health
 after each step. A node or bound driver alone will not validate NFC exchange.
 Do not start an Android NFC HAL or perform a transaction as a status probe.
+`lynx/tools/trial_v53_nfc_ram.py` is prepared for that step. Its default mode
+checks the exact stock module hashes and kernel ABI without contacting Lynx;
+`--start` requires the fresh live guards, stages only in RAM, records each
+command and elapsed time, and arms a timed reboot fallback before loading.
+The live mode has not been run.

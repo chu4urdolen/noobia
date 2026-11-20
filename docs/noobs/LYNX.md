@@ -2,17 +2,14 @@
 
 **Current conversation handoff:** [Lynx handoff](../../lynx/linux-port/docs/CURRENT-HANDOFF.md).
 
-Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the latest 2026-11-04
-checkpoint, she is running trial V53 Alpine with Wi-Fi, SSH, and a Bluetooth
-service started after boot. V53 waits for shared-radio calibration before
-requesting Wi-Fi. Two monitored boots, including one short-uptime warm reboot,
-and authenticated BLE trials passed. Long-uptime reboot reliability and
-automatic Bluetooth startup remain unverified. V52
-Bluetooth passes authenticated RAM-only start/stop trials after a healthy
-boot, but long-uptime warm reboots have returned to Fastboot before rescue
-SSH even after an explicit radio power-off and 60-second wait. V52 is not yet
-a dependable reboot image. BusyBox rescue and the exact V50 rollback remain
-available. Her observed Noobia address is
+Lynx is the OnePlus Nord 3 CPH2493 / MT6983. At the 2026-11-20
+checkpoint, trial V53 Alpine is healthy on a new boot, charging at 22%, with
+Wi-Fi and SSH. V53 waits for shared-radio calibration before requesting
+Wi-Fi. Authenticated BLE trials and a 15-minute same-boot Bluetooth hold
+passed; automatic Bluetooth startup and long-uptime reboot reliability remain
+unverified. RAM-only V53 GNSS trials produced 108 checksum-valid NMEA
+sentences but no position fix. The exact V50 BusyBox rescue image and
+Fastboot rollback remain available. Her observed Noobia address is
 `192.168.100.107`. Check live identity and health before a hardware trial.
 The persistent Alpine root uses `Europe/Sofia`; its local time was verified
 after the latest V50 restoration.

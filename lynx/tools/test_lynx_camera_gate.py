@@ -1,6 +1,8 @@
 """Unit tests for the offline Lynx camera gate."""
 
 import json
+import contextlib
+import io
 import unittest
 
 from lynx_camera_gate import (
@@ -11,6 +13,7 @@ from lynx_camera_gate import (
     REFUSED_SENSORS,
     evaluate_request,
     gate,
+    main,
 )
 
 
@@ -174,6 +177,18 @@ class MalformedRequestTests(unittest.TestCase):
         raw = json.dumps(request()).encode("utf-8")
         decision = gate(raw)
         self.assertEqual(decision.decision, ALLOW)
+
+    def test_cli_missing_argument_returns_without_reading_stdin(self):
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            result = main([])
+        self.assertEqual(result, 2)
+        self.assertFalse(json.loads(output.getvalue())["allowed"])
+
+    def test_cli_oversized_argument_is_refused(self):
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            result = main(["x" * 4097])
+        self.assertEqual(result, 2)
+        self.assertFalse(json.loads(output.getvalue())["allowed"])
 
 
 if __name__ == "__main__":

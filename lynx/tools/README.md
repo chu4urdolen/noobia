@@ -8,7 +8,7 @@ him. Cached ARM64 BusyBox validation evidence remains available locally.
 recognizable camera modes. It performs no device action; an `allow` response
 does not replace a matching live receipt or attended trial.
 
-## Current V50 recovery and V52 Bluetooth work (2026-10-31)
+## V53 Alpine, V50 recovery, and connectivity
 
 V53 is the current **trial** image: it adds a 30-second shared-radio
 calibration settle period before Wi-Fi power-on. Two monitored boots,

@@ -206,14 +206,15 @@ def gate(raw: object) -> CameraGateDecision:
 
 
 def main(argv=None) -> int:
-    """Command-line entry point: read a request from argv or stdin, emit JSON."""
+    """Command-line entry point: require one bounded JSON argument, emit JSON."""
     import sys
 
     argv = list(sys.argv[1:] if argv is None else argv)
-    if argv:
-        raw = " ".join(argv)
-    else:
-        raw = sys.stdin.read()
+    if len(argv) != 1 or len(argv[0]) > 4096:
+        print(json.dumps({"decision": REFUSE, "allowed": False,
+                          "reason": "expected one JSON argument of at most 4096 characters"}))
+        return 2
+    raw = argv[0]
     decision = gate(raw)
     print(json.dumps(decision.as_dict(), indent=2, sort_keys=True))
     return 0 if decision.decision == ALLOW else 1

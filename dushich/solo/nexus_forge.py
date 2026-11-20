@@ -39,6 +39,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -245,6 +246,48 @@ def _get_agy_token_quota() -> str:
 
 
 def _get_claude_token_quota() -> str:
+    # First priority: live official OAuth usage from Anthropic API (matches /usage)
+    for cred_path in [
+        Path("/noobia/gwyn-app-nub/private/claude/.credentials.json"),
+        Path.home() / ".claude" / ".credentials.json",
+    ]:
+        if cred_path.is_file():
+            try:
+                with open(cred_path, "r", encoding="utf-8") as f:
+                    cred = json.load(f)
+                token = (cred.get("claudeAiOauth") or {}).get("accessToken")
+                if token:
+                    req = urllib.request.Request(
+                        "https://api.anthropic.com/api/oauth/usage",
+                        headers={
+                            "Authorization": f"Bearer {token}",
+                            "User-Agent": "claude-code/2.1.329",
+                            "Accept": "application/json",
+                            "anthropic-beta": "claude-code-20250219",
+                        },
+                    )
+                    with urllib.request.urlopen(req, timeout=3) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                        fh = data.get("five_hour") or {}
+                        sd = data.get("seven_day") or {}
+                        u_h = fh.get("utilization")
+                        u_w = sd.get("utilization")
+                        if u_h is not None or u_w is not None:
+                            rem_h = (
+                                max(0, 100 - int(round(u_h)))
+                                if u_h is not None
+                                else 100
+                            )
+                            rem_w = (
+                                max(0, 100 - int(round(u_w)))
+                                if u_w is not None
+                                else 100
+                            )
+                            return f"H/W: {rem_h}% / {rem_w}%"
+            except Exception:
+                pass
+
+    # Fallback: scan local session logs
     now = time.time()
     one_hour_ago = now - 3600
     one_week_ago = now - 7 * 86400

@@ -39,6 +39,7 @@ import os
 import subprocess
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 from avatar_pane import (
@@ -193,6 +194,96 @@ def build_quadrants_table(cfg: dict | None = None) -> dict:
 # ---------------------------------------------------------------------------
 # Token quota / rate limits resolution
 # ---------------------------------------------------------------------------
+_TOKEN_BADGE_CACHE: dict[str, tuple[float, str]] = {}
+CACHE_TTL = 15.0
+
+
+def _get_agy_token_quota() -> str:
+    now = time.time()
+    one_hour_ago = now - 3600
+    one_week_ago = now - 7 * 86400
+    total_1h = 0
+    total_7d = 0
+    pattern = str(
+        Path.home()
+        / ".gemini"
+        / "antigravity-cli"
+        / "brain"
+        / "*"
+        / ".system_generated"
+        / "logs"
+        / "transcript.jsonl"
+    )
+    for fpath in glob.glob(pattern):
+        try:
+            if os.path.getmtime(fpath) < one_week_ago:
+                continue
+            with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    try:
+                        d = json.loads(line)
+                        ts_str = d.get("created_at")
+                        if not ts_str:
+                            continue
+                        dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                        ts_sec = dt.timestamp()
+                        if ts_sec < one_week_ago:
+                            continue
+                        toks = (d.get("input_tokens") or 0) + (d.get("output_tokens") or 0)
+                        if ts_sec >= one_hour_ago:
+                            total_1h += toks
+                        total_7d += toks
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+    if total_7d == 0 and total_1h == 0:
+        return "H/W: --% / --%"
+    h_pct = min(100, int(round((total_1h / 1_000_000) * 100)))
+    w_pct = min(100, int(round((total_7d / 15_000_000) * 100)))
+    return f"H/W: {h_pct}% / {w_pct}%"
+
+
+def _get_claude_token_quota() -> str:
+    now = time.time()
+    one_hour_ago = now - 3600
+    one_week_ago = now - 7 * 86400
+    total_1h = 0
+    total_7d = 0
+    pattern = "/noobia/gwyn-app-nub/private/claude/projects/**/*.jsonl"
+    for fpath in glob.glob(pattern, recursive=True):
+        try:
+            if os.path.getmtime(fpath) < one_week_ago:
+                continue
+            with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    try:
+                        d = json.loads(line)
+                        ts_str = d.get("timestamp")
+                        if not ts_str or not isinstance(ts_str, str):
+                            continue
+                        dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                        ts_sec = dt.timestamp()
+                        if ts_sec < one_week_ago:
+                            continue
+                        msg = d.get("message")
+                        if isinstance(msg, dict):
+                            usage = msg.get("usage") or {}
+                            toks = (usage.get("input_tokens") or 0) + (usage.get("output_tokens") or 0)
+                            if ts_sec >= one_hour_ago:
+                                total_1h += toks
+                            total_7d += toks
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+    if total_7d == 0 and total_1h == 0:
+        return "H/W: --% / --%"
+    h_pct = min(100, int(round((total_1h / 500_000) * 100)))
+    w_pct = min(100, int(round((total_7d / 5_000_000) * 100)))
+    return f"H/W: {h_pct}% / {w_pct}%"
+
+
 def resolve_token_badge(
     agent: str,
     explicit_badge: str = "",
@@ -222,6 +313,13 @@ def resolve_token_badge(
         except Exception:
             pass
 
+    # In-memory TTL cache
+    now = time.time()
+    cached = _TOKEN_BADGE_CACHE.get(agent_norm)
+    if cached and (now - cached[0]) < CACHE_TTL:
+        return cached[1]
+
+    result = "H/W: --% / --%"
     if agent_norm == "aria":
         try:
             sessions = sorted(
@@ -257,13 +355,27 @@ def resolve_token_badge(
                                             if wp is not None
                                             else "--%"
                                         )
-                                        return f"H/W: {h_str} / {w_str}"
+                                        result = f"H/W: {h_str} / {w_str}"
+                                        break
+                        if result != "H/W: --% / --%":
+                            break
                 except Exception:
                     continue
         except Exception:
             pass
+    elif agent_norm == "banshee":
+        try:
+            result = _get_agy_token_quota()
+        except Exception:
+            result = "H/W: --% / --%"
+    elif agent_norm == "gwyn":
+        try:
+            result = _get_claude_token_quota()
+        except Exception:
+            result = "H/W: --% / --%"
 
-    return "H/W: --% / --%"
+    _TOKEN_BADGE_CACHE[agent_norm] = (now, result)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -531,6 +643,7 @@ if _GI_AVAILABLE:
             self.reconnect_box = Gtk.Box(
                 orientation=Gtk.Orientation.VERTICAL, spacing=8
             )
+            self.reconnect_box.set_no_show_all(True)
             self.reconnect_box.set_halign(Gtk.Align.CENTER)
             self.reconnect_box.set_valign(Gtk.Align.CENTER)
             self.reconnect_box.set_margin_start(24)

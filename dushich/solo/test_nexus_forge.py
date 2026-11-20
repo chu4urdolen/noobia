@@ -119,6 +119,12 @@ class TestConfigAndBadges(unittest.TestCase):
         self.assertEqual(resolve_token_badge("Dushich"), "Local: 100%")
         self.assertEqual(resolve_token_badge("dushich"), "Local: 100%")
 
+        # 3. Banshee and Gwyn return valid percentage badges
+        b_badge = resolve_token_badge("Banshee")
+        self.assertTrue(b_badge.startswith("H/W: ") and "%" in b_badge, b_badge)
+        g_badge = resolve_token_badge("Gwyn")
+        self.assertTrue(g_badge.startswith("H/W: ") and "%" in g_badge, g_badge)
+
         # 3. Cache file override
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = Path(tmpdir) / "rate_limits.json"

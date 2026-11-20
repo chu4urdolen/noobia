@@ -50,11 +50,11 @@ INSTALL_LABEL = {
 CSS = """
 :root{--bg:#f6f5f2;--card:#fff;--ink:#1d2024;--muted:#5d646d;--line:#dcdad4;
 --ok:#1f7a4d;--ok-bg:#e3f3ea;--warn:#8a5a00;--warn-bg:#fbf0d9;--bad:#a2312b;
---bad-bg:#f9e3e1;--na:#555c66;--na-bg:#eceef1;--act:#6b3fa0;--act-bg:#efe7f8}
+--bad-bg:#f9e3e1;--na:#555c66;--na-bg:#eceef1;--act:#6b3fa0;--act-bg:#efe7f8;--hum:#1f5f99;--hum-bg:#e2eefa}
 @media (prefers-color-scheme:dark){:root{--bg:#15171a;--card:#1e2125;--ink:#e8e6e1;
 --muted:#9aa1aa;--line:#33373d;--ok:#6fd3a0;--ok-bg:#183326;--warn:#f0c46a;
 --warn-bg:#3a2e14;--bad:#f39a92;--bad-bg:#3d1f1c;--na:#aab1ba;--na-bg:#2a2e33;
---act:#c9a8f0;--act-bg:#2e2340}}
+--act:#c9a8f0;--act-bg:#2e2340;--hum:#8cc4f5;--hum-bg:#1a2c3e}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);
 font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -80,6 +80,10 @@ overflow-wrap:anywhere}
 .card p{margin:4px 0;font-size:13.5px}.next{color:var(--muted)}
 .meta{color:var(--muted);font-size:12px}
 .legend{font-size:13px;color:var(--muted)}
+.h-attended{background:var(--hum-bg);color:var(--hum)}
+.attended{border-left:3px solid var(--hum);padding-left:8px}
+.evidence{background:var(--card);border:1px solid var(--line);border-radius:10px;
+padding:12px;margin-bottom:8px}.evidence p{margin:4px 0;font-size:13.5px}
 footer{margin-top:32px;color:var(--muted);font-size:13px}
 """
 
@@ -104,7 +108,7 @@ def age_text(captured_at, now):
     return f"{seconds // 3600} h old"
 
 
-def card(tool):
+def card(tool, attended=None):
     live = tool.get("live", {"state": "unknown"})
     state = live["state"]
     installed = tool.get("installed", "unknown")
@@ -115,6 +119,8 @@ def card(tool):
         f'<span class="badge s-{esc(state)}">{esc(STATE_LABEL.get(state, state))}</span>',
         f'<span class="badge i-{esc(installed)}">{esc(INSTALL_LABEL.get(installed, installed))}</span>',
     ]
+    if tool.get("attended"):
+        badges.append('<span class="badge h-attended">attended</span>')
     desc = tool["description"].removeprefix("Entity: Lynx. ")
     parts = [f'<div class="card" data-tool="{esc(tool["name"])}">',
              f'<h3>{esc(tool["name"])}</h3>',
@@ -126,6 +132,11 @@ def card(tool):
         counts = ", ".join(f"{n} {STATE_LABEL.get(s, s)}"
                            for s, n in live.get("counts", {}).items())
         parts.append(f'<p class="next">{esc(counts)}</p>')
+    for ident in tool.get("attended", []):
+        entry = (attended or {}).get(ident)
+        if entry:
+            parts.append(f'<p class="attended">Attended {esc(entry["date"])} '
+                         f'({esc(entry["observer"])}): {esc(entry["claim"])}</p>')
     meta = [f"timeout {tool['timeout_s']} s"]
     if tool["inputs"]:
         meta.append("inputs: " + ", ".join(tool["inputs"]))
@@ -164,10 +175,14 @@ def render(manifest, now=None):
         out.append("</div>")
     else:
         out.append('<p class="sub">No status snapshot: every live state is unknown.</p>')
-    out.append('<p class="legend">“Proven” comes only from Lynx\'s own status code. '
-               '“Present, unproven” means the kernel interface exists but no tested '
-               'function backs it. Human-attended trials recorded in forge notes are '
-               'not reflected here.</p>')
+    out.append('<p class="legend">The chips above and each card\'s first state '
+               'badge come only from Lynx\'s own status code. “Present, unproven” '
+               'means the kernel interface exists but the phone\'s code does not '
+               'claim a tested function. A blue “attended” badge is separate: a '
+               'person confirmed one specific function once, with a receipt. It '
+               'does not change the phone-reported state and may not hold on '
+               'the current boot.</p>')
+    attended = {e["id"]: e for e in manifest.get("attended_evidence", [])}
     by_group = {}
     for tool in manifest["tools"]:
         by_group.setdefault(tool["group"], []).append(tool)
@@ -175,12 +190,27 @@ def render(manifest, now=None):
         tools = by_group.pop(key, [])
         if tools:
             out.append(f"<h2>{esc(title)}</h2><div class=\"grid\">")
-            out.extend(card(tool) for tool in tools)
+            out.extend(card(tool, attended) for tool in tools)
             out.append("</div>")
     for key, tools in sorted(by_group.items()):
         out.append(f"<h2>{esc(key)}</h2><div class=\"grid\">")
-        out.extend(card(tool) for tool in tools)
+        out.extend(card(tool, attended) for tool in tools)
         out.append("</div>")
+    if attended:
+        out.append("<h2>Attended confirmations</h2>"
+                   '<p class="legend">Human observations of one function each, '
+                   "kept apart from phone-reported validation.</p>")
+        for entry in attended.values():
+            component = entry["component"].split("/", 1)[1]
+            boot = f" · boot {entry['boot']}" if entry.get("boot") else ""
+            out.append('<div class="evidence">'
+                       f'<p><span class="badge h-attended">{esc(component)}</span> '
+                       f'{esc(entry["date"])} · {esc(entry["observer"])}{esc(boot)}</p>'
+                       f'<p>{esc(entry["claim"])}</p>'
+                       f'<p class="next">Does not establish: '
+                       f'{esc("; ".join(entry["does_not_establish"]))}</p>'
+                       f'<p class="meta">Receipts: {esc("; ".join(entry["receipts"]))}</p>'
+                       "</div>")
     out.append(f"<footer>Rendered {esc(now.strftime('%Y-%m-%d %H:%M:%S UTC'))} by "
                "lynx/tools/ui/lynx_tool_board.py. This page cannot act on Lynx.</footer>")
     out.append("</main></body></html>\n")

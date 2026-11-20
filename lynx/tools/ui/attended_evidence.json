@@ -1,0 +1,105 @@
+{
+  "about": "Human-attended physical confirmations of Lynx functions, each tied to one receipt. These are history, not live state: they never change a tool's phone-reported 'validated' value and may not hold on the current boot. 'tools' names only the tools the observation actually covers. Add an entry only with a specific receipt; Aria's forge note #61 forbids broad claims.",
+  "entries": [
+    {
+      "id": "speaker-beep-2026-11-21",
+      "component": "platform/audio",
+      "tools": [
+        "lynx_audio_status",
+        "lynx_media_play"
+      ],
+      "claim": "Noob heard Lynx play the quiet half-second beep through the bounded media tool; sound stopped and both speaker mutes returned to On.",
+      "observer": "Noob",
+      "date": "2026-11-21",
+      "boot": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+      "receipts": [
+        "lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md",
+        "commit 45a1ecf"
+      ],
+      "does_not_establish": [
+        "headset output",
+        "volume or audio quality",
+        "other sounds or long playback"
+      ]
+    },
+    {
+      "id": "haptic-pulse-2026-11-21",
+      "component": "platform/haptic",
+      "tools": [
+        "lynx_haptic_status",
+        "lynx_haptic_pulse"
+      ],
+      "claim": "Noob felt one isolated 80 ms haptic pulse from Lynx; the tool verified OFF afterward.",
+      "observer": "Noob",
+      "date": "2026-11-21",
+      "boot": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+      "receipts": [
+        "lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md",
+        "commit 45a1ecf"
+      ],
+      "does_not_establish": [
+        "patterns or durations other than 80 ms",
+        "an earlier unisolated vibration, which is not counted"
+      ]
+    },
+    {
+      "id": "rear-led-pulse-2026-11-02",
+      "component": "hardware/flashlight",
+      "tools": [
+        "lynx_flashlight",
+        "lynx_flashlight_pulse"
+      ],
+      "claim": "Noob saw one bounded 100 ms rear LED flash (lm3642); OFF was verified by the control tool.",
+      "observer": "Noob",
+      "date": "2026-11-02",
+      "boot": null,
+      "receipts": [
+        "lynx/tools/flashlight-visual-confirmation.json",
+        "lynx/linux-port/docs/CURRENT-HANDOFF.md"
+      ],
+      "does_not_establish": [
+        "the second rear light",
+        "safe persistent startup; the driver must be loaded again after reboot"
+      ]
+    },
+    {
+      "id": "microphone-clap-2026-10-29",
+      "component": "hardware/microphone",
+      "tools": [
+        "lynx_microphone"
+      ],
+      "claim": "An external clap confirmed by the attending user raised microphone RMS 11.8x over the quiet median on V50; no raw audio was kept.",
+      "observer": "attending user (the receipt does not name them)",
+      "date": "2026-10-29",
+      "boot": null,
+      "receipts": [
+        "lynx/linux-port/docs/LYNX-REMAINING-HARDWARE-TRIALS.md",
+        "lynx/logs/v50-microphone-clap-1793305372427637018.json"
+      ],
+      "does_not_establish": [
+        "calibrated sound levels",
+        "speech capture or recording quality"
+      ]
+    },
+    {
+      "id": "usb-acm-2026-11-21",
+      "component": "platform/usb",
+      "tools": [
+        "lynx_usb_status"
+      ],
+      "claim": "In an attended RAM-only trial, Lynx enumerated on Nexus as 1d6b:0104 over high-speed USB and passed bidirectional ACM serial; Noob confirmed the physical test.",
+      "observer": "Noob",
+      "date": "2026-11-21",
+      "boot": null,
+      "receipts": [
+        "lynx/linux-port/docs/CURRENT-HANDOFF.md",
+        "forge-db lynx notes #58 and #67"
+      ],
+      "does_not_establish": [
+        "cold-boot persistence",
+        "disconnect and reconnect",
+        "agent-facing USB use"
+      ]
+    }
+  ]
+}

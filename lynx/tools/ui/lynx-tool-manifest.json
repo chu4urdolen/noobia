@@ -1,4 +1,106 @@
 {
+  "attended_evidence": [
+    {
+      "boot": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+      "claim": "Noob heard Lynx play the quiet half-second beep through the bounded media tool; sound stopped and both speaker mutes returned to On.",
+      "component": "platform/audio",
+      "date": "2026-11-21",
+      "does_not_establish": [
+        "headset output",
+        "volume or audio quality",
+        "other sounds or long playback"
+      ],
+      "id": "speaker-beep-2026-11-21",
+      "observer": "Noob",
+      "receipts": [
+        "lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md",
+        "commit 45a1ecf"
+      ],
+      "tools": [
+        "lynx_audio_status",
+        "lynx_media_play"
+      ]
+    },
+    {
+      "boot": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+      "claim": "Noob felt one isolated 80 ms haptic pulse from Lynx; the tool verified OFF afterward.",
+      "component": "platform/haptic",
+      "date": "2026-11-21",
+      "does_not_establish": [
+        "patterns or durations other than 80 ms",
+        "an earlier unisolated vibration, which is not counted"
+      ],
+      "id": "haptic-pulse-2026-11-21",
+      "observer": "Noob",
+      "receipts": [
+        "lynx/linux-port/docs/LYNX-MEDIA-CONTROL.md",
+        "commit 45a1ecf"
+      ],
+      "tools": [
+        "lynx_haptic_status",
+        "lynx_haptic_pulse"
+      ]
+    },
+    {
+      "boot": null,
+      "claim": "Noob saw one bounded 100 ms rear LED flash (lm3642); OFF was verified by the control tool.",
+      "component": "hardware/flashlight",
+      "date": "2026-11-02",
+      "does_not_establish": [
+        "the second rear light",
+        "safe persistent startup; the driver must be loaded again after reboot"
+      ],
+      "id": "rear-led-pulse-2026-11-02",
+      "observer": "Noob",
+      "receipts": [
+        "lynx/tools/flashlight-visual-confirmation.json",
+        "lynx/linux-port/docs/CURRENT-HANDOFF.md"
+      ],
+      "tools": [
+        "lynx_flashlight",
+        "lynx_flashlight_pulse"
+      ]
+    },
+    {
+      "boot": null,
+      "claim": "An external clap confirmed by the attending user raised microphone RMS 11.8x over the quiet median on V50; no raw audio was kept.",
+      "component": "hardware/microphone",
+      "date": "2026-10-29",
+      "does_not_establish": [
+        "calibrated sound levels",
+        "speech capture or recording quality"
+      ],
+      "id": "microphone-clap-2026-10-29",
+      "observer": "attending user (the receipt does not name them)",
+      "receipts": [
+        "lynx/linux-port/docs/LYNX-REMAINING-HARDWARE-TRIALS.md",
+        "lynx/logs/v50-microphone-clap-1793305372427637018.json"
+      ],
+      "tools": [
+        "lynx_microphone"
+      ]
+    },
+    {
+      "boot": null,
+      "claim": "In an attended RAM-only trial, Lynx enumerated on Nexus as 1d6b:0104 over high-speed USB and passed bidirectional ACM serial; Noob confirmed the physical test.",
+      "component": "platform/usb",
+      "date": "2026-11-21",
+      "does_not_establish": [
+        "cold-boot persistence",
+        "disconnect and reconnect",
+        "agent-facing USB use"
+      ],
+      "id": "usb-acm-2026-11-21",
+      "observer": "Noob",
+      "receipts": [
+        "lynx/linux-port/docs/CURRENT-HANDOFF.md",
+        "forge-db lynx notes #58 and #67"
+      ],
+      "tools": [
+        "lynx_usb_status"
+      ]
+    }
+  ],
   "effects": {
     "actuates": 3,
     "read_only": 30,
@@ -13,7 +115,7 @@
     "missing",
     "unknown"
   ],
-  "note": "Interface inventory is not proof of function. A tool's 'live' state comes only from a status snapshot.",
+  "note": "Interface inventory is not proof of function. A tool's 'live' state comes only from a status snapshot. 'attended' lists separate human confirmations, which never change 'live'.",
   "schema_version": 1,
   "source": "lynx/tools/local_calls",
   "status_sources": {
@@ -56,6 +158,7 @@
   "tool_count": 38,
   "tools": [
     {
+      "attended": [],
       "component": null,
       "description": "Entity: Lynx. Read whether the local AI agent is installed, its audit log exists, and Nexus is reachable. This does not run inference or activate hardware.",
       "effect": "read_only",
@@ -77,6 +180,9 @@
       "timeout_s": 5
     },
     {
+      "attended": [
+        "speaker-beep-2026-11-21"
+      ],
       "component": "audio",
       "description": "Entity: Lynx. Read ALSA card and PCM interface readiness; does not play or record audio.",
       "effect": "read_only",
@@ -100,6 +206,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "battery",
       "description": "Entity: Lynx. Read gauge capacity, signed current, temperature and voltage. The 20% reserve policy may power off even while charging.",
       "effect": "read_only",
@@ -123,6 +230,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "bluetooth",
       "description": "Entity: Lynx. Read bluetooth interface status and validation state. This does not activate hardware or prove operation.",
       "effect": "read_only",
@@ -147,6 +255,7 @@
       "timeout_s": 10
     },
     {
+      "attended": [],
       "component": "camera",
       "description": "Entity: Lynx. Read camera interface status and validation state. This does not activate hardware or prove operation.",
       "effect": "read_only",
@@ -171,6 +280,7 @@
       "timeout_s": 10
     },
     {
+      "attended": [],
       "component": "cellular",
       "description": "Entity: Lynx. Read CCCI interface presence only. Does not start the modem or query a SIM.",
       "effect": "read_only",
@@ -194,6 +304,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": null,
       "description": "Entity: Lynx. Run one bounded coding task with Codex CLI as the unprivileged lynx-coder user in her own workspace. The Codex binary is RAM-only and may be unavailable after a reboot. No system or boot partition writes are granted.",
       "effect": "runs_task",
@@ -221,6 +332,7 @@
       "timeout_s": 130
     },
     {
+      "attended": [],
       "component": "display",
       "description": "Entity: Lynx. Read DRM display interface readiness; does not change the screen.",
       "effect": "read_only",
@@ -244,6 +356,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "fingerprint",
       "description": "Entity: Lynx. Read-only status for the fingerprint. Interface evidence does not validate function.",
       "effect": "read_only",
@@ -267,6 +380,9 @@
       "timeout_s": 5
     },
     {
+      "attended": [
+        "rear-led-pulse-2026-11-02"
+      ],
       "component": "flashlight",
       "description": "Entity: Lynx. Read flashlight interface status and validation state. This does not activate hardware or prove operation.",
       "effect": "read_only",
@@ -291,6 +407,9 @@
       "timeout_s": 10
     },
     {
+      "attended": [
+        "rear-led-pulse-2026-11-02"
+      ],
       "component": "flashlight",
       "description": "Entity: Lynx. Request one 100 ms flashlight pulse. Requires an active driver and healthy battery/thermal state; verifies OFF afterward and enforces a 10-second cooldown.",
       "effect": "actuates",
@@ -315,6 +434,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "flashlight",
       "description": "Entity: Lynx. Request flashlight OFF and report whether a loaded driver verified it. Safe to call when the driver is absent.",
       "effect": "stops",
@@ -338,6 +458,7 @@
       "timeout_s": 5
     },
     {
+      "attended": [],
       "component": "gnss",
       "description": "Entity: Lynx. Read gnss interface status and validation state. This does not activate hardware or prove operation.",
       "effect": "read_only",
@@ -362,6 +483,9 @@
       "timeout_s": 10
     },
     {
+      "attended": [
+        "haptic-pulse-2026-11-21"
+      ],
       "component": "haptic",
       "description": "Entity: Lynx. Request one 80 ms haptic pulse through the existing NRP runtime, then verify OFF.",
       "effect": "actuates",
@@ -385,6 +509,9 @@
       "timeout_s": 6
     },
     {
+      "attended": [
+        "haptic-pulse-2026-11-21"
+      ],
       "component": "haptic",
       "description": "Entity: Lynx. Read vibration driver and LED interface readiness; does not activate the motor.",
       "effect": "read_only",
@@ -408,6 +535,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "haptic",
       "description": "Entity: Lynx. Request haptic OFF and verify it.",
       "effect": "stops",
@@ -431,6 +559,7 @@
       "timeout_s": 6
     },
     {
+      "attended": [],
       "component": "headset",
       "description": "Entity: Lynx. Read-only status for the headset. Interface evidence does not validate function.",
       "effect": "read_only",
@@ -454,6 +583,7 @@
       "timeout_s": 5
     },
     {
+      "attended": [],
       "component": "sensorhub",
       "description": "Entity: Lynx. Read one raw rear light sensor sample. The lower pale rear circle has a verified optical response. Values are driver raw units, not calibrated lux or color temperature.",
       "effect": "read_only",
@@ -475,6 +605,7 @@
       "timeout_s": 5
     },
     {
+      "attended": [],
       "component": "sensorhub",
       "description": "Entity: Lynx. Read one AKM09918 raw magnetometer vector. Values are driver raw units, not a calibrated compass heading.",
       "effect": "read_only",
@@ -496,6 +627,7 @@
       "timeout_s": 5
     },
     {
+      "attended": [],
       "component": "audio",
       "description": "Entity: Lynx. List installed sound and image item names.",
       "effect": "read_only",
@@ -519,6 +651,9 @@
       "timeout_s": 8
     },
     {
+      "attended": [
+        "speaker-beep-2026-11-21"
+      ],
       "component": "audio",
       "description": "Entity: Lynx. Play one bounded sound or selected image from Lynx's installed catalog.",
       "effect": "actuates",
@@ -548,6 +683,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "audio",
       "description": "Entity: Lynx. Read sound and image playback state.",
       "effect": "read_only",
@@ -571,6 +707,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "audio",
       "description": "Entity: Lynx. Stop and clear Lynx's sound or image channel.",
       "effect": "stops",
@@ -598,6 +735,9 @@
       "timeout_s": 8
     },
     {
+      "attended": [
+        "microphone-clap-2026-10-29"
+      ],
       "component": "microphone",
       "description": "Entity: Lynx. Read microphone interface status and validation state. This does not activate hardware or prove operation.",
       "effect": "read_only",
@@ -622,6 +762,7 @@
       "timeout_s": 10
     },
     {
+      "attended": [],
       "component": "microphone",
       "description": "Entity: Lynx. Take one bounded microphone level sample. Returns late RMS and peak only, keeps no audio, and restores the mixer. External acoustic response is not yet validated.",
       "effect": "samples_microphone",
@@ -646,6 +787,7 @@
       "timeout_s": 10
     },
     {
+      "attended": [],
       "component": "sensorhub",
       "description": "Entity: Lynx. Read one raw accelerometer or gyroscope vector. Values are driver raw units and are not calibrated physical units.",
       "effect": "read_only",
@@ -671,6 +813,7 @@
       "timeout_s": 5
     },
     {
+      "attended": [],
       "component": "nfc",
       "description": "Entity: Lynx. Read-only status for the nfc. Interface evidence does not validate function.",
       "effect": "read_only",
@@ -694,6 +837,7 @@
       "timeout_s": 5
     },
     {
+      "attended": [],
       "component": "*",
       "description": "Entity: Lynx. Read-only status for NFC, fingerprint, and headset. Interface evidence does not validate function.",
       "effect": "read_only",
@@ -717,6 +861,7 @@
       "timeout_s": 5
     },
     {
+      "attended": [],
       "component": "*",
       "description": "Entity: Lynx. Read a bounded inventory of battery, thermal, storage, Wi-Fi, display, touch, audio, haptic, sensor hub, USB, cellular, and SIM status. Does not activate hardware.",
       "effect": "read_only",
@@ -740,6 +885,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "sensorhub",
       "description": "Entity: Lynx. Read one raw proximity sensor sample. Values are driver raw units, not a calibrated distance or a verified near/far interpretation.",
       "effect": "read_only",
@@ -761,6 +907,7 @@
       "timeout_s": 5
     },
     {
+      "attended": [],
       "component": null,
       "description": "Read Lynx agent queue counts, oldest pending age, stop state, and private-file integrity. Never reads prompts, replies, or job IDs.",
       "effect": "read_only",
@@ -782,6 +929,7 @@
       "timeout_s": 5
     },
     {
+      "attended": [],
       "component": "sensorhub",
       "description": "Entity: Lynx. Read hf_manager sensor-hub interface readiness; does not enable a sensor.",
       "effect": "read_only",
@@ -805,6 +953,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "sim",
       "description": "Entity: Lynx. Report SIM trial state without touching the modem or SIM controls.",
       "effect": "read_only",
@@ -828,6 +977,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "storage",
       "description": "Entity: Lynx. Read ext4 root identity, error count and free space without touching storage.",
       "effect": "read_only",
@@ -851,6 +1001,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "thermal",
       "description": "Entity: Lynx. Read SoC temperature and cooling states without changing thermal policy.",
       "effect": "read_only",
@@ -874,6 +1025,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "touch",
       "description": "Entity: Lynx. Read Synaptics touch driver and input-node presence; does not sample or inject touch.",
       "effect": "read_only",
@@ -897,6 +1049,9 @@
       "timeout_s": 8
     },
     {
+      "attended": [
+        "usb-acm-2026-11-21"
+      ],
       "component": "usb",
       "description": "Entity: Lynx. Read USB device-controller inventory; native gadget and host enumeration remain unverified.",
       "effect": "read_only",
@@ -920,6 +1075,7 @@
       "timeout_s": 8
     },
     {
+      "attended": [],
       "component": "wifi",
       "description": "Entity: Lynx. Read Alpine Wi-Fi carrier and IP status without scanning or changing the network.",
       "effect": "read_only",

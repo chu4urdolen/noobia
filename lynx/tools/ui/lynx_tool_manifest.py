@@ -40,6 +40,7 @@ MAX_SNAPSHOT_BYTES = 1 << 20
 NOOBIA = Path(os.environ.get("NOOBIA", "/noobia"))
 SOURCE_DIR = NOOBIA / "lynx/tools/local_calls"
 MANIFEST_PATH = NOOBIA / "lynx/tools/ui/lynx-tool-manifest.json"
+ATTENDED_PATH = NOOBIA / "lynx/tools/ui/attended_evidence.json"
 
 # Status sources and the components each reports, mirroring
 # lynx_platform_status.COMPONENTS, lynx_peripheral_status.COMPONENTS and
@@ -186,11 +187,59 @@ def source_tools(source_dir=SOURCE_DIR):
     return tools
 
 
-def build(source_dir=SOURCE_DIR):
+ATTENDED_KEYS = {"id", "component", "tools", "claim", "observer", "date", "boot",
+                 "receipts", "does_not_establish"}
+
+
+def load_attended(path=ATTENDED_PATH):
+    """Load human-attended confirmations; each must cite a receipt and limits."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ManifestError(f"attended evidence unreadable: {exc}") from None
+    entries = data.get("entries") if isinstance(data, dict) else None
+    if not isinstance(entries, list):
+        raise ManifestError("attended evidence needs an 'entries' list")
+    components = {f"{s}/{c}" for s, (_, parts) in SOURCES.items() for c in parts}
+    seen = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or set(entry) != ATTENDED_KEYS:
+            raise ManifestError(f"attended entry needs exactly {sorted(ATTENDED_KEYS)}")
+        ident = entry["id"]
+        if not isinstance(ident, str) or ident in seen:
+            raise ManifestError(f"attended entry id missing or repeated: {ident!r}")
+        seen.add(ident)
+        if entry["component"] not in components:
+            raise ManifestError(f"{ident}: unknown component {entry['component']!r}")
+        for key in ("claim", "observer", "date"):
+            if not isinstance(entry[key], str) or not entry[key].strip():
+                raise ManifestError(f"{ident}: {key} must be a non-empty string")
+        for key in ("tools", "receipts", "does_not_establish"):
+            values = entry[key]
+            if (not isinstance(values, list) or not values or
+                    not all(isinstance(v, str) and v.strip() for v in values)):
+                raise ManifestError(f"{ident}: {key} must list at least one item")
+    return entries
+
+
+def build(source_dir=SOURCE_DIR, attended_path=ATTENDED_PATH):
     tools = source_tools(source_dir)
+    attended = load_attended(attended_path)
+    by_tool = {}
+    known = {tool["name"]: tool for tool in tools}
+    for entry in attended:
+        for name in entry["tools"]:
+            tool = known.get(name)
+            if tool is None:
+                raise ManifestError(f"{entry['id']}: unknown tool {name!r}")
+            if f"{tool['status_source']}/{tool['component']}" != entry["component"]:
+                raise ManifestError(f"{entry['id']}: {name} does not belong to "
+                                    f"{entry['component']}")
+            by_tool.setdefault(name, []).append(entry["id"])
     effects = {}
     for tool in tools:
         effects[tool["effect"]] = effects.get(tool["effect"], 0) + 1
+        tool["attended"] = by_tool.get(tool["name"], [])
     return {
         "schema_version": SCHEMA_VERSION,
         "entity": "Lynx",
@@ -203,7 +252,10 @@ def build(source_dir=SOURCE_DIR):
                               "unknown", "malformed"],
         "install_states": ["current", "differs", "missing", "unknown"],
         "note": ("Interface inventory is not proof of function. A tool's "
-                 "'live' state comes only from a status snapshot."),
+                 "'live' state comes only from a status snapshot. 'attended' "
+                 "lists separate human confirmations, which never change "
+                 "'live'."),
+        "attended_evidence": attended,
         "tools": tools,
     }
 

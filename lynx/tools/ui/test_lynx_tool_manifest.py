@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import unittest
@@ -242,6 +243,82 @@ class SnapshotTest(unittest.TestCase):
                                  "--summary"])
         self.assertEqual(code, 0, out)
         self.assertEqual(len(out.strip().splitlines()), 38)
+
+
+class CleanCheckoutTest(unittest.TestCase):
+    """The manifest must be reproducible from files Git actually tracks."""
+
+    def test_every_source_pair_is_tracked_by_git(self):
+        try:
+            proc = subprocess.run(
+                ["git", "-C", str(SOURCE), "ls-files", "--error-unmatch", "--", "."],
+                capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            self.skipTest(f"git unavailable: {exc}")
+        if "not a git repository" in proc.stderr:
+            self.skipTest("not a Git checkout")
+        tracked = {Path(line).name for line in proc.stdout.splitlines()}
+        on_disk = {p.name for p in SOURCE.iterdir() if p.suffix in (".json", ".sh")}
+        self.assertEqual(sorted(on_disk - tracked), [],
+                         "untracked local_calls files break clean-checkout parity")
+
+    def test_receipt_paths_in_repo_exist(self):
+        root = TOOLS_DIR.parents[1]
+        for entry in m.load_attended():
+            for receipt in entry["receipts"]:
+                if receipt.startswith("lynx/") and "/logs/" not in receipt:
+                    self.assertTrue((root / receipt).is_file(), f"{entry['id']}: {receipt}")
+
+
+class AttendedEvidenceTest(unittest.TestCase):
+    def test_attended_is_listed_per_tool_without_touching_live(self):
+        manifest = m.build(SOURCE)
+        tools = {t["name"]: t for t in manifest["tools"]}
+        self.assertEqual(tools["lynx_haptic_pulse"]["attended"], ["haptic-pulse-2026-11-21"])
+        self.assertEqual(tools["lynx_audio_status"]["attended"], ["speaker-beep-2026-11-21"])
+        self.assertEqual(tools["lynx_touch_status"]["attended"], [])
+        self.assertEqual(tools["lynx_media_catalog"]["attended"], [])
+        self.assertEqual(tools["lynx_haptic_stop"]["attended"], [])
+        self.assertEqual(tools["lynx_microphone_level"]["attended"], [])
+        self.assertEqual(tools["lynx_camera"]["attended"], [])
+        self.assertEqual(tools["lynx_platform_status"]["attended"], [])
+        snapshot = {"platform": {"haptic": {"interface_ready": True, "validated": False}}}
+        joined = {t["name"]: t for t in m.apply_snapshot(manifest, snapshot)["tools"]}
+        self.assertEqual(joined["lynx_haptic_pulse"]["live"]["state"], "interface_only")
+        self.assertEqual(joined["lynx_haptic_pulse"]["attended"], ["haptic-pulse-2026-11-21"])
+
+    def test_every_entry_states_its_limits(self):
+        for entry in m.load_attended():
+            self.assertTrue(entry["does_not_establish"])
+            self.assertTrue(entry["receipts"])
+
+    def test_bad_attended_files_are_rejected(self):
+        good = json.loads(m.ATTENDED_PATH.read_text())["entries"][0]
+        cases = {
+            "no limits": dict(good, does_not_establish=[]),
+            "no receipt": dict(good, receipts=[]),
+            "bad component": dict(good, component="platform/teleport"),
+            "extra claim field": dict(good, validated=True),
+            "no tools": dict(good, tools=[]),
+        }
+        for label, entry in cases.items():
+            with self.subTest(label), TemporaryDirectory() as temp:
+                path = Path(temp) / "attended.json"
+                path.write_text(json.dumps({"entries": [entry]}))
+                with self.assertRaises(m.ManifestError):
+                    m.load_attended(path)
+        for label, entry in {"unknown tool": dict(good, tools=["lynx_teleport"]),
+                             "wrong component": dict(good, tools=["lynx_gnss"])}.items():
+            with self.subTest(label), TemporaryDirectory() as temp:
+                path = Path(temp) / "attended.json"
+                path.write_text(json.dumps({"entries": [entry]}))
+                with self.assertRaises(m.ManifestError):
+                    m.build(SOURCE, path)
+        with TemporaryDirectory() as temp:
+            path = Path(temp) / "attended.json"
+            path.write_text(json.dumps({"entries": [good, good]}))
+            with self.assertRaisesRegex(m.ManifestError, "repeated"):
+                m.load_attended(path)
 
 
 if __name__ == "__main__":

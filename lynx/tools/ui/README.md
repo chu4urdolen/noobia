@@ -84,16 +84,39 @@ status code's "next" hint. It shows snapshot age, and warns when sources fail
 or the installed catalog drifts. It cannot act on Lynx. Checked with
 Playwright at desktop, phone (390 px) and dark-mode sizes.
 
+## Attended confirmations (`attended_evidence.json`)
+
+Phone-reported validation and human confirmations stay separate. The status
+code's `validated` flag drives the chips and each card's state badge. A person
+seeing, hearing, or feeling one specific function is recorded separately in
+`attended_evidence.json`. Each entry has a component, the specific `tools` it
+covers, the observer, the date, the boot if known, receipts, and a
+`does_not_establish` list. The loader rejects entries without receipts,
+limits, or tools, and tools that belong to another component. Such entries
+add a blue "attended" badge and a line to only the named cards, plus a
+separate "Attended confirmations" section. They never change `live`. They are
+history and may not hold on the current boot.
+
+Current entries: speaker beep and an 80 ms haptic pulse (2026-11-21,
+`45a1ecf`), one rear LED pulse (2026-11-02), a microphone clap response
+(2026-10-29), and the USB ACM link (2026-11-21, forge notes #58 and #67).
+Touch and cameras are deliberately absent. No receipt records a person
+confirming touch input. The camera frames were judged recognizable, but no
+record names an attending observer. Per Aria's note #61, add entries only with
+a specific receipt.
+
 ## Tests
 
 ```sh
 python3 -m unittest discover -s lynx/tools/ui -p 'test_*.py'
 ```
 
-These 27 tests are all offline. Status fixtures come from the real `inventory()`
+These 33 tests are all offline. Status fixtures come from the real `inventory()`
 functions run over temporary directory trees, and the broker uses a fake
 runner. The tests check agreement with all 38 source manifests and the phone's
-component lists, catch source drift and stale committed manifests, and cover
+component lists, catch source drift and stale committed manifests, check that every
+`local_calls` file is tracked by Git (clean-checkout parity), check attended
+evidence rules, and cover
 partial and malformed snapshots. For the broker they cover the exact command
 list, timeouts, bad JSON, oversized output, hostile catalog lines, atomic
 writes, and install drift. For the board they check HTML escaping and that
@@ -106,7 +129,8 @@ the page has no scripts or controls.
   `lynx_platform_status` and similar tools fail there. Banshee owns that MCP.
 - The status code reports touch, haptic and audio `validated: false` despite
   attended confirmations. The board mirrors the code.
-- Git does not track 6 of the 76 source files (`lynx_agent_health`,
-  `lynx_codex`, `lynx_queue_health`).
+- `lynx_agent_health.sh` checks for `/usr/local/bin/lynx-agent`, whose source
+  `lynx/tools/agent/lynx_agent.py` is still untracked. That file is Aria's.
+  The manifest does not need it.
 - A periodic refresh would be a service install, so it waits for Aria's
   review.

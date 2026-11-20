@@ -1,0 +1,12 @@
+{
+  "name": "lynx_agent_health",
+  "description": "Entity: Lynx. Read whether the local AI agent is installed, its audit log exists, and Nexus is reachable. This does not run inference or activate hardware.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "nrp_id": 500,
+  "timeout": 5
+}

@@ -1,0 +1,13 @@
+{
+  "name": "lynx_queue_health",
+  "description": "Read Lynx agent queue counts, oldest pending age, stop state, and private-file integrity. Never reads prompts, replies, or job IDs.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "nrp_id": 514,
+  "nrp_result": "queue_health_v1",
+  "timeout": 5
+}

@@ -1,0 +1,26 @@
+{
+  "name": "lynx_codex",
+  "description": "Entity: Lynx. Run one bounded coding task with Codex CLI as the unprivileged lynx-coder user in her own workspace. The Codex binary is RAM-only and may be unavailable after a reboot. No system or boot partition writes are granted.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "model": {
+        "type": "string",
+        "enum": [
+          "gpt-oss-20b"
+        ]
+      }
+    },
+    "required": [
+      "prompt",
+      "model"
+    ],
+    "additionalProperties": false
+  },
+  "timeout": 130
+}

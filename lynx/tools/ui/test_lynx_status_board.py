@@ -163,6 +163,20 @@ class BoardTest(unittest.TestCase):
         self.assertIn("Some sources failed", page)
         self.assertIn("Installed catalog differs from source", page)
 
+    def test_attended_is_shown_apart_from_phone_state(self):
+        with TemporaryDirectory() as temp:
+            page = self.render_with(snap.capture(FakeLynx(Path(temp)), NOW))
+        self.assertIn("haptic: present, unproven", page)
+        self.assertIn("<h2>Attended confirmations</h2>", page)
+        self.assertEqual(page.count('<div class="evidence">'), 5)
+        haptic = page.split('data-tool="lynx_haptic_pulse"')[1].split('<div class="card"')[0]
+        self.assertIn("s-interface_only", haptic)
+        self.assertIn("h-attended", haptic)
+        touch = page.split('data-tool="lynx_touch_status"')[1].split('<div class="card"')[0]
+        self.assertNotIn("h-attended", touch)
+        chips = page.split('<div class="chips">')[1].split("</div>")[0]
+        self.assertNotIn("attended", chips)
+
     def test_board_escapes_snapshot_text(self):
         snapshot = {"captured_at": "2026-11-21T00:00:00Z",
                     "hardware": {"gnss": {"interface_ready": True, "validated": False,

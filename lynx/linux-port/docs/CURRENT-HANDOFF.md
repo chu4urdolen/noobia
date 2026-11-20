@@ -128,9 +128,10 @@ bringing the catalog to 32 on the same healthy boot. NFC has an unbound
 `odm:nfc_chipset` platform node and no known device node; fingerprint has no
 recognized interface; the MT6338 headset input reports all switch bits off
 via read-only ioctl. None is functionally validated. The USB controller
-`11201000.usb0` exists but has no bound `mtu3` driver; only `dummy_udc.0`
-is registered. The exact stock `mtu3.ko` has matching V53 kernel version and
-no declared module dependencies, but a guarded live load has not been run.
+`11201000.usb0` was initially unbound and only `dummy_udc.0` was registered.
+On 2026-11-21 Banshee ran a guarded RAM-only `mtu3` trial and reported a
+working ACM gadget. Noob confirmed the physical USB test. See USB item 5
+below for the tested boundary.
 See `lynx/tools/lynx_peripheral_status.py`.
 On the same boot, four bounded media tools and two haptic action tools were
 added, bringing the catalog to 38. Agent calls played the short installed
@@ -194,14 +195,16 @@ See
 4. Every listed hardware area now has a local agent status tool. Add bounded
    action tools as each remaining hardware path passes its own trial; do not
    label an inventory-only interface as a working capture or actuator.
-5. Native USB data is blocked before gadget setup: `11201000.usb0` is present
-   but unbound, no real UDC is registered, and only `dummy_udc.0` appears.
-   The matching stock `mtu3.ko` is available offline (SHA-256
-   `d3c59fa794a6e02f014dd0de660592bb66c9d7f8eb941c1d1183f8a3322bb467`),
-   with matching V53 kernel version and no declared module dependencies.
-   Stage a guarded RAM-only driver trial only after a fresh >=50% charge,
-   health check, watchdog, and attended recovery path; a bound driver alone
-   would still not prove host enumeration.
+5. **Native USB data now works in the attended RAM trial.** On 2026-11-21
+   Banshee bound the `mtu3` controller in peripheral mode, configured an ACM
+   serial gadget, and reported high-speed enumeration on Nexus as
+   `1d6b:0104 Lynx Nord 3` at `/dev/ttyACM0`. She and Noob verified
+   bidirectional serial traffic with Lynx `/dev/ttyGS0` (forge note #58);
+   Noob also confirmed the test to Aria. This is a working physical USB data
+   link, beyond driver binding or a `dummy_udc` node. The trial used RAM
+   state; cold-boot startup, safe disconnect/reconnect, recovery, and
+   agent-facing USB control still need evidence before enabling it by
+   default. Banshee owns those USB follow-ups and her own tests.
 6. NFC has a stock `oplus_nfc.ko` platform driver and `nfc_i2c.ko` NCI driver.
    Before the 2026-11-21 probe neither was bound and `/dev/nq-nci` was only
    the node expected by stock `init.SN100x.nfc.rc`. Read-only active

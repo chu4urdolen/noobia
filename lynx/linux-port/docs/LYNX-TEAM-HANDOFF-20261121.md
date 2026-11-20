@@ -71,7 +71,7 @@ note #60 is the pickup pointer.
 | Area | Lead | Outstanding evidence |
 | --- | --- | --- |
 | NFC; fingerprint | Aria live; Banshee fingerprint preflight | Guarded NFC RAM probe on 2026-11-21 bound the driver and got a chip GET_VERSION response, but no tag exchange; fingerprint `spi7.0` has no bound driver or verified identity, secure userspace or function |
-| USB data | Banshee | Banshee reports physical high-speed enumeration and bidirectional ACM serial on 2026-11-21 (forge note #58); assess persistence, safe disconnect, and agent-facing use before calling USB finished |
+| USB data | Banshee | Banshee and Noob verified physical high-speed enumeration and bidirectional ACM serial on 2026-11-21 (forge note #58); assess persistence, safe disconnect, and agent-facing use before calling USB finished |
 | Cellular and SIM | Banshee startup plan, Aria live trial | CCCI nodes exist but `md1:0`; no modem start, network registration, or SIM path verified; no SIM installed |
 | Cameras and lights | Aria | Macro GC02M1 and wide IMX355 have optical frames via RAM patched ISP; main IMX890, front S5K3P9SP, second rear LED, safe persistent startup and agent capture/action interfaces remain |
 | Bluetooth | Aria | Manual link and 15-minute hold passed; autostart and long-uptime reboot behavior remain |

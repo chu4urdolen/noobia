@@ -24,6 +24,7 @@ hashes in builders, flashing/rollback tools, and bounded diagnostic trials.
 | Need | Source and notes |
 | --- | --- |
 | Current hardware evidence | [`LYNX-HARDWARE-STATUS.md`](../../lynx/linux-port/docs/LYNX-HARDWARE-STATUS.md) |
+| 2026-11-21 native USB ACM milestone | [Current handoff](../../lynx/linux-port/docs/CURRENT-HANDOFF.md): Banshee and Noob verified high-speed enumeration and bidirectional serial; boot persistence remains open |
 | Read-only cellular inventory and SIM gate | [`LYNX-CELLULAR-INVENTORY-20261118.md`](../../lynx/linux-port/docs/LYNX-CELLULAR-INVENTORY-20261118.md) |
 | Read-only NFC module preflight | [`LYNX-NFC-PREFLIGHT-20261120.md`](../../lynx/linux-port/docs/LYNX-NFC-PREFLIGHT-20261120.md) |
 | Why Lynx powers off | [Poweroff audit](../../lynx/linux-port/docs/LYNX-POWER-SHUTDOWNS-20261118.md); active 20% reserve and older charging policy |

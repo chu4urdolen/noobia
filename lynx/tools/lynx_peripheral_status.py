@@ -33,6 +33,7 @@ def inventory(root=Path("/"), switch_reader=read_switches):
     nfc_driver = nfc_platform / "driver"
     nfc_nodes = [name for name in ("/dev/nq-nci", "/dev/pn544", "/dev/nfc")
                  if at(name).exists()]
+    nfc_interface_ready = nfc_driver.exists() and bool(nfc_nodes)
     fingerprint_nodes = [name for name in ("/dev/fpsensor", "/dev/goodix_fp",
                                                  "/dev/egis_fp", "/dev/fingerprint")
                          if at(name).exists()]
@@ -60,11 +61,13 @@ def inventory(root=Path("/"), switch_reader=read_switches):
         except OSError as exc:
             headset_error = type(exc).__name__
     return {
-        "nfc": {"interface_ready": nfc_driver.exists() and bool(nfc_nodes),
+        "nfc": {"interface_ready": nfc_interface_ready,
                 "validated": False,
                 "evidence": {"platform_node": nfc_platform.exists(),
                              "driver_bound": nfc_driver.exists(), "device_nodes": nfc_nodes},
-                "next": "stock oplus_nfc and nfc_i2c modules need a guarded driver trial"},
+                "next": ("NFC tag exchange remains unverified; driver and node alone do not validate it"
+                         if nfc_interface_ready else
+                         "stock oplus_nfc and nfc_i2c modules need a guarded driver trial")},
         "fingerprint": {"interface_ready": fingerprint_driver.exists() and bool(fingerprint_nodes),
                         "validated": False,
                         "evidence": {"device_nodes": fingerprint_nodes,

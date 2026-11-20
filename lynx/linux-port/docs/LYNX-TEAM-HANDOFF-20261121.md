@@ -30,7 +30,7 @@ work on Lynx in parallel and will ask the other three to read `forge-db`.
 | Owner | Work and owned source | First reviewable result | Completion gate |
 | --- | --- | --- | --- |
 | Aria | Live hardware trials, integration, recovery and acceptance; `lynx/tools/trial_*`, device deployment, hardware handoff docs | Recheck Lynx health, then decide the guarded NFC RAM trial; review Banshee's USB preflight before any USB trial | Bounded receipts, health and recovery evidence, agent tool for each newly proven path |
-| Banshee | USB controller and gadget preflight, later read-only cellular route analysis and shared MCP integration; new `lynx/tools/usb_*` and `common/mcp/` changes | Review Dushich's incomplete `dushich/workspace/lynx/tools/lynx_usb_mtu3_preflight.py`; adopt a corrected script into `lynx/tools/` with an independent offline test and a no-write default | Preflight identifies exact module/DT/UDC state and safe stop conditions; Aria reviews before live driver load or gadget bind |
+| Banshee | USB controller and gadget preflight, then offline fingerprint route analysis; later read-only cellular route analysis and shared MCP integration; new `lynx/tools/usb_*`, fingerprint preflight doc, and `common/mcp/` changes | Review Dushich's incomplete `dushich/workspace/lynx/tools/lynx_usb_mtu3_preflight.py`; adopt a corrected script into `lynx/tools/` with an independent offline test and a no-write default | Preflight identifies exact module/DT/UDC state and safe stop conditions; Aria reviews before live driver load or gadget bind |
 | Gwyn App Nub | Lynx interface and tool presentation; `lynx/tools/ui/` and UI docs | Generate a read-only, validated-status-aware manifest for the 38 current local agent tools, with an offline test against source manifests | UI can display actual health and tool availability through a bounded broker; no direct unprivileged root-socket access, phone writes, or service install before Aria review |
 | Solo Dushich | Portable passive diagnostics inspired by Aigel; `lynx/tools/health/` | Offline read-only `portable_health.py` plus independent tests using fixture input for battery, thermal, storage, network, and service state | Lynx health summary is bounded and accurate; common checks can later be reused on Nexus while GPU/SMART and other machine-specific checks remain separate; Aria reviews before install |
 
@@ -41,11 +41,18 @@ assume it passed. Helper discussion does not change files or create a Solo
 task. Solo Dushich can pick up his lane through his own CLI after reading the
 forge notes.
 
+**Additional Banshee task, requested by Noob on 2026-11-21:** After the USB
+preflight, write `LYNX-FINGERPRINT-PREFLIGHT-20261121.md` here. Trace the
+enabled `spi7.0` `oplus,fp_spi` device through exact stock driver candidates,
+device tree, expected node, and secure userspace or TEE requirements. Mark
+uncertainties and propose a bounded first trial. This is offline analysis; no
+module load or biometric access. Forge note #39 is the pickup pointer.
+
 ## Remaining hardware and acceptance ownership
 
 | Area | Lead | Outstanding evidence |
 | --- | --- | --- |
-| NFC; fingerprint | Aria | Guarded NFC RAM probe not yet run; fingerprint `spi7.0` has no bound driver or verified identity, secure userspace or function |
+| NFC; fingerprint | Aria live; Banshee fingerprint preflight | Guarded NFC RAM probe on 2026-11-21 bound the driver and got a chip GET_VERSION response, but no tag exchange; fingerprint `spi7.0` has no bound driver or verified identity, secure userspace or function |
 | USB data | Banshee prepares, Aria trials | `11201000.usb0` is unbound; only `dummy_udc.0` is registered; actual host enumeration and gadget data need proof |
 | Cellular and SIM | Banshee inventories, Aria trials | CCCI nodes exist but `md_state=0`; no modem start, network registration, or SIM path verified; no SIM installed |
 | Cameras and lights | Aria | Macro GC02M1 and wide IMX355 have optical frames via RAM patched ISP; main IMX890, front S5K3P9SP, second rear LED, safe persistent startup and agent capture/action interfaces remain |

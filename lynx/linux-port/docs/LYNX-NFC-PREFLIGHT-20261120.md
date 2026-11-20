@@ -36,4 +36,21 @@ Do not start an Android NFC HAL or perform a transaction as a status probe.
 checks the exact stock module hashes and kernel ABI without contacting Lynx;
 `--start` requires the fresh live guards, stages only in RAM, records each
 command and elapsed time, and arms a timed reboot fallback before loading.
-The live mode has not been run.
+**2026-11-21 guarded RAM probe:** Noob attended the recovery window. The
+script's offline hash and ABI checks and three offline tests passed; fresh
+Alpine health reported 100% and charging, 38.1°C maximum thermal zone, clear
+health, and the expected V53 boot. The live script loaded `oplus_nfc` and
+`nfc_i2c` from verified `/run` copies after arming a 120-second reboot
+watchdog. Both loads returned successfully. The platform driver bound,
+`/dev/nq-nci` appeared, and the kernel's `nfcc_hw_check` logged a returned
+GET_VERSION response (`Chip Type 0xa4`, ROM `0x01`, firmware `0x10.68`). This
+is evidence of chip communication during driver probe, beyond device-node
+creation. No tag or peer transaction was attempted. Health and Wi-Fi remained
+clear on the same boot; the watchdog was canceled. Only RAM staging was used,
+so this driver state will disappear on reboot. Receipt:
+`lynx/logs/v53-nfc-ram-1795213467857550302/result.json` and its step logs.
+
+Next: design a bounded, attended NFC transaction that identifies an actual tag
+without installing an Android HAL blindly. Keep the agent's `validated` flag
+false until that succeeds. Do not start a service automatically from this
+driver-probe result.

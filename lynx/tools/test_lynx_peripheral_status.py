@@ -29,6 +29,7 @@ class PeripheralStatusTest(unittest.TestCase):
         self.assertTrue(state["headset"]["evidence"]["switches"]["headphone"])
         self.assertFalse(state["headset"]["evidence"]["switches"]["microphone"])
         self.assertTrue(state["nfc"]["interface_ready"])
+        self.assertIn("tag exchange remains unverified", state["nfc"]["next"])
         self.assertFalse(state["headset"]["validated"])
         self.assertFalse(state["nfc"]["validated"])
 

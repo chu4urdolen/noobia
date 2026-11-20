@@ -1,4 +1,4 @@
-# Lynx handoff — updated 2026-11-20
+# Lynx handoff — updated 2026-11-21
 
 Read this first in the next conversation. Confirm live state before any phone
 command; this is a checkpoint, not a live guarantee.
@@ -198,7 +198,12 @@ changing boot storage. See `lynx/tools/lynx_agent_media.py`,
    `/dev/nq-nci`; this is an expected path, not a live node or verified chip
    identity. Read-only active device-tree strings say `SN110T` for both
    configured variants; see [NFC preflight](LYNX-NFC-PREFLIGHT-20261120.md).
-   The guarded RAM-only probe script is prepared but its live mode has not run.
+   A guarded RAM-only probe on 2026-11-21 loaded both matching stock modules,
+   bound the platform driver, created `/dev/nq-nci`, and received a kernel
+   GET_VERSION response. Health and Wi-Fi remained clear on the same boot and
+   the reboot watchdog was canceled. No tag exchange was attempted; agent
+   validation remains false. The modules are RAM-only and vanish on reboot.
+   See [NFC preflight](LYNX-NFC-PREFLIGHT-20261120.md) for the receipt.
    Fingerprint driver candidates
    `oplus_fp_common.ko` and `uff_fp_driver.ko` are in the stock vendor DLKM;
    the active tree has an enabled `oplus,fp_spi` device at `spi7.0`, but its

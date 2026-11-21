@@ -89,6 +89,13 @@
 !/tools/flashlight/fixtures/
 /tools/flashlight/fixtures/*
 !/tools/flashlight/fixtures/*.json
+!/tools/flashlight_gate/
+/tools/flashlight_gate/*
+!/tools/flashlight_gate/*.py
+!/tools/flashlight_gate/README.md
+!/tools/flashlight_gate/fixtures/
+/tools/flashlight_gate/fixtures/*
+!/tools/flashlight_gate/fixtures/*.json
 !/tools/camera_deps/
 /tools/camera_deps/*
 !/tools/camera_deps/*.py

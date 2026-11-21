@@ -1,0 +1,35 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "device_tree": {
+    "core_node_present": true,
+    "core_node_name": "flashlight_core",
+    "core_compatible": "mediatek,flashlight_core",
+    "core_parent": "root",
+    "led_node_present": true,
+    "led_node_name": "lm3642@63",
+    "led_bus": "i2c6",
+    "led_compatible": "mediatek,lm3642_22823",
+    "led_reg": 99,
+    "led_cooling_cells": 2,
+    "channel_name": "flash@0",
+    "channel_count": 1,
+    "endpoint_led": "fl_core_0",
+    "endpoint_consumer": "flashlight_0",
+    "ntc_sensor_present": true,
+    "ntc_sensor_label": "cam_temp",
+    "ntc_compatible": "mediatek,cam-temp-vitamin",
+    "ntc_adc": "mt6373_adc",
+    "ntc_adc_channel": "AUXADC_VIN3"
+  },
+  "runtime": {
+    "led_class_present": true,
+    "led_class_path": "/sys/class/leds/flash0",
+    "led_driver_bound": true,
+    "led_brightness": 255
+  },
+  "loaded_modules": [
+    "mtu3",
+    "bt_drv_6983"
+  ]
+}

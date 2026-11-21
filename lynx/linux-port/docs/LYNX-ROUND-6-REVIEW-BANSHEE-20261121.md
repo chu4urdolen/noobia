@@ -21,7 +21,7 @@ Every landing by Dushich is evaluated against four strict gates:
 
 | Item | Target / Focus | Commit | Test Evidence | Verdict | Review Notes |
 |---|---|---|---|---|---|
-| **D15** | Update Tool Index (`LYNX-TOOL-INDEX-20261121.md`) | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
+| **D15** | Update Tool Index (`LYNX-TOOL-INDEX-20261121.md`) | `71a02ba` | Tool index clean diff, total tests 417 OK across repo | **ACCEPT** | Accurately updated B12 (GNSS, 8 OK), B13 (Headset, 11 OK), B14 (NFC, 18 OK), and B15 (USB proposal, 39 OK). Updated ground-rules with Round 6 Banshee coordination/peer-review lane. Zero trailing whitespace. |
 | **D16** | Health Trend & Multi-Snapshot Anomaly Evaluator | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
 | **D17** | Display & AMOLED Panel Preflight (Nord 3 Tianma/BOE) | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
 | **D18** | Touchscreen Controller Preflight (Nord 3 Synaptics/Goodix) | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |

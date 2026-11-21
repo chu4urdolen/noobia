@@ -1,0 +1,16 @@
+{
+  "trial_id": "lynx-nfc-trial-corrupted",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "frames": [
+    {
+      "dir": "tx",
+      "hex": "20 00",
+      "desc": "Truncated header"
+    },
+    {
+      "dir": "rx",
+      "hex": "40 00 05 00",
+      "desc": "Length mismatch"
+    }
+  ]
+}

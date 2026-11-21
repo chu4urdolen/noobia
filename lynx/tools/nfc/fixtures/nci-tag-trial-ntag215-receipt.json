@@ -1,0 +1,63 @@
+{
+  "trial_id": "lynx-nfc-trial-ntag215",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "controller": "NXP SN110T",
+  "device_node": "/dev/nq-nci",
+  "frames": [
+    {
+      "dir": "tx",
+      "hex": "20 00 01 01",
+      "desc": "CORE_RESET_CMD (keep config)"
+    },
+    {
+      "dir": "rx",
+      "hex": "40 00 03 00 10 01",
+      "desc": "CORE_RESET_RSP (status ok, nci 1.0, config kept)"
+    },
+    {
+      "dir": "tx",
+      "hex": "20 01 00",
+      "desc": "CORE_INIT_CMD"
+    },
+    {
+      "dir": "rx",
+      "hex": "40 01 16 00 01 02 03 04 04 01 f4 ff ff 01 ff 04 01 02 03 00 04 a4 01 10 68",
+      "desc": "CORE_INIT_RSP (NXP SN110T chip A4, rom 01, fw 10.68)"
+    },
+    {
+      "dir": "tx",
+      "hex": "21 03 03 01 00 01",
+      "desc": "RF_DISCOVER_CMD (nfc-a poll mode)"
+    },
+    {
+      "dir": "rx",
+      "hex": "41 03 01 00",
+      "desc": "RF_DISCOVER_RSP (ok)"
+    },
+    {
+      "dir": "rx",
+      "hex": "61 05 13 01 01 02 00 ff 01 0c 44 00 07 04 a1 b2 c3 d4 e5 f6 00 00",
+      "desc": "RF_INTF_ACTIVATED_NTF (Type 2 Tag, 7-byte UID 04:A1:B2:C3:D4:E5:F6)"
+    },
+    {
+      "dir": "tx",
+      "hex": "00 00 02 30 04",
+      "desc": "DATA_CMD (READ block 4)"
+    },
+    {
+      "dir": "rx",
+      "hex": "00 00 10 03 12 d1 01 0e 54 02 65 6e 4c 79 6e 78 4e 46 43",
+      "desc": "DATA_RSP (16 bytes NDEF payload)"
+    },
+    {
+      "dir": "tx",
+      "hex": "21 06 01 00",
+      "desc": "RF_DEACTIVATE_CMD (idle mode)"
+    },
+    {
+      "dir": "rx",
+      "hex": "41 06 01 00",
+      "desc": "RF_DEACTIVATE_RSP (ok)"
+    }
+  ]
+}

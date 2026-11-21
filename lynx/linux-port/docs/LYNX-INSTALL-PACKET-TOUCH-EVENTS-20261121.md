@@ -81,7 +81,7 @@ rm -f /usr/local/bin/lynx-agent-touch /usr/local/share/lynx/agent-tools/lynx_tou
 python3 -m unittest discover -s lynx/tools -p 'test_lynx_agent_touch.py'
 ```
 
-This runs 9 tests against a real Unix socket answering with the **actual
+This runs 8 tests against a real Unix socket answering with the **actual
 runtime handler's** reply format. They check:
 - only `TOUCH_STATUS` is sent, and consuming commands are refused;
 - malformed or impossible replies are rejected (`queued` above 8);

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Stage C2 Camera Repeatability Trial Script for Lynx (SPEC C2, #292).
+"""Stage C2 Camera Repeatability Trial Script for Lynx (SPEC C2, #292, #309).
 
 Runs Stage B frame capture multiple times (default 10) on a single boot,
 attended with Noob present, without the emergency reboot net firing.
 Measures:
-- Frame validity and byte size across every iteration.
+- Measured frame validity (size == 1600*1200 and non-flat statistics via decode_camera_bayer).
 - YUV-B interrupt delta (detects IRQ leakage or storm).
-- Battery capacity and thermal envelope drift.
-- Supervisor and system health responsiveness.
+- Battery capacity (capacity_percent) and thermal envelope (max_mC).
+- Kernel stability: bounded Oops / BUG check per iteration.
+- Safe subprocess timeout handling (remote 55s watchdog warning).
 
 Generates a structured trial report in lynx/logs/c2-repeatability-<timestamp>/.
 """
@@ -30,6 +31,42 @@ DEFAULT_ITERATIONS = 10
 DEFAULT_SETTLE_S = 3.0
 MAX_ALLOWED_IRQ_DELTA_PER_FRAME = 2000
 MIN_FRAME_BYTES = 1600 * 1200
+MIN_BATTERY_PERCENT = 20
+MAX_TEMP_C = 65.0
+
+
+def compute_frame_statistics(raw_bytes: bytes, width: int = 1600, height: int = 1200) -> dict:
+    """Compute basic pixel statistics to verify frame is non-flat and genuine."""
+    expected = width * height
+    if len(raw_bytes) != expected:
+        raise ValueError(f"expected {expected} Bayer bytes, got {len(raw_bytes)}")
+
+    # Histogram over 256 bins
+    counts = [0] * 256
+    for b in raw_bytes:
+        counts[b] += 1
+
+    min_val = next((i for i, c in enumerate(counts) if c > 0), 0)
+    max_val = next((i for i in range(255, -1, -1) if counts[i] > 0), 255)
+    mean_val = sum(i * c for i, c in enumerate(counts)) / float(expected)
+    dominant_val = max(range(256), key=lambda i: counts[i])
+    dominant_frac = counts[dominant_val] / float(expected)
+    unique_vals = sum(1 for c in counts if c > 0)
+
+    is_valid = (unique_vals >= 2) and (max_val > min_val) and (dominant_frac < 0.99)
+
+    return {
+        "bytes": len(raw_bytes),
+        "width": width,
+        "height": height,
+        "min": min_val,
+        "max": max_val,
+        "mean": round(mean_val, 2),
+        "unique_values": unique_vals,
+        "dominant_value": dominant_val,
+        "dominant_fraction": round(dominant_frac, 4),
+        "valid": is_valid,
+    }
 
 
 def get_yuv_b_irq_count(ssh_fn) -> int:
@@ -38,12 +75,23 @@ def get_yuv_b_irq_count(ssh_fn) -> int:
     if rc != 0 or not out:
         return 0
     parts = out.split()
-    # parts[0] is '123:', subsequent columns are counts per CPU
     total = 0
     for p in parts[1:]:
         if p.isdigit():
             total += int(p)
     return total
+
+
+def check_kernel_oops(ssh_fn) -> tuple[bool, int]:
+    """Check for kernel Oops/BUG via dmesg. Returns (has_oops, count)."""
+    rc, out, _ = ssh_fn('dmesg | grep -c -E "Oops|BUG:|Unable to handle" || true')
+    count = 0
+    if rc == 0 and out.strip():
+        try:
+            count = int(out.strip().splitlines()[-1].strip())
+        except ValueError:
+            count = 0
+    return count > 0, count
 
 
 def read_lynx_health(ssh_fn) -> dict:
@@ -52,9 +100,46 @@ def read_lynx_health(ssh_fn) -> dict:
     if rc != 0 or not out:
         return {}
     try:
-        return json.loads(out)
-    except ValueError:
+        data = json.loads(out)
+        battery = data.get("battery", {})
+        thermal = data.get("thermal", {})
+
+        cap_pct = battery.get("capacity_percent")
+        if cap_pct is None:
+            cap_pct = battery.get("capacity_pct")
+
+        max_mc = thermal.get("max_mC")
+        temp_c = (max_mc / 1000.0) if max_mc is not None else thermal.get("shell_max_c")
+
+        return {
+            "battery_percent": cap_pct,
+            "temp_c": temp_c,
+            "raw": data,
+        }
+    except (ValueError, TypeError):
         return {}
+
+
+def find_latest_trial_result(logs_root: Path, boot_id: str) -> Path | None:
+    """Find the newest camera-camsv-frame-* directory for this boot."""
+    if not logs_root.is_dir():
+        return None
+    dirs = sorted(logs_root.glob("camera-camsv-frame-*"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for d in dirs:
+        res_file = d / "result.json"
+        if res_file.is_file():
+            try:
+                data = json.loads(res_file.read_text())
+                steps = data.get("steps", [])
+                for s in steps:
+                    if s.get("name") == "boot_id":
+                        boot_id_file = d / "boot_id.stdout"
+                        b = boot_id_file.read_text().strip() if boot_id_file.is_file() else ""
+                        if b == boot_id or not boot_id:
+                            return d
+            except Exception:
+                pass
+    return None
 
 
 def run_c2_trial(
@@ -65,6 +150,7 @@ def run_c2_trial(
     output_dir: Path | None = None,
     ssh_fn=None,
     camsv_cmd_fn=None,
+    logs_root: Path = LOGS_DIR,
 ) -> dict:
     if not attended:
         raise RuntimeError("C2 repeatability trial requires attended operator with Noob present")
@@ -94,12 +180,20 @@ def run_c2_trial(
     # Preflight verification
     init_health = read_lynx_health(ssh)
     init_irq = get_yuv_b_irq_count(ssh)
+    has_oops, oops_count = check_kernel_oops(ssh)
 
     report["initial_health"] = {
-        "battery_pct": init_health.get("battery", {}).get("capacity_pct"),
-        "shell_temp_c": init_health.get("thermal", {}).get("shell_max_c"),
+        "battery_percent": init_health.get("battery_percent"),
+        "temp_c": init_health.get("temp_c"),
         "initial_irq": init_irq,
+        "initial_oops": oops_count,
     }
+
+    if has_oops:
+        report["state"] = "aborted_initial_oops"
+        report["error"] = f"kernel Oops/BUG detected in preflight ({oops_count} matches)"
+        (out / "result.json").write_text(json.dumps(report, indent=2) + "\n")
+        return report
 
     successful = 0
     total_irq_growth = 0
@@ -111,9 +205,28 @@ def run_c2_trial(
             "start_time": time.time(),
         }
 
+        # Health trend gating before iteration
+        cur_health = read_lynx_health(ssh)
+        bat = cur_health.get("battery_percent")
+        temp = cur_health.get("temp_c")
+        if bat is not None and bat < MIN_BATTERY_PERCENT:
+            iter_record["error"] = f"battery {bat}% below safety gate {MIN_BATTERY_PERCENT}%"
+            report["iterations"].append(iter_record)
+            report["state"] = "aborted_battery_depleted"
+            break
+        if temp is not None and temp > MAX_TEMP_C:
+            iter_record["error"] = f"temperature {temp:.1f}C exceeded safety gate {MAX_TEMP_C}C"
+            report["iterations"].append(iter_record)
+            report["state"] = "aborted_thermal_exceeded"
+            break
+
         # 1. Run single frame capture
+        frame_stats = None
         if camsv_cmd_fn:
-            cap_ok, cap_bytes, cap_msg = camsv_cmd_fn(idx)
+            res_tuple = camsv_cmd_fn(idx)
+            cap_ok, cap_bytes, cap_msg = res_tuple[0], res_tuple[1], res_tuple[2]
+            if len(res_tuple) > 3:
+                frame_stats = res_tuple[3]
         else:
             cmd = [
                 sys.executable,
@@ -122,26 +235,62 @@ def run_c2_trial(
                 "--boot-id",
                 boot_id,
             ]
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-            cap_ok = (res.returncode == 0)
-            cap_bytes = MIN_FRAME_BYTES if cap_ok else 0
-            cap_msg = res.stdout if cap_ok else res.stderr
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                cap_ok = (res.returncode == 0)
+                cap_msg = res.stdout if cap_ok else res.stderr
+                cap_bytes = 0
+
+                # Read actual captured frame from the trial receipt
+                trial_dir = find_latest_trial_result(logs_root, boot_id)
+                if trial_dir:
+                    cand_frame = trial_dir / "sensor4.bayer"
+                    if not cand_frame.is_file():
+                        cand_frame = trial_dir / "download_frame.stdout"
+                    if cand_frame.is_file():
+                        raw_data = cand_frame.read_bytes()
+                        cap_bytes = len(raw_data)
+                        frame_stats = compute_frame_statistics(raw_data)
+                        if not frame_stats.get("valid"):
+                            cap_ok = False
+                            cap_msg = f"frame in {cand_frame} failed validity check (flat image)"
+            except subprocess.TimeoutExpired:
+                cap_ok = False
+                cap_bytes = 0
+                cap_msg = "TimeoutExpired: Stage B capture timed out after 60s"
+                iter_record["error"] = "capture timed out; remote watchdog may still fire - wait 60 s"
+                report["iterations"].append(iter_record)
+                report["state"] = f"aborted_timeout_iteration_{idx}"
+                report["warning"] = "remote 55s watchdog may still fire - wait at least 60 s before any further action"
+                (out / "result.json").write_text(json.dumps(report, indent=2) + "\n")
+                return report
 
         current_irq = get_yuv_b_irq_count(ssh)
         irq_delta = current_irq - prev_irq
         prev_irq = current_irq
         total_irq_growth += max(0, irq_delta)
 
+        # Check for kernel Oops after capture
+        has_oops, oops_count = check_kernel_oops(ssh)
+
         iter_record["cap_ok"] = cap_ok
         iter_record["frame_bytes"] = cap_bytes
+        iter_record["frame_stats"] = frame_stats
         iter_record["irq_delta"] = irq_delta
         iter_record["current_irq"] = current_irq
+        iter_record["oops_detected"] = has_oops
         iter_record["msg"] = cap_msg[:200] if cap_msg else ""
 
         if not cap_ok:
-            iter_record["error"] = "capture failed"
+            iter_record["error"] = "capture failed or frame invalid"
             report["iterations"].append(iter_record)
             report["state"] = f"aborted_at_iteration_{idx}"
+            break
+
+        if has_oops:
+            iter_record["error"] = f"kernel Oops detected after iteration ({oops_count} matches)"
+            report["iterations"].append(iter_record)
+            report["state"] = f"aborted_oops_at_iteration_{idx}"
             break
 
         if irq_delta > MAX_ALLOWED_IRQ_DELTA_PER_FRAME:
@@ -158,8 +307,8 @@ def run_c2_trial(
 
     final_health = read_lynx_health(ssh)
     report["final_health"] = {
-        "battery_pct": final_health.get("battery", {}).get("capacity_pct"),
-        "shell_temp_c": final_health.get("thermal", {}).get("shell_max_c"),
+        "battery_percent": final_health.get("battery_percent"),
+        "temp_c": final_health.get("temp_c"),
         "final_irq": prev_irq,
         "total_irq_growth": total_irq_growth,
     }

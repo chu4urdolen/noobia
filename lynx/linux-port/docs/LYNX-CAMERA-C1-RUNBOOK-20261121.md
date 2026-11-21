@@ -66,17 +66,17 @@ python3 lynx/tools/camera/lynx_camera_c1_wrapper.py --latest-trial --emit
 ```
 
 **Behavior:**
-1. Loads the frame bytes into memory directly from the newest `camsv-frame-*` trial.
+1. Loads frame bytes into memory directly from the newest `camera-camsv-frame-*` trial.
+   Enforces same-boot verification (`boot_id == current Lynx boot`) and staleness window (< 5 min).
+   If raw Bayer (`sensor4.bayer`), decodes RGGB in memory to PNG; fails loudly if frame is undecodable.
 2. Posts image bytes in memory to `http://127.0.0.1:5050/detect` (never writes frame to disk).
-3. Formats and emits canonical NOOBIA sense line:
-   ```
-   NOOBIA P1 camera object.seen label=<label> conf=<conf> | <label> seen by camera
-   ```
-4. Output JSON:
+3. Normalizes multi-word COCO labels (e.g. `cell phone` -> `cell_phone`, `traffic light` -> `traffic_light`) in `fields["label"]` while preserving human text after `|`.
+4. Emits canonical sense line directly ON LYNX over pinned SSH via `busybox logger -t noobia-sense -p user.notice '<line>'` so Lynx's `noobia-autonomyd` sees her own camera event in `/var/log/lynx/messages`.
+5. Output JSON:
    ```json
    {
      "ok": true,
-     "frame_source": "/noobia/lynx/logs/camsv-frame-.../sensor4-lifted.png",
+     "frame_source": "/noobia/lynx/logs/camera-camsv-frame-.../sensor4-preview-lifted.png",
      "frame_bytes": 1920000,
      "objects_count": 1,
      "objects": [{"label": "person", "confidence": 0.88}],

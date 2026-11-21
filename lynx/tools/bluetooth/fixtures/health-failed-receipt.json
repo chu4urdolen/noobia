@@ -1,0 +1,21 @@
+{
+  "state": "failed",
+  "boot_id": "4b971a1c-99c8-47c3-8f08-01e4db932ceb",
+  "partition_writes": false,
+  "runlevel_writes": false,
+  "radio_started": true,
+  "error": "sustained health check failed: battery depleted below 15%",
+  "steps": [
+    { "name": "health_before", "exit": 0 },
+    { "name": "start", "exit": 0 }
+  ],
+  "health_samples": [
+    {
+      "boot_id": "4b971a1c-99c8-47c3-8f08-01e4db932ceb",
+      "issues": ["battery_low"],
+      "battery": { "capacity_percent": 12, "temperature_mC": 35000 },
+      "thermal": { "max_mC": 38000 },
+      "uptime_seconds": 450
+    }
+  ]
+}

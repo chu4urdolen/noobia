@@ -1,0 +1,20 @@
+{
+  "state": "running-after-healthy-trial",
+  "boot_id": "76d8b0c2-75d3-4632-9cb7-28f09dfa0b67",
+  "partition_writes": false,
+  "runlevel_writes": false,
+  "radio_started": true,
+  "steps": [
+    { "name": "health_before", "exit": 0 },
+    { "name": "start", "exit": 0 }
+  ],
+  "health_samples": [
+    {
+      "boot_id": "76d8b0c2-75d3-4632-9cb7-28f09dfa0b67",
+      "issues": [],
+      "battery": { "capacity_percent": 90, "temperature_mC": 31000 },
+      "thermal": { "max_mC": 33000 },
+      "uptime_seconds": 300
+    }
+  ]
+}

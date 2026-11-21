@@ -1,0 +1,41 @@
+{
+  "state": "stopped-after-healthy-trial",
+  "boot_id": "e84f507b-8914-411a-a1b7-96a8497fa061",
+  "partition_writes": false,
+  "runlevel_writes": false,
+  "radio_started": true,
+  "watchdog_mode": "stop-only",
+  "watchdog_remains_armed": false,
+  "steps": [
+    { "name": "health_before", "exit": 0 },
+    { "name": "identity", "exit": 0 },
+    { "name": "arm_watchdog", "exit": 0 },
+    { "name": "start", "exit": 0 },
+    { "name": "stop", "exit": 0 },
+    { "name": "stopped_check", "exit": 0 },
+    { "name": "cancel_watchdog", "exit": 0 }
+  ],
+  "health_samples": [
+    {
+      "boot_id": "e84f507b-8914-411a-a1b7-96a8497fa061",
+      "issues": [],
+      "battery": { "capacity_percent": 85, "temperature_mC": 31200 },
+      "thermal": { "max_mC": 34500 },
+      "uptime_seconds": 320
+    },
+    {
+      "boot_id": "e84f507b-8914-411a-a1b7-96a8497fa061",
+      "issues": [],
+      "battery": { "capacity_percent": 84, "temperature_mC": 31500 },
+      "thermal": { "max_mC": 35000 },
+      "uptime_seconds": 620
+    },
+    {
+      "boot_id": "e84f507b-8914-411a-a1b7-96a8497fa061",
+      "issues": [],
+      "battery": { "capacity_percent": 83, "temperature_mC": 31800 },
+      "thermal": { "max_mC": 35200 },
+      "uptime_seconds": 920
+    }
+  ]
+}

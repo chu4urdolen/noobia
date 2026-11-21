@@ -1,0 +1,24 @@
+{
+  "state": "stopped-after-healthy-trial",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "partition_writes": false,
+  "runlevel_writes": false,
+  "radio_started": true,
+  "watchdog_mode": "stop-only",
+  "watchdog_remains_armed": false,
+  "steps": [
+    { "name": "health_before", "exit": 0 },
+    { "name": "start", "exit": 0 },
+    { "name": "stop", "exit": 0 },
+    { "name": "stopped_check", "exit": 0 }
+  ],
+  "health_samples": [
+    {
+      "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+      "issues": [],
+      "battery": { "capacity_percent": 80, "temperature_mC": 30000 },
+      "thermal": { "max_mC": 33000 },
+      "uptime_seconds": 300
+    }
+  ]
+}

@@ -32,16 +32,23 @@
 
 ## 2. Attended Capture Sequence
 
-### Step 1: Stage A (RAM Insmod of Patched ISP)
-Execute from `/noobia`:
+### Step 1: Stage A (prepare the camera stack in RAM)
+Run from `/noobia`. Aria used this successfully in the first live test,
+2026-11-21, forge lynx #350:
 ```sh
-python3 lynx/tools/trial_camera_isp_patched.py --attended --boot-id <BOOT_ID>
+python3 lynx/tools/prepare_camera_camsv.py --status                  # read-only readiness check first
+python3 lynx/tools/prepare_camera_camsv.py --execute --attended
 ```
 **Expect:**
-- `mtk-cam-isp.ko` (sensor-power variant) loads bounded by 25s timeout.
-- 35 seconds of stable observation without crash or IRQ storm.
-- Receipt generated under `lynx/logs/isp-patched-<timestamp>/result.json` with:
-  `"state": "stable_35_seconds_no_capture"`.
+- It loads the stock and pipeline camera module prefixes and the patched ISP
+  (the sensor-power variant). The ISP stays stable for 35 s with no IRQ storm.
+- The CAMSV route is linked.
+- A receipt is written to `lynx/logs/camera-prepare-<ns>/result.json` with
+  `"state": "prepared_no_stream"`.
+
+Do **not** use the older `trial_camera_isp_patched.py --attended --boot-id …`
+line. It needs `--execute --with-sensor-power` and stops safely without the
+camera prefix, which is what happened at the start of the first test.
 
 ### Step 2: Stage B (Single Frame Capture via CAMSV-0)
 With someone or an object positioned in front of Lynx's main camera:
@@ -120,3 +127,29 @@ python3 lynx/tools/lynx_remote.py run "cat /sys/module/firmware_class/parameters
 python3 lynx/tools/lynx_remote.py run "pgrep -f watchdog.sh || echo clean"
 # Expect: clean
 ```
+
+
+## Findings from the first live test (2026-11-21, Gwyn, forge lynx #357, #358)
+
+- **Cat** (real frame, 0.76): the whole chain worked up to Aigel. Aigel chose
+  quiet because her prompt read "the Noob" as the human. Fixed in 6e87471, and
+  aigel_intake was restarted at 19:45:28Z. There has been **no P1 sighting
+  since the fix**, so Aigel → adapter → agent and the ranker repeat are
+  still unproven.
+- **Dog (twice) and cup**: honest `objects=0`, nothing invented. The frames
+  show:
+  - the **whole image rotated 90°**, because Lynx's sensor is mounted
+    sideways;
+  - focus that is **soft** at close range;
+  - a strong **green cast**;
+  - pictures shown on **screens** with glare.
+
+  Offline re-runs: the cup is detected only after rotating 270° (cup 0.51).
+  The cat is found at 0° (0.76) and at 270° (0.69).
+- Next session:
+  - the wrapper detects on an upright frame (rotation, white balance;
+    Banshee);
+  - cat repeat, to see Aigel's message reach Lynx's agent, then the ranker
+    path;
+  - a blank-wall negative;
+  - printed pictures at 30–50 cm.

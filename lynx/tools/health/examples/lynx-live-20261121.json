@@ -1,0 +1,77 @@
+{
+  "captured_at": "2026-11-21T00:14:30Z",
+  "collector": "lynx_health_collect/1",
+  "facts": {
+    "battery": {
+      "capacity_percent": 100.0,
+      "current_ma": 0.0,
+      "gauge_read_errors": 0.0,
+      "temperature_mc": 28.4
+    },
+    "network": {
+      "carrier": true,
+      "ipv4": "192.168.100.107/24",
+      "link_state": "wifi"
+    },
+    "services": {
+      "failed": [],
+      "required": [
+        "lynx-battery-reserve",
+        "lynx-dropbear",
+        "lynx-health",
+        "lynx-local-logs",
+        "lynx-maintenance",
+        "lynx-power-history",
+        "lynx-time-sync",
+        "lynx-wifi"
+      ],
+      "running": [
+        "lynx-battery-reserve",
+        "lynx-dropbear",
+        "lynx-health",
+        "lynx-local-logs",
+        "lynx-maintenance",
+        "lynx-power-history",
+        "lynx-time-sync",
+        "lynx-wifi"
+      ]
+    },
+    "storage": {
+      "free_mib": 214063.0,
+      "fs_errors": 0.0
+    },
+    "thermal": {
+      "max_c": 36.495
+    }
+  },
+  "host": "lynx",
+  "machine": {
+    "lynx": {}
+  },
+  "profile": "lynx",
+  "route": {
+    "ip": "192.168.100.107",
+    "port": 2222,
+    "transport": "ssh-pinned-key"
+  },
+  "schema": "portable-health/1",
+  "source": {
+    "commands": [
+      {
+        "exit": 0,
+        "name": "/usr/local/bin/lynx-status",
+        "ok": true,
+        "stdout_bytes": 1051,
+        "truncated": false
+      }
+    ],
+    "ip": "192.168.100.107",
+    "issues": [],
+    "notes": [
+      "battery: charging state is not reported by lynx-status; the evaluator treats it as absent",
+      "storage: used_percent is not reported by lynx-status; the evaluator judges free space"
+    ],
+    "port": 2222,
+    "transport": "ssh-pinned-key"
+  }
+}

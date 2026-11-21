@@ -21,8 +21,15 @@ built to be **portable and offline**:
 ## Status
 
 Prototype. **Nothing here is installed on any device.** Aria reviews before
-install. A snapshot collector (phone-side script or Nexus-side SSH capture)
-is the follow-up; the snapshot schema is the seam for it.
+install.
+
+- Evaluator (`portable_health.py`): done, 62 offline fixture tests.
+- Collector (`lynx_health_collect.py`): done, 22 offline fixture tests. It
+  runs exactly one read-only command on Lynx over the pinned SSH route and
+  maps the phone's `lynx-status` JSON (schema 2) into a `portable-health/1`
+  snapshot. First live capture: `examples/lynx-live-20261121.json` (verdict
+  ok). Modem MD1 and agent-queue facts are still a separate seam (left
+  `unknown`), and Nexus GPU/RAM/SMART collection stays with Aigel's board.
 
 ## Usage
 
@@ -34,6 +41,35 @@ python3 lynx/tools/health/portable_health.py --snapshot snap.json --max-age 3600
 
 Exit codes: `0` ok, `1` warn, `2` fail, `3` all checks unknown,
 `4` invalid snapshot/schema.
+
+### Collecting a snapshot from Lynx (read-only)
+
+```sh
+# One bounded, read-only command on Lynx (pinned key, port 2222, BatchMode):
+python3 lynx/tools/health/lynx_health_collect.py            # snapshot JSON
+python3 lynx/tools/health/lynx_health_collect.py --evaluate # verdict; exit = verdict
+python3 lynx/tools/health/lynx_health_collect.py --evaluate --max-age 300
+```
+
+Guarantees: per-command (15 s default) and total (45 s default) timeouts,
+stdout capped (12000 chars default), one command only, no writes, no
+prompts. A failing, timed-out, or unparseable source leaves that section of
+`facts` **absent**, so the evaluator reports `unknown`, never `ok` — nothing
+is fabricated. The runner is injectable, which is how the tests stay
+offline. `--evaluate` exit codes match the evaluator's (0/1/2/3/4).
+
+Collector limits (honest, current):
+
+- `charging` is not reported by `lynx-status`; the field stays absent.
+- `used_percent` is not reported; storage is judged on free space.
+- `link_state` reflects the **wifi interface** as Lynx reports it; a USB
+  link (if the host reached Lynx over USB) is not observable from this
+  snapshot, so `carrier: false` maps to `link_state: none` (fail) even if
+  the SSH hop itself went over USB.
+- `throttled` is derived from a nonzero cpufreq cooling state; absence of
+  cooling data means the flag is absent, not false.
+- `machine.lynx` (modem MD1 state, agent queue) is intentionally empty:
+  those facts need their own read-only seam.
 
 ## Tests (offline, fixture-only)
 
@@ -56,8 +92,8 @@ python3 -m unittest discover -s lynx/tools/health -p 'test_*.py'
     "thermal":  {"max_c": 31.2, "throttled": false},
     "storage":  {"used_percent": 41, "free_mib": 12345, "fs_errors": 0},
     "network":  {"link_state": "wifi", "carrier": true, "ipv4": "192.168.100.107"},
-    "services": {"required": ["sshd", "lynx-noobd"],
-                 "running": ["sshd", "lynx-noobd", "audio"], "failed": []}
+    "services": {"required": ["lynx-health", "lynx-battery-reserve", "..."],
+                 "running": ["lynx-health", "..."], "failed": []}
   },
   "machine": {
     "lynx": {"modem_md1_state": 0, "pending": 0, "running": 0,

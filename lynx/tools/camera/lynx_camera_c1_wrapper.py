@@ -187,7 +187,9 @@ def find_latest_trial_frame(
             dir_boot_id = boot_id_file.read_text().strip()
 
         # Enforce boot_id match if required
-        if expected_boot_id and dir_boot_id and dir_boot_id != expected_boot_id:
+        # An unknown boot is refused, not trusted: a frame we cannot tie to
+        # this boot could be from yesterday (Gwyn review of 87f7e6f).
+        if expected_boot_id and dir_boot_id != expected_boot_id:
             continue
 
         # Enforce staleness window (<= 5 minutes)

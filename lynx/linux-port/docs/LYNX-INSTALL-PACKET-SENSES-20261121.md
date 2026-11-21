@@ -20,7 +20,7 @@
 | `lynx/senses/power/lynx_sense_power.py` | `/usr/local/lib/noobia/senses/power/lynx_sense_power.py` | 644 root | `467d60e62ec466c525807aa4a4120acb1b9c15372e04c8068d272a00b3f548ab` |
 | `lynx/senses/nexus/lynx_sense_nexus.py` | `/usr/local/lib/noobia/senses/nexus/lynx_sense_nexus.py` | 644 root | `39a903da5a3fe366061300d7059b9e13946cbfb3bcf17eb02f19770552399510` |
 | `lynx/senses/camera/lynx_sense_camera.py` | `/usr/local/lib/noobia/senses/camera/lynx_sense_camera.py` | 644 root | `a72653226dcbd33eee56e0d4f50ede1ab9367143a5a6df3d00609cb18d789321` |
-| `lynx/senses/agent/lynx_agent_action_log.py` | `/usr/local/lib/noobia/senses/agent/lynx_agent_action_log.py` | 644 root | `5790fbf0e527dd273c0aa4e409949aa3d43cee059c6f2da9854c91b22fcb74dc` |
+| `lynx/senses/agent/lynx_agent_action_log.py` | `/usr/local/lib/noobia/senses/agent/lynx_agent_action_log.py` | 644 root | `ad98dde9a2fcf932df35716f9d67a97a096b8f6aaaf9199315b8331df3f125b4` |
 | `lynx/senses/init/lynx-senses.initd` | `/etc/init.d/lynx-senses` | 755 root | `56128629357d64ff1a5efa203e10f558bf527c9e057fe906920fe640e9e361b5` |
 
 Directory permissions:
@@ -130,3 +130,7 @@ Output:
 Ran 57 tests in 0.102s
 OK
 ```
+
+## Revision note (Gwyn, 2026-11-21)
+
+Recomputed SHA-256 from the repository for: `lynx/senses/agent/lynx_agent_action_log.py`. `lynx_agent_action_log.py` changed in a0472d9: under unit tests it no longer writes to the live `noobia-agent` view.

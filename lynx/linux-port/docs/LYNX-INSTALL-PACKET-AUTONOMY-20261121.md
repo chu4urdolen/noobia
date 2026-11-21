@@ -34,15 +34,16 @@ The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
 
 | Repository File | Target File on Lynx | Mode | Owner | SHA-256 |
 |---|---|---|---|---|
-| `common/autonomy/sense.py` | `/usr/local/lib/noobia/autonomy/sense.py` | `0644` | root:root | `3fc4205866639e53c7c3e6ba5bb18bb1014411ddc2c1357f9b14030993c7e7e8` |
+| `common/autonomy/sense.py` | `/usr/local/lib/noobia/autonomy/sense.py` | `0644` | root:root | `2c0b418951a52aad96ea3f402df1456c25a07459a07c229ea2338a074d7af4fb` |
 | `common/autonomy/views.py` | `/usr/local/lib/noobia/autonomy/views.py` | `0644` | root:root | `f1a9d03e319cba4971c503559cd73fa6b312f7d88569abb5b12f3c64854b7a25` |
 | `common/autonomy/trigger.py` | `/usr/local/lib/noobia/autonomy/trigger.py` | `0644` | root:root | `51ae0c4f821fa587197712a8ea617dc8857518587c59ccdbdcccc0272c196353` |
 | `common/autonomy/ranker.py` | `/usr/local/lib/noobia/autonomy/ranker.py` | `0644` | root:root | `94aa04d9e301fadea5f81397b680a54da5162e112c87f0320aa8b42b92acf169` |
-| `common/autonomy/prioritizer.py` | `/usr/local/lib/noobia/autonomy/prioritizer.py` | `0644` | root:root | `5aef4b2687f72ae6cfc56e67e1410f6608eaf0a30628cfde993500310e073390` |
-| `common/autonomy/harness.py` | `/usr/local/lib/noobia/autonomy/harness.py` | `0644` | root:root | `04a8d1ef5efdfd30061cfb4faa2e74d1f41a9b08062fc0f41c95cd0431671f3e` |
-| `common/autonomy/agent_link.py` | `/usr/local/lib/noobia/autonomy/agent_link.py` | `0644` | root:root | `7d9ff97b13ce371b319f0ba02a8ba20ef84b6b0411d967bd9f09113e6d6fadf9` |
+| `common/autonomy/prioritizer.py` | `/usr/local/lib/noobia/autonomy/prioritizer.py` | `0644` | root:root | `310742cbcc946fc2743fcc17a6bc70bd6ce6853e618009fba6835b0255e11532` |
+| `common/autonomy/harness.py` | `/usr/local/lib/noobia/autonomy/harness.py` | `0644` | root:root | `c72816a36159573ba05e3f724183046fd7d50678e1d71a19842bcb693ace8379` |
+| `common/autonomy/agent_link.py` | `/usr/local/lib/noobia/autonomy/agent_link.py` | `0644` | root:root | `1cc73eba20670d5b31425ef7064f4ae6ebb21304147b109ce35e843aa542a56d` |
 | `common/autonomy/aigel_client.py` | `/usr/local/lib/noobia/autonomy/aigel_client.py` | `0644` | root:root | `f7f5007ffa56fee10f0e77c62f0e0f6036b84ee39cb43df5c071246214d9a536` |
-| `common/autonomy/autonomyd.py` | `/usr/local/lib/noobia/autonomy/autonomyd.py` | `0755` | root:root | `950e09815d3fa403f684f270f42534cfc1d8e251434cf717d8d102382403c5a7` |
+| `common/autonomy/viewlog.py` | `/usr/local/lib/noobia/autonomy/viewlog.py` | `0644` | root:root | `5291e8f7acd466bc8f10574d3d29dc4483f57282e136e8ccd8273404deb4fcba` |
+| `common/autonomy/autonomyd.py` | `/usr/local/lib/noobia/autonomy/autonomyd.py` | `0755` | root:root | `4664376d966e79e3e55ce9bfed989990ce282ca4f4f691be001d3b9e2af6855c` |
 | `lynx/autonomy/noobia-autonomyd.sh` | `/usr/local/bin/noobia-autonomyd` | `0755` | root:root | `c0763258f1d576246acc6610fad9231056702a7fa0c87ff647f82eb7fa1f02bd` |
 | `lynx/tools/agent/lynx_aigel_adapter.py` | `/usr/local/lib/noobia/lynx/lynx_aigel_adapter.py` | `0644` | root:root | `acee2f5c659558cee58695c740b3d5d6ecf29b36593ac6a4e689923545738ed5` |
 | `lynx/tools/agent/lynx_agent_queue.py` | `/usr/local/lib/noobia/lynx/lynx_agent_queue.py` | `0644` | root:root | `7abc08ca92c6b8d636d2b35887d87b604852e41a3a78c0f6ac5e9247423d1a33` |
@@ -59,14 +60,14 @@ The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
   ```sh
   python3 -c '
   import sys, pathlib, subprocess
-  sys.path.insert(0, "/noobia/lynx/tools/network")
+  sys.path.insert(0, "/noobia/lynx/tools")
   from lynx_wifi_v19_contact import ssh_command
 
   secret = pathlib.Path("/noobia/aigel/private/lynx_autonomy_secret").read_bytes()
   remote_cmd = "mkdir -p /etc/noobia && cat > /etc/noobia/aigel-lynx.secret && chmod 0600 /etc/noobia/aigel-lynx.secret && chown root:root /etc/noobia/aigel-lynx.secret"
   argv = ssh_command("192.168.100.107", remote_cmd)
   argv[-2:-2] = ["-p", "2222"]
-  subprocess.run(argv, input=secret, check=True)
+  subprocess.run(argv, input=secret, check=True, timeout=20)
   '
   ```
 
@@ -116,7 +117,7 @@ Expect: `200`.
 2. **Copy harness and support modules:**
    ```sh
    # Common autonomy harness modules
-   cp sense.py views.py trigger.py ranker.py prioritizer.py harness.py agent_link.py aigel_client.py autonomyd.py /usr/local/lib/noobia/autonomy/
+   cp sense.py views.py trigger.py ranker.py prioritizer.py harness.py agent_link.py aigel_client.py viewlog.py autonomyd.py /usr/local/lib/noobia/autonomy/
    chmod 0644 /usr/local/lib/noobia/autonomy/*.py
    chmod 0755 /usr/local/lib/noobia/autonomy/autonomyd.py
 
@@ -226,3 +227,14 @@ rm -rf /usr/local/lib/noobia/autonomy \
        /var/lib/noobia/autonomy
 ```
 Re-verify clean system state with `rc-status`.
+
+## Revision note (Gwyn, 2026-11-21, review of 41f13c8)
+
+- Added `common/autonomy/viewlog.py` (a0472d9). `sense.py`, `agent_link.py`
+  and `autonomyd.py` import it, so without it the harness fails to import
+  on Lynx. Under unit tests it keeps view lines in memory; on Lynx it writes
+  to syslog as before.
+- Recomputed every SHA-256 above from the repository.
+- Secret copy: the import path is `/noobia/lynx/tools`; `/noobia/lynx/tools/network` does not exist. Added `timeout=20` to the SSH call.
+- Import closure checked: every shipped module imports only shipped
+  modules.

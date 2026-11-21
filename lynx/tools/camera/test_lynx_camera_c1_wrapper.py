@@ -82,6 +82,17 @@ class TestCameraC1Wrapper(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             find_latest_trial_frame(logs_dir, expected_boot_id="boot-A", max_age_s=300.0, now_ts=now)
 
+    def test_frame_with_unknown_boot_is_refused(self):
+        logs_dir = self.tmp_dir / "logs"
+        logs_dir.mkdir()
+        t = logs_dir / "camera-camsv-frame-300"
+        t.mkdir()
+        (t / "sensor4-lifted.png").write_bytes(self._make_png_bytes())
+        (t / "result.json").write_text('{"steps": [{"name": "boot_id", "unix_ns": 99990000000000}]}')
+        # fresh, but no boot_id.stdout: it cannot be tied to the current boot
+        with self.assertRaises(RuntimeError):
+            find_latest_trial_frame(logs_dir, expected_boot_id="boot-B", max_age_s=300.0, now_ts=100000.0)
+
     def test_bayer_decode_and_loud_failure(self):
         # 1. Synthesize a valid 1600x1200 Bayer array (1920000 bytes)
         raw_bayer = bytes([128] * (1600 * 1200))

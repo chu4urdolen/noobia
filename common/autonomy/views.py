@@ -38,12 +38,14 @@ class ViewReader:
         view: str,
         backend: str = "auto",
         log_file: Path | str | None = None,
+        state_file: Path | str | None = None,
         start_at_end: bool = False,
     ):
         if view not in KNOWN_VIEWS and not re.match(r"^[a-z0-9_-]{1,32}\Z", view):
             raise ViewError(f"invalid view name: {view!r}")
         self.view = view
         self.log_file = Path(log_file) if log_file else BUSYBOX_SYSLOG_PATH
+        self.state_file = Path(state_file) if state_file else None
 
         if backend == "auto":
             if shutil.which("journalctl") is not None:
@@ -61,7 +63,9 @@ class ViewReader:
         self._file_inode: int | None = None
         self._journal_cursor: str | None = None
 
-        if start_at_end:
+        if self.state_file and self.state_file.exists():
+            self.load_state()
+        elif start_at_end:
             if self.backend in ("file", "fallback") and self.log_file.exists():
                 try:
                     st = self.log_file.stat()
@@ -70,6 +74,8 @@ class ViewReader:
                 except OSError:
                     self._file_offset = 0
                     self._file_inode = None
+            elif self.backend == "journald":
+                self._journal_cursor = self._get_journal_tail_cursor()
 
     def read_recent(self, lines: int = 100) -> list[str]:
         """Read up to `lines` recent entries for this view."""
@@ -86,11 +92,15 @@ class ViewReader:
     def read_new(self) -> list[str]:
         """Read only newly arrived lines since last call (V1 view follower)."""
         if self.backend == "journald":
-            return self._read_new_journald()
+            lines = self._read_new_journald()
         elif self.backend == "file":
-            return self._read_new_file()
+            lines = self._read_new_file()
         else:
-            return self._read_new_fallback()
+            lines = self._read_new_fallback()
+
+        if self.state_file:
+            self.save_state()
+        return lines
 
     def follow(self, poll_interval_s: float = 1.0, stop=lambda: False) -> Generator[str, None, None]:
         """Generator yielding new lines as they arrive."""
@@ -111,12 +121,67 @@ class ViewReader:
             pass
         return []
 
+    def _get_journal_tail_cursor(self) -> str | None:
+        try:
+            res = subprocess.run(
+                ["journalctl", "-n", "0", "--show-cursor", "--no-pager"],
+                capture_output=True,
+                text=True,
+                timeout=5.0,
+            )
+            if res.returncode == 0:
+                for line in res.stdout.splitlines():
+                    if line.startswith("-- cursor:"):
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            return parts[2].strip()
+        except Exception:
+            pass
+        return None
+
+    def load_state(self) -> None:
+        """Load follower state (cursor/offset/inode) from state_file."""
+        if not self.state_file or not self.state_file.exists():
+            return
+        try:
+            with open(self.state_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self._file_offset = int(data.get("file_offset", 0))
+            self._file_inode = data.get("file_inode")
+            self._journal_cursor = data.get("journal_cursor")
+        except Exception:
+            pass
+
+    def save_state(self) -> None:
+        """Save follower state (cursor/offset/inode) atomically to state_file."""
+        if not self.state_file:
+            return
+        tmp = self.state_file.with_suffix(f".tmp.{time.time_ns()}")
+        try:
+            payload = {
+                "file_offset": self._file_offset,
+                "file_inode": self._file_inode,
+                "journal_cursor": self._journal_cursor,
+            }
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(payload, f)
+            tmp.replace(self.state_file)
+        except OSError:
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)
+
     def _read_new_journald(self) -> list[str]:
+        if not self._journal_cursor:
+            tail_cur = self._get_journal_tail_cursor()
+            if tail_cur:
+                self._journal_cursor = tail_cur
+                return []
+
         cmd = ["journalctl", "-t", self.view, "-o", "json", "--no-pager"]
         if self._journal_cursor:
             cmd.extend(["--after-cursor", self._journal_cursor])
         else:
-            cmd.extend(["-n", "100"])
+            cmd.extend(["-n", "0"])
 
         try:
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5.0)

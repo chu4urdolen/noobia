@@ -168,6 +168,45 @@ class TestViews(unittest.TestCase):
         lines = vr.read_recent(5)
         self.assertIsInstance(lines, list)
 
+    def test_state_file_persistence(self):
+        """State persistence preserves file offsets across reader restarts."""
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", delete=False) as tf_log, \
+             tempfile.NamedTemporaryFile("w+", delete=False) as tf_state:
+            tf_log.write("Nov 21 14:00:00 lynx user.notice noobia-sense: line 1\n")
+            tf_log.flush()
+            log_path = tf_log.name
+            state_path = tf_state.name
+
+        try:
+            vr1 = ViewReader("noobia-sense", backend="file", log_file=log_path, state_file=state_path)
+            lines1 = vr1.read_new()
+            self.assertEqual(lines1, ["line 1"])
+            self.assertGreater(vr1._file_offset, 0)
+
+            # Recreate reader with the same state file: offset must be restored
+            vr2 = ViewReader("noobia-sense", backend="file", log_file=log_path, state_file=state_path)
+            self.assertEqual(vr2._file_offset, vr1._file_offset)
+            self.assertEqual(vr2.read_new(), [])
+
+            # Write another line
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write("Nov 21 14:00:01 lynx user.notice noobia-sense: line 2\n")
+
+            self.assertEqual(vr2.read_new(), ["line 2"])
+        finally:
+            Path(log_path).unlink(missing_ok=True)
+            Path(state_path).unlink(missing_ok=True)
+
+    def test_journald_no_cursor_starts_at_tail(self):
+        """When starting with no cursor, journald starts at tail cursor rather than replaying."""
+        vr = ViewReader("noobia-sense", backend="journald")
+        vr._journal_cursor = None
+        vr._get_journal_tail_cursor = lambda: "mock-tail-cursor-999"
+
+        lines = vr.read_new()
+        self.assertEqual(lines, [])
+        self.assertEqual(vr._journal_cursor, "mock-tail-cursor-999")
+
 
 if __name__ == "__main__":
     unittest.main()

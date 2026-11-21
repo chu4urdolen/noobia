@@ -1,0 +1,37 @@
+#!/sbin/openrc-run
+# Stop kernel trace events from being printed to the kernel log.
+# Lynx's boot image enables 9 UFS ref-clock kprobe events and boots with
+# tp_printk, so every probe hit becomes a kern.warn line (~7/s, forge lynx #306).
+# This only clears kernel.tracepoint_printk; probes and the trace ring buffer
+# are untouched. Disable: touch /etc/noobia/quiet-trace.disable. Packet:
+# lynx/linux-port/docs/LYNX-INSTALL-PACKET-QUIET-TRACE-20261121.md
+
+description="Keep UFS debug trace events out of the kernel log"
+: "${QUIET_TRACE_SYSCTL:=/proc/sys/kernel/tracepoint_printk}"
+: "${QUIET_TRACE_DISABLE:=/etc/noobia/quiet-trace.disable}"
+
+depend() {
+	before lynx-local-logs
+}
+
+start() {
+	ebegin "Quieting tracepoint_printk"
+	if [ -e "$QUIET_TRACE_DISABLE" ]; then
+		einfo "disabled by $QUIET_TRACE_DISABLE; leaving tracepoint_printk unchanged"
+		eend 0
+		return 0
+	fi
+	if [ ! -w "$QUIET_TRACE_SYSCTL" ]; then
+		eend 1 "$QUIET_TRACE_SYSCTL is not writable"
+		return 1
+	fi
+	printf '0\n' > "$QUIET_TRACE_SYSCTL" || { eend 1 "write failed"; return 1; }
+	value=$(cat "$QUIET_TRACE_SYSCTL")
+	[ "$value" = 0 ]
+	eend $? "tracepoint_printk is $value, expected 0"
+}
+
+stop() {
+	# Stopping does not re-enable printing; rollback is explicit (see packet).
+	return 0
+}

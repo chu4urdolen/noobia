@@ -248,7 +248,48 @@ def read_frame_bytes(
     return img_bytes, str(target_path)
 
 
-def detect_objects(
+def gray_world_white_balance(img: Image.Image) -> Image.Image:
+    """Normalize color cast via gray-world assumption."""
+    try:
+        import numpy as np
+        arr = np.array(img, dtype=np.float32)
+        r, g, b = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
+        mean_r, mean_g, mean_b = float(np.mean(r)), float(np.mean(g)), float(np.mean(b))
+        mean_gray = (mean_r + mean_g + mean_b) / 3.0
+        arr[:, :, 0] = np.clip(r * (mean_gray / max(mean_r, 1.0)), 0, 255)
+        arr[:, :, 1] = np.clip(g * (mean_gray / max(mean_g, 1.0)), 0, 255)
+        arr[:, :, 2] = np.clip(b * (mean_gray / max(mean_b, 1.0)), 0, 255)
+        return Image.fromarray(arr.astype(np.uint8))
+    except Exception:
+        return img
+
+
+def get_detection_frame_variants(frame_bytes: bytes) -> list[tuple[str, bytes]]:
+    """Produce native and upright (270 deg rotated) variants with white balance in memory."""
+    variants: list[tuple[str, bytes]] = [("native", frame_bytes)]
+    try:
+        from PIL import Image
+        with Image.open(io.BytesIO(frame_bytes)) as img:
+            rgb = img.convert("RGB")
+            # Upright for Lynx's sideways-mounted IMX890/S5K3P9SP sensor (270 degrees)
+            upright = rgb.rotate(270, expand=True)
+
+            # Variant 1: Upright with gray-world white balance
+            upright_wb = gray_world_white_balance(upright)
+            buf_wb = io.BytesIO()
+            upright_wb.save(buf_wb, format="PNG")
+            variants.append(("upright_wb", buf_wb.getvalue()))
+
+            # Variant 2: Upright raw
+            buf_up = io.BytesIO()
+            upright.save(buf_up, format="PNG")
+            variants.append(("upright", buf_up.getvalue()))
+    except Exception:
+        pass
+    return variants
+
+
+def query_detect_endpoint(
     frame_bytes: bytes,
     detect_url: str = DEFAULT_DETECT_URL,
     timeout_s: float = DEFAULT_TIMEOUT_S,
@@ -266,6 +307,34 @@ def detect_objects(
             return data.get("objects", [])
     except urllib.error.URLError as err:
         raise ConnectionError(f"Nexus detect service unavailable at {detect_url}: {err}") from err
+
+
+def detect_objects(
+    frame_bytes: bytes,
+    detect_url: str = DEFAULT_DETECT_URL,
+    timeout_s: float = DEFAULT_TIMEOUT_S,
+    detect_fn=None,
+) -> list[dict]:
+    """Query detection service across native and upright (270 deg) variants in memory."""
+    single_query = detect_fn or (lambda b: query_detect_endpoint(b, detect_url=detect_url, timeout_s=timeout_s))
+    variants = get_detection_frame_variants(frame_bytes)
+
+    merged: dict[str, dict] = {}
+    for tag, v_bytes in variants:
+        try:
+            objs = single_query(v_bytes)
+            for o in objs:
+                lbl = str(o.get("label", "")).strip()
+                if not lbl:
+                    continue
+                conf = float(o.get("confidence", 0.0))
+                if lbl not in merged or conf > float(merged[lbl].get("confidence", 0.0)):
+                    merged[lbl] = o
+        except Exception:
+            if tag == "native":
+                raise
+
+    return list(merged.values())
 
 
 def emit_line_to_lynx(
@@ -295,8 +364,7 @@ def run_c1_wrapper(
     emit_remote_fn=None,
 ) -> dict:
     """Execute C1 detection and emit canonical sense lines onto Lynx."""
-    det = detect_fn or (lambda b: detect_objects(b, detect_url=detect_url, timeout_s=timeout_s))
-    objects = det(frame_bytes)
+    objects = detect_objects(frame_bytes, detect_url=detect_url, timeout_s=timeout_s, detect_fn=detect_fn)
 
     lines: list[str] = []
     # If no objects detected, produce one P0 informational observation

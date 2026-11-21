@@ -185,6 +185,39 @@ class TestCameraC1Wrapper(unittest.TestCase):
         self.assertIn("NOOBIA P0 camera frame.analyzed objects=0 | frame analyzed, no objects recognized", res["emitted_lines"][0])
         self.assertEqual(len(emitted_lines), 1)
 
+    def test_c1b_rotation_and_wb_on_real_trial_frames(self):
+        """Task C1b: rotation (270 deg) and white balance detect cat, dog, and cup from real trial frames."""
+        import sys
+        sys.path.insert(0, str(Path(__file__).parents[3] / "common" / "autonomy" / "services" / "detect"))
+        from detector import ObjectDetector
+
+        det = ObjectDetector(tpu=False)
+        if not det.model_loaded:
+            self.skipTest("Real ONNX detector model not available")
+
+        logs_root = Path(__file__).parents[2] / "logs"
+        cat_p = logs_root / "camera-camsv-frame-1795289981388760796" / "sensor4-preview-lifted.png"
+        dog_p = logs_root / "camera-camsv-frame-1795290224065061121" / "sensor4-preview-lifted.png"
+        cup_p = logs_root / "camera-camsv-frame-1795290384755337439" / "sensor4-preview-lifted.png"
+
+        if not (cat_p.is_file() and dog_p.is_file() and cup_p.is_file()):
+            self.skipTest("Real trial frames not present on disk")
+
+        # Cat frame: detects cat
+        res_cat = run_c1_wrapper(cat_p.read_bytes(), "cat_frame", detect_fn=det.detect_raw)
+        cat_labels = [o["label"] for o in res_cat["objects"]]
+        self.assertIn("cat", cat_labels)
+
+        # Dog frame (enlarged): detects dog
+        res_dog = run_c1_wrapper(dog_p.read_bytes(), "dog_frame", detect_fn=det.detect_raw)
+        dog_labels = [o["label"] for o in res_dog["objects"]]
+        self.assertIn("dog", dog_labels)
+
+        # Cup frame: detects cup
+        res_cup = run_c1_wrapper(cup_p.read_bytes(), "cup_frame", detect_fn=det.detect_raw)
+        cup_labels = [o["label"] for o in res_cup["objects"]]
+        self.assertIn("cup", cup_labels)
+
 
 if __name__ == "__main__":
     unittest.main()

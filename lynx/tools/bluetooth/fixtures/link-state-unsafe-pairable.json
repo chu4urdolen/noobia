@@ -1,0 +1,42 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / 22823 'Vitamin')",
+  "boot_id": "8e3b5e40-a15d-4f81-80a2-21171fa9bc28",
+  "runlevel_default_services": [
+    "bootmisc",
+    "hostname",
+    "networking",
+    "sshd",
+    "syslog",
+    "urandom"
+  ],
+  "modules": [
+    "bt_drv_6983",
+    "btif_drv",
+    "wlan_drv_gen4m_6983",
+    "wmt_drv",
+    "conninfra"
+  ],
+  "device_nodes": {
+    "stpbt": true
+  },
+  "hci_interfaces": {
+    "hci0": true
+  },
+  "runtime_ready_flag": true,
+  "services": {
+    "lynx-bluetooth": "started",
+    "bluetooth": "started",
+    "dbus": "started"
+  },
+  "controller": {
+    "controller_mac": "F4:2A:7D:01:23:45",
+    "powered": true,
+    "discoverable": false,
+    "pairable": true,
+    "name": "lynx-ble"
+  },
+  "connected_devices": [],
+  "battery": {
+    "capacity_percent": 80
+  }
+}

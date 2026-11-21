@@ -1,21 +1,32 @@
-# Lynx Bluetooth Acceptance Gate
+# Lynx Bluetooth Tools
 
-This directory contains offline validation tooling for Bluetooth cold-boot and sustained-uptime trials on the OnePlus 11R 5G (Lynx / MT6895 platform).
+This directory contains validation, telemetry evaluation, and acceptance tooling for Bluetooth on the OnePlus Nord 3 5G CPH2493 (MediaTek MT6983, Project 22823 "Vitamin").
 
-## Purpose
+## Tools Overview
 
-Enforces strict acceptance gates on Bluetooth trial receipts without issuing network calls or device mutations:
-1. **Fresh Boot ID**: Proves evidence originates from a new boot cycle rather than stale logs or prior sessions.
-2. **Sustained System Health**: Enforces unbroken healthy status samples across the trial hold (zero issues, battery $\ge 15\%$, temperature $< 55^\circ\text{C}$).
-3. **Verified Radio Teardown**: Confirms radio power-off at trial completion (`rc-service lynx-bluetooth stop` succeeded, `hci0` removed).
-4. **Bounded Recovery Boundary**: Proves zero partition writes, zero runlevel alterations, and disarmed watchdogs.
+### 1. Bluetooth Acceptance Gate (`lynx_bt_acceptance_gate.py`)
+Enforces strict acceptance criteria on Bluetooth trial receipts without issuing network calls or device mutations:
+- **Fresh Boot ID**: Proves evidence originates from a new boot cycle rather than stale logs or prior sessions.
+- **Sustained System Health**: Enforces unbroken healthy status samples across the trial hold (zero issues, battery $\ge 15\%$, temperature $< 55^\circ\text{C}$).
+- **Verified Radio Teardown**: Confirms radio power-off at trial completion (`rc-service lynx-bluetooth stop` succeeded, `hci0` removed).
+- **Bounded Recovery Boundary**: Proves zero partition writes, zero runlevel alterations, and disarmed watchdogs.
+
+### 2. Bluetooth Link-State Evaluator (`lynx_bluetooth_link_state.py`)
+Provides an agent-facing, read-only link-state report on top of `BT_STATUS` (NRP 393) and `lynx_bluetoothd.py`:
+- **State Classification**: Classifies telemetry into `RADIO_OFF`, `READY_UNLINKED`, `CONNECTED`, `DEGRADED`, `UNSAFE_CONFIG`, and `ABSENT`.
+- **Peer Topology**: Surfaces active connected BLE/BT peers (MAC addresses, device names, connection flags).
+- **Safety Auditing**: Audits default OpenRC runlevels (ensuring `lynx-bluetooth` is not autostarted) and validates `pairable` mode is disabled.
+- **Read-Only / Live Gating**: Strictly offline evaluator with optional read-only live query requiring explicit `--live --allow-live`.
 
 ## Usage
 
 ```bash
-# Evaluate a trial receipt
+# Evaluate a Bluetooth trial receipt
 python3 lynx_bt_acceptance_gate.py fixtures/passing-trial-receipt.json --reference-boot-id "<prior-boot-uuid>"
 
+# Evaluate a link-state telemetry fixture
+python3 lynx_bluetooth_link_state.py fixtures/link-state-radio-off.json
+
 # Run unit tests
-python3 test_lynx_bt_acceptance_gate.py
+python3 -m unittest discover -s . -p 'test_*.py'
 ```

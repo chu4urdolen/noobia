@@ -23,7 +23,8 @@ class DetectRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             resp = {
-                "status": "ok",
+                "status": "ok" if getattr(self.detector, "model_loaded", False) else "degraded",
+                "model": bool(getattr(self.detector, "model_loaded", False)),
                 "engine": self.detector.engine,
                 "tpu": self.detector.tpu_available,
             }

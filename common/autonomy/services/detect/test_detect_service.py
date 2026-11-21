@@ -40,6 +40,20 @@ class TestDetectService(unittest.TestCase):
         # Fallback minimal JPEG header
         return b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xdb"
 
+    def test_no_model_never_fabricates_detections(self):
+        import io
+        from detector import ObjectDetector
+        d = ObjectDetector(tpu=False)
+        self.assertEqual(d.engine, "no_model")
+        try:
+            from PIL import Image
+            buf = io.BytesIO()
+            Image.new("RGB", (32, 32), (0, 0, 0)).save(buf, format="JPEG")
+            frame = buf.getvalue()
+        except ImportError:
+            frame = b"\xff\xd8\xff\xe0 not really a jpeg"
+        self.assertEqual(d.detect_raw(frame), [])   # a black frame is not a person
+
     def test_health_check(self):
         url = f"http://127.0.0.1:{self.port}/health"
         with urlopen(url, timeout=2.0) as resp:
@@ -48,7 +62,21 @@ class TestDetectService(unittest.TestCase):
             self.assertIn("status", data)
             self.assertIn("engine", data)
 
+    def test_no_model_service_yields_no_sense_lines(self):
+        url = f"http://127.0.0.1:{self.port}/detect"
+        cs = CameraSense(detect_url=url, seen_window_s=60.0)
+        self.assertEqual(cs.process_frame(self._make_dummy_jpeg(), now=100.0), [])
+
     def test_detect_post_in_memory(self):
+        """New-label / repeat logic of the camera sense, with an EXPLICIT test-double detector."""
+        from service import DetectRequestHandler
+
+        class TestDoubleDetector(ObjectDetector):
+            def detect_raw(self, image_bytes, min_confidence=0.5):
+                return [{"label": "person", "confidence": 0.88, "box": [0.1, 0.2, 0.8, 0.7]}]
+        real = DetectRequestHandler.detector
+        DetectRequestHandler.detector = TestDoubleDetector(tpu=False)
+        self.addCleanup(setattr, DetectRequestHandler, "detector", real)
         url = f"http://127.0.0.1:{self.port}/detect"
         jpeg = self._make_dummy_jpeg()
         cs = CameraSense(detect_url=url, seen_window_s=60.0)

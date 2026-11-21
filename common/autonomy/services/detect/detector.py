@@ -15,7 +15,10 @@ except ImportError:
 class ObjectDetector:
     def __init__(self, model_path: str | None = None, tpu: bool = True):
         self.tpu_available = False
-        self.engine = "cpu_mock"
+        # Honesty rule (Gwyn, 2026-11-21): without a real model this service
+        # must never report detections. "no_model" returns nothing.
+        self.engine = "no_model"
+        self.model_loaded = False
 
         # Check for Coral TPU / PyCoral if available
         if tpu:
@@ -25,7 +28,7 @@ class ObjectDetector:
                 self.engine = "coral_edgetpu"
             except ImportError:
                 self.tpu_available = False
-                self.engine = "cpu_fallback"
+                self.engine = "no_model"
 
     def detect_raw(self, image_bytes: bytes, min_confidence: float = 0.5) -> list[dict[str, Any]]:
         """Process image bytes purely in memory and return detected objects.
@@ -47,11 +50,7 @@ class ObjectDetector:
         # If Coral TPU is active and model loaded, invoke inference
         # Otherwise, in CPU fallback mode without model weights, return structured mock/heuristic
         # or parse test tags from frame header if present in testing mode
-        if self.engine == "coral_edgetpu":
-            # Real Coral inference pipeline here
-            return []
-
-        # CPU fallback: returns detected objects
-        return [
-            {"label": "person", "confidence": 0.88, "box": [0.1, 0.2, 0.8, 0.7]}
-        ]
+        # No real inference is implemented yet (no Coral attached, no CPU model).
+        # Never fabricate a perception: a Noob must not be told something she
+        # did not see. Return nothing until a real model is loaded.
+        return []

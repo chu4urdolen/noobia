@@ -1,0 +1,45 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "5e2a1f8c-6b4d-4e7a-9c12-8f3d2a1b0c9d",
+  "device_tree": {
+    "touch_node_present": true,
+    "touch_node_paths": [
+      "/sys/firmware/devicetree/base/i2c@11c00000/synaptics20171@4b"
+    ],
+    "i2c_bus": 0,
+    "i2c_addr": "0x4b",
+    "compatible": "synaptics-s3908",
+    "chip_name": "S3908"
+  },
+  "gpios": {
+    "irq": 8,
+    "reset": 3
+  },
+  "rails": {
+    "vdd_supply": "mt6373_vtp",
+    "vdd_uv": 3000000,
+    "vcc_supply": "mt6373_vmc",
+    "vcc_uv": 1800000
+  },
+  "geometry": {
+    "tx": 17,
+    "rx": 38,
+    "max_points": 10,
+    "display_w": 1440,
+    "display_h": 3216
+  },
+  "reporting": {
+    "report_rate_default": 60
+  },
+  "runtime": {
+    "i2c_client_present": true,
+    "touch_driver_bound": true,
+    "input_device_present": true,
+    "input_device_name": "S3908 Touchscreen"
+  },
+  "loaded_modules": [
+    "mtu3",
+    "bt_drv_6983",
+    "wlan_drv_gen4m_6983"
+  ]
+}

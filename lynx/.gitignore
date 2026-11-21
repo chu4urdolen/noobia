@@ -145,3 +145,10 @@
 !/tools/display/fixtures/
 /tools/display/fixtures/*
 !/tools/display/fixtures/*.json
+!/tools/touch/
+/tools/touch/*
+!/tools/touch/*.py
+!/tools/touch/README.md
+!/tools/touch/fixtures/
+/tools/touch/fixtures/*
+!/tools/touch/fixtures/*.json

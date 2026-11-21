@@ -1,0 +1,39 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "77aa0c1e-9d2b-4f6e-8b31-5c4d6e7f8a9b",
+  "device_tree": {
+    "touch_node_present": false,
+    "touch_node_paths": [],
+    "i2c_bus": 1,
+    "i2c_addr": "0x5d",
+    "compatible": "goodix,gt9886",
+    "chip_name": "GT9886"
+  },
+  "gpios": {
+    "irq": 8,
+    "reset": 3
+  },
+  "rails": {
+    "vdd_supply": "mt6373_vtp",
+    "vdd_uv": 3000000,
+    "vcc_supply": "mt6373_vmc",
+    "vcc_uv": 1800000
+  },
+  "geometry": {
+    "tx": 17,
+    "rx": 38,
+    "max_points": 10,
+    "display_w": 1440,
+    "display_h": 3216
+  },
+  "reporting": {
+    "report_rate_default": 60
+  },
+  "runtime": {
+    "i2c_client_present": false,
+    "touch_driver_bound": false,
+    "input_device_present": false,
+    "input_device_name": null
+  },
+  "loaded_modules": []
+}

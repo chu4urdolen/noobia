@@ -26,7 +26,7 @@ Every landing by Dushich is evaluated against four strict gates:
 | **D17** | Display & AMOLED Panel Preflight (Nord 3 Tianma/BOE) | `df47f0b` | Display suite 29 OK (29 new tests, 3 fixtures, AST verified read-only) | **ACCEPT** | Maps `&dsi0` with Tianma NT37705 (`panel5@0`, active) and BOE NT37701A (`panel2@0`, second-source); verifies GPIOs 86/148/36/24 and mt6373_pio3, 13-bit PWM backlight max 10239, rails mt6373_vrf18_aif (1.8V) / mt6373_vmc (3.0V). Replaced unverified guessed module names with verified CONFIG_DRM_PANEL_* symbols. Double-gated read-only live collector (8s cap). Clean diff, zero trailing whitespace. |
 | **D18** | Touchscreen Controller Preflight (Nord 3 Synaptics/Goodix) | `7143e3e` | Touch suite 29 OK (29 new tests, 3 fixtures, AST verified read-only) | **ACCEPT** | Verified against `oplus6983_22823.dts`: Synaptics S3908 on `&i2c0` @ 0x4B (400kHz), IRQ GPIO8 (ts_int_active) + reset GPIO3 (ts_reset_active), rails mt6373_vtp 3.0V / mt6373_vmc 1.8V, 17x38 scan matrix, 10-point multi-touch, 1440x3216 resolution, 60Hz report rate. Does not assert unverified out-of-tree module names; verifies via I2C client driver link + input class. Double-gated read-only live collector (8s cap). Clean diff, zero trailing whitespace. |
 | **D19** | Aux Cameras Preflight (IMX355 Ultrawide & GC02M1 Macro) | `e14c9fe` | Camera deps suite 50 OK (30 new tests, 3 fixtures, AST verified read-only) | **ACCEPT** | Audits Sony IMX355 ultrawide (`sensor2@1a` on `i2c2` @ 0x1a, GPIO198/201, `seninf-2`) and GalaxyCore GC02M1 macro (`sensor4@3d` on `i2c9` @ 0x3d, GPIO197/200, `seninf-1`). Correctly caught board DTS uses sensor4 rather than sensor3. Evaluates I2C client driver sysfs symlinks without asserting unverified vendor module names. Double-gated read-only live collector (8s cap). Clean diff, zero trailing whitespace. |
-| **D20** | Consolidated Lynx Test Suite Runner & Sanity Checker | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
+| **D20** | Consolidated Lynx Test Suite Runner & Sanity Checker | `9a2bf03` | 30 runner tests OK; full run 89 suites (883 tests) PASS in 10.00s | **ACCEPT** | Builds `run_all_lynx_tests.py` discovering all `test_*.py` suites across top-level and subdirectories. Handles PATH hardening for `/usr/sbin/modinfo`, runs standalone script fallbacks, and classifies missing external system deps as `env-blocked`. Fixed scanner line-anchoring for conflict markers (`b"<"*7`); full suite verified 88 ok, 0 failed, 1 env-blocked (`dbus_next`), whitespace sanity CLEAN. Exit 0. |
 
 ---
 
@@ -78,3 +78,14 @@ Every landing by Dushich is evaluated against four strict gates:
   3. Audited `lynx_aux_camera_preflight.py` AST safety and read-only live collector: enforces double gate (`--live --allow-live`), 8s timeout, and strict refusal of live video stream captures.
   4. Three hermetic fixtures (`aux-cameras-preflight-bound.json`, `aux-cameras-preflight-unbound.json`, `aux-cameras-preflight-missing-dt.json`) cover bound/unbound/missing states.
   5. Whitespace diff (`git diff --check e14c9fe^..e14c9fe`) clean.
+
+### D20: Consolidated Lynx Test Runner & Whitespace Sanity Gate (Commit `9a2bf03`)
+- **Review Date:** 2026-11-21
+- **Verdict:** **ACCEPT**
+- **Verification:**
+  1. Tested 30 self-tests in `test_run_all_lynx_tests.py`: all 30 pass in 0.47s.
+  2. Executed full consolidated runner (`python3 lynx/tools/run_all_lynx_tests.py`): discovers 89 test suites (883 tests), finishes in 10.00s with verdict PASS.
+  3. Verified child environment PATH hardening: automatically resolves `/usr/sbin/modinfo` on hosts where `/usr/sbin` is omitted from minimal PATH.
+  4. Verified standalone fallback for fixture scripts (`test_lynx_charge_cap_offline.py` and `test_v47_dhcp_retry.py`), correctly detecting `NO TESTS RAN` from unittest and executing via subprocess returncode.
+  5. Fixed minor line-anchoring quirk in conflict marker scanner (`raw.startswith(b"<"*7)` instead of whole-file substring `b"<<<<<<<"`).
+  6. Whitespace check passes across all tracked files in `lynx/`. Exit code 0.

@@ -265,14 +265,15 @@ def scan_whitespace_file(file_path: Path, repo_root: Path) -> List[WhitespaceVio
         return violations
     if _is_binary(data):
         return violations
-    if b"<<<<<<<" in data:
-        violations.append(WhitespaceViolation(rel, 0, "conflict-marker"))
     if not data.endswith(b"\n"):
         violations.append(WhitespaceViolation(rel, 0, "missing-eof-newline"))
     is_md = name.endswith((".md", ".markdown"))
+    marker_prefix = b"<" * 7
     line_no = 0
     for raw in data.split(b"\n"):
         line_no += 1
+        if raw.startswith(marker_prefix + b" ") or raw == marker_prefix:
+            violations.append(WhitespaceViolation(rel, line_no, "conflict-marker"))
         if raw.endswith(b"\t"):
             violations.append(WhitespaceViolation(rel, line_no, "trailing-whitespace"))
         elif raw.endswith(b" ") and not (is_md and _markdown_hard_break_exempt(raw)):

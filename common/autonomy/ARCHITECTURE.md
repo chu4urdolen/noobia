@@ -94,6 +94,13 @@ It cuts **chunks**, closing one when any of these happens:
 - **60 s** have passed since the chunk opened and it holds at least one
   line.
 
+Lines marked `cause=self` (the Noob's own actions) count toward **no**
+trigger rule: not the P rules and not the 15-line rule. They stay in the
+chunk as context, and they do count toward the size limits below. Time
+starts when the first line of any kind enters an empty chunk. Pattern
+cooldowns apply per pattern: one message per pattern per `cooldown_s`,
+however many lines match.
+
 Each closed chunk goes to the regex ranker. The trigger itself never calls
 an LLM.
 

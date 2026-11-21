@@ -67,7 +67,7 @@ NEO boards waiting to become Noobs once the Nexus is set up.
 - **Banshee** (she/her) — little blue ghost, the Spirit of Initiative. Google
   Antigravity CLI on Nexus (`noobia-banshee`). Role file:
   `/noobia/banshee/AGENTS.md`.
-- **Dushich** — the curious, playful Watchmaker of the Singularity: the little
+- **Dushich** (he/him) — the curious, playful Watchmaker of the Singularity: the little
   phone and Noobia's local Nexus collaborator. A Qwen model on the RTX 5090
   through his own Codex CLI and Ollama, with helper and solo roles;
   keeper of Noobia's forge memory. Role files: `/noobia/dushich/coding/`,

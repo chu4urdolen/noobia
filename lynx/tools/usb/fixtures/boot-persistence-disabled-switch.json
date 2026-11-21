@@ -4,10 +4,10 @@
   "runlevel_default_services": [
     "bootmisc",
     "hostname",
-    "lynx-usb-gadget",
     "networking",
     "sshd",
-    "syslog"
+    "syslog",
+    "lynx-usb-gadget"
   ],
   "disable_switch_present": true,
   "udc_bound": false,

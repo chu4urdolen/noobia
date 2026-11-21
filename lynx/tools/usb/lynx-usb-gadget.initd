@@ -7,8 +7,7 @@ UDC_TARGET="11201000.usb0"
 MODULE_PATH="/lib/modules/$(uname -r)/kernel/drivers/usb/mtu3/mtu3.ko"
 
 depend() {
-    after bootmisc modules
-    before sshd
+    after bootmisc modules sshd
     provide usb-gadget
 }
 
@@ -26,13 +25,14 @@ start() {
 
     ebegin "Starting Lynx USB MTU3 ACM Gadget"
 
-    # 1. Load mtu3 driver if not already loaded
+    # 1. Load mtu3 driver if not already loaded (bounded with 5s timeout)
     if ! grep -q "^mtu3 " /proc/modules; then
         if [ -f "$MODULE_PATH" ]; then
-            modprobe mtu3 2>/dev/null || insmod "$MODULE_PATH" 2>/dev/null
+            /bin/busybox timeout -t 5 modprobe mtu3 2>/dev/null || \
+                /bin/busybox timeout -t 5 insmod "$MODULE_PATH" 2>/dev/null
         else
             ewarn "mtu3 module not found at $MODULE_PATH; attempting modprobe"
-            modprobe mtu3 2>/dev/null
+            /bin/busybox timeout -t 5 modprobe mtu3 2>/dev/null
         fi
     fi
 
@@ -64,9 +64,9 @@ start() {
 
     ln -s functions/acm.usb0 configs/c.1/acm.usb0 2>/dev/null
 
-    # 4. Bind UDC
+    # 4. Bind UDC (bounded with 3s timeout)
     if [ -d "/sys/class/udc/$UDC_TARGET" ]; then
-        echo "$UDC_TARGET" > UDC
+        /bin/busybox timeout -t 3 sh -c "echo '$UDC_TARGET' > UDC" 2>/dev/null
     else
         ewarn "Target UDC $UDC_TARGET not found in /sys/class/udc"
     fi
@@ -78,8 +78,8 @@ stop() {
     ebegin "Stopping Lynx USB MTU3 ACM Gadget"
 
     if [ -d "$GADGET_DIR" ]; then
-        # Unbind UDC
-        echo "" > "$GADGET_DIR/UDC" 2>/dev/null
+        # Unbind UDC (bounded with 3s timeout)
+        /bin/busybox timeout -t 3 sh -c "echo '' > '$GADGET_DIR/UDC'" 2>/dev/null
 
         # Remove function link
         rm -f "$GADGET_DIR/configs/c.1/acm.usb0" 2>/dev/null

@@ -32,7 +32,7 @@ class TestLynxUsbBootPersistence(unittest.TestCase):
         self.assertIn("missing_or_invalid_openrc_shebang", failures)
 
     def test_missing_depend_block(self):
-        script = "#!/sbin/openrc-run\n/etc/lynx/disable-usb-gadget\n11201000.usb0\necho \"\" > \"$GADGET_DIR/UDC\"\n"
+        script = "#!/sbin/openrc-run\n/etc/lynx/disable-usb-gadget\n11201000.usb0\necho \"\" > \"$GADGET_DIR/UDC\"\ntimeout\n"
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
         self.assertIn("missing_depend_block", failures)
@@ -40,17 +40,18 @@ class TestLynxUsbBootPersistence(unittest.TestCase):
     def test_missing_after_bootmisc(self):
         script = """#!/sbin/openrc-run
 depend() {
-    before sshd
+    after sshd
 }
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
+timeout
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
         self.assertIn("ordering_must_declare_after_bootmisc_or_modules", failures)
 
-    def test_missing_before_sshd(self):
+    def test_require_after_sshd(self):
         script = """#!/sbin/openrc-run
 depend() {
     after bootmisc
@@ -58,21 +59,38 @@ depend() {
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
+timeout
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
-        self.assertIn("ordering_must_declare_before_sshd", failures)
+        self.assertIn("ordering_must_declare_after_sshd", failures)
+
+    def test_reject_before_sshd(self):
+        """Rejecting 'before sshd' to ensure the USB gadget can never delay recovery."""
+        script = """#!/sbin/openrc-run
+depend() {
+    after bootmisc modules sshd
+    before sshd
+}
+/etc/lynx/disable-usb-gadget
+11201000.usb0
+echo "" > "$GADGET_DIR/UDC"
+timeout
+"""
+        ok, failures = validate_init_script(script)
+        self.assertFalse(ok)
+        self.assertIn("forbidden_ordering_before_sshd", failures)
 
     def test_forbidden_networking_dependency(self):
         script = """#!/sbin/openrc-run
 depend() {
-    after bootmisc
-    before sshd
+    after bootmisc modules sshd
     need net
 }
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
+timeout
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
@@ -81,15 +99,28 @@ echo "" > "$GADGET_DIR/UDC"
     def test_missing_disable_switch(self):
         script = """#!/sbin/openrc-run
 depend() {
-    after bootmisc
-    before sshd
+    after bootmisc modules sshd
 }
+11201000.usb0
+echo "" > "$GADGET_DIR/UDC"
+timeout
+"""
+        ok, failures = validate_init_script(script)
+        self.assertFalse(ok)
+        self.assertIn("missing_local_disable_switch_check", failures)
+
+    def test_missing_bounded_timeouts(self):
+        script = """#!/sbin/openrc-run
+depend() {
+    after bootmisc modules sshd
+}
+/etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
-        self.assertIn("missing_local_disable_switch_check", failures)
+        self.assertIn("missing_bounded_timeouts_in_start", failures)
 
     def test_fixture_persistent_enabled(self):
         path = FIXTURES_DIR / "boot-persistence-valid-enabled.json"

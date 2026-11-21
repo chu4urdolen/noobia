@@ -53,9 +53,12 @@ def validate_init_script(script_text: str) -> Tuple[bool, List[str]]:
         # Check ordering: after bootmisc/modules
         if not re.search(r"after\s+.*\b(bootmisc|modules)\b", dep_body):
             failures.append("ordering_must_declare_after_bootmisc_or_modules")
-        # Check ordering: before sshd
-        if not re.search(r"before\s+.*\bsshd\b", dep_body):
-            failures.append("ordering_must_declare_before_sshd")
+        # Ordering REQUIREMENT: must declare after sshd so gadget can never delay sshd
+        if not re.search(r"after\s+.*\bsshd\b", dep_body):
+            failures.append("ordering_must_declare_after_sshd")
+        # Ordering FORBIDDEN: must NOT declare before sshd
+        if re.search(r"before\s+.*\bsshd\b", dep_body):
+            failures.append("forbidden_ordering_before_sshd")
         # Must NOT depend on networking or wifi (must not block or couple)
         if re.search(r"need\s+.*\b(net|networking|lynx-wifi|wifi)\b", dep_body):
             failures.append("forbidden_need_dependency_on_networking")
@@ -69,8 +72,12 @@ def validate_init_script(script_text: str) -> Tuple[bool, List[str]]:
         failures.append("missing_target_udc_declaration")
 
     # 4. Teardown check (unbinding UDC)
-    if 'echo "" > "$GADGET_DIR/UDC"' not in script_text and 'echo "" >' not in script_text:
+    if not re.search(r"echo\s+['\"]{2}\s*>\s*['\"]?\$GADGET_DIR/UDC", script_text):
         failures.append("missing_udc_unbind_in_stop")
+
+    # 5. Bounded timeout check (explicit timeouts on module load / UDC bind)
+    if "timeout" not in script_text:
+        failures.append("missing_bounded_timeouts_in_start")
 
     return len(failures) == 0, failures
 

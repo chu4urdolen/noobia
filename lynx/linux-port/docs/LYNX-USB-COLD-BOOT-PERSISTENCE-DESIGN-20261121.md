@@ -44,8 +44,7 @@ UDC_TARGET="11201000.usb0"
 MODULE_PATH="/lib/modules/$(uname -r)/kernel/drivers/usb/mtu3/mtu3.ko"
 
 depend() {
-    after bootmisc modules
-    before sshd
+    after bootmisc modules sshd
     provide usb-gadget
 }
 ```
@@ -54,10 +53,14 @@ depend() {
 
 To prevent boot hangs and maintain unattended recovery safety:
 1. **Declare `after bootmisc modules`**: Ensures `configfs` kernel support and required clock/power regulators are enumerated before gadget creation.
-2. **Declare `before sshd`**: Ensures the USB serial interface is available concurrently with or slightly before remote SSH access.
-3. **Strict Non-Blocking Invariant**:
+2. **Declare `after sshd` (Strict Non-Delay Invariant)**:
+   - The service must **never** declare `before sshd`. SSH is Lynx's primary recovery route, so USB gadget startup must never precede or delay `sshd`.
+   - By starting `after sshd`, remote SSH access on port 2222 is fully active and listening before USB gadget initialization begins.
+3. **Bounded Execution Timeouts**:
+   - Both driver insertion (`modprobe mtu3` / `insmod`) and UDC binding are wrapped with explicit bounds (`/bin/busybox timeout -t 5` and `timeout -t 3`). If the MTU3 controller or ConfigFS hangs, the operation aborts within seconds rather than locking PID 1.
+4. **Decoupled from Wi-Fi**:
    - The service must **never** declare `need net` or `need lynx-wifi`. USB serial is a local hardware transport and must remain completely decoupled from Wi-Fi networking.
-   - If `mtu3.ko` fails to load, `configfs` cannot be mounted, or UDC binding fails, the service emits warnings (`ewarn`) and exits cleanly (`return 0` soft-fail). It must **never** fail with a blocking exit code that halts OpenRC runlevel execution or delays `sshd`.
+   - If `mtu3.ko` fails to load, `configfs` cannot be mounted, or UDC binding fails, the service emits warnings (`ewarn`) and exits cleanly (`return 0` soft-fail). It must **never** fail with a blocking exit code that halts OpenRC runlevel execution.
    - Wi-Fi SSH (`192.168.100.107:2222`) remains the primary, uncompromised recovery lifeline.
 
 ---
@@ -109,14 +112,14 @@ If an unattended reboot or hardware test indicates USB instability:
 ## 7. Offline Tooling and Test Verification
 
 - **Validator Tool**: [`lynx/tools/usb/lynx_usb_boot_persistence.py`](file:///noobia/lynx/tools/usb/lynx_usb_boot_persistence.py)
-  - Audits OpenRC init scripts for shebang, dependency structure, ordering invariants, disable switch checks, and teardown commands.
+  - Audits OpenRC init scripts for shebang, dependency structure, ordering invariants (strictly rejecting `before sshd` and requiring `after sshd`), bounded execution timeouts, disable switch checks, and teardown commands.
   - Classifies system telemetry into `PERSISTENT_ENABLED`, `PERSISTENT_DISABLED_SWITCH`, `RUNTIME_ONLY`, `UNCONFIGURED`, and `INVALID_ORDERING`.
-- **Unit Test Suite**: [`lynx/tools/usb/test_lynx_usb_boot_persistence.py`](file:///noobia/lynx/tools/usb/test_lynx_usb_boot_persistence.py) (13 tests).
+- **Unit Test Suite**: [`lynx/tools/usb/test_lynx_usb_boot_persistence.py`](file:///noobia/lynx/tools/usb/test_lynx_usb_boot_persistence.py) (15 tests).
 - **Test Fixture Matrix**:
-  - `boot-persistence-valid-enabled.json`: Service enabled, ordering valid, UDC bound.
+  - `boot-persistence-valid-enabled.json`: Service enabled, ordering valid (`after sshd`), UDC bound.
   - `boot-persistence-disabled-switch.json`: Service enabled in runlevel but inhibited by switch.
   - `boot-persistence-invalid-ordering.json`: Service ordering violates dependency safety.
   - `boot-persistence-runtime-only.json`: Gadget active in runtime without runlevel installation.
   - `boot-persistence-unconfigured.json`: Quiescent baseline state.
 
-All 30 unit tests across the USB suite pass with 100% offline determinism.
+All 32 unit tests across the USB suite pass with 100% offline determinism.

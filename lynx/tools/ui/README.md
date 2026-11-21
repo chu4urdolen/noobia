@@ -214,13 +214,48 @@ lynx/tools/ui/lynx_catalog_diff.py --fail-on-drift   # exit 2 on drift
 
 It never syncs or writes. 2026-11-21 00:10 UTC: IN SYNC, 38/38.
 
+## Accessibility (`check_board_a11y.py`)
+
+The checker runs in a real browser, in light and dark mode at 1200 px and
+390 px wide. It measures:
+- WCAG contrast of every text element;
+- the heading outline;
+- landmarks;
+- Tab order and whether focus is visible;
+- horizontal overflow;
+- forbidden or remote elements.
+
+It exits 1 on any failure and checks only the page, never hardware.
+
+```sh
+PLAYWRIGHT_BROWSERS_PATH=$NOOBIA/common/runtime/playwright \
+  $NOOBIA/common/runtime/web-venv/bin/python lynx/tools/ui/check_board_a11y.py BOARD.html
+```
+
+Fixed on 2026-11-21, after the audit:
+- Cards were bare `div`s. They are now list items in labelled `section`s,
+  with spoken tool counts.
+- Badges were an unlabelled run of words. Hidden labels now read "Effect",
+  "Phone state", "Install", and "Human check".
+- The footer sat inside `main`. It is now outside.
+- The page had nothing to focus. An in-page section `nav` now has a visible
+  3 px focus ring.
+- On a stale page, every state badge now says "(as captured)".
+- The green badge contrast went from 4.63:1 to at least 5.24:1, with muted
+  text darkened.
+
+Result on the live board and a 5-hour-stale rendering: no failures in all 4
+views. Minimum contrast is 5.24:1 in light mode and 6.2:1 in dark. All 13
+links are reached by Tab with visible focus. No overflow at 390 px. There is
+still no script, form, button, input, or remote asset.
+
 ## Tests
 
 ```sh
 python3 -m unittest discover -s lynx/tools/ui -p 'test_*.py'
 ```
 
-These 76 tests are all offline. Status fixtures come from the real
+These 83 tests are all offline. Status fixtures come from the real
 `inventory()` functions run over temporary directory trees, and the broker
 uses a fake runner.
 
@@ -240,6 +275,10 @@ uses a fake runner.
 - **Catalog diff:** 38/38 unchanged, partial catalog, phone-only tools,
   hostile names, duplicate keys and lines, bounded deterministic output, exit
   codes, and no file contents.
+- **Board structure:** one h1 and no skipped heading levels, landmarks,
+  footer outside `main`, cards as list items in labelled sections, in-page
+  links only, spoken badge labels, and "(as captured)" on every known state
+  when stale.
 - **Coverage:** companion rules, missing tools, the different not-ready
   causes, drift, keeping attended evidence separate, and JSON output that
   repeats exactly for the same input.

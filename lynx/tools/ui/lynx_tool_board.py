@@ -49,8 +49,8 @@ INSTALL_LABEL = {
 }
 
 CSS = """
-:root{--bg:#f6f5f2;--card:#fff;--ink:#1d2024;--muted:#5d646d;--line:#dcdad4;
---ok:#1f7a4d;--ok-bg:#e3f3ea;--warn:#8a5a00;--warn-bg:#fbf0d9;--bad:#a2312b;
+:root{--bg:#f6f5f2;--card:#fff;--ink:#1d2024;--muted:#525960;--line:#dcdad4;
+--ok:#14603b;--ok-bg:#e3f3ea;--warn:#8a5a00;--warn-bg:#fbf0d9;--bad:#a2312b;
 --bad-bg:#f9e3e1;--na:#555c66;--na-bg:#eceef1;--act:#6b3fa0;--act-bg:#efe7f8;--hum:#1f5f99;--hum-bg:#e2eefa}
 @media (prefers-color-scheme:dark){:root{--bg:#15171a;--card:#1e2125;--ink:#e8e6e1;
 --muted:#9aa1aa;--line:#33373d;--ok:#6fd3a0;--ok-bg:#183326;--warn:#f0c46a;
@@ -85,7 +85,14 @@ overflow-wrap:anywhere}
 .attended{border-left:3px solid var(--hum);padding-left:8px}
 .evidence{background:var(--card);border:1px solid var(--line);border-radius:10px;
 padding:12px;margin-bottom:8px}.evidence p{margin:4px 0;font-size:13.5px}
-footer{margin-top:32px;color:var(--muted);font-size:13px}
+footer{max-width:1100px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font-size:13px}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;
+clip:rect(0 0 0 0);white-space:nowrap;border:0}
+ul.chips,ul.grid,ul.evidence-list,nav ul{list-style:none;margin:0;padding:0}
+nav ul{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px}
+a{color:var(--hum);text-underline-offset:2px}
+a:focus-visible{outline:3px solid var(--ink);outline-offset:2px;border-radius:3px}
+.asof{font-style:italic}
 """
 
 
@@ -93,21 +100,27 @@ def esc(value):
     return html.escape(str(value), quote=True)
 
 
-def card(tool, attended=None):
+def card(tool, attended=None, current=True):
     live = tool.get("live", {"state": "unknown"})
     state = live["state"]
     installed = tool.get("installed", "unknown")
     where = (f"{tool['status_source']}/{tool['component']}"
              if tool["status_source"] and tool["component"] != "*" else None)
+    asof = ("" if current or state in ("unknown", "summary")
+            else ' <span class="asof">(as captured)</span>')
     badges = [
-        f'<span class="badge e-{esc(tool["effect"])}">{esc(EFFECT_LABEL[tool["effect"]])}</span>',
-        f'<span class="badge s-{esc(state)}">{esc(STATE_LABEL.get(state, state))}</span>',
-        f'<span class="badge i-{esc(installed)}">{esc(INSTALL_LABEL.get(installed, installed))}</span>',
+        f'<span class="badge e-{esc(tool["effect"])}"><span class="sr">Effect: </span>'
+        f'{esc(EFFECT_LABEL[tool["effect"]])}</span>',
+        f'<span class="badge s-{esc(state)}"><span class="sr">Phone state: </span>'
+        f'{esc(STATE_LABEL.get(state, state))}{asof}</span>',
+        f'<span class="badge i-{esc(installed)}"><span class="sr">Install: </span>'
+        f'{esc(INSTALL_LABEL.get(installed, installed))}</span>',
     ]
     if tool.get("attended"):
-        badges.append('<span class="badge h-attended">attended</span>')
+        badges.append('<span class="badge h-attended"><span class="sr">Human check: </span>'
+                      'attended</span>')
     desc = tool["description"].removeprefix("Entity: Lynx. ")
-    parts = [f'<div class="card" data-tool="{esc(tool["name"])}">',
+    parts = [f'<li class="card" data-tool="{esc(tool["name"])}">',
              f'<h3>{esc(tool["name"])}</h3>',
              f'<div class="badges">{"".join(badges)}</div>',
              f"<p>{esc(desc)}</p>"]
@@ -127,7 +140,7 @@ def card(tool, attended=None):
         meta.append("inputs: " + ", ".join(tool["inputs"]))
     if where:
         meta.append(f"status: {where}")
-    parts.append(f'<p class="meta">{esc(" · ".join(meta))}</p></div>')
+    parts.append(f'<p class="meta">{esc(" · ".join(meta))}</p></li>')
     return "".join(parts)
 
 
@@ -137,7 +150,7 @@ def render(manifest, now=None):
     out = ["<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">",
            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">",
            "<title>Lynx Tool Board</title>", f"<style>{CSS}</style></head><body><main>",
-           "<h1>Lynx tool board</h1>"]
+           "<header><h1>Lynx tool board</h1>"]
     fresh = age_mod.freshness(snap, now) if snap else None
     if snap:
         boot = fresh["boot_id"] or "unknown"
@@ -162,40 +175,48 @@ def render(manifest, now=None):
                        f'{esc(json.dumps(drift))}'
                        + (f"; installed only on phone: {esc(extra)}" if extra else "")
                        + "</div>")
-        heading = ("Hardware components" if fresh["current"]
-                   else "Hardware components (as captured, not current)")
-        out.append(f"<h2>{esc(heading)}</h2><div class=\"chips\">")
-        for name, state in snap["components"].items():
-            out.append(f'<span class="chip s-{esc(state)}">{esc(name.split("/", 1)[1])}: '
-                       f'{esc(STATE_LABEL.get(state, state))}</span>')
-        out.append("</div>")
     else:
         out.append('<p class="sub">No status snapshot: every live state is unknown.</p>')
-    out.append('<p class="legend">The chips above and each card\'s first state '
+    out.append("</header>")
+    attended = {e["id"]: e for e in manifest.get("attended_evidence", [])}
+    by_group = {}
+    for tool in manifest["tools"]:
+        by_group.setdefault(tool["group"], []).append(tool)
+    sections = [(key, title, by_group.pop(key)) for key, title in GROUPS if key in by_group]
+    sections += [(key, key, tools) for key, tools in sorted(by_group.items())]
+    links = ([("components", "Hardware components")] if snap else [])
+    links += [(f"g-{key}", title) for key, title, _ in sections]
+    links += [("attended", "Attended confirmations")] if attended else []
+    out.append('<nav aria-label="Sections"><ul>' + "".join(
+        f'<li><a href="#{esc(ident)}">{esc(title)}</a></li>' for ident, title in links)
+        + "</ul></nav>")
+    current = bool(fresh and fresh["current"])
+    if snap:
+        heading = ("Hardware components" if current
+                   else "Hardware components (as captured, not current)")
+        out.append(f'<section aria-labelledby="components"><h2 id="components">{esc(heading)}</h2>'
+                   '<ul class="chips" aria-label="Phone-reported component states">')
+        for name, state in snap["components"].items():
+            out.append(f'<li class="chip s-{esc(state)}">{esc(name.split("/", 1)[1])}: '
+                       f'{esc(STATE_LABEL.get(state, state))}</li>')
+        out.append("</ul></section>")
+    out.append('<p class="legend">The component chips and each card\'s first state '
                'badge come only from Lynx\'s own status code. “Present, unproven” '
                'means the kernel interface exists but the phone\'s code does not '
                'claim a tested function. A blue “attended” badge is separate: a '
                'person confirmed one specific function once, with a receipt. It '
                'does not change the phone-reported state and may not hold on '
                'the current boot.</p>')
-    attended = {e["id"]: e for e in manifest.get("attended_evidence", [])}
-    by_group = {}
-    for tool in manifest["tools"]:
-        by_group.setdefault(tool["group"], []).append(tool)
-    for key, title in GROUPS:
-        tools = by_group.pop(key, [])
-        if tools:
-            out.append(f"<h2>{esc(title)}</h2><div class=\"grid\">")
-            out.extend(card(tool, attended) for tool in tools)
-            out.append("</div>")
-    for key, tools in sorted(by_group.items()):
-        out.append(f"<h2>{esc(key)}</h2><div class=\"grid\">")
-        out.extend(card(tool, attended) for tool in tools)
-        out.append("</div>")
+    for key, title, tools in sections:
+        count = f"{len(tools)} tool" + ("s" if len(tools) != 1 else "")
+        out.append(f'<section aria-labelledby="g-{esc(key)}"><h2 id="g-{esc(key)}">{esc(title)}'
+                   f' <span class="sr">({count})</span></h2><ul class="grid">')
+        out.extend(card(tool, attended, current) for tool in tools)
+        out.append("</ul></section>")
     if attended:
-        out.append("<h2>Attended confirmations</h2>"
+        out.append('<section aria-labelledby="attended"><h2 id="attended">Attended confirmations</h2>'
                    '<p class="legend">Human observations of one function each, '
-                   "kept apart from phone-reported validation.</p>")
+                   'kept apart from phone-reported validation.</p><ul class="evidence-list">')
         for entry in attended.values():
             component = entry["component"].split("/", 1)[1]
             boot = f" · boot {entry['boot']}" if entry.get("boot") else ""
@@ -207,7 +228,7 @@ def render(manifest, now=None):
                 "boot_not_recorded": "Boot not recorded; may not hold now.",
                 "snapshot_boot_unknown": "Snapshot boot unknown; may not hold now.",
             }[relation]
-            out.append('<div class="evidence">'
+            out.append('<li class="evidence">'
                        f'<p><span class="badge h-attended">{esc(component)}</span> '
                        f'{esc(entry["date"])} · {esc(entry["observer"])}{esc(boot)}</p>'
                        f'<p>{esc(entry["claim"])}</p>'
@@ -216,10 +237,12 @@ def render(manifest, now=None):
                        f'<p class="meta">Receipts: {esc("; ".join(entry["receipts"]))}</p>'
                        f'<p class="meta" data-boot-relation="{esc(relation)}">'
                        f'{esc(relation_text)}</p>'
-                       "</div>")
+                       "</li>")
+        out.append("</ul></section>")
+    out.append("</main>")
     out.append(f"<footer>Rendered {esc(now.strftime('%Y-%m-%d %H:%M:%S UTC'))} by "
                "lynx/tools/ui/lynx_tool_board.py. This page cannot act on Lynx.</footer>")
-    out.append("</main></body></html>\n")
+    out.append("</body></html>\n")
     return "".join(out)
 
 

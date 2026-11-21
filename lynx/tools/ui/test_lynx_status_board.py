@@ -171,14 +171,14 @@ class BoardTest(unittest.TestCase):
         with TemporaryDirectory() as temp:
             page = self.render_with(snap.capture(FakeLynx(Path(temp)), NOW))
         self.assertIn("haptic: present, unproven", page)
-        self.assertIn("<h2>Attended confirmations</h2>", page)
-        self.assertEqual(page.count('<div class="evidence">'), 5)
-        haptic = page.split('data-tool="lynx_haptic_pulse"')[1].split('<div class="card"')[0]
+        self.assertIn('<h2 id="attended">Attended confirmations</h2>', page)
+        self.assertEqual(page.count('<li class="evidence"'), 5)
+        haptic = page.split('data-tool="lynx_haptic_pulse"')[1].split('<li class="card"')[0]
         self.assertIn("s-interface_only", haptic)
         self.assertIn("h-attended", haptic)
-        touch = page.split('data-tool="lynx_touch_status"')[1].split('<div class="card"')[0]
+        touch = page.split('data-tool="lynx_touch_status"')[1].split('<li class="card"')[0]
         self.assertNotIn("h-attended", touch)
-        chips = page.split('<div class="chips">')[1].split("</div>")[0]
+        chips = page.split('<ul class="chips"')[1].split("</ul>")[0]
         self.assertNotIn("attended", chips)
 
     def test_board_escapes_snapshot_text(self):

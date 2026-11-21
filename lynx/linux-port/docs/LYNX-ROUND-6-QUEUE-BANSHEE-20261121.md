@@ -79,7 +79,55 @@ Work in order, one commit and one forge note per item. Banshee will review each 
 
 ---
 
-## 2. Review Protocol (Banshee Reviewing)
+## 2. Round 6 Queue for Banshee
+
+Banshee executes items B16 through B20 in order, alongside reviewing Dushich's landings.
+
+### Item B16: Cellular Modem Subsystem Directory & Preflight Architecture
+- **Objective:** Package the standalone CCCI modem preflight gate into a standard tool directory with hermetic fixtures and complete architecture documentation.
+- **Directory:** `lynx/tools/modem/`
+- **Details:**
+  - Relocate/package `lynx_modem_preflight.py` and `test_lynx_modem_preflight.py` into `lynx/tools/modem/`.
+  - Add hermetic test fixtures in `lynx/tools/modem/fixtures/` (`modem-ready-status.json`, `modem-sim-inserted-blocked.json`, `modem-md1-booting.json`).
+  - Whitelist `lynx/tools/modem/` in `lynx/.gitignore`.
+  - Author design document `LYNX-MODEM-CCCI-PREFLIGHT-20261121.md` documenting MT6983 MD1 modem architecture, CCCI character devices (`/dev/ccci_ioctl0..4`, `/dev/ccci_md1_sta`, `/dev/ccci_fs`, `/dev/ccci_rpc`, `/dev/ttyC0`), stock partition verification (`md1img` SHA-256 `7cf648e7...`, `ccci_mdinit` SHA-256 `a288eb33...`), SIM removal safety gate, and baseline `md1:0` INVALID state verification. Zero RF emissions, zero boot attempts.
+
+### Item B17: Audio Smart Amplifier (NXP TFA9874) Preflight & Register Map
+- **Objective:** Establish the hardware dependency map and preflight validator for the Nord 3 stereo smart amplifiers.
+- **Directory:** `lynx/tools/audio/`
+- **Details:**
+  - Map dual stereo NXP TFA9874 smart amplifiers from `oplus6983_22823.dts` (`tfa_channel = <1>`, `tfa_low_pressure = <1>`) and `mt6983-mt6338.c`: I2C bus nodes, reset GPIOs, TDM/I2S DAI interfaces, and ALSA kcontrol gain staging.
+  - Build `lynx_audio_amp_preflight.py` with double-gated read-only live collector (`--live --allow-live`).
+  - Add fixtures, unit tests in `test_lynx_audio_amp_preflight.py`, and documentation `LYNX-AUDIO-TFA9874-AMP-PREFLIGHT-20261121.md`.
+  - Pure offline inspection; zero audio test beeps, zero DAC unmute.
+
+### Item B18: Fast Charging & Charger Sub-PMIC (MT6375 / BQ28Z610) Telemetry Map & Preflight
+- **Objective:** Establish the preflight gate and telemetry model for the 80W SuperVOOC / USB PD charging subsystem.
+- **Directory:** `lynx/tools/charger/`
+- **Details:**
+  - Map MT6375 sub-PMIC charger (`11e01000.i2c:mt6375@34:chg`), BQ28Z610 gas gauge (`7-0055/battery_snapshot`), and charge pump nodes.
+  - Model fast charging power negotiation states (Standard BC1.2 / USB PD / VOOC / SuperVOOC) and thermal throttling safety cutoff ($> 45^\circ\text{C}$).
+  - Build `lynx_charger_preflight.py` with double-gated read-only live collector (`--live --allow-live`).
+  - Add fixtures, unit tests in `test_lynx_charger_preflight.py`, and documentation `LYNX-CHARGER-SUPERVOOC-PREFLIGHT-20261121.md`.
+
+### Item B19: USB-C DisplayPort Alternate Mode & Redriver Preflight Gate
+- **Objective:** Establish the preflight gate for USB Type-C DisplayPort Alternate Mode video output.
+- **Directory:** `lynx/tools/usb_dp/`
+- **Details:**
+  - Map Parade Technologies PS5170 Type-C DP mux/redriver (`&ps5170`) and `&usb_dp_selector` from `oplus6983_22823.dts`.
+  - Model DP HPD (Hot Plug Detect), lane crossbar assignment (Pin Assignment C / D), and TCPC mode switching.
+  - Build `lynx_usb_dp_preflight.py` with fixtures, unit tests in `test_lynx_usb_dp_preflight.py`, and documentation `LYNX-USB-DP-ALTMODE-PREFLIGHT-20261121.md`.
+
+### Item B20: Low-Power Island (SCP / LPM) Architecture & Subsystem State Preflight
+- **Objective:** Establish the hardware map and preflight validator for the MediaTek System Companion Processor (SCP / TinySys) and Low Power Module (LPM).
+- **Directory:** `lynx/tools/lpm/`
+- **Details:**
+  - Map `mtk_lpm` and `scp` nodes from `mt6983.dts`: resource controls (`bus26m`, `syspll`, `dram_s0/s1`), low-power states (`mcusysoff`, `system_mem`, `system_pll`, `system_bus`), and wake IRQ masks.
+  - Build `lynx_lpm_preflight.py` with fixtures, unit tests in `test_lynx_lpm_preflight.py`, and documentation `LYNX-LPM-SCP-PREFLIGHT-20261121.md`.
+
+---
+
+## 3. Review Protocol (Banshee Reviewing)
 
 For each commit D15–D20 landed by Dushich:
 1. **Clean Clone Verification:** Verify all tests pass in a clean clone (`git clone --no-local /noobia`).

@@ -110,11 +110,16 @@ def run_job(queue, job_id, prompt):
         queue.finish(job_id, ok, text or ('Agent stopped' if stopping else 'No response'))
         print(json.dumps({'event': 'job_finished', 'job_id': job_id, 'ok': ok}), flush=True)
         if ok and text:
+            clean_text = text.strip()
+            try:
+                Path('/var/lib/noobia/lynx_thought.txt').write_text(clean_text, encoding='utf-8')
+            except Exception:
+                pass
             try:
                 payload = json.dumps({
                     "host": "lynx",
                     "job_id": job_id,
-                    "text": text.strip(),
+                    "text": clean_text,
                     "t": time.time(),
                 }).encode("utf-8")
                 req = urllib.request.Request(

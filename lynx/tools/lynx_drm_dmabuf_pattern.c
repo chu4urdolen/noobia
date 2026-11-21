@@ -34,6 +34,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/un.h>
 #include <time.h>
@@ -55,6 +56,8 @@
 #define SELECTION_FILE "/var/lib/lynx-display/selection"
 #define CONSOLE_SNAPSHOT "/run/lynx-console/snapshot.txt"
 #define CONSOLE_SOCKET "/run/lynx-console/control.sock"
+#define THOUGHT_FILE "/var/lib/noobia/lynx_thought.txt"
+#define HEARING_ENABLED_FILE "/var/lib/noobia/senses/hearing/enabled"
 #define MAX_SCENE_FRAMES 64
 
 static volatile sig_atomic_t stop_requested;
@@ -881,6 +884,142 @@ static void status_item(uint32_t *pixels, unsigned int column,
 	draw_text(pixels, value, x, y + 72, 6, 0x00f5f8fa);
 }
 
+static time_t get_thought_mtime(void)
+{
+	struct stat st;
+	if (stat(THOUGHT_FILE, &st) == 0)
+		return st.st_mtime;
+	return 0;
+}
+
+static int read_hearing_enabled(void)
+{
+	FILE *f = fopen(HEARING_ENABLED_FILE, "r");
+	if (!f)
+		return 0;
+	char buf[16] = {0};
+	int val = 0;
+	if (fgets(buf, sizeof(buf), f)) {
+		if (buf[0] == '1' || buf[0] == 't' || buf[0] == 'T' || buf[0] == 'y' || buf[0] == 'Y')
+			val = 1;
+	}
+	fclose(f);
+	return val;
+}
+
+static void toggle_hearing(void)
+{
+	int current = read_hearing_enabled();
+	int new_state = current ? 0 : 1;
+	FILE *f = fopen(HEARING_ENABLED_FILE, "w");
+	if (f) {
+		fprintf(f, "%d\n", new_state);
+		fclose(f);
+	}
+	/* Notify Nexus LAN endpoint in background asynchronously */
+	pid_t pid = fork();
+	if (pid == 0) {
+		int devnull = open("/dev/null", O_RDWR);
+		if (devnull >= 0) {
+			dup2(devnull, STDIN_FILENO);
+			dup2(devnull, STDOUT_FILENO);
+			dup2(devnull, STDERR_FILENO);
+			close(devnull);
+		}
+		execl("/usr/bin/python3", "python3", "-c",
+		      "import urllib.request\n"
+		      "try:\n"
+		      "    req = urllib.request.Request('http://192.168.100.106:112/api/v1/hearing/toggle', method='POST')\n"
+		      "    urllib.request.urlopen(req, timeout=1)\n"
+		      "except Exception:\n"
+		      "    pass\n",
+		      (char *)NULL);
+		_exit(0);
+	}
+}
+
+static void paint_thoughts(uint32_t *pixels)
+{
+	const uint32_t dark = 0x00121c29, teal = 0x0009dcc4;
+	const uint32_t white = 0x00f5f8fa, muted = 0x007d94a5;
+
+	/* Container box: x=50..1190, y=2050..2340 (height 290) */
+	rectangle(pixels, 50, 2050, 1140, 290, dark);
+	rectangle(pixels, 50, 2050, 1140, 4, teal);
+	draw_text(pixels, "THOUGHTS", 75, 2065, 5, teal);
+
+	FILE *f = fopen(THOUGHT_FILE, "r");
+	char content[512] = {0};
+	size_t n = 0;
+	if (f) {
+		n = fread(content, 1, sizeof(content) - 1, f);
+		fclose(f);
+	}
+
+	if (n == 0) {
+		draw_text(pixels, "(listening and waiting...)", 75, 2125, 5, muted);
+		return;
+	}
+
+	for (size_t i = 0; i < n; i++) {
+		if (content[i] == '\r' || content[i] == '\n')
+			content[i] = ' ';
+	}
+	char *start = content;
+	while (*start == ' ')
+		start++;
+	if (!*start) {
+		draw_text(pixels, "(listening and waiting...)", 75, 2125, 5, muted);
+		return;
+	}
+
+	/* Word wrap up to 3 lines with 36 chars each */
+	unsigned int y = 2125;
+	char *cursor = start;
+	for (int line = 0; line < 3 && *cursor; line++) {
+		char line_buf[40] = {0};
+		size_t len = strlen(cursor);
+		if (len <= 36) {
+			snprintf(line_buf, sizeof(line_buf), "%s", cursor);
+			cursor += len;
+		} else {
+			int split = 36;
+			while (split > 0 && cursor[split] != ' ')
+				split--;
+			if (split <= 0)
+				split = 36;
+			memcpy(line_buf, cursor, (size_t)split);
+			line_buf[split] = '\0';
+			cursor += split;
+			while (*cursor == ' ')
+				cursor++;
+		}
+		draw_text(pixels, line_buf, 75, y, 5, white);
+		y += 60;
+	}
+}
+
+static void paint_hearing_button(uint32_t *pixels)
+{
+	int on = read_hearing_enabled();
+	const uint32_t bg = on ? 0x001a7042 : 0x002c3844;
+	const uint32_t border = on ? 0x002aa860 : 0x00455566;
+	const uint32_t white = 0x00f5f8fa;
+
+	/* Button area: x=50..1190, y=2360..2490 (height 130) */
+	rectangle(pixels, 50, 2360, 1140, 130, bg);
+	rectangle(pixels, 50, 2360, 1140, 4, border);
+	rectangle(pixels, 50, 2486, 1140, 4, border);
+	rectangle(pixels, 50, 2360, 4, 130, border);
+	rectangle(pixels, 1186, 2360, 4, 130, border);
+
+	if (on) {
+		draw_text(pixels, "HEARING: ON (LISTENING)", 206, 2405, 6, white);
+	} else {
+		draw_text(pixels, "HEARING: OFF (TAP TO LISTEN)", 116, 2405, 6, white);
+	}
+}
+
 static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 			   const char *pose, int capacity)
 {
@@ -890,6 +1029,8 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 	if (page == PAGE_HOME) {
 		if (paint_lynx_portrait(pixels, pose, capacity) < 0)
 			return -1;
+		paint_thoughts(pixels);
+		paint_hearing_button(pixels);
 		nav_buttons(pixels, page);
 		return 0;
 	}
@@ -1370,6 +1511,8 @@ static int run(const char *action, unsigned int seconds)
 	uint64_t last_battery_poll = 0;
 	uint64_t last_page_refresh = 0;
 	unsigned int shown_console_sequence = 0;
+	time_t shown_thought_mtime = 0;
+	int shown_hearing_on = -1;
 	time_t shown_minute = 0;
 	enum lynx_page page = PAGE_HOME;
 	struct touch_state touch_state = { 0 };
@@ -1594,6 +1737,13 @@ static int run(const char *action, unsigned int seconds)
 							else if (x >= 645 && x < 1190)
 								target = page == PAGE_STATUS ?
 									 PAGE_HOME : PAGE_STATUS;
+						} else if (page == PAGE_HOME &&
+							   y >= 2360 && y < 2490 &&
+							   x >= 50 && x < 1190) {
+							toggle_hearing();
+							page_changed = true;
+							printf("hearing_toggled\n");
+							fflush(stdout);
 						} else if (page == PAGE_CONSOLE &&
 							   y >= 450 && y < 2450) {
 							console_key((unsigned int)x, (unsigned int)y);
@@ -1655,8 +1805,15 @@ static int run(const char *action, unsigned int seconds)
 				console_sequence() : 0;
 			bool console_refresh = portrait && page == PAGE_CONSOLE && lit &&
 				console_seq != shown_console_sequence;
+			time_t thought_mtime = get_thought_mtime();
+			bool thought_refresh = portrait && page == PAGE_HOME && lit &&
+				thought_mtime != shown_thought_mtime;
+			int hearing_on = read_hearing_enabled();
+			bool hearing_refresh = portrait && page == PAGE_HOME && lit &&
+				hearing_on != shown_hearing_on;
 			if (capacity == shown_capacity && (!portrait ||
 			    (!page_changed && !status_refresh && !console_refresh &&
+			     !thought_refresh && !hearing_refresh &&
 			     (page != PAGE_HOME ||
 			      (next_frame == shown_frame && minute == shown_minute &&
 			       scene_result != 1)))))
@@ -1689,6 +1846,8 @@ static int run(const char *action, unsigned int seconds)
 			shown_capacity = capacity;
 			shown_frame = next_frame;
 			shown_minute = minute;
+			shown_thought_mtime = thought_mtime;
+			shown_hearing_on = hearing_on;
 			page_changed = false;
 			if (page == PAGE_STATUS)
 				last_page_refresh = now_ms;
@@ -1776,6 +1935,8 @@ int main(int argc, char **argv)
 	if (argc == 2 && !strcmp(argv[1], "--self-test-console-keys"))
 		return self_test_console_keys();
 	if (argc == 4 && !strcmp(argv[1], "--preview-page")) {
+		if (!strcmp(argv[2], "home"))
+			return render_preview("", argv[3], PAGE_HOME);
 		if (!strcmp(argv[2], "console"))
 			return render_preview("", argv[3], PAGE_CONSOLE);
 		if (!strcmp(argv[2], "status"))

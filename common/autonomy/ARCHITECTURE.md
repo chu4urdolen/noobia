@@ -355,6 +355,43 @@ She describes the world; she never commands hardware.
 She shares the single-request Qwen queue with Dushich, so the trigger's rate
 limits are what keep her load small.
 
+## 5a. Instinct and conscious action (Tom, 2026-11-21)
+
+**Aigel is the instinct; the Noob is the conscious mind.**
+
+1. **What the senses perceive reaches the Noob.** A real perception (seen,
+   heard, or found on the network and recognized; P≥1; not `cause=self`)
+   always becomes a message. Aigel writes the words; if she judges it quiet
+   or cannot think, the *perception floor* in `aigel_think.py` forwards it
+   anyway. Repeats are held back by the host's learned patterns (cooldown)
+   and the senses' own seen-windows. The floor does not hold them back.
+2. **The Noob always reacts, in its own way.** A `[sense]` job's first model
+   call must use a tool (`tool_choice: "required"`). The Noob chooses which:
+   an image, a sound, its voice, light or a buzz. Then it answers briefly.
+3. **The Noob's own perception is its own.** When the Noob consciously uses a
+   sense, for example taking a picture because it heard something:
+   - the result goes **only to the Noob**, as that tool's output;
+   - it is **never** written to `noobia-sense`, so it never reaches Aigel's
+     chunker;
+   - the Noob's actions are logged only in `noobia-agent`, which the trigger
+     never reads (section 3).
+4. **Shared services are tools, not senses.** The Nexus detector (`:5050`),
+   speech-to-text and text-to-speech can be called consciously by a Noob.
+   Calling them emits no sense line. Only a *sense* (a `lynx/senses/*`
+   process) turns a result into a sense line.
+5. **No hardware collisions.** A device both a sense and the Noob can use,
+   such as the camera or the microphone, has one lock file
+   (`/run/lynx/<device>.lock`, flock).
+   - The Noob's conscious use takes the lock first.
+   - The sense skips its sample while the lock is held, and logs nothing
+     about the Noob's use.
+   - A sense never preempts the Noob.
+
+   Today (2026-11-21) Lynx has no conscious camera or microphone *capture*
+   tool (`lynx_camera` reads status only), and the camera sense S1 is not
+   installed. This rule must be in place, with tests, **before** either one
+   ships.
+
 ## 6. B: the Aigel ↔ agent interface (`agent_link.py`)
 
 **Message** (one JSON object, at most 2 KiB):

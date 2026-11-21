@@ -31,7 +31,7 @@ The task-owned tool [`lynx_usb_collector.py`](file:///noobia/lynx/tools/usb/lynx
 ### 2.1 Evaluated States
 *   `connected`: Phone gadget in mode 3 with active `ttyGS0`, and Nexus host enumerated with active `/dev/ttyACM*` (`cdc_acm`).
 *   `disconnected`: Neither phone nor Nexus has active endpoints (cable unplugged or gadget disabled).
-*   `partial`: 
+*   `partial`:
     *   *Phone only:* Phone gadget configured, but Nexus host has not enumerated.
     *   *Nexus only:* Host has stale device node, but phone gadget is inactive.
 *   `stale_boot`: Observed phone boot ID does not match the pinned session boot ID (`0fe847d2-44d6-4ac1-9000-2c99df1a51d8`).
@@ -59,7 +59,7 @@ A live read-only capture using `/noobia/lynx/tools/usb/lynx_usb_collector.py --l
 
 ### Execution Steps (Attended by Noob):
 1. **Disconnect:** Noob unplugs the USB-C cable from Lynx or Nexus.
-2. **Observe Disconnected State:** 
+2. **Observe Disconnected State:**
    - Nexus: Verify `/dev/ttyACM0` disappears from `/dev/`.
    - Run collector: `python3 /noobia/lynx/tools/usb/lynx_usb_collector.py --live --allow-live` $\rightarrow$ expect `partial` (phone_only) or `disconnected`.
 3. **Wait Window:** Wait 10 seconds.

@@ -34,6 +34,25 @@ local NRP socket for a fixed 80 ms pulse, sends STOP in a `finally` path, and
 verifies OFF. The additive installers are `agent/install_media_agent_tools.py`
 and `agent/install_haptic_agent_tools.py`; no service restart is required.
 
+## Consolidated test-suite runner (D20, 2026-11-21)
+
+`run_all_lynx_tests.py` runs every `test_*.py` suite in this directory and
+its immediate subdirectories in isolated subprocesses (per-suite timeout,
+default 300 s), then scans all tracked `lynx/` files with a
+`git diff --check`-equivalent whitespace gate. It prints a markdown (or
+`--json`) summary with per-suite test counts and wall-clock time. Exit 0
+only when nothing failed and the whitespace scan is clean. Files that collect
+zero unittest tests (the two standalone V47/V48 fixture scripts) are re-run
+directly and judged by their exit code; suites blocked by a missing system
+dependency are reported as `env-blocked` with the missing name (currently
+`test_lynx_ble_gatt_probe` needs `dbus_next`, absent from the system Python)
+and do not fail the default run — use `--strict` on a fully provisioned host.
+The runner also prepends the directory holding `modinfo` (`/usr/sbin` on
+Ubuntu) when it is not already on PATH, so the `modinfo`-using RAM-gate
+suites pass under minimal exec contexts. Conventions (patch/diff and
+Markdown hard-break exemptions) and full evidence:
+[`LYNX-CONSOLIDATED-SUITE-20261121.md`](../linux-port/docs/LYNX-CONSOLIDATED-SUITE-20261121.md).
+
 ## V53 Alpine, V50 recovery, and connectivity
 
 V53 is the current **trial** image: it adds a 30-second shared-radio

@@ -1,0 +1,52 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "device_tree": {
+    "sensor_node_present": true,
+    "paths": [
+      "/sys/firmware/devicetree/base/i2c@11d05000/sensor0@36"
+    ],
+    "sensor_names": [
+      "ov64b_mipi_raw_22823",
+      "imx890_mipi_raw_21871"
+    ]
+  },
+  "phy": {
+    "type": "MIPI_CPHY",
+    "lane_or_trio_count": 3,
+    "mclk_mhz": 24,
+    "seninf_csi_port": 3
+  },
+  "vcm": {
+    "nodes": [
+      "/sys/bus/i2c/devices/8-000a",
+      "/sys/bus/i2c/devices/8-000b",
+      "/sys/bus/i2c/devices/8-000c"
+    ]
+  },
+  "power_sequence": [
+    {"step": 1, "id": "HW_ID_MCLK", "val": 24, "delay_ms": 0, "desc": "MCLK 24 MHz from CAMTG4"},
+    {"step": 2, "id": "HW_ID_RST", "val": 0, "delay_ms": 1, "desc": "RST assert low (GPIO202)"},
+    {"step": 3, "id": "HW_ID_AVDD", "val": 2804000, "delay_ms": 3, "desc": "AVDD 2.804V (multi_reg_ldo3)"},
+    {"step": 4, "id": "HW_ID_AVDD1", "val": 1804000, "delay_ms": 3, "desc": "AVDD1 1.804V (multi_reg_ldo6)"},
+    {"step": 5, "id": "HW_ID_AFVDD", "val": 2804000, "delay_ms": 3, "desc": "AFVDD 2.804V (multi_reg_ldo5)"},
+    {"step": 6, "id": "HW_ID_DVDD", "val": 1, "delay_ms": 4, "desc": "DVDD high (GPIO194 core switch)"},
+    {"step": 7, "id": "HW_ID_DOVDD", "val": 1804000, "delay_ms": 3, "desc": "DOVDD 1.804V (multi_reg_ldo7)"},
+    {"step": 8, "id": "HW_ID_MCLK_DRIVING_CURRENT", "val": 4, "delay_ms": 6, "desc": "MCLK driving current 4mA"},
+    {"step": 9, "id": "HW_ID_RST", "val": 1, "delay_ms": 5, "desc": "RST deassert high (standby ready)"}
+  ],
+  "sysfs_i2c": {
+    "sensor_client_present": true,
+    "sensor_driver_bound": true,
+    "eeprom_present": true
+  },
+  "loaded_modules": [
+    "mtu3",
+    "mtk_cam_plat_util",
+    "mtk_cam_plat_mt6983",
+    "camera_eeprom",
+    "imgsensor",
+    "mtk_cam_isp",
+    "oplus_cam_event_report"
+  ]
+}

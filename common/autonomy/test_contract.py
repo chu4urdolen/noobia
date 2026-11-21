@@ -13,7 +13,8 @@ sense.py
 
 trigger.py
   Chunker(window_s=60, max_lines=15, max_chunk_lines=200, max_bytes=32768,
-          carry_max_lines=200, carry_max_age_s=600, disabled=lambda: False)
+          carry_max_lines=200, carry_max_age_s=600,
+          volume_resets_priority=True, disabled=lambda: False)
     .feed(line, now) -> list[Closed]
     .tick(now)       -> list[Closed]
     .carried         -> list[dict]          # priority lines waiting, in order
@@ -169,20 +170,42 @@ class TriggerContract(unittest.TestCase):
         self.assertEqual(c.tick(60.0), [])
         self.assertEqual(len(c.carried), 1)
 
-    def test_carried_lines_do_not_count_toward_volume(self):
+    def test_volume_sends_everything_and_resets_priority(self):
+        """Noob: a 15+ line chunk goes as it is, priority lines included; counters reset."""
         c = self.t.Chunker()
         for i in range(8):
             c.feed(self.L(9, event=f"c{i}"), i * 0.1)     # 8 of 9 needed: no trigger
-        self.assertEqual(c.tick(60.0), [])                # nothing but P lines: nothing sent
+        self.assertEqual(c.tick(60.0), [])                # only P lines: nothing sent
         self.assertEqual(len(c.carried), 8)
         out = []
         for i in range(15):
             out += c.feed(self.L(0, event=f"n{i}"), 61.0 + i * 0.1)
-        self.assertEqual(out, [])                         # 15 new lines is not "more than 15"
+        self.assertEqual(out, [])                         # carried lines don't count; 15 is not >15
         (closed,) = c.feed(self.L(0, event="n15"), 63.0)
         self.assertEqual(closed["reason"], "volume")
+        self.assertEqual([x["event"] for x in closed["lines"]],
+                         [f"c{i}" for i in range(8)] + [f"n{i}" for i in range(16)])
+        self.assertEqual(c.carried, [])                   # priority counters reset
+
+    def test_volume_carry_mode_is_configurable(self):
+        c = self.t.Chunker(volume_resets_priority=False)
+        for i in range(3):
+            c.feed(self.L(9, event=f"c{i}"), i * 0.1)
+        self.assertEqual(c.tick(60.0), [])                # carried into the next chunk
+        out = []
+        for i in range(16):
+            out += c.feed(self.L(0, event=f"n{i}"), 61.0 + i * 0.1)
+        (closed,) = out
+        self.assertEqual(closed["reason"], "volume")
         self.assertEqual([x["event"] for x in closed["lines"]], [f"n{i}" for i in range(16)])
-        self.assertEqual(len(c.carried), 8)               # volume acts like timeout: P lines carried
+        self.assertEqual([x["event"] for x in c.carried], ["c0", "c1", "c2"])
+
+    def test_max_lines_is_configurable(self):
+        c = self.t.Chunker(max_lines=3)
+        out = []
+        for i in range(4):
+            out += c.feed(self.L(0), i * 0.1)
+        self.assertEqual([x["reason"] for x in out], ["volume"])
 
     def test_self_caused_lines_trigger_nothing_but_travel_as_context(self):
         c = self.t.Chunker()

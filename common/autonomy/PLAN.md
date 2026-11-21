@@ -39,7 +39,7 @@ for Aigel, `lynx` for hardware and installs.
 | E0 | Contract and conformance tests (v0.2) | Gwyn | **done** |
 | E1 | `sense.py` + `common/bin/noobia-sense`: format, parse, emit to syslog or journald under the `noobia-sense` identifier | Banshee | `SenseLineContract` all pass |
 | E2 | `views.py`: journald (`journalctl -t`) and BusyBox-file backends with a fallback, one reader per view | Banshee | own tests plus a live read of Nexus journald, read-only |
-| E3 | `trigger.py`: chunk rules, carry-over, bounds, rates, kill switch | Banshee | `TriggerContract` all pass |
+| E3 | `trigger.py`: chunk rules, carry-over, VOLUME sends as-is and resets (configurable `max_lines`, `volume_resets_priority`, `volume_skips_ranker`), bounds, rates, kill switch | Banshee | `TriggerContract` all pass |
 | E4 | `ranker.py`: structured patterns, store 200 / active 100 (configurable), archive, cooldowns, validator, persistence | Banshee | `RankerContract` all pass |
 | E5 | `route.py`: per-task backends `inference`, `detect`, `stt`, `tts`, in the order Nexus → local → cloud, with health checks, timeouts, a config file re-read on change, and decisions logged to `noobia-autonomy` | Banshee | own tests with fake backends |
 | E6 | `aigel_client.py`: send unexplained chunks to Aigel, receive the decision, patterns and message; authenticated, bounded retries | Banshee | tests against a fake Aigel |

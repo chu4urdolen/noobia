@@ -133,9 +133,15 @@ context, and they do count toward the size limits.
     counting toward its threshold.
   - The rest (`P0` and `cause=self` lines) goes on.
   - If nothing is left after the removal, nothing is sent.
-- **On VOLUME:** treated like TIMEOUT. Priority lines are carried and the
-  rest goes on. *(This is Gwyn's default for a case Noob did not specify;
-  confirm it.)*
+- **On VOLUME** (Noob, 2026-11-21): the chunk is sent **as it is**, with
+  carried and priority lines included and nothing stripped, and the
+  **priority counters reset** (nothing is carried). It goes **straight to
+  Aigel's LLM**, skipping the regex ranker. All three are configurable while
+  we think this through:
+  - `max_lines` (default 15);
+  - `volume_resets_priority` (default `true`; `false` strips and carries
+    priority lines the way TIMEOUT does);
+  - `volume_skips_ranker` (default `true`).
 
 Example (Noob's, and pinned by a test): 10 `P15` lines arrive within 60 s,
 and the chunk closes on TIMEOUT. Its `P0` lines go to the ranker, and the

@@ -296,6 +296,8 @@ def _extract_json(text: str) -> dict | None:
     if not isinstance(text, str):
         return None
     text = text.strip()
+    if "<think>" in text:
+        text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
     if text.startswith("```"):
         text = re.sub(r"^```[a-zA-Z0-9]*\s*", "", text)
         text = re.sub(r"\s*```$", "", text)

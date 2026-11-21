@@ -1,4 +1,4 @@
-"""Unit tests for Noobia log views (task E2)."""
+"""Unit tests for Noobia log views (task E2 / V1 view follower)."""
 
 import os
 from pathlib import Path
@@ -40,6 +40,34 @@ class TestViews(unittest.TestCase):
             if os.path.exists(log_path):
                 os.unlink(log_path)
 
+    def test_read_new_follower(self):
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", delete=False) as tf:
+            tf.write("Nov 21 14:00:00 lynx user.notice noobia-sense: line 1\n")
+            tf.flush()
+            log_path = tf.name
+
+        try:
+            vr = ViewReader("noobia-sense", backend="file", log_file=log_path)
+            # First read gets initial line
+            first = vr.read_new()
+            self.assertEqual(first, ["line 1"])
+
+            # No new lines -> empty list
+            second = vr.read_new()
+            self.assertEqual(second, [])
+
+            # Append new lines
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write("Nov 21 14:00:01 lynx user.notice noobia-sense: line 2\n")
+                f.write("Nov 21 14:00:02 lynx user.notice other-tag: ignored\n")
+                f.write("Nov 21 14:00:03 lynx user.notice noobia-sense: line 3\n")
+
+            third = vr.read_new()
+            self.assertEqual(third, ["line 2", "line 3"])
+        finally:
+            if os.path.exists(log_path):
+                os.unlink(log_path)
+
     def test_parse_syslog_line(self):
         vr = ViewReader("noobia-sense", backend="fallback")
         raw = "Nov 21 14:00:00 lynx user.notice noobia-sense: NOOBIA P1 wifi link.up"
@@ -50,10 +78,8 @@ class TestViews(unittest.TestCase):
         self.assertIsNone(vr.parse_syslog_line(other))
 
     def test_journald_probe_on_nexus(self):
-        # Read-only live test on Nexus journald
         vr = ViewReader("noobia-sense", backend="journald")
         lines = vr.read_recent(5)
-        # Should execute cleanly without raising an exception
         self.assertIsInstance(lines, list)
 
 

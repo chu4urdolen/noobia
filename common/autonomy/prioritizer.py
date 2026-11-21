@@ -1,6 +1,6 @@
 """The prioritizer for Noobia autonomy (ARCHITECTURE.md §2a).
 
-Deliverable A, task E8.
+Deliverable A, task E8. Conforms to PrioritizerContract.
 
 Translates ordinary log messages from allowlisted sources into sense lines:
 - Mapped lines receive configured priority Pn and sense/event.
@@ -27,7 +27,7 @@ DEFAULT_RULES_CAPACITY = 200
 DEFAULT_REPEAT_WINDOW_S = 60.0
 
 
-class PrioritizerError(Exception):
+class PrioritizerError(ValueError):
     pass
 
 
@@ -69,6 +69,8 @@ def validate_rule(rule: dict) -> None:
     text_contains = match.get("text_contains")
     if not isinstance(text_contains, list) or not text_contains:
         raise PrioritizerError("text_contains must be a non-empty list of strings")
+    if any(not isinstance(item, str) or not item for item in text_contains):
+        raise PrioritizerError("text_contains items must be non-empty strings")
 
     emit = rule.get("emit")
     if not isinstance(emit, dict):
@@ -108,21 +110,25 @@ class Prioritizer:
     def __init__(
         self,
         rules: list[dict] | None = None,
-        allowlist: set[str] | list[str] | None = None,
-        rules_capacity: int = DEFAULT_RULES_CAPACITY,
+        sources: list[str] | set[str] | None = None,
         repeat_window_s: float = DEFAULT_REPEAT_WINDOW_S,
+        rules_capacity: int = DEFAULT_RULES_CAPACITY,
+        allowlist: list[str] | set[str] | None = None,
     ):
         self.rules_capacity = int(rules_capacity)
         self.repeat_window_s = float(repeat_window_s)
-        self.allowlist = set(allowlist) if allowlist else {"wpa_supplicant", "kernel", "lynx-bluetoothd"}
 
-        # Validate incoming rules
+        allowed = sources if sources is not None else allowlist
+        self.sources = set(allowed) if allowed is not None else {"wpa_supplicant", "kernel", "lynx-bluetoothd"}
+
+        # Validate incoming rules; reject invalid on load
         self._rules: list[dict] = []
         if rules:
             for r in rules:
                 try:
                     validate_rule(r)
-                    self._rules.append(r)
+                    if len(self._rules) < self.rules_capacity:
+                        self._rules.append(r)
                 except Exception:
                     pass
 
@@ -140,6 +146,9 @@ class Prioritizer:
         rule_id = rule["id"]
 
         existing = next((r for r in self._rules if r.get("id") == rule_id), None)
+        if not existing and len(self._rules) >= self.rules_capacity:
+            raise PrioritizerError(f"rules capacity ({self.rules_capacity}) exceeded")
+
         if revertible:
             self._history.append({"id": rule_id, "prev": existing})
 
@@ -147,11 +156,9 @@ class Prioritizer:
             self._rules.remove(existing)
 
         self._rules.insert(0, rule)
-        if len(self._rules) > self.rules_capacity:
-            self._rules.pop()
 
-    def revert_rule(self, rule_id: str) -> bool:
-        """Revert rule to previous version from history."""
+    def revert(self, rule_id: str) -> bool:
+        """Revert rule to previous version from history (contract method)."""
         for i in range(len(self._history) - 1, -1, -1):
             entry = self._history[i]
             if entry.get("id") == rule_id:
@@ -163,14 +170,16 @@ class Prioritizer:
                 return True
         return False
 
-    def process_line(self, source: str, text: str, now: float) -> str | None:
+    revert_rule = revert
+
+    def process(self, source: str, text: str, now: float) -> str | None:
         """Process one raw log line into a formatted sense line, or None if filtered."""
         # Loop guard: reject any source starting with noobia-
         if not source or source.startswith("noobia-"):
             return None
 
-        # Allowlist filter
-        if source not in self.allowlist:
+        # Sources filter
+        if source not in self.sources:
             return None
 
         # Repeat collapse
@@ -197,7 +206,7 @@ class Prioritizer:
                     text=text,
                 )
 
-        # Unmapped line from allowlisted source -> P0 raw line
+        # Unmapped line from allowed source -> P0 raw line
         return format_line(
             p=0,
             sense="raw",
@@ -205,6 +214,8 @@ class Prioritizer:
             fields={"src": source},
             text=text,
         )
+
+    process_line = process
 
     def save_map(self, path: Path | str) -> None:
         """Save rules atomically to JSON file."""
@@ -220,11 +231,17 @@ class Prioritizer:
         os.replace(temp_name, target)
 
     @classmethod
-    def load_map(cls, path: Path | str, allowlist: set[str] | None = None) -> Prioritizer:
+    def load_map(
+        cls,
+        path: Path | str,
+        sources: list[str] | set[str] | None = None,
+        allowlist: list[str] | set[str] | None = None,
+    ) -> Prioritizer:
         """Load prioritizer from JSON map file."""
         target = Path(path)
+        allowed = sources if sources is not None else allowlist
         if not target.exists():
-            return cls([], allowlist=allowlist)
+            return cls([], sources=allowed)
         with open(target, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return cls(data.get("rules", []), allowlist=allowlist)
+        return cls(data.get("rules", []), sources=allowed)

@@ -263,3 +263,48 @@ class PriorityRuleValidationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class PerceptionFloorTests(unittest.TestCase):
+    """Tom 2026-11-21: what a Noob perceives always reaches the Noob."""
+
+    def decide(self, lines, replies):
+        return AigelThinker(llm=FakeLLM(replies)).decide("lynx", "priority", lines)
+
+    def test_quiet_cat_is_forwarded_with_plain_words(self):
+        d = self.decide(["NOOBIA P1 camera object.seen label=cat conf=0.76 | cat seen by camera"],
+                        [reply("quiet", note="charming but non-diagnostic")])
+        self.assertEqual(d["decision"], "message")
+        self.assertEqual(d["message"], "You perceive: cat seen by camera (76% sure).")
+        self.assertIn("perception floor", d["note"])
+
+    def test_aigels_own_words_are_kept(self):
+        d = self.decide(["NOOBIA P1 camera object.seen label=cat conf=0.76 | cat seen by camera"],
+                        [reply("message", message="A cat wandered into your view.")])
+        self.assertEqual(d["message"], "A cat wandered into your view.")
+        self.assertNotIn("perception floor", d["note"])
+
+    def test_heard_and_network_perceptions_count(self):
+        d = self.decide(["NOOBIA P1 audio speech.heard lang=en | hello Lynx",
+                         "NOOBIA P2 network device.new name=rose | Rose joined the network"],
+                        [reply("quiet")])
+        self.assertEqual(d["decision"], "message")
+        self.assertIn("hello Lynx", d["message"])
+        self.assertIn("Rose joined the network", d["message"])
+
+    def test_non_perceptions_stay_with_the_thinker(self):
+        for line in ("NOOBIA P1 autonomy install.test | IS-2 link check",
+                     "NOOBIA P0 camera object.seen label=cat conf=0.9",          # P0 sample
+                     "NOOBIA P0 camera frame.analyzed objects=0",
+                     "NOOBIA P1 camera object.seen label=cat cause=self | my own picture",
+                     "NOOBIA P1 wifi link.down iface=wlan0"):
+            d = self.decide([line], [reply("quiet")])
+            self.assertEqual(d["decision"], "quiet", line)
+
+    def test_floor_holds_when_qwen_is_down(self):
+        d = self.decide(["NOOBIA P1 camera object.seen label=dog conf=0.83"],
+                        [QwenError("down"), QwenError("down")])
+        self.assertEqual(d["decision"], "message")
+        self.assertIn("dog", d["message"])
+        self.assertIn("83% sure", d["message"])
+

@@ -229,6 +229,19 @@ class DecisionTests(IntakeServerCase):
         body = json.dumps({"host": "lynx", "chunk_reason": "TIMEOUT", "lines": LINES}).encode()
         code, obj = self.signed_post("/api/v1/chunk", body)
         self.assertEqual(code, 200)
+        # LINES is a cat perception: the floor still forwards it with Qwen down.
+        self.assertEqual(obj["decision"], "message")
+        self.assertIn("cat", obj["message"])
+        self.assertIn("unavailable", obj["note"])
+
+    def test_llm_down_non_perception_stays_quiet(self):
+        self.thinker = AigelThinker(llm=FakeLLM([QwenError("ollama unreachable")]))
+        self.intake = AigelIntake(self.thinker, self.hosts, log=self.log, state_file=self.state_file)
+        self.restart_server(self.intake)
+        body = json.dumps({"host": "lynx", "chunk_reason": "TIMEOUT",
+                           "lines": ["NOOBIA P1 wifi rssi.low dbm=-80"]}).encode()
+        code, obj = self.signed_post("/api/v1/chunk", body)
+        self.assertEqual(code, 200)
         self.assertEqual(obj["decision"], "quiet")
         self.assertIn("unavailable", obj["note"])
 

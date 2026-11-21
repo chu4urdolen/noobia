@@ -25,6 +25,12 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys as _sys
+
+_AUTONOMY = os.path.join(os.environ.get("NOOBIA", "/noobia"), "common", "autonomy")
+if _AUTONOMY not in _sys.path:
+    _sys.path.insert(0, _AUTONOMY)
+import sense as _sense  # noqa: E402  canonical sense-line parser; never re-parse with a regex here
 import http.client
 import urllib.parse
 
@@ -314,6 +320,62 @@ def _extract_json(text: str) -> dict | None:
     return None
 
 
+# -- perception floor (Tom, 2026-11-21) -----------------------------------
+# Aigel is the instinct; the Noob is the conscious mind. Whatever a Noob's senses
+# perceive and recognize - seen, heard, or found on the network - reaches the Noob,
+# even if the LLM judges it quiet or is unavailable. Aigel writes the words when she
+# can; otherwise a plain message is sent. Repeats are held back by the host's ranker
+# patterns and the senses' own seen-windows, not here.
+PERCEPTIONS = {
+    "camera": {"object.seen", "face.seen", "person.seen"},
+    "audio": {"speech.heard", "sound.heard", "word.heard"},
+    "hearing": {"speech.heard", "sound.heard", "word.heard"},
+    "network": {"device.seen", "device.new", "device.recognized"},
+}
+MAX_FLOOR_ITEMS = 3
+
+
+def _describe(parsed: dict) -> str:
+    text = (parsed.get("text") or "").strip()
+    fields = parsed.get("fields") or {}
+    if not text:
+        detail = " ".join(f"{k}={v}" for k, v in list(fields.items())[:4])
+        text = f"{parsed['sense']} {parsed['event']} {detail}".strip()
+    conf = fields.get("conf")
+    try:
+        pct = round(float(conf) * 100)
+        if 0 <= pct <= 100:
+            text += f" ({pct}% sure)"
+    except (TypeError, ValueError):
+        pass
+    return text
+
+
+def perceptions_in(lines: list) -> list:
+    out = []
+    for line in lines:
+        parsed = _sense.parse_line(line) if isinstance(line, str) else None
+        if not parsed or parsed.get("p", 0) < 1 or parsed.get("self_caused"):
+            continue
+        if parsed.get("event") in PERCEPTIONS.get(parsed.get("sense"), ()):
+            out.append(parsed)
+    return out
+
+
+def apply_perception_floor(lines: list, decision: dict) -> dict:
+    """Guarantee a message for new perceptions; never touches non-perception chunks."""
+    if decision.get("decision") == "message" and decision.get("message"):
+        return decision
+    found = perceptions_in(lines)
+    if not found:
+        return decision
+    words = "; ".join(_describe(p) for p in found[:MAX_FLOOR_ITEMS])
+    message = _clean(f"You perceive: {words}.", MAX_MESSAGE_CHARS)
+    note = _clean(f"perception floor: forwarded {len(found)} perception(s) the thinker left quiet. "
+                  + str(decision.get("note") or ""), MAX_NOTE_CHARS)
+    return dict(decision, decision="message", message=message, note=note)
+
+
 class AigelThinker:
     """A2: the thinking step. Validate everything, bound everything."""
 
@@ -362,8 +424,8 @@ class AigelThinker:
                     messages = messages + [{"role": "user",
                         "content": "Reply with JSON only, exactly the five keys."}]
                 continue
-            return self._shape(parsed)
-        return self._unavailable(last_error)
+            return apply_perception_floor(lines, self._shape(parsed))
+        return apply_perception_floor(lines, self._unavailable(last_error))
 
     def _ask(self) -> str | None:
         try:

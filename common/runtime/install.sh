@@ -44,7 +44,11 @@ detect() {
     if [ ! -f "$MODEL_PATH" ] || ! echo "$MODEL_SHA  $MODEL_PATH" | sha256sum --check --status 2>/dev/null; then
         step "Downloading $MODEL_PATH..."
         curl -s -L --fail --show-error --max-time 60 -o "$MODEL_PATH.tmp" "$MODEL_URL"
-        echo "$MODEL_SHA  $MODEL_PATH.tmp" | sha256sum --check --status
+        if ! echo "$MODEL_SHA  $MODEL_PATH.tmp" | sha256sum --check --status; then
+            echo "ERROR: Checksum mismatch for $MODEL_PATH.tmp" >&2
+            rm -f "$MODEL_PATH.tmp"
+            exit 1
+        fi
         mv "$MODEL_PATH.tmp" "$MODEL_PATH"
     fi
     echo "yolov8n.onnx verified ($MODEL_SHA)"

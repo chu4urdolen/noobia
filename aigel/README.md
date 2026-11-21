@@ -44,7 +44,13 @@ Run (a LAN service; port 112 is privileged - the install is Aria's step,
 IS-3):
 
     python3 aigel/service/aigel_intake.py --port 112 \
-        --hosts aigel/private/intake_hosts.json [--chat-token ...]
+        --hosts aigel/private/intake_hosts.json --chat-token <token>
+
+The chat endpoint (`POST /api/v1/chat`) is **disabled until a
+`--chat-token` / `AIGEL_CHAT_TOKEN` is configured** (honest 503), and
+with a token it is Bearer-authenticated and capped (1 turn / 2 s,
+60 turns / hour) so the shared single Qwen queue stays usable (Gwyn
+review #255).
 
 Tests: `cd /noobia && python3 -m unittest discover -s aigel/service -p 'test_*.py'`
 (70 tests). The wire format is pinned cross-component by

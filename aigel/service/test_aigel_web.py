@@ -152,9 +152,30 @@ class WebCase(unittest.TestCase):
         recent = json.loads(text)["recent"]
         self.assertGreaterEqual(recent[0]["t"], recent[1]["t"])
 
+    def test_recent_includes_evidence_lines(self):
+        self.send_chunk()
+        code, _, text = self.get("/api/v1/status")
+        self.assertEqual(code, 200)
+        recent = json.loads(text)["recent"]
+        self.assertEqual(recent[0]["evidence"], LINES)
+
+    def test_recent_evidence_is_bounded(self):
+        lines = [f"NOOBIA P5 wifi sample.line i={i}" for i in range(30)]
+        body = json.dumps({"host": "lynx", "lines": lines}).encode("utf-8")
+        self.thinker.llm.replies.insert(0, decision("quiet", None, "saw it"))
+        code, _ = self.post("/api/v1/chunk", body)
+        self.assertEqual(code, 200)
+        with open(self.state_file, encoding="utf-8") as fh:
+            state = json.load(fh)
+        ev = state["lynx"]["recent"][0]["evidence"]
+        self.assertEqual(len(ev), 5)
+        for line in ev:
+            self.assertLessEqual(len(line), 512)
+
     # -- chat ----------------------------------------------------------------
 
     def chat_setup(self, replies, **kw):
+        kw.setdefault("chat_token", "tok")
         self.thinker.llm.replies = replies
         self.web = AigelWeb(self.intake, self.log, **kw)
         self.httpd.server_close()
@@ -168,7 +189,7 @@ class WebCase(unittest.TestCase):
     def test_chat_replies_and_logs(self):
         self.chat_setup(["Hello, Noob. I am here, listening."])
         body = json.dumps({"message": "Hello Aigel"}).encode("utf-8")
-        code, obj = self.post("/api/v1/chat", body, sign=False)
+        code, obj = self.post("/api/v1/chat", body, sign=False, token="tok")
         self.assertEqual(code, 200)
         self.assertEqual(obj["reply"], "Hello, Noob. I am here, listening.")
         log = self.view_log()
@@ -178,21 +199,21 @@ class WebCase(unittest.TestCase):
     def test_chat_reply_is_bounded(self):
         self.chat_setup(["word " * 3000])
         body = json.dumps({"message": "tell me everything"}).encode("utf-8")
-        code, obj = self.post("/api/v1/chat", body, sign=False)
+        code, obj = self.post("/api/v1/chat", body, sign=False, token="tok")
         self.assertEqual(code, 200)
         self.assertLessEqual(len(obj["reply"]), 1000)
 
     def test_chat_empty_message_rejected(self):
         self.chat_setup(["unused"])
         code, obj = self.post("/api/v1/chat", json.dumps(
-            {"message": "   "}).encode(), sign=False)
+            {"message": "   "}).encode(), sign=False, token="tok")
         self.assertEqual(code, 400)
         self.assertIn("error", obj)
 
     def test_chat_message_too_long_rejected(self):
         self.chat_setup(["unused"])
         code, obj = self.post("/api/v1/chat", json.dumps(
-            {"message": "a" * 1001}).encode(), sign=False)
+            {"message": "a" * 1001}).encode(), sign=False, token="tok")
         self.assertEqual(code, 400)
         self.assertIn("bound", obj["error"])
 
@@ -205,18 +226,46 @@ class WebCase(unittest.TestCase):
     def test_chat_qwen_down_is_honest_503(self):
         self.chat_setup([QwenError("ollama unreachable")])
         body = json.dumps({"message": "hello?"}).encode("utf-8")
-        code, obj = self.post("/api/v1/chat", body, sign=False)
+        code, obj = self.post("/api/v1/chat", body, sign=False, token="tok")
         self.assertEqual(code, 503)
         self.assertIn("aigel unavailable", obj["error"])
 
     def test_chat_rate_limited(self):
         self.chat_setup(["one", "two"])
         body = json.dumps({"message": "hi"}).encode("utf-8")
-        code1, _ = self.post("/api/v1/chat", body, sign=False)
-        code2, obj2 = self.post("/api/v1/chat", body, sign=False)
+        code1, _ = self.post("/api/v1/chat", body, sign=False, token="tok")
+        code2, obj2 = self.post("/api/v1/chat", body, sign=False, token="tok")
         self.assertEqual(code1, 200)
         self.assertEqual(code2, 429)
         self.assertIn("thinking", obj2["error"])
+
+    def test_chat_disabled_without_token(self):
+        self.thinker.llm.replies = ["nope"]
+        self.web = AigelWeb(self.intake, self.log)
+        self.httpd.server_close()
+        self.thread.join(timeout=2)
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self.intake, self.web))
+        self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+        self.thread.start()
+        self.addCleanup(self.httpd.server_close)
+        self.base = f"http://127.0.0.1:{self.httpd.server_address[1]}"
+        body = json.dumps({"message": "hi"}).encode("utf-8")
+        code, obj = self.post("/api/v1/chat", body, sign=False)
+        self.assertEqual(code, 503)
+        self.assertIn("disabled", obj["error"])
+        self.assertEqual(self.thinker.llm.replies, ["nope"])  # never reached Qwen
+
+    def test_chat_hourly_cap(self):
+        self.chat_setup(["a", "b", "c"], min_gap_s=0, hourly_cap=2)
+        body = json.dumps({"message": "hi"}).encode("utf-8")
+        c1, _ = self.post("/api/v1/chat", body, sign=False, token="tok")
+        c2, _ = self.post("/api/v1/chat", body, sign=False, token="tok")
+        c3, obj = self.post("/api/v1/chat", body, sign=False, token="tok")
+        self.assertEqual(c1, 200)
+        self.assertEqual(c2, 200)
+        self.assertEqual(c3, 429)
+        self.assertIn("hourly", obj["error"])
+        self.assertEqual(self.thinker.llm.replies, ["c"])  # third turn never reached Qwen
 
     def test_chat_token_auth(self):
         self.chat_setup(["a", "b", "c"])

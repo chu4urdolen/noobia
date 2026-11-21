@@ -144,17 +144,21 @@ class AigelIntake:
             pass  # state persistence is best-effort, never fatal
 
     def _touch_host(self, host: str, decision: dict,
-                    reason: str = "unknown", n_lines: int = 0) -> None:
+                    reason: str = "unknown", n_lines: int = 0,
+                    evidence: list | None = None) -> None:
         with self._lock:
             now = self.now_fn()
             entry = self._state.get(host, {})
             history = entry.get("recent")
             if not isinstance(history, list):
                 history = []
+            ev = ([str(line)[:512] for line in evidence[:5]]
+                  if isinstance(evidence, list) else [])
             history.append({
                 "t": now,
                 "reason": str(reason)[:64],
                 "lines": int(n_lines),
+                "evidence": ev,
                 "decision": str(decision.get("decision", "quiet")),
                 "message": (str(decision["message"])[:500]
                             if decision.get("message") else None),
@@ -260,7 +264,7 @@ class AigelIntake:
                 "priority_rules": [], "note": "reply over bound; nothing delivered",
             }, ensure_ascii=False).encode("utf-8")
             decision = json.loads(body.decode("utf-8"))
-        self._touch_host(host, decision, reason=reason, n_lines=len(lines))
+        self._touch_host(host, decision, reason=reason, n_lines=len(lines), evidence=lines)
         self.log.write(
             f"decision host={host} decision={decision['decision']} "
             f"patterns={len(decision['patterns'])} priority_rules={len(decision['priority_rules'])} "
@@ -365,7 +369,8 @@ def main() -> int:
                          "Noobia network (contract section 5)")
     ap.add_argument("--port", type=int, default=112)
     ap.add_argument("--chat-token", default=os.environ.get("AIGEL_CHAT_TOKEN"),
-                    help="optional Bearer token guarding POST /api/v1/chat")
+                    help="Bearer token guarding POST /api/v1/chat; chat is "
+                         "disabled (honest 503) until one is configured")
     ap.add_argument("--hosts", default=DEFAULT_HOSTS,
                     help="private per-host auth registry JSON")
     ap.add_argument("--state", default=DEFAULT_STATE,

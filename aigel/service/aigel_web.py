@@ -18,15 +18,16 @@ JSON from ``/api/v1/*`` and rendered through the DOM API
 markup into the page.
 
 Authentication: the chunk path keeps its per-host HMAC/Bearer auth.
-The chat is a LAN convenience for people; if a ``chat_token`` is
-configured (``--chat-token`` or ``AIGEL_CHAT_TOKEN``) the chat
-endpoint requires ``Authorization: Bearer <token>``. Without one it
-is open on the Noobia LAN - the same documented LAN-only risk as a
-host configured without a credential (contract C4).
+The chat requires a ``chat_token`` (``--chat-token`` or
+``AIGEL_CHAT_TOKEN``): until one is configured the chat endpoint is
+**disabled** and answers an honest 503 - no anonymous chat, even on
+the Noobia LAN (Gwyn review #255). With a token set, requests need
+``Authorization: Bearer <token>``.
 
 Bounded: chat body 8 KiB, message <= 1000 chars, reply <= 1000
-chars, at most one chat turn every 2 s (Aigel shares the single
-Qwen queue with everyone else). Qwen down -> honest 503.
+chars, at most one chat turn every 2 s and at most 60 turns per
+hour (Aigel shares the single Qwen queue with everyone else).
+Qwen down -> honest 503.
 
     python3 aigel/service/aigel_intake.py --port 112   # A1 + A4 together
 """
@@ -45,6 +46,7 @@ except ImportError:  # direct script use from aigel/service/
 
 MAX_CHAT_BODY_BYTES = 8_192
 DEFAULT_MIN_GAP_S = 2.0
+CHAT_HOURLY_CAP = 60  # turns per rolling hour: protect the shared Qwen queue
 
 PAGE = b"""<!doctype html>
 <html lang="en">
@@ -132,6 +134,12 @@ async function load() {
       const meta = document.createElement('div'); meta.className = 'meta';
       meta.textContent = c.host + ' - ' + (c.reason || 'unknown') + ' - ' + c.lines + ' lines - ' + rel(c.t);
       li.append(meta);
+      if (Array.isArray(c.evidence) && c.evidence.length) {
+        c.evidence.forEach(line => {
+          const e = document.createElement('div'); e.className = 'meta';
+          e.textContent = line; li.append(e);
+        });
+      }
       if (c.message) { const m = document.createElement('div'); m.textContent = 'Aigel: ' + c.message; li.append(m); }
       if (c.note) { const n = document.createElement('div'); n.className = 'meta'; n.textContent = 'note: ' + c.note; li.append(n); }
       ul.append(li);
@@ -158,7 +166,7 @@ $('chat').addEventListener('submit', async (ev) => {
   } catch (e) { her().textContent = 'Aigel is unreachable: ' + e; }
 });
 load();
-setInterval(load, 30000);
+setInterval(load, 10000);
 </script>
 </body>
 </html>
@@ -169,14 +177,17 @@ class AigelWeb:
     """The people channel: status (from the intake state) + chat."""
 
     def __init__(self, intake, log, chat_token: str | None = None,
-                 min_gap_s: float = DEFAULT_MIN_GAP_S, now_fn=time.time):
+                 min_gap_s: float = DEFAULT_MIN_GAP_S,
+                 hourly_cap: int = CHAT_HOURLY_CAP, now_fn=time.time):
         self.intake = intake
         self.log = log
         self.chat_token = chat_token
         self.min_gap_s = float(min_gap_s)
+        self.hourly_cap = max(1, int(hourly_cap))
         self.now_fn = now_fn
         self._lock = threading.Lock()
         self._last_chat = 0.0
+        self._chat_times: list = []
 
     # -- chat ---------------------------------------------------------------
 
@@ -195,6 +206,9 @@ class AigelWeb:
         if len(raw_body) > MAX_CHAT_BODY_BYTES:
             self.log.write("chat refused: body over bound")
             return 413, {"error": "message too large"}
+        if not self.chat_token:
+            self.log.write("chat refused: disabled (no token configured)")
+            return 503, {"error": "chat disabled: no chat token configured"}
         ok, why = self.check_chat_auth(headers)
         if not ok:
             self.log.write(f"chat refused: {why}")
@@ -215,7 +229,12 @@ class AigelWeb:
             if now - self._last_chat < self.min_gap_s:
                 self.log.write("chat: too soon, waiting")
                 return 429, {"error": "aigel is still thinking; wait a moment"}
+            self._chat_times = [t for t in self._chat_times if now - t < 3600]
+            if len(self._chat_times) >= self.hourly_cap:
+                self.log.write("chat: hourly cap reached")
+                return 429, {"error": "hourly chat limit reached; try again in a bit"}
             self._last_chat = now
+            self._chat_times.append(now)
         self.log.write(f"chat in: {len(message)} chars")
         try:
             reply = self.intake.thinker.chat(message)

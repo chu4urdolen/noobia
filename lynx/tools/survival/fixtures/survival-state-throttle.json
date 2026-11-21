@@ -1,0 +1,13 @@
+{
+  "telemetry": {
+    "battery_pct": 55,
+    "battery_voltage_mv": 7820,
+    "battery_current_ma": 2400,
+    "charging_active": true,
+    "shell_temp_c": 42.5,
+    "soc_max_temp_c": 86.0,
+    "cpu_big_temp_c": 84.0,
+    "ram_free_mb": 310,
+    "storage_free_mb": 18450
+  }
+}

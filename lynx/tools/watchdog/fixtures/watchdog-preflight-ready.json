@@ -1,0 +1,22 @@
+{
+  "device_tree": {
+    "node": "watchdog@1c007000",
+    "compatible": "mediatek,mt6983-wdt",
+    "base_address": "0x1c007000",
+    "size": "0x1000",
+    "reboot_mode": {
+      "compatible": "syscon-reboot-mode",
+      "offset": "0x24",
+      "mask": "0xff"
+    }
+  },
+  "runtime": {
+    "driver_bound": true,
+    "device_identity": "MT6589 Watchdog",
+    "configured_timeout_sec": 30,
+    "min_timeout_sec": 1,
+    "max_timeout_sec": 32,
+    "petting_cadence_sec": 5,
+    "sysfs_node": "/sys/class/watchdog/watchdog0"
+  }
+}

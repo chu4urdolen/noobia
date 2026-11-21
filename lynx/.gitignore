@@ -208,3 +208,17 @@
 !/tools/ufs/fixtures/
 /tools/ufs/fixtures/*
 !/tools/ufs/fixtures/*.json
+!/tools/watchdog/
+/tools/watchdog/*
+!/tools/watchdog/*.py
+!/tools/watchdog/README.md
+!/tools/watchdog/fixtures/
+/tools/watchdog/fixtures/*
+!/tools/watchdog/fixtures/*.json
+!/tools/survival/
+/tools/survival/*
+!/tools/survival/*.py
+!/tools/survival/README.md
+!/tools/survival/fixtures/
+/tools/survival/fixtures/*
+!/tools/survival/fixtures/*.json

@@ -1,0 +1,10 @@
+{
+  "device_tree": {
+    "node": "watchdog@1c007000",
+    "compatible": "invalid_watchdog",
+    "base_address": "0x00000000"
+  },
+  "runtime": {
+    "driver_bound": false
+  }
+}

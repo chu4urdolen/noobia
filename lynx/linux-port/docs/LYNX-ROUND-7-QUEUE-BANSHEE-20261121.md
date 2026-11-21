@@ -90,3 +90,13 @@ Banshee executes items B21 through B24 in order, alongside peer-reviewing Dushic
 - **Objective:** Establish the preflight validator for the MediaTek MT6983 UFS 3.1 host controller, M-PHY Gear 4 link, and JEDEC JESD220E health telemetry.
 - **Directory:** `lynx/tools/ufs/`
 - **Details:** Map `ufshci@112b0000` (IRQ 169), 5 required clocks, syscon resets (`unipro_rst`, `crypto_rst`, `hci_rst`), voltage supplies (`vufs18`, `vufs12`), and UFS PHY at `0x11fa0000`. Evaluate JEDEC health descriptors (`bPreEOLInfo`, `bDeviceLifeTimeEstA`, `bDeviceLifeTimeEstB`). Build validator, fixtures, 10 unit tests, and architecture doc.
+
+### Item B27: Hardware Watchdog (MTK-WDT) Preflight Gate & Unattended Recovery Policy
+- **Objective:** Establish the preflight validator and safety boundary for the MediaTek MT6983 hardware watchdog (`watchdog@1c007000`) and TOPRGU reset controller.
+- **Directory:** `lynx/tools/watchdog/`
+- **Details:** Map MMIO base `0x1c007000`, `syscon-reboot-mode` sub-node at offset `0x24`, timeout limits (1..32 seconds), and 5s safe petting cadence. Strictly inspect via sysfs while strictly forbidding opens on `/dev/watchdog` during inspection. Build validator, 3 fixtures, 10 unit tests, and doc.
+
+### Item B28: Autonomous Thermal & Battery Survival Engine
+- **Objective:** Establish the multi-sensor autonomous self-preservation decision engine governing execution state when untethered without human monitoring.
+- **Directory:** `lynx/tools/survival/`
+- **Details:** Evaluate telemetry across Fuel Gauge (BQ28Z610), SuperVOOC Charger (MT6375), and LVTS/NTC thermal zones into a unified 4-state policy engine: `NOMINAL_OPERATION`, `THERMAL_THROTTLE_PAUSE_CHG`, `LOW_POWER_SUSPEND`, and `EMERGENCY_SHUTDOWN`. Build engine, 4 fixtures, 10 unit tests, and doc.

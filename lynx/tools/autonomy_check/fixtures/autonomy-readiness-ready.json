@@ -1,0 +1,14 @@
+{
+  "gates": {
+    "battery_pct": 85,
+    "cell_delta_mv": 12,
+    "shell_temp_c": 31.5,
+    "soc_max_temp_c": 44.0,
+    "ufs_pre_eol": 1,
+    "ufs_lifetime_est": 1,
+    "watchdog_timeout_sec": 30,
+    "watchdog_petting_sec": 5,
+    "watchdog_bound": true,
+    "survival_policy": "NOMINAL_OPERATION"
+  }
+}

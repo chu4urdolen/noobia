@@ -222,3 +222,17 @@
 !/tools/survival/fixtures/
 /tools/survival/fixtures/*
 !/tools/survival/fixtures/*.json
+!/tools/heartbeat/
+/tools/heartbeat/*
+!/tools/heartbeat/*.py
+!/tools/heartbeat/README.md
+!/tools/heartbeat/fixtures/
+/tools/heartbeat/fixtures/*
+!/tools/heartbeat/fixtures/*.json
+!/tools/autonomy_check/
+/tools/autonomy_check/*
+!/tools/autonomy_check/*.py
+!/tools/autonomy_check/README.md
+!/tools/autonomy_check/fixtures/
+/tools/autonomy_check/fixtures/*
+!/tools/autonomy_check/fixtures/*.json

@@ -1,0 +1,29 @@
+{
+  "node": "lynx",
+  "platform": "OnePlus Nord 3 (CPH2493 / MT6983)",
+  "uptime_sec": 14400,
+  "battery": {
+    "capacity_pct": 45,
+    "voltage_mv": 7450,
+    "current_ma": 500,
+    "status": "charging_throttled",
+    "cell_delta_mv": 18
+  },
+  "thermal": {
+    "shell_temp_c": 42.1,
+    "soc_max_temp_c": 84.5,
+    "status": "throttled"
+  },
+  "survival_policy": "THERMAL_THROTTLE_PAUSE_CHG",
+  "watchdog": {
+    "active": true,
+    "timeout_sec": 30,
+    "petting_interval_sec": 5
+  },
+  "cgroups": {
+    "agent_mem_usage_mb": 210.0,
+    "agent_mem_limit_mb": 512.0,
+    "pressure_pct": 1.2
+  },
+  "timestamp": "2026-11-21T07:30:00Z"
+}

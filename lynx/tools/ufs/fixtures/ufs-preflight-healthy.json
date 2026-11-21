@@ -1,0 +1,41 @@
+{
+  "device_tree": {
+    "node": "ufshci@112b0000",
+    "compatible": "mediatek,mt8183-ufshci",
+    "base_address": "0x112b0000",
+    "interrupt": 169,
+    "clocks": [
+      "ufs_hd_haxi",
+      "ufs_fde",
+      "ufs",
+      "ufs_mbist",
+      "ufs_hf_fmem"
+    ],
+    "resets": [
+      "unipro_rst",
+      "crypto_rst",
+      "hci_rst"
+    ],
+    "regulators": [
+      "mt6363_vufs18",
+      "mt6363_vufs12"
+    ],
+    "phy": {
+      "base": "0x11fa0000",
+      "compatible": "mediatek,peri_ufs_glb_dig"
+    }
+  },
+  "runtime": {
+    "driver_bound": true,
+    "gear_speed": "Gear 4",
+    "lanes_active": 2,
+    "ufs_version": "3.1",
+    "health_descriptor": {
+      "pre_eol_info": 1,
+      "lifetime_estimation_a": 1,
+      "lifetime_estimation_b": 1
+    },
+    "block_device": "/dev/block/sda",
+    "capacity_bytes": 256060514304
+  }
+}

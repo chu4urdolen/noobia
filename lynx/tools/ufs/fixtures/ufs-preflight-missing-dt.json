@@ -1,0 +1,12 @@
+{
+  "device_tree": {
+    "node": "ufshci@112b0000",
+    "compatible": "generic_broken_hci",
+    "base_address": "0x00000000",
+    "interrupt": 0,
+    "clocks": []
+  },
+  "runtime": {
+    "driver_bound": false
+  }
+}

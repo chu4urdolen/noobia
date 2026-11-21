@@ -1,0 +1,42 @@
+{
+  "host": "lynx",
+  "view": {
+    "backend": "file",
+    "log_file": "/var/log/lynx/messages"
+  },
+  "aigel": {
+    "url": "http://192.168.100.106:112/api/v1/chunk",
+    "hmac_secret_file": "/etc/noobia/aigel-lynx.secret"
+  },
+  "adapter": {
+    "path": "/usr/local/lib/noobia/lynx",
+    "spec": "lynx_aigel_adapter:LynxAdapter",
+    "state_dir": "/var/lib/noobia/autonomy/lynx-adapter"
+  },
+  "ranker": {
+    "store_file": "/var/lib/noobia/autonomy/patterns.json",
+    "store_capacity": 200,
+    "active_capacity": 100
+  },
+  "prioritizer": {
+    "enabled": true,
+    "map_file": "/var/lib/noobia/autonomy/priority_map.json",
+    "sources": [
+      "wpa_supplicant",
+      "kernel",
+      "lynx-bluetoothd"
+    ]
+  },
+  "trigger": {
+    "window_s": 60,
+    "max_lines": 15
+  },
+  "harness": {
+    "heartbeat_s": 300,
+    "silence_s": 900,
+    "max_per_hour": 30,
+    "queue_max": 20
+  },
+  "kill_switch": "/etc/noobia/autonomy.disable",
+  "interval_s": 1.0
+}

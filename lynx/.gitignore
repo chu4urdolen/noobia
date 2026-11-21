@@ -5,6 +5,8 @@
 !/README.md
 !/tools/
 !/linux-port/
+!/senses/
+!/autonomy/
 /tools/*
 !/tools/*.py
 !/tools/*.c

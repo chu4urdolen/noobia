@@ -1,0 +1,28 @@
+#!/sbin/openrc-run
+description="Noobia host autonomy harness daemon"
+supervisor="supervise-daemon"
+
+name="noobia-autonomyd"
+command="/usr/bin/python3"
+command_args="/usr/local/lib/noobia/autonomy/autonomyd.py --config /etc/noobia/autonomy.json"
+respawn_delay=5
+respawn_max=0
+
+DISABLE_SWITCH="/etc/noobia/autonomy.disable"
+
+depend() {
+    after lynx-local-logs net
+    need lynx-local-logs
+}
+
+start_pre() {
+    if [ -f "$DISABLE_SWITCH" ]; then
+        ewarn "noobia-autonomyd disabled by $DISABLE_SWITCH"
+        return 1
+    fi
+    if [ ! -f "/etc/noobia/autonomy.json" ]; then
+        eerror "Config /etc/noobia/autonomy.json missing"
+        return 1
+    fi
+    mkdir -p /var/lib/noobia/autonomy/lynx-adapter
+}

@@ -1,0 +1,62 @@
+[
+ {
+  "schema": "portable-health/1",
+  "host": "lynx",
+  "profile": "lynx",
+  "route": "ssh-pinned-key",
+  "captured_at": "2026-11-21T10:00:00Z",
+  "collector": "lynx_health_collect/2 (fixture, D16)",
+  "facts": {
+   "battery": {
+    "capacity_percent": 45.0,
+    "voltage_mv": 4050
+   },
+   "storage": {
+    "free_mib": 214000
+   },
+   "thermal": {
+    "max_c": 36.9
+   }
+  }
+ },
+ {
+  "schema": "portable-health/1",
+  "host": "lynx",
+  "profile": "lynx",
+  "route": "ssh-pinned-key",
+  "captured_at": "2026-11-21T11:00:00Z",
+  "collector": "lynx_health_collect/2 (fixture, D16)",
+  "facts": {
+   "battery": {
+    "capacity_percent": 32.5,
+    "voltage_mv": 3990
+   },
+   "storage": {
+    "free_mib": 214005
+   },
+   "thermal": {
+    "max_c": 37.0
+   }
+  }
+ },
+ {
+  "schema": "portable-health/1",
+  "host": "lynx",
+  "profile": "lynx",
+  "route": "ssh-pinned-key",
+  "captured_at": "2026-11-21T12:00:00Z",
+  "collector": "lynx_health_collect/2 (fixture, D16)",
+  "facts": {
+   "battery": {
+    "capacity_percent": 20.0,
+    "voltage_mv": 3930
+   },
+   "storage": {
+    "free_mib": 213998
+   },
+   "thermal": {
+    "max_c": 36.8
+   }
+  }
+ }
+]

@@ -1,0 +1,78 @@
+[
+ {
+  "schema": "portable-health/1",
+  "host": "lynx",
+  "profile": "lynx",
+  "route": "ssh-pinned-key",
+  "captured_at": "2026-11-21T10:00:00Z",
+  "collector": "lynx_health_collect/2 (fixture, D16)",
+  "facts": {
+   "battery": {
+    "capacity_percent": 98.0
+   },
+   "storage": {
+    "free_mib": 214063
+   },
+   "thermal": {
+    "max_c": 36.9
+   }
+  }
+ },
+ {
+  "schema": "portable-health/1",
+  "host": "lynx",
+  "profile": "lynx",
+  "route": "ssh-pinned-key",
+  "captured_at": "2026-11-21T10:30:00Z",
+  "collector": "lynx_health_collect/2 (fixture, D16)",
+  "facts": {
+   "battery": {
+    "capacity_percent": 98.0
+   },
+   "storage": {
+    "free_mib": 213800
+   },
+   "thermal": {
+    "max_c": 37.0
+   }
+  }
+ },
+ {
+  "schema": "portable-health/1",
+  "host": "lynx",
+  "profile": "lynx",
+  "route": "ssh-pinned-key",
+  "captured_at": "2026-11-21T11:00:00Z",
+  "collector": "lynx_health_collect/2 (fixture, D16)",
+  "facts": {
+   "battery": {
+    "capacity_percent": 98.0
+   },
+   "storage": {
+    "free_mib": 213500
+   },
+   "thermal": {
+    "max_c": 37.1
+   }
+  }
+ },
+ {
+  "schema": "portable-health/1",
+  "host": "lynx",
+  "profile": "lynx",
+  "route": "ssh-pinned-key",
+  "captured_at": "2026-11-21T11:30:00Z",
+  "collector": "lynx_health_collect/2 (fixture, D16)",
+  "facts": {
+   "battery": {
+    "capacity_percent": 98.0
+   },
+   "storage": {
+    "free_mib": 213200
+   },
+   "thermal": {
+    "max_c": 36.9
+   }
+  }
+ }
+]

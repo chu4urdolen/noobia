@@ -1,0 +1,26 @@
+[
+ {
+  "schema": "portable-health/1",
+  "host": "lynx",
+  "profile": "lynx",
+  "captured_at": "2026-11-21T10:00:00Z",
+  "facts": {
+   "network": {
+    "carrier": true,
+    "link_state": "wifi"
+   }
+  }
+ },
+ {
+  "schema": "portable-health/1",
+  "host": "lynx",
+  "profile": "lynx",
+  "captured_at": "2026-11-21T11:00:00Z",
+  "facts": {
+   "network": {
+    "carrier": true,
+    "link_state": "wifi"
+   }
+  }
+ }
+]

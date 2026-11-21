@@ -105,7 +105,7 @@ minutes apart and record bytes per minute.
 - Hypothesis, not verified: a feedback loop, where each log write wakes the
   UFS reference clock and logs another warning.
 - Follow-up: filter kernel warnings without losing `user.notice` sense
-  lines. See forge lynx #303.
+  lines. See forge lynx #306.
 
 ## Disable and rollback
 

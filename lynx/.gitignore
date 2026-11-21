@@ -187,6 +187,13 @@
 !/tools/haptics/fixtures/
 /tools/haptics/fixtures/*
 !/tools/haptics/fixtures/*.json
+!/tools/audio_afe/
+/tools/audio_afe/*
+!/tools/audio_afe/*.py
+!/tools/audio_afe/README.md
+!/tools/audio_afe/fixtures/
+/tools/audio_afe/fixtures/*
+!/tools/audio_afe/fixtures/*.json
 !/tools/tri_state_key/
 /tools/tri_state_key/*
 !/tools/tri_state_key/*.py

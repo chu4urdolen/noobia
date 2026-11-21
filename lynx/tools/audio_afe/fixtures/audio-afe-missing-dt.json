@@ -1,0 +1,39 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "device_tree": {
+    "afe_node_present": false,
+    "afe_node_name": "mt6983-afe-pcm@1e100000",
+    "afe_label": "afe",
+    "afe_compatible": "mediatek,mt6983-sound",
+    "afe_reg_base": "0x1e100000",
+    "afe_irq": 512,
+    "afe_power_domain": "MT6983_POWER_DOMAIN_AUDIO",
+    "afe_clock_sources": [
+      "topckgen"
+    ],
+    "scp_node_present": true,
+    "scp_node_name": "snd_scp_ultra",
+    "scp_compatible": "mediatek,snd_scp",
+    "scp_dl_memif_id": 7,
+    "scp_ul_memif_id": 15,
+    "sound_node_present": false,
+    "sound_node_name": "sound",
+    "sound_compatible": "mediatek,mt6983-mt6338-sound",
+    "sound_platform": "afe"
+  },
+  "runtime": {
+    "proc_asound_present": true,
+    "card_count": 1,
+    "pcm_enumerated": true,
+    "pcm_devices": [
+      "0-0: AFE Play 1           Playback",
+      "0-1: AFE Capture 1        Capture"
+    ],
+    "stream_active": false
+  },
+  "loaded_modules": [
+    "mtu3",
+    "bt_drv_6983"
+  ]
+}

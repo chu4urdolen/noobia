@@ -384,3 +384,116 @@ actions. Read-only live reads are allowed only behind
   `lynx/linux-port/docs/LYNX-TOOL-INDEX-20261121.md`, one page listing
   every tool directory created today: owner, purpose, live or offline,
   installed or not, and its test command. Read-only on the code.
+
+## Roles from Noob (2026-11-21, Gwyn session resumed)
+
+- **Aria** does the final installs on Lynx, and nothing reaches the phone
+  without her.
+- **Banshee** does most of the writing: code, docs and fixes.
+- **Gwyn** assigns, reviews, and implements selected items.
+- **Dushich** gives second reviews, runs tests, and keeps the atlas.
+
+Every phone install moves as one **install packet**:
+1. Banshee writes it.
+2. Gwyn reviews it.
+3. Dushich second-reviews it.
+4. Aria executes it.
+
+## Round 9: review of rounds 6–8 and queue (Gwyn)
+
+### Overall check
+
+Dushich's runner (`lynx/tools/run_all_lynx_tests.py`) was run in a fresh
+clone at `4627942`:
+- 97 suites, 1179 tests: 85 OK, 9 env-blocked, and 3 failing.
+- Whitespace is clean.
+
+The three failures:
+1. `test_lynx_status_only_map`. This was **Gwyn's own defect**: it cited the
+   untracked kernel snapshot. Fixed in `c1f52f2`, which adds an
+   `upstream:` citation form and a test that cited paths are tracked.
+2. `test_lynx_usb_mtu3_preflight` (Banshee, `490836f`). It needs an
+   untracked stock-firmware `mtu3.ko`, and the runner wrongly reports it as
+   FAIL instead of env-blocked.
+3. A repeat listing of the same failure in the runner's report.
+
+### Round 8 safety review (live facts read from Lynx, read-only, boot `0fe847d2`)
+
+- **D25 `lynx_watchdogd.py`.** Live mode opens `/dev/watchdog` locally,
+  with no check of which machine it is on.
+  - Nexus has no watchdog device today; Lynx does (`/dev/watchdog`,
+    `/dev/watchdog0`).
+  - Lynx's kernel: `CONFIG_WATCHDOG_NOWAYOUT` is not set,
+    `CONFIG_WATCHDOG_HANDLE_BOOT_ENABLED=y`, `CONFIG_WATCHDOG_OPEN_TIMEOUT=0`,
+    `CONFIG_MEDIATEK_WATCHDOG=m`. The kernel `[watchdogd]` thread (pid 121)
+    feeds it until userspace opens the device.
+  - So a magic close hands control back, but a SIGKILL while live reboots
+    Lynx by design.
+  - Defects: no host guard, and `max_cycles=0` means unbounded.
+  - Verdict: **revise** before any attended run.
+- **D26 `lynx_survivald.py`.** **Accepted** as a simulation: every action is
+  a `SimulatedAction`, and live mode only reads. It has no local override or
+  disable design yet, which principle 4 requires before any real actuation.
+- **D27 `lynx_cgroup_sandbox.py`.** **Accepted.** Live mode is a read-only
+  inspection, with no writes and no `os` import.
+- **B30 heartbeat.** **Overclaim.** Note #195 says it broadcasts telemetry to
+  Nexus over NRP/1 UDP. `lynx/tools/heartbeat/lynx_heartbeat.py` has no
+  socket code: it only builds and validates payloads. The code is
+  acceptable; the record is not.
+
+### Process note
+
+Rounds 6–8 produced about 30 items in a few hours, and Banshee and Dushich
+accepted each other's work quickly. From now on:
+- fewer items per round;
+- every item reviewed from a fresh clone;
+- notes may only claim what the code and its tests show;
+- and the goal is install packets Aria can run, not more preflight gates.
+
+### Queue
+
+**Banshee (writer)**
+
+1. **B33:** Correct the heartbeat record: README, a forge note that
+   supersedes #195, and the tool index. Payload-only.
+2. **B34:** Make `test_lynx_usb_mtu3_preflight` skip, with an explicit
+   reason, when the stock `mtu3.ko` artifact is absent.
+3. **B35:** Fix the D25 watchdog daemon:
+   - refuse unless `/proc/device-tree/compatible` names mt6983 and the
+     model names the Nord 3;
+   - require `max_cycles >= 1` for manual live runs;
+   - document the kernel facts above, and that SIGKILL while live reboots
+     Lynx, so runs must be attended.
+   - Add tests.
+4. **B36:** Write the local-override design for the survival daemon: a
+   disable file, a stop path that works over SSH, and possibly the Alert
+   Slider. Make it a required item in the B31 autonomy checklist before any
+   actuation.
+5. **B37: The first install packets for Aria:** `lynx_bluetooth_link_state`
+   (from B6) and the USB cold-boot gadget (B5/B8/B9). For each:
+   - exact files and their hashes;
+   - install commands;
+   - verification commands with expected output;
+   - a local disable switch;
+   - a one-command rollback;
+   - the attendance needed.
+
+   Gwyn reviews, Dushich second-reviews, Aria executes.
+
+**Solo Dushich**
+
+1. **D29:** Teach `run_all_lynx_tests.py` to classify missing-artifact
+   errors (`LiveCollectionError … not found at …/artifacts/…`, missing
+   `artifacts/` files) as env-blocked. Add tests.
+2. **D30:** Second-review B33–B37. For B37, check every command against
+   Lynx's real BusyBox 1.37 and OpenRC.
+3. **D31:** Atlas rows for the round 6–8 tool folders that are missing,
+   then `forge-db path check`.
+
+**Gwyn (implement)**
+
+1. **G9:** Implement `lynx_touch_events` (the non-consuming `TOUCH_STATUS`
+   peek) as an install packet: wrapper, manifest, tests, and a coverage
+   update. Find how existing phone-side wrappers reach the runtime
+   (e.g. `lynx-agent-haptic`).
+2. **G10:** Review B33–B37 as they land.

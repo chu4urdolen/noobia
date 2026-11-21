@@ -42,6 +42,23 @@ class MapTest(unittest.TestCase):
         for path in smap.cited_paths(self.entries):
             self.assertTrue((REPO / path).is_file(), path)
 
+    def test_cited_paths_are_tracked_by_git(self):
+        import subprocess
+        try:
+            tracked = set(subprocess.run(["git", "-C", str(REPO), "ls-files"], capture_output=True,
+                                         text=True, timeout=20, check=True).stdout.splitlines())
+        except (OSError, subprocess.SubprocessError):
+            self.skipTest("not a Git checkout")
+        for path in smap.cited_paths(self.entries):
+            self.assertIn(path, tracked, f"{path} exists only locally; cite it as upstream:")
+
+    def test_upstream_sources_name_repo_and_branch(self):
+        upstream = [r["source"] for e in self.entries for r in e["existing_routes"]
+                    if r["source"].startswith("upstream:")]
+        self.assertTrue(upstream)
+        for source in upstream:
+            self.assertRegex(source, r"^upstream:[\w.-]+/[\w.-]+@[\w./-]+$")
+
     def test_cited_nrp_lines_name_the_function(self):
         runtime = (REPO / "lynx/tools/lynx_noob_runtime.py").read_text().splitlines()
         checks = {717: "TOUCH_STATUS", 718: "TOUCH_POLL", 726: "GNSS_STATUS",

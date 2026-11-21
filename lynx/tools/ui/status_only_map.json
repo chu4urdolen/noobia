@@ -1,5 +1,5 @@
 {
-  "about": "Gwyn backlog item 2: implementation map for the components lynx_tool_coverage.py reports as status-only (no separate read or action agent tool). Priority 1 is the most useful next agent tool that is safe to build. Source paths are relative to /noobia; line numbers are as of commit 8aff46d. This map proposes work; it implements nothing and grants no hardware authority. 2026-11-21: platform/display left the status-only set once lynx_media_play/stop/status (kind=image) were mapped to it as secondary components; priorities renumbered.",
+  "about": "Gwyn backlog item 2: implementation map for the components lynx_tool_coverage.py reports as status-only (no separate read or action agent tool). Priority 1 is the most useful next agent tool that is safe to build. Source paths are relative to /noobia; line numbers are as of commit 8aff46d. This map proposes work; it implements nothing and grants no hardware authority. 2026-11-21: platform/display left the status-only set once lynx_media_play/stop/status (kind=image) were mapped to it as secondary components; priorities renumbered. Sources starting with 'upstream:' cite a third-party repository (OnePlus kernel) that is not in Git; Nexus keeps an untracked snapshot under lynx/linux-port/sources/.",
   "kinds": {
     "missing_wrapper": "a safe read or action route already exists on Lynx; only the agent tool is missing",
     "trial_needed": "a route exists only as a trial or preflight tool; a reviewed live trial must come before an agent tool",
@@ -134,7 +134,7 @@
         },
         {
           "route": "source DT: NXP SN110 at nq@28, compatible nxp,sn-nci (Lynx's own Nord 3 tree)",
-          "source": "lynx/linux-port/sources/snapshots/kernel-mt6983/arch/arm64/boot/dts/mediatek/nfc/mt6983_vitamin_22823_sn110.dtsi"
+          "source": "upstream:OnePlusOSS/android_kernel_5.10_oneplus_mt6983@oneplus/mt6983_t_13.1_oneplus_nord_3_5g/arch/arm64/boot/dts/mediatek/nfc/mt6983_vitamin_22823_sn110.dtsi"
         }
       ],
       "missing_tool": "a tag-read tool, after a bounded tag exchange is proven",

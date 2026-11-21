@@ -76,10 +76,16 @@ def load_map(path=MAP_PATH):
 
 
 def cited_paths(entries):
-    """Repository paths cited by the map (line suffixes removed)."""
+    """Repository paths cited by the map (line suffixes removed).
+
+    ``upstream:`` sources name third-party repositories outside Git and are
+    excluded; everything else must be a tracked repository path.
+    """
     paths = set()
     for entry in entries:
         for route in entry["existing_routes"]:
+            if route["source"].startswith("upstream:"):
+                continue
             paths.add(route["source"].split(":", 1)[0])
         paths.update(entry["docs"])
     return sorted(paths)

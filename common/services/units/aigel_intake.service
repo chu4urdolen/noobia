@@ -2,8 +2,11 @@
 Description=Aigel Autonomous Intake and Web Service (port 112)
 After=network.target ollama.service
 Wants=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
+SyslogIdentifier=noobia-aigel
 Type=simple
 User=aria
 Group=aria
@@ -16,6 +19,12 @@ AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 StandardOutput=journal
 StandardError=journal
+# Resource guardrails (queue #294 item 3): Aigel must never starve Qwen
+# (18 GB VRAM in Ollama) or the desktop. Throttle at 768M, hard-cap at 1G
+# (OOM-kill stays inside this cgroup), half a core at most.
+MemoryHigh=768M
+MemoryMax=1G
+CPUQuota=50%
 
 [Install]
 WantedBy=multi-user.target

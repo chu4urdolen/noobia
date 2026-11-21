@@ -1,8 +1,11 @@
 [Unit]
 Description=Nexus Object Detection Service (port 5050)
 After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
+SyslogIdentifier=noobia-detect
 Type=simple
 User=aria
 Group=aria
@@ -13,6 +16,12 @@ RestartSec=5
 TimeoutStopSec=15
 StandardOutput=journal
 StandardError=journal
+# Resource guardrails (queue #294 item 3): the detector must never starve
+# Qwen (18 GB VRAM in Ollama) or the desktop. Throttle at 768M, hard-cap at
+# 1G (OOM-kill stays inside this cgroup), half a core at most.
+MemoryHigh=768M
+MemoryMax=1G
+CPUQuota=50%
 
 [Install]
 WantedBy=multi-user.target

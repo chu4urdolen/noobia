@@ -67,6 +67,42 @@ sudo -n rm /etc/systemd/system/aigel_intake.service
 sudo -n systemctl daemon-reload
 ```
 
+### Resource guardrails (queue #294, 2026-11-21)
+
+`aigel_intake.service` (and `nexus_detect.service`) carry hard guardrails so
+a busy or wedged service can never starve Qwen (18 GB VRAM in Ollama) or the
+desktop:
+
+| Key (in `[Service]`) | Value | Effect |
+|---|---|---|
+| `MemoryHigh=` | `768M` | kernel throttles allocation pressure |
+| `MemoryMax=` | `1G` | hard cap; OOM-kill stays inside the unit's cgroup |
+| `CPUQuota=` | `50%` | at most half a core |
+| `SyslogIdentifier=` | `noobia-aigel` / `noobia-detect` | journal lines are greppable by name |
+| `StartLimitIntervalSec=` / `StartLimitBurst=` (in `[Unit]`) | `60` / `3` | a crash loop is capped at 3 starts per 60 s, then the unit goes `start-limit-broken` instead of spinning |
+
+Verify a running service's live limits:
+
+```sh
+CG=/sys/fs/cgroup/system.slice/aigel_intake.service
+cat $CG/memory.max $CG/memory.high $CG/cpu.max    # 1073741824  805306368  50000 100000
+journalctl -u aigel_intake -n 5 --no-pager          # lines tagged noobia-aigel[PID]
+```
+
+If a unit is `start-limit-broken` (see `systemctl is-failed aigel_intake`):
+read `journalctl -u aigel_intake` for *why*, then clear and restart:
+
+```sh
+sudo -n systemctl reset-failed aigel_intake
+sudo -n systemctl restart aigel_intake
+```
+
+Change or remove the guardrails in the unit **sources**
+(`common/services/units/{aigel_intake,nexus_detect}.service`), then
+`sudo -n bash common/services/units/install_services.sh`,
+`sudo -n systemctl daemon-reload`, and restart the unit. Validate a unit
+first with `sudo -n systemd-analyze verify <unit-file>`.
+
 ### Credentials & Security
 
 All host secrets and tokens reside exclusively in `/noobia/aigel/private/` (mode 0700 dir, files mode 0600, excluded from Git):

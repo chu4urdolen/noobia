@@ -80,3 +80,10 @@
 !/tools/flashlight/fixtures/
 /tools/flashlight/fixtures/*
 !/tools/flashlight/fixtures/*.json
+!/tools/camera_deps/
+/tools/camera_deps/*
+!/tools/camera_deps/*.py
+!/tools/camera_deps/README.md
+!/tools/camera_deps/fixtures/
+/tools/camera_deps/fixtures/*
+!/tools/camera_deps/fixtures/*.json

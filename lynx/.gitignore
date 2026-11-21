@@ -110,3 +110,10 @@
 !/tools/modem/fixtures/
 /tools/modem/fixtures/*
 !/tools/modem/fixtures/*.json
+!/tools/audio/
+/tools/audio/*
+!/tools/audio/*.py
+!/tools/audio/README.md
+!/tools/audio/fixtures/
+/tools/audio/fixtures/*
+!/tools/audio/fixtures/*.json

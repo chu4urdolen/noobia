@@ -1,0 +1,14 @@
+{
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "i2c_devices": [
+    "6-0034",
+    "6-0035"
+  ],
+  "loaded_modules": [
+    "snd_soc_tfa98xx",
+    "mtk_sp_spk_amp"
+  ],
+  "driver_bound": true,
+  "left_channel_impedance_mohm": 1200,
+  "right_channel_impedance_mohm": 6150
+}

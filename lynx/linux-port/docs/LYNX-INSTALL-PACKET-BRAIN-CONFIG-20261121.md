@@ -64,13 +64,22 @@ Expect:
 
 ## Verify
 
-```sh
-python3 lynx/tools/lynx_remote.py run "python3 -c \"import runpy; m = runpy.run_path('/usr/local/bin/lynx-agent'); print('backend:', m['backend']()[:2])\""
-```
+1. **Verify backend selection:**
+   ```sh
+   python3 lynx/tools/lynx_remote.py run "python3 -c \"import runpy; m = runpy.run_path('/usr/local/bin/lynx-agent'); print('backend:', m['backend']()[:2])\""
+   ```
+   Expect:
+   - Output: `backend: ('http://192.168.100.106:8080', 'qwen3.8:27b')`.
+   - Zero errors.
 
-Expect:
-- Output: `backend: ('http://192.168.100.106:8080', 'qwen3.8:27b')`.
-- Zero errors.
+2. **Verify end-to-end agent inference and tool calling:**
+   ```sh
+   python3 lynx/tools/lynx_remote.py run "printf 'What is my battery level?' | /usr/local/bin/lynx-agent --stdin" --timeout 90
+   ```
+   Expect:
+   - Agent contacts Nexus LAN proxy `:8080`, Qwen executes function call `lynx_battery_status`, and answers with observed battery percentage and charging state.
+   - `/var/log/lynx-agent.jsonl` records `{"event":"backend","kind":"nexus","model":"qwen3.8:27b"}` and `{"event":"tool","name":"lynx_battery_status","ok":true}`.
+   - Zero unhandled exceptions.
 
 ## Rollback
 

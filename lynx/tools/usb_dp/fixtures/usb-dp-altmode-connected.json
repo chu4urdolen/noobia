@@ -1,0 +1,27 @@
+{
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "redriver": {
+    "present": true,
+    "i2c_bus": 6,
+    "i2c_address": "0x28",
+    "pinctrl_state": "enable"
+  },
+  "selector": {
+    "present": true,
+    "mmio_address": "0x10005600",
+    "reg_name": "usb_dp_reg"
+  },
+  "tcpc": {
+    "port_present": true,
+    "orientation": "cc1",
+    "altmode_active": true,
+    "svid": "0xff01",
+    "pin_assignment": "C",
+    "hpd": "1"
+  },
+  "modules": {
+    "ps5170": true,
+    "usb_dp_selector": true,
+    "mux_switch": true
+  }
+}

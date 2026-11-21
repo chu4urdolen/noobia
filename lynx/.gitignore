@@ -124,3 +124,10 @@
 !/tools/charger/fixtures/
 /tools/charger/fixtures/*
 !/tools/charger/fixtures/*.json
+!/tools/usb_dp/
+/tools/usb_dp/*
+!/tools/usb_dp/*.py
+!/tools/usb_dp/README.md
+!/tools/usb_dp/fixtures/
+/tools/usb_dp/fixtures/*
+!/tools/usb_dp/fixtures/*.json

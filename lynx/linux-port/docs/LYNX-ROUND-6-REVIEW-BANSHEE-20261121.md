@@ -22,8 +22,27 @@ Every landing by Dushich is evaluated against four strict gates:
 | Item | Target / Focus | Commit | Test Evidence | Verdict | Review Notes |
 |---|---|---|---|---|---|
 | **D15** | Update Tool Index (`LYNX-TOOL-INDEX-20261121.md`) | `71a02ba` | Tool index clean diff, total tests 417 OK across repo | **ACCEPT** | Accurately updated B12 (GNSS, 8 OK), B13 (Headset, 11 OK), B14 (NFC, 18 OK), and B15 (USB proposal, 39 OK). Updated ground-rules with Round 6 Banshee coordination/peer-review lane. Zero trailing whitespace. |
-| **D16** | Health Trend & Multi-Snapshot Anomaly Evaluator | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
+| **D16** | Health Trend & Multi-Snapshot Anomaly Evaluator | `71c3cb3` | Health suite 165 OK (26 new tests, 5 fixtures, AST verified pure offline) | **ACCEPT** | Implements `health_trend_evaluator.py` evaluating 4 trend families: battery drain velocity (%/hr, mV/hr), storage leak (monotonic fall), fault counters (XID step/series + gauge errors), thermal drift (with Aigel-agreed GPU 85/95°C). Worst assessable metric returned; absent/insufficient never ok. Zero network/subprocess/disk writes. |
 | **D17** | Display & AMOLED Panel Preflight (Nord 3 Tianma/BOE) | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
 | **D18** | Touchscreen Controller Preflight (Nord 3 Synaptics/Goodix) | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
 | **D19** | Aux Cameras Preflight (IMX355 Ultrawide & GC02M1 Macro) | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
 | **D20** | Consolidated Lynx Test Suite Runner & Sanity Checker | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
+
+---
+
+## 3. Detailed Review Notes
+
+### D15: Tool Index Sync (Commit `71a02ba`)
+- **Review Date:** 2026-11-21
+- **Verdict:** **ACCEPT**
+- **Verification:** Commit diff inspected against `lynx/linux-port/docs/LYNX-TOOL-INDEX-20261121.md`. All newly added Round 5 test suites accurately represented (B12 GNSS: 8, B13 Headset: 11, B14 NFC: 18, B15 USB Serial: 39). Total test tally 417 verified. Rebase on Banshee B16-B20 additions was clean and verified consistent.
+
+### D16: Health Trend Evaluator (Commit `71c3cb3`)
+- **Review Date:** 2026-11-21
+- **Verdict:** **ACCEPT**
+- **Verification:**
+  1. Ran full health suite: 165 tests passed in 1.05s (`python3 -m unittest discover -s lynx/tools/health/ -p "test_*.py"`).
+  2. Verified AST safety in `test_health_trend_evaluator.py`: strictly confirms no imports of `subprocess`, `socket`, `urllib`, `requests`, or other network/process mutation facilities.
+  3. Five hermetic fixtures (`trend-stable.json`, `trend-draining.json`, `trend-storage-leak.json`, `trend-xid-cascade.json`, `trend-insufficient.json`) provide 100% test coverage over evaluation branches.
+  4. Thresholds align with Noobian agreed baselines: battery drain velocity 10/25 %/hr, storage leak 500/2048 MiB and 200/1024 MiB/hr, XID cascades step 1/2, thermal drift 3/8 °C/hr with GPU thresholds at 85/95 °C.
+  5. Whitespace diff (`git diff --check 71c3cb3^..71c3cb3`) clean.

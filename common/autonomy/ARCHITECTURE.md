@@ -175,6 +175,17 @@ will tune this by reassigning priorities and reconfiguring the trigger once
 we see it running. `volume_skips_ranker` and a matching
 `timeout_skips_ranker` (both default `true`) keep this configurable.
 
+**Liveness: silence is a symptom.** On 2026-11-21, Lynx's syslog went
+silent for two hours before she rebooted, and nothing noticed. To catch
+this:
+- Each host harness emits its own heartbeat sense line every
+  `heartbeat_s` (default 300 s), `NOOBIA P0 autonomy heartbeat`.
+- If the trigger's view backend sees **no line at all** (heartbeat
+  included) for `silence_s` (default 900 s), it reports `view.silent`
+  directly to Aigel over the client, not through the log.
+- Aigel, on Nexus, separately marks a host as `silent` when no chunk or
+  heartbeat arrives for `host_silence_s`. That is her first nursing duty.
+
 **Kill switch:** while `/etc/noobia/autonomy.disable` exists, the trigger
 sends nothing. The senses keep logging.
 

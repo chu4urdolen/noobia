@@ -34,9 +34,8 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 AUTONOMY_DIR = REPO / "common" / "autonomy"
 LYNX_TOOLS_DIR = REPO / "lynx" / "tools"
-NETWORK_DIR = LYNX_TOOLS_DIR / "network"
 
-for p in (AUTONOMY_DIR, LYNX_TOOLS_DIR, NETWORK_DIR):
+for p in (AUTONOMY_DIR, LYNX_TOOLS_DIR):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 

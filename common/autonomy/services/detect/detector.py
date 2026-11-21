@@ -1,4 +1,9 @@
-"""Detector engine supporting ONNX CPU YOLOv8n and Coral TPU fallback without disk writes."""
+"""Detector engine supporting ONNX CPU YOLOv8n and Coral TPU fallback without disk writes.
+
+Model provenance: YOLOv8 Nano (YOLOv8n) architecture by Ultralytics Inc.
+License: AGPL-3.0. Pinned by SHA-256 in common/runtime/install.sh.
+Permitted for Noobia's autonomous internal perception.
+"""
 
 from __future__ import annotations
 

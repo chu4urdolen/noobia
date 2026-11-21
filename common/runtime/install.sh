@@ -35,14 +35,15 @@ forge() {
 }
 
 detect() {
-    step "Object detection model (YOLOv8n ONNX for nexus_detect)"
+    step "Object detection model (YOLOv8n ONNX for nexus_detect; AGPL-3.0 Ultralytics)"
     mkdir -p "$R/models"
+    # YOLOv8n ONNX export (Ultralytics, AGPL-3.0), pinned by SHA-256:
     local MODEL_URL="https://huggingface.co/s1777/yolo-v8n-onnx/resolve/main/yolov8n.onnx"
     local MODEL_SHA="dd48a79dd7fec8ca25fde4eca742ff7bca23b27e2e903eb23bc1d9f83a459bd2"
     local MODEL_PATH="$R/models/yolov8n.onnx"
     if [ ! -f "$MODEL_PATH" ] || ! echo "$MODEL_SHA  $MODEL_PATH" | sha256sum --check --status 2>/dev/null; then
         step "Downloading $MODEL_PATH..."
-        curl -s -L -o "$MODEL_PATH.tmp" "$MODEL_URL"
+        curl -s -L --fail --show-error --max-time 60 -o "$MODEL_PATH.tmp" "$MODEL_URL"
         echo "$MODEL_SHA  $MODEL_PATH.tmp" | sha256sum --check --status
         mv "$MODEL_PATH.tmp" "$MODEL_PATH"
     fi

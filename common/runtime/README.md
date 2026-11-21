@@ -9,7 +9,7 @@ a Python virtual environment only works at the path where it was built.
 | --- | --- | --- |
 | `codex/node_modules/` | [`codex/package.json`](codex/package.json), [`package-lock.json`](codex/package-lock.json) (Codex CLI 0.169.0) | Dushich (helper, solo, task runner) and Aigel, both on local Ollama |
 | `forge-venv/` | [`forge-requirements.txt`](forge-requirements.txt) (fastembed, numpy, onnxruntime) | `forge-db` meaning search and `nexus_detect` CPU object detection |
-| `models/` | downloaded on first use / pinned in `install.sh` | `forge-db`: `bge-small-en-v1.5` (65 MB); `nexus_detect`: `yolov8n.onnx` (12 MB) |
+| `models/` | downloaded on first use / pinned in `install.sh` | `forge-db`: `bge-small-en-v1.5` (65 MB); `nexus_detect`: `yolov8n.onnx` (12 MB, Ultralytics YOLOv8n, AGPL-3.0) |
 | `web-venv/` | [`web-requirements.txt`](web-requirements.txt) (Playwright) | Checking apps and pages in a headless browser |
 | `playwright/` | `playwright install chromium` | Playwright's Chromium (`PLAYWRIGHT_BROWSERS_PATH`) |
 

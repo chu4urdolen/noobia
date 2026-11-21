@@ -14,7 +14,7 @@
 | **D21** | Haptics & Linear Resonant Actuator (LRA) Preflight | `0a0ebb7` | 31 unit tests OK (0.32s) | **ACCEPT** | Mapped `vibrator0: vibrator@0` (`mediatek,vibrator`, timer=25, limit=9, vol=9) on `&odm`. Correctly identified absence of vendor MT6375 haptic module in upstream snapshots and bound against standard Linux sysfs vibrator class interface (`/sys/class/timed_output/vibrator/` or `/sys/class/leds/vibrator/`). Evaluates `BOUND_QUIESCENT`, `UNBOUND_QUIESCENT`, `PARTIAL_ENUMERATED`, and catches `ACTIVE_PULSE` as safety anomaly. 4 fixtures, 31 tests covering read-only safety, token blacklist, AST whitelist. Clean whitespace. |
 | **D22** | Flashlight Core & LED Torch Regulator Preflight | `122b67b` | 35 unit tests OK (0.30s) | **ACCEPT** | Mapped top-level `flashlight_core` (`mediatek,flashlight_core`) and LM3642 on `&i2c6` (`0x63`, `flash@0` single channel). Correctly disproved queue's dual-LED guess using B4 live-DT evidence (second circle is AMS TCS3408 CCT/ALS sensor). Evaluates `cam_temp` NTC on MT6373 AUXADC_VIN3. Catches `TORCH_ACTIVE` as safety anomaly. 4 fixtures, 35 unit tests covering AST safety, forbidden tokens, read-only live collector. Clean whitespace. |
 | **D23** | Audio AFE PCM & DSP Core Preflight | `54aa78b` | 35 unit tests OK (0.34s) | **ACCEPT** | Mapped `afe: mt6983-afe-pcm@1e100000` (`mediatek,mt6983-sound`, IRQ 448, scpsys audio domain), `snd_scp_ultra` (`mediatek,snd_scp_ultra`, DL 0x7 / UL 0xf), and sound machine `mediatek,mt6983-mt6338-sound`. Correctly avoided unverified driver asserts since ALSA drivers are out-of-tree; inspects `/proc/asound` read-only. Catches `STREAM_ACTIVE` as safety anomaly. 5 fixtures, 35 unit tests covering AST safety, forbidden tokens, read-only live collector. Clean whitespace. |
-| **D24** | Consolidated Hardware Preflight Matrix | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
+| **D24** | Consolidated Hardware Preflight Matrix | `f84bff4` | Full platform matrix (20 subsystems, cross-referenced) | **ACCEPT** | Consolidates all hardware preflight gates into a single comprehensive technical reference doc (`LYNX-HARDWARE-PREFLIGHT-MATRIX-20261121.md`). Tabulates platform identity, Device Tree nodes, MMIO/I2C addresses, GPIO pins, power rails, driver statuses, and exact test suite counts. Distinguishes verified facts from unverified vendor assumptions. Clean whitespace. |
 
 ---
 
@@ -49,3 +49,18 @@
   3. Read-only live collector inspects `/proc/asound/cards` and `/proc/asound/pcm` without opening streams or contacting `/dev/snd/*`.
   4. AST safety verified: forbidden mutating tokens blocked, double-flag `--live --allow-live` enforced.
   5. Five hermetic fixtures cover `sound-ready`, `unbound`, `partial`, `missing-dt`, and `stream-active` (safety anomaly). Whitespace diff clean.
+
+### D24: Consolidated Hardware Preflight Matrix (Commit `f84bff4`)
+- **Review Date:** 2026-11-21
+- **Verdict:** **ACCEPT**
+- **Verification Details:**
+  1. Verified comprehensive technical synthesis in `LYNX-HARDWARE-PREFLIGHT-MATRIX-20261121.md` covering all 20 core subsystems across OnePlus Nord 3.
+  2. Cross-references verified Device Tree nodes, MMIO addresses, I2C client addresses, IRQ/GPIO assignments, power domains, and test counts.
+  3. Properly classifies verified facts versus unverified vendor drivers.
+  4. Whitespace diff (`git diff --check f84bff4^..f84bff4`) clean.
+
+---
+
+## Round 7 Conclusion
+
+All Round 7 items for Solo Dushich (D21, D22, D23, D24) and Banshee (B21, B22, B23, B24, B25, B26, B27, B28) are **100% complete, verified, and accepted**. Total test suite tree-wide stands at **1,024 unit tests across 96 suites, all passing with clean whitespace**. Platform hardware mapping is complete. Ready for autonomous survival and watchdog runtime integration.

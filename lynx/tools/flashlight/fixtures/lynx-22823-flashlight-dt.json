@@ -1,0 +1,20 @@
+{
+  "platform": "OnePlus 11R 5G (Ace 2 / Vitamin / 22823)",
+  "dts_source": "kernel-mt6983/arch/arm64/boot/dts/mediatek/cust_mt6983_vitamin_camera_v4l2.dtsi",
+  "controller": {
+    "node": "lm3642:lm3642@63",
+    "chip": "Texas Instruments LM3642",
+    "bus": "i2c6",
+    "address": "0x63",
+    "compatible": "mediatek,lm3642_22823",
+    "subnodes": {
+      "flash@0": {
+        "reg": 0,
+        "type": 0,
+        "ct": 0,
+        "part": 0,
+        "remote_endpoint": "&flashlight_0"
+      }
+    }
+  }
+}

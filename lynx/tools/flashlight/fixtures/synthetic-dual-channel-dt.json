@@ -1,0 +1,26 @@
+{
+  "platform": "Synthetic Dual-Channel Platform (e.g. Aries / Qingting)",
+  "controller": {
+    "node": "lm3644:lm3644@63",
+    "chip": "Texas Instruments LM3644 (Dual Channel)",
+    "bus": "i2c6",
+    "address": "0x63",
+    "compatible": "mediatek,flashlights_lm3644",
+    "subnodes": {
+      "flash@0": {
+        "reg": 0,
+        "type": 0,
+        "ct": 0,
+        "part": 0,
+        "remote_endpoint": "&flashlight_0"
+      },
+      "flash@1": {
+        "reg": 1,
+        "type": 0,
+        "ct": 1,
+        "part": 1,
+        "remote_endpoint": "&flashlight_1"
+      }
+    }
+  }
+}

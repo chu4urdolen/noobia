@@ -1,0 +1,13 @@
+{
+  "platform": "Corrupted DT Record",
+  "controller": {
+    "node": "lm3642:lm3642@63",
+    "chip": "Texas Instruments LM3642",
+    "subnodes": {
+      "flash@0": {
+        "reg": "invalid_number",
+        "type": "none"
+      }
+    }
+  }
+}

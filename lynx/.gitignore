@@ -73,3 +73,10 @@
 !/tools/headset/fixtures/
 /tools/headset/fixtures/*
 !/tools/headset/fixtures/*.json
+!/tools/flashlight/
+/tools/flashlight/*
+!/tools/flashlight/*.py
+!/tools/flashlight/README.md
+!/tools/flashlight/fixtures/
+/tools/flashlight/fixtures/*
+!/tools/flashlight/fixtures/*.json

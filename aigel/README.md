@@ -40,11 +40,40 @@ her. She describes the world; she never commands hardware.
 | `service/aigel_log.py`    | bounded one-line writer to the `noobia-aigel` view |
 | `private/intake_hosts.json` | per-host secrets (gitignored, never in Git) |
 
-Run (a LAN service; port 112 is privileged - the install is Aria's step,
-IS-3):
+Run (a LAN service; port 112 is privileged; installed as supervised systemd service `aigel_intake.service`):
 
-    python3 aigel/service/aigel_intake.py --port 112 \
-        --hosts aigel/private/intake_hosts.json --chat-token <token>
+    # Installed via common/services/units/install_services.sh
+    # Service definition: common/services/units/aigel_intake.service
+    # Runner script: common/services/aigel_intake.sh
+
+### Service Administration & Operations
+
+```sh
+# Check service status and recent journal logs:
+sudo -n systemctl status aigel_intake.service
+journalctl -u aigel_intake.service -f
+
+# Verify API status:
+curl -s http://127.0.0.1:112/api/v1/status | jq .
+
+# Stop or restart:
+sudo -n systemctl stop aigel_intake.service
+sudo -n systemctl restart aigel_intake.service
+
+# Rollback:
+sudo -n systemctl stop aigel_intake.service
+sudo -n systemctl disable aigel_intake.service
+sudo -n rm /etc/systemd/system/aigel_intake.service
+sudo -n systemctl daemon-reload
+```
+
+### Credentials & Security
+
+All host secrets and tokens reside exclusively in `/noobia/aigel/private/` (mode 0700 dir, files mode 0600, excluded from Git):
+- `intake_hosts.json`: per-host HMAC secrets and silence thresholds.
+- `chat_token`: Bearer token guarding `POST /api/v1/chat`.
+- `nexus_autonomy_secret`: local Nexus secret for the host autonomy harness.
+- `lynx_autonomy_secret`: provisioned secret for the Lynx host autonomy harness (for Aria's IS-2 session).
 
 The chat endpoint (`POST /api/v1/chat`) is **disabled until a
 `--chat-token` / `AIGEL_CHAT_TOKEN` is configured** (honest 503), and

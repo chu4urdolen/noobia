@@ -10,6 +10,7 @@ is the code behind it.
 | [`agents.py`](agents.py) | The agent table: each agent's home, session variables, transcript reader, and helper. Paths follow `$NOOBIA` (default `/noobia`). |
 | [`mcp.py`](mcp.py) | The `dushich` MCP server, `mcp.py --agent aria\|banshee\|gwyn`. Every agent gets the same tools. |
 | [`bridge.py`](bridge.py) | Verified handoffs for Banshee and Gwyn (`--agent`), and the right-hand monitor pane (`monitor`). Aria's handoffs use her own Codex bridge, [`aria/dushich-bridge`](../../aria/dushich-bridge). |
+| [`session_links.py`](session_links.py) | Persistent SQLite links between launcher/tmux sessions and agent conversation IDs, with CLI hook handlers for Antigravity and Claude Code. |
 | [`delegate-dushich`](delegate-dushich) | Runs one handoff through Dushich's task runner and prints the verified report. Used by every bridge; do not call it directly. |
 | [`helper_mirror.py`](helper_mirror.py) | Helper Dushich threads for Aria's Codex conversations, plus the shared `run_turn` every helper uses. |
 | [`helper_banshee.py`](helper_banshee.py), [`helper_gwyn.py`](helper_gwyn.py) | Helper threads for Banshee (mirrored continuously) and Gwyn (updated when asked). |

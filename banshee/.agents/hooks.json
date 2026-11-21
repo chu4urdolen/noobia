@@ -1,0 +1,12 @@
+{
+  "dushich-session-link": {
+    "enabled": true,
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "/usr/bin/python3 /noobia/banshee/session_link.py",
+        "timeout": 10
+      }
+    ]
+  }
+}

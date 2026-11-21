@@ -26,6 +26,7 @@ import time
 from uuid import uuid4
 
 import agents
+import session_links
 
 sys.path.insert(0, str(agents.DUSHICH_CODING))
 import compact_output  # noqa: E402
@@ -88,7 +89,7 @@ def write_private(path: Path, text: str) -> None:
     os.chmod(path, 0o600)
 
 
-def jobs(session_id: str) -> list[str]:
+def jobs(session_id: str, conversation_id: str | None = None) -> list[str]:
     require_session(session_id)
     if not ROOT.exists():
         return []
@@ -96,7 +97,10 @@ def jobs(session_id: str) -> list[str]:
     for path in sorted(ROOT.iterdir()):
         if path.is_dir() and RUN.fullmatch(path.name):
             try:
-                if state(path.name).get("session_id") == session_id:
+                st = state(path.name)
+                if st.get("session_id") == session_id or (
+                    conversation_id and st.get("conversation_id") == conversation_id
+                ):
                     found.append(path.name)
             except (OSError, ValueError, KeyError):
                 continue
@@ -142,14 +146,18 @@ def selected_context(context: str, files: list[str]) -> str:
 
 
 def conversation_id(session_id: str) -> str | None:
-    # A launcher hook may record the transcript actually in use (Claude Code
-    # changes it when a conversation is resumed from inside the CLI).
-    link = AGENT.home / "private/session-links" / session_id
-    found = link.read_text().strip() if link.is_file() else os.environ.get(AGENT.conversation_env)
+    # Check the persistent session links database first
+    found = session_links.get_conversation(AGENT.key, session_id)
+    if not found:
+        # Fall back to legacy file or conversation environment variable
+        link = AGENT.home / "private/session-links" / session_id
+        found = link.read_text().strip() if link.is_file() else os.environ.get(AGENT.conversation_env)
     if not found:
         prior = jobs(session_id)
         if prior:
             found = state(prior[-1]).get("conversation_id")
+    if not found:
+        found = session_links.get_latest_conversation(AGENT.key)
     return found or None
 
 
@@ -267,36 +275,41 @@ def monitor(session_id: str, once: bool = False) -> None:
     require_session(session_id)
     offsets: dict[str, int] = {}
     completed: set[str] = set()
-    activity_offset = 0
-    activity_init = False
+    activity_offsets: dict[str, int] = {}
+    last_cid: str | None = None
     print("DUSHICH • local GPU activity & dialogue", flush=True)
     print(f"{AGENT.name} session: {session_id}", flush=True)
     while True:
+        cid = None
         try:
             cid, _ = conversation_context(session_id, summarize=False)
-            activity = agents.STATE / "helper-mirror" / AGENT.key / cid / "activity.jsonl"
-            if cid and activity.exists():
-                lines = activity.read_text(encoding="utf-8").splitlines()
-                if not activity_init:
-                    activity_offset = max(0, len(lines) - 8)
-                    activity_init = True
-                for line in lines[activity_offset:]:
-                    try:
-                        item = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-                    kind, when = item.get("type"), item.get("time", "")
-                    if kind == "question":
-                        print(f"\n[{AGENT.name} • {when}] {item.get('question', '')}", flush=True)
-                    elif kind == "answer":
-                        print(f"[Dushich • {when}] {item.get('answer', '')}\n", flush=True)
-                    elif kind == "sync":
-                        print(f"[{when}] Dushich mirror: {item.get('message', '')}", flush=True)
-                activity_offset = len(lines)
+            if cid != last_cid:
+                if last_cid is not None and cid:
+                    print(f"\n=== Switched to conversation {cid} ===", flush=True)
+                last_cid = cid
+            if cid:
+                activity = agents.STATE / "helper-mirror" / AGENT.key / cid / "activity.jsonl"
+                if activity.exists():
+                    lines = activity.read_text(encoding="utf-8").splitlines()
+                    if cid not in activity_offsets:
+                        activity_offsets[cid] = max(0, len(lines) - 8)
+                    for line in lines[activity_offsets[cid]:]:
+                        try:
+                            item = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        kind, when = item.get("type"), item.get("time", "")
+                        if kind == "question":
+                            print(f"\n[{AGENT.name} • {when}] {item.get('question', '')}", flush=True)
+                        elif kind == "answer":
+                            print(f"[Dushich • {when}] {item.get('answer', '')}\n", flush=True)
+                        elif kind == "sync":
+                            print(f"[{when}] Dushich mirror: {item.get('message', '')}", flush=True)
+                    activity_offsets[cid] = len(lines)
         except Exception:
             pass  # the monitor must keep running whatever a transcript contains
 
-        current_jobs = jobs(session_id)
+        current_jobs = jobs(session_id, conversation_id=cid)
         if not current_jobs and once:
             print(f"Waiting for {AGENT.name}'s first handoff.", flush=True)
         for run_id in current_jobs:

@@ -97,7 +97,13 @@ class Shared:
         self.name = self.agent.name
 
     def session(self) -> str:
-        return self.bridge.require_session(os.environ.get(self.agent.session_env))
+        s = os.environ.get(self.agent.session_env)
+        if not s:
+            import session_links
+            latest_conv = session_links.get_latest_conversation(self.agent.key)
+            if latest_conv:
+                s = session_links.get_launcher_session(self.agent.key, latest_conv)
+        return self.bridge.require_session(s)
 
     def owned(self, run_id: str) -> dict:
         current = self.bridge.state(run_id)
@@ -173,7 +179,14 @@ class Aria:
                     candidates.append((path.stat().st_mtime, meta["id"]))
             except (OSError, ValueError, KeyError, TypeError):
                 continue
-        return max(candidates)[1] if candidates else None
+        res = max(candidates)[1] if candidates else None
+        if res:
+            try:
+                import session_links
+                session_links.set_link("aria", "active", res)
+            except Exception:
+                pass
+        return res
 
     def context_status(self, args: dict) -> str:
         return run([self.BRIDGE, "context-status", "--session-id", self.session()], 60)

@@ -44,10 +44,23 @@ def activate() -> float:
 
 def eligible(session_id: str) -> bool:
     """Only sessions born after activation enter the persistent helper mirror."""
+    if not UUID.fullmatch(session_id):
+        return False
+    if (ROOT / session_id).is_dir():
+        return True
+    try:
+        import session_links
+        if session_links.is_conversation_active_or_linked('aria', session_id):
+            return True
+    except Exception:
+        pass
     if not ACTIVATION.exists():
         return False
     cutoff = json.loads(ACTIVATION.read_text())['created_after']
-    source = path_for(session_id)
+    try:
+        source = path_for(session_id)
+    except ValueError:
+        return False
     with source.open(encoding='utf-8') as stream:
         try:
             first = json.loads(stream.readline())

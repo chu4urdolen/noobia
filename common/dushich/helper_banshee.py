@@ -41,10 +41,22 @@ def activate() -> set[str]:
 
 
 def eligible(conversation_id: str) -> bool:
-    if not ACTIVATION.exists() or not shared.UUID.fullmatch(conversation_id):
+    if not shared.UUID.fullmatch(conversation_id):
         return False
-    return (conversation_id not in set(json.loads(ACTIVATION.read_text())['existing_ids'])
-            and (CONVERSATIONS / (conversation_id + '.db')).is_file())
+    target = CONVERSATIONS / (conversation_id + '.db')
+    if not target.is_file():
+        return False
+    if (ROOT / conversation_id).is_dir():
+        return True
+    try:
+        import session_links
+        if session_links.is_conversation_active_or_linked('banshee', conversation_id):
+            return True
+    except Exception:
+        pass
+    if not ACTIVATION.exists():
+        return False
+    return conversation_id not in set(json.loads(ACTIVATION.read_text())['existing_ids'])
 
 
 def ensure_aria_read_access(path: Path) -> None:

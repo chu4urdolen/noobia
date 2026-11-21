@@ -358,9 +358,23 @@ def monitor_full(session_id: str | None, run_id: str | None, once: bool) -> int:
     reported: set[str] = set()
     dialogue_offset = 0
     dialogue_init = False
+    last_session = session_id
     print("DUSHICH • complete tool output (scroll up for history)", flush=True)
     print(f"Aria session: {session_id or 'all sessions'}", flush=True)
     while True:
+        try:
+            sys.path.insert(0, str(NOOBIA / "common/dushich"))
+            import session_links
+            latest = session_links.get_latest_conversation("aria")
+            if latest and latest != session_id and not run_id:
+                session_id = latest
+                if last_session is not None and session_id != last_session:
+                    print(f"\n=== Switched to Aria session {session_id} ===", flush=True)
+                    dialogue_init = False
+                last_session = session_id
+        except Exception:
+            pass
+
         dialogue_path = Path(HOME + "/.codex/dushich-bridge/direct-dialogue.jsonl")
         if dialogue_path.exists():
             try:

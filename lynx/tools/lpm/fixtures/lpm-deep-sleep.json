@@ -1,0 +1,25 @@
+{
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "scp": {
+    "present": true,
+    "state": "running",
+    "tcm_size_bytes": 2097152,
+    "mbox_count": 5,
+    "active_ipis": [
+      "IPI_OUT_C_SLEEP_0",
+      "IPI_OUT_SENSOR_CTRL"
+    ]
+  },
+  "lpm": {
+    "present": true,
+    "current_state": "system_mem",
+    "wakeup_aborts": 2,
+    "resources": {
+      "bus26m": {"vote": 0, "owner": "none"},
+      "infra": {"vote": 0, "owner": "none"},
+      "syspll": {"vote": 0, "owner": "none"},
+      "dram_s0": {"vote": 0, "owner": "self-refresh"},
+      "dram_s1": {"vote": 0, "owner": "self-refresh"}
+    }
+  }
+}

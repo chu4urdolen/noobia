@@ -1,0 +1,22 @@
+{
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "scp": {
+    "present": true,
+    "state": "crashed",
+    "tcm_size_bytes": 2097152,
+    "mbox_count": 2,
+    "active_ipis": []
+  },
+  "lpm": {
+    "present": true,
+    "current_state": "active",
+    "wakeup_aborts": 89,
+    "resources": {
+      "bus26m": {"vote": 1, "owner": "ap"},
+      "infra": {"vote": 1, "owner": "ap"},
+      "syspll": {"vote": 1, "owner": "ap"},
+      "dram_s0": {"vote": 1, "owner": "ap"},
+      "dram_s1": {"vote": 1, "owner": "ap"}
+    }
+  }
+}

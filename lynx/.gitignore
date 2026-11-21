@@ -131,3 +131,10 @@
 !/tools/usb_dp/fixtures/
 /tools/usb_dp/fixtures/*
 !/tools/usb_dp/fixtures/*.json
+!/tools/lpm/
+/tools/lpm/*
+!/tools/lpm/*.py
+!/tools/lpm/README.md
+!/tools/lpm/fixtures/
+/tools/lpm/fixtures/*
+!/tools/lpm/fixtures/*.json

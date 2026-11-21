@@ -45,3 +45,10 @@
 !/tools/usb/fixtures/
 /tools/usb/fixtures/*
 !/tools/usb/fixtures/*.json
+!/tools/fingerprint/
+/tools/fingerprint/*
+!/tools/fingerprint/*.py
+!/tools/fingerprint/README.md
+!/tools/fingerprint/fixtures/
+/tools/fingerprint/fixtures/*
+!/tools/fingerprint/fixtures/*.json

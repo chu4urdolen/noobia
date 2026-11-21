@@ -1,0 +1,30 @@
+{
+  "phone": {
+    "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+    "device_tree": {
+      "present": true,
+      "compatible": "oplus,fp_spi",
+      "path": "/sys/firmware/devicetree/base/spi7@11017000/fingerprint@0"
+    },
+    "spi_bus": {
+      "present": true,
+      "device_node": "/sys/bus/spi/devices/spi7.0",
+      "driver_bound": false,
+      "driver_name": null
+    },
+    "modules": [
+      "spi_mt65xx",
+      "olc",
+      "mtk_disp_notify",
+      "oplus_bsp_tp_notify"
+    ],
+    "devices": {
+      "fingerprint_dev": false,
+      "mobicore_dev": false
+    },
+    "daemons": [
+      "lynx-health",
+      "lynx-wifi"
+    ]
+  }
+}

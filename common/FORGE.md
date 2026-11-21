@@ -62,9 +62,8 @@ no quadrant in the window; she watches Nexus health from her own terminal.
   - Codex agents get it from [`/noobia/AGENTS.md`](../AGENTS.md).
   - Gwyn's `CLAUDE.md` imports it.
   - Banshee is told to read it at the start of each session.
-- A **launcher** starts the CLI in that agent's home folder, usually as a
-  two-pane tmux session with the agent on the left and Dushich's live
-  activity on the right.
+- A **launcher** starts the CLI in that agent's home folder in a tmux
+  session with full width for the agent's terminal.
 - A **private, Git-ignored directory** holds the CLI's configuration,
   sessions, and logins, so the agents never share a conversation history or
   an account.

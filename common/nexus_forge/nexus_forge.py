@@ -103,7 +103,7 @@ DEFAULT_QUADRANTS = {
         "command": [
             "/bin/bash",
             "-lc",
-            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-aria-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then if tmux list-panes -t \"$s\":0 -F '#{pane_current_command}' 2>/dev/null | grep -qx 'codex'; then if [ $(tmux list-panes -t \"$s\":0 2>/dev/null | wc -l) -lt 2 ]; then NOOBIA_ARIA_NO_GUI=1 ${NOOBIA:-/noobia}/aria/codex-with-dushich --detached 2>/dev/null || true; fi; exec tmux attach-session -t \"$s\"; else tmux kill-session -t \"$s\" 2>/dev/null || true; fi; fi; NOOBIA_ARIA_NO_GUI=1 exec ${NOOBIA:-/noobia}/aria/codex-with-dushich",
+            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-aria-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then if tmux list-panes -t \"$s\":0 -F '#{pane_current_command}' 2>/dev/null | grep -qx 'codex'; then exec tmux attach-session -t \"$s\"; else tmux kill-session -t \"$s\" 2>/dev/null || true; fi; fi; NOOBIA_ARIA_NO_GUI=1 exec ${NOOBIA:-/noobia}/aria/codex-with-dushich",
         ],
     },
     "bottom_left": {
@@ -125,7 +125,7 @@ DEFAULT_QUADRANTS = {
         "command": [
             "/bin/bash",
             "-lc",
-            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-banshee-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then if [ $(tmux list-panes -t \"$s\":0 2>/dev/null | wc -l) -lt 2 ]; then sid=$(tmux show-environment -t \"$s\" NOOBIA_BANSHEE_SESSION 2>/dev/null | cut -d= -f2-); [ -n \"$sid\" ] && ${NOOBIA:-/noobia}/banshee/launch --attach \"$sid\" --detached 2>/dev/null || true; fi; exec tmux attach-session -t \"$s\"; fi; exec ${NOOBIA:-/noobia}/banshee/launch",
+            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-banshee-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux attach-session -t \"$s\"; fi; exec ${NOOBIA:-/noobia}/banshee/launch",
         ],
     },
     "bottom_right": {
@@ -136,7 +136,7 @@ DEFAULT_QUADRANTS = {
         "command": [
             "/bin/bash",
             "-lc",
-            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-gwyn-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then if [ $(tmux list-panes -t \"$s\":0 2>/dev/null | wc -l) -lt 2 ]; then sid=$(tmux show-environment -t \"$s\" NOOBIA_GWYN_SESSION 2>/dev/null | cut -d= -f2-); [ -n \"$sid\" ] && ${NOOBIA:-/noobia}/gwyn-app-nub/launch --attach \"$sid\" --detached 2>/dev/null || true; fi; exec tmux attach-session -t \"$s\"; fi; exec ${NOOBIA:-/noobia}/gwyn-app-nub/launch",
+            "s=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-gwyn-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux attach-session -t \"$s\"; fi; exec ${NOOBIA:-/noobia}/gwyn-app-nub/launch",
         ],
     },
 }

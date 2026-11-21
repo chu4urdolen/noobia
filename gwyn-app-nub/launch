@@ -31,15 +31,6 @@ command -v tmux >/dev/null || { echo "tmux is required" >&2; exit 1; }
 if [[ -n "$attach" ]]; then
     session="noobia-gwyn-${attach:0:8}"
     tmux has-session -t "$session" 2>/dev/null || { echo "Gwyn session is not running: $attach" >&2; exit 1; }
-    if [[ $(tmux list-panes -t "$session":0 2>/dev/null | wc -l) -lt 2 ]]; then
-        tmux split-window -h -p 40 -t "$session":0 -c "$root" \
-            "/bin/bash -c 'while true; do /usr/bin/python3 $NOOBIA/common/dushich/bridge.py --agent gwyn monitor --session-id $attach; sleep 1; done'"
-        tmux set-window-option -t "$session":0 pane-border-status top
-        tmux set-window-option -t "$session":0 pane-border-format ' #{pane_title} '
-        tmux select-pane -t "$session":0.0 -T 'Gwyn + Noob • Claude Code'
-        tmux select-pane -t "$session":0.1 -T 'Dushich • local GPU activity'
-        tmux select-pane -t "$session":0.0
-    fi
 else
     [[ "$(/usr/bin/id -un)" == "aria" ]] || { echo "Run Gwyn from the aria account" >&2; exit 1; }
     attach="$(python3 -c 'import uuid; print(uuid.uuid4())')"
@@ -56,19 +47,13 @@ else
     fi
     tmux new-session -d -s "$session" -n workshop -c "$root" \
         "exec env HOME=/home/aria USER=aria LOGNAME=aria CLAUDE_CONFIG_DIR=$CLAUDE_CONFIG_DIR GIT_AUTHOR_NAME='Gwyn App Nub' GIT_AUTHOR_EMAIL=gwyn@nexus.local GIT_COMMITTER_NAME='Gwyn App Nub' GIT_COMMITTER_EMAIL=gwyn@nexus.local GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes' NOOBIA_GWYN_SESSION=$attach NOOBIA_GWYN_CONVERSATION_ID=$conversation $claude $claude_args"
-    tmux split-window -h -p 40 -t "$session":0 -c "$root" \
-        "/bin/bash -c 'while true; do /usr/bin/python3 $NOOBIA/common/dushich/bridge.py --agent gwyn monitor --session-id $attach; sleep 1; done'"
-    tmux set-window-option -t "$session":0 pane-border-status top
-    tmux set-window-option -t "$session":0 pane-border-format ' #{pane_title} '
     tmux select-pane -t "$session":0.0 -T 'Gwyn + Noob • Claude Code'
-    tmux select-pane -t "$session":0.1 -T 'Dushich • local GPU activity'
-    tmux select-pane -t "$session":0.0
     tmux set-option -t "$session" history-limit 50000
     tmux set-option -t "$session" mouse on
 fi
 
 if "$detached"; then
-    echo "Two-pane session ready: $session"
+    echo "Session ready: $session"
     echo "Reattach: $NOOBIA/gwyn-app-nub/launch --attach $attach"
 elif [[ -n "${TMUX:-}" ]]; then
     exec tmux switch-client -t "$session"

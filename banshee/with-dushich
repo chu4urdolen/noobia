@@ -27,15 +27,6 @@ if [[ -n "$attach" ]]; then
     tmux has-session -t "$session" 2>/dev/null || {
         echo "Banshee session is not running: $attach" >&2; exit 1
     }
-    if [[ $(tmux list-panes -t "$session":0 2>/dev/null | wc -l) -lt 2 ]]; then
-        tmux split-window -h -p 50 -t "$session":0 -c $NOOBIA/banshee \
-            "/bin/bash -c 'while true; do /usr/bin/python3 $NOOBIA/common/dushich/bridge.py --agent banshee monitor --session-id $attach; sleep 1; done'"
-        tmux set-window-option -t "$session":0 pane-border-status top
-        tmux set-window-option -t "$session":0 pane-border-format ' #{pane_title} '
-        tmux select-pane -t "$session":0.0 -T 'Banshee + Noob • Antigravity'
-        tmux select-pane -t "$session":0.1 -T 'Dushich • local GPU activity'
-        tmux select-pane -t "$session":0.0
-    fi
 else
     if [[ -n "$conversation" ]]; then
         [[ "$conversation" =~ ^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$ ]] || {
@@ -52,19 +43,13 @@ else
     [[ "$(/usr/bin/id -un)" == "aria" ]] || { echo "Run Banshee from the aria account" >&2; exit 1; }
     tmux new-session -d -s "$session" -n workshop -c $NOOBIA/banshee \
         "exec env HOME=/home/aria USER=aria LOGNAME=aria GIT_AUTHOR_NAME=Banshee GIT_AUTHOR_EMAIL=banshee@nexus.local GIT_COMMITTER_NAME=Banshee GIT_COMMITTER_EMAIL=banshee@nexus.local GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes' NOOBIA_BANSHEE_SESSION=$attach NOOBIA_BANSHEE_CONVERSATION_ID=$conversation /home/aria/.local/bin/agy $agy_args"
-    tmux split-window -h -p 50 -t "$session":0 -c $NOOBIA/banshee \
-        "/bin/bash -c 'while true; do /usr/bin/python3 $NOOBIA/common/dushich/bridge.py --agent banshee monitor --session-id $attach; sleep 1; done'"
-    tmux set-window-option -t "$session":0 pane-border-status top
-    tmux set-window-option -t "$session":0 pane-border-format ' #{pane_title} '
     tmux select-pane -t "$session":0.0 -T 'Banshee + Noob • Antigravity'
-    tmux select-pane -t "$session":0.1 -T 'Dushich • local GPU activity'
-    tmux select-pane -t "$session":0.0
     tmux set-option -t "$session" history-limit 50000
     tmux set-option -t "$session" mouse on
 fi
 
 if "$detached"; then
-    echo "Two-pane session ready: $session"
+    echo "Session ready: $session"
     echo "Reattach: noobia-banshee --attach $attach"
 elif [[ -n "${TMUX:-}" ]]; then
     exec tmux switch-client -t "$session"

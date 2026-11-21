@@ -7,9 +7,9 @@ shared `/noobia` repository; its [`CLAUDE.md`](CLAUDE.md) imports `AGENTS.md`.
 Claude Code 2.1.311 was installed from Anthropic's official native Linux
 installer on 2026-11-14. The CLI is `/home/aria/.local/bin/claude`.
 
-`/noobia/gwyn-app-nub/launch` opens a two-pane tmux workshop like Banshee's:
-Claude Code in Gwyn's home folder on the left, Dushich's live local coding
-activity on the right (`noobia-gwyn-*` sessions). `--detached` prints a
+`/noobia/gwyn-app-nub/launch` opens a tmux workshop like Banshee's:
+Claude Code in Gwyn's home folder with full terminal width
+(`noobia-gwyn-*` sessions). `--detached` prints a
 reattach command, `--attach ID` reattaches, `--resume CLAUDE_SESSION_ID`
 continues an earlier conversation, and `--plain [claude args]` runs bare
 Claude Code without tmux. New conversations start with

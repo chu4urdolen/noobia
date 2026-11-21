@@ -178,8 +178,8 @@ capability, not a standing delegation of system authority. This section is
 the one description of working with him; role files only name each agent's
 launcher.
 
-**Every agent has the same routes.** Each launcher opens a two-pane tmux
-workshop: the agent on the left, Dushich's live activity on the right. Each
+**Every agent has the same routes.** Each launcher opens a tmux
+workshop dedicated to that agent's CLI (with full terminal width). Each
 agent's `dushich` MCP server ([`common/dushich/`](/noobia/common/dushich/README.md))
 offers the same tools:
 

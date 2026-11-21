@@ -15,6 +15,7 @@ except ImportError:
 from detector import ObjectDetector
 from service import make_server
 from camera_sense import CameraSense
+from sense import format_line  # collector: tests never write to the live journal
 
 
 class TestDetectService(unittest.TestCase):
@@ -43,8 +44,9 @@ class TestDetectService(unittest.TestCase):
     def test_no_model_never_fabricates_detections(self):
         import io
         from detector import ObjectDetector
-        d = ObjectDetector(tpu=False)
+        d = ObjectDetector(model_path="", tpu=False)
         self.assertEqual(d.engine, "no_model")
+        self.assertFalse(d.model_loaded)
         try:
             from PIL import Image
             buf = io.BytesIO()
@@ -53,6 +55,22 @@ class TestDetectService(unittest.TestCase):
         except ImportError:
             frame = b"\xff\xd8\xff\xe0 not really a jpeg"
         self.assertEqual(d.detect_raw(frame), [])   # a black frame is not a person
+
+    def test_real_model_detection_on_fixtures(self):
+        from detector import ObjectDetector
+        d = ObjectDetector(tpu=False)
+        if not d.model_loaded:
+            self.skipTest("ONNX model or onnxruntime not available in environment")
+        self.assertEqual(d.engine, "onnx_cpu")
+        self.assertTrue(d.model_loaded)
+
+        fixtures_dir = Path(__file__).parent / "fixtures"
+        for expected_label, fname in [("cat", "cat.jpg"), ("dog", "dog.jpg"), ("person", "person.jpg")]:
+            img_path = fixtures_dir / fname
+            self.assertTrue(img_path.is_file(), f"Fixture {img_path} not found")
+            detections = d.detect_raw(img_path.read_bytes(), min_confidence=0.4)
+            labels = [obj["label"] for obj in detections]
+            self.assertIn(expected_label, labels, f"Expected {expected_label} in detected labels {labels}")
 
     def test_health_check(self):
         url = f"http://127.0.0.1:{self.port}/health"
@@ -64,7 +82,7 @@ class TestDetectService(unittest.TestCase):
 
     def test_no_model_service_yields_no_sense_lines(self):
         url = f"http://127.0.0.1:{self.port}/detect"
-        cs = CameraSense(detect_url=url, seen_window_s=60.0)
+        cs = CameraSense(detect_url=url, seen_window_s=60.0, emit_fn=format_line)
         self.assertEqual(cs.process_frame(self._make_dummy_jpeg(), now=100.0), [])
 
     def test_detect_post_in_memory(self):
@@ -79,7 +97,7 @@ class TestDetectService(unittest.TestCase):
         self.addCleanup(setattr, DetectRequestHandler, "detector", real)
         url = f"http://127.0.0.1:{self.port}/detect"
         jpeg = self._make_dummy_jpeg()
-        cs = CameraSense(detect_url=url, seen_window_s=60.0)
+        cs = CameraSense(detect_url=url, seen_window_s=60.0, emit_fn=format_line)
 
         # First frame with new label should produce P1
         lines = cs.process_frame(jpeg, now=100.0)

@@ -5,4 +5,4 @@ set -euo pipefail
 export NOOBIA="${NOOBIA:-/noobia}"
 cd "$NOOBIA/common/autonomy/services/detect"
 
-exec /usr/bin/python3 "$NOOBIA/common/autonomy/services/detect/service.py"
+exec "$NOOBIA/common/runtime/forge-venv/bin/python" "$NOOBIA/common/autonomy/services/detect/service.py"

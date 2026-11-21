@@ -105,6 +105,11 @@
 !/tools/camera_deps/fixtures/
 /tools/camera_deps/fixtures/*
 !/tools/camera_deps/fixtures/*.json
+!/tools/camera/
+/tools/camera/*
+!/tools/camera/*.py
+!/tools/camera/*.initd
+!/tools/camera/README.md
 !/tools/gnss/
 /tools/gnss/*
 !/tools/gnss/*.py

@@ -1,0 +1,54 @@
+#!/sbin/openrc-run
+description="Lynx camera hardware safe boot initialization"
+
+DISABLE_SWITCH="/etc/lynx/disable-camera-boot"
+MEDIA_DEV="/dev/media1"
+
+depend() {
+    after bootmisc modules
+    provide camera-hardware
+}
+
+start_pre() {
+    if [ -f "$DISABLE_SWITCH" ]; then
+        ewarn "Camera boot initialization disabled via $DISABLE_SWITCH"
+        return 0
+    fi
+}
+
+start() {
+    if [ -f "$DISABLE_SWITCH" ]; then
+        return 0
+    fi
+
+    ebegin "Initializing Lynx Camera Hardware and CAMSV Route"
+
+    # 1. Verify media device or kernel module readiness (bounded 5s timeout)
+    if [ ! -e "$MEDIA_DEV" ]; then
+        ewarn "Media controller $MEDIA_DEV not present; skipping CAMSV route"
+        eend 0
+        return 0
+    fi
+
+    # 2. Configure CAMSV-0 route for sensor4 (GC02M1 macro, 1600x1200 BA81)
+    if command -v media-ctl >/dev/null 2>&1; then
+        /bin/busybox timeout 5 media-ctl -d "$MEDIA_DEV" -r 2>/dev/null || true
+        /bin/busybox timeout 5 media-ctl -d "$MEDIA_DEV" -l '"sensor4":0 -> "seninf-1":0 [1]' 2>/dev/null || true
+        /bin/busybox timeout 5 media-ctl -d "$MEDIA_DEV" -l '"seninf-1":1 -> "mtk-cam camsv-0":0 [1]' 2>/dev/null || true
+    fi
+
+    # 3. Configure V4L2 format if device exists
+    if [ -e "/dev/video145" ] && command -v v4l2-ctl >/dev/null 2>&1; then
+        /bin/busybox timeout 5 v4l2-ctl -d /dev/video145 --set-fmt-video=width=1600,height=1200,pixelformat=BA81 2>/dev/null || true
+    fi
+
+    eend 0
+}
+
+stop() {
+    ebegin "Stopping Lynx Camera Hardware"
+    if [ -e "$MEDIA_DEV" ] && command -v media-ctl >/dev/null 2>&1; then
+        /bin/busybox timeout 3 media-ctl -d "$MEDIA_DEV" -r 2>/dev/null || true
+    fi
+    eend 0
+}

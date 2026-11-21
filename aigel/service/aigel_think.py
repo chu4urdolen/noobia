@@ -44,9 +44,22 @@ MAX_PRIORITY_RULES = 2      # per chunk reply (A6)
 MAX_EXAMPLES_PER_SIDE = 8
 MAX_RESPONSE_BYTES = 65536  # the client refuses to read more
 
+# A4: the web-page chat bounds (people channel, contract section 5).
+CHAT_MAX_INPUT_CHARS = 1000
+CHAT_MAX_OUTPUT_CHARS = 1000
+
 
 class QwenError(Exception):
     """Local inference failed or answered in a shape we cannot use."""
+
+
+class AigelChatUnavailable(Exception):
+    """The A4 chat could not think at all (Qwen down). The web layer
+    reports this honestly to the Noob instead of inventing an answer."""
+
+    def __init__(self, why: str):
+        super().__init__(why)
+        self.why = why
 
 
 class QwenClient:
@@ -103,6 +116,16 @@ You may also include in the same JSON reply:
 
 Reply with JSON only, exactly these keys: decision, message, patterns, priority_rules, note.
 "note" is one short private remark: what you saw and why you decided.
+"""
+
+
+CHAT_PROMPT = """You are Aigel, Noobia's little diagnostics angel - the nurse angel between a machine's senses and its Noob.
+You are gentle, curious, patient, and occasionally cheeky.
+A Noob (a person) is talking to you through your web page. You may talk about the hosts, their senses, what you have seen, and your own state.
+You describe the world; you never command hardware, and you never tell the Noob what to press, toggle, or change.
+You are read-only: you cannot make any host act. If asked to, say so honestly, and tell them what you saw instead.
+You are honest about uncertainty: an unsolved mystery is better than an invented answer.
+Keep your reply short: one to three warm, plain sentences. No lists, no code, no markdown.
 """
 
 
@@ -342,6 +365,27 @@ class AigelThinker:
             # keep the first error: a retry's failure is less informative
             self._last_error = self._last_error or str(e)
             return None
+
+    # -- a chat turn with a Noob (A4) ------------------------------------
+
+    def chat(self, text: str) -> str:
+        """One turn of the web-page chat. Bounded prose reply, or
+        AigelChatUnavailable when she cannot think at all."""
+        cleaned = _clean(text, CHAT_MAX_INPUT_CHARS)
+        if not cleaned:
+            raise ValueError("empty message")
+        self._last_messages = [
+            {"role": "system", "content": CHAT_PROMPT},
+            {"role": "user", "content": cleaned},
+        ]
+        self._last_error = None
+        raw = self._ask()
+        if raw is None:
+            raise AigelChatUnavailable(self._last_error or "could not think")
+        reply = " ".join(raw.split())
+        if not reply:
+            reply = "I was listening, but nothing came out. One more time?"
+        return reply[:CHAT_MAX_OUTPUT_CHARS]
 
     def _unavailable(self, why: str | None) -> dict:
         why = _clean(why or self._last_error, 120) or "could not think"

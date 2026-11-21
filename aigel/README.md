@@ -23,6 +23,33 @@ with its unit sources in `common/services/units/`. See
 [common/services/README.md](../common/services/README.md) for the sampling
 schedule, arguments, stores, and install instructions.
 
+## Autonomy service (A1, A2, A4, A6 - 2026-11-21)
+
+Aigel's role in Noobia's autonomy engine (contract:
+[`common/autonomy/ARCHITECTURE.md`](../common/autonomy/ARCHITECTURE.md),
+plan: [`common/autonomy/PLAN.md`](../common/autonomy/PLAN.md)). She is the
+nurse angel between a machine's senses and its Noob: hosts POST her the
+chunks they cannot explain, she decides, and people can watch and talk to
+her. She describes the world; she never commands hardware.
+
+| File                      | Role |
+|---------------------------|------|
+| `service/aigel_intake.py` | A1: intake on Nexus - `POST /api/v1/chunk`, per-host HMAC or Bearer auth from the private registry, bounded; her decision **is** the HTTP reply |
+| `service/aigel_think.py`  | A2 (+A6): thinking step on Qwen (local Ollama queue): JSON `quiet`/`message` + structured `patterns` + `priority_rules`; plus the A4 chat turn |
+| `service/aigel_web.py`    | A4: the web page for a Noob - host status, recent chunks and decisions, talk to Aigel (`POST /api/v1/chat`) |
+| `service/aigel_log.py`    | bounded one-line writer to the `noobia-aigel` view |
+| `private/intake_hosts.json` | per-host secrets (gitignored, never in Git) |
+
+Run (a LAN service; port 112 is privileged - the install is Aria's step,
+IS-3):
+
+    python3 aigel/service/aigel_intake.py --port 112 \
+        --hosts aigel/private/intake_hosts.json [--chat-token ...]
+
+Tests: `cd /noobia && python3 -m unittest discover -s aigel/service -p 'test_*.py'`
+(70 tests). The wire format is pinned cross-component by
+`common/autonomy/test_integration_aigel.py`.
+
 ## Monitoring model
 
 * All monitoring is **passive** — Aigel never alters system settings unless

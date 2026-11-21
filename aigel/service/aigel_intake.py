@@ -21,8 +21,13 @@ remembers the last chunk per host and marks a host ``silent`` when
 nothing arrives for its ``silence_s`` (her first nursing duty,
 contract liveness note) - exposed read-only on ``GET /api/v1/status``.
 
+A4 (the "People" channel) rides the same service: ``GET /`` is her
+web page (host status, recent chunks and decisions, a chat box),
+``GET /api/v1/status`` is the data behind it, and ``POST /api/v1/chat``
+is a bounded, logged chat turn. See ``aigel_web.py``.
+
 Runs on the Noobia LAN; the privileged port 112 is an admin step in
-an install session (A4). Until then it runs on any port:
+an install session (A4, IS-3). Until then it runs on any port:
 
     python3 aigel/service/aigel_intake.py --port 8112 --hosts aigel/private/intake_hosts.json
 """
@@ -42,9 +47,11 @@ from pathlib import Path
 try:  # package import (aigel.service.aigel_intake)
     from .aigel_log import ViewLogger
     from .aigel_think import AigelThinker
+    from .aigel_web import AigelWeb
 except ImportError:  # direct script use from aigel/service/
     from aigel_log import ViewLogger
     from aigel_think import AigelThinker
+    from aigel_web import AigelWeb
 
 NOOBIA = os.environ.get("NOOBIA", "/noobia")
 DEFAULT_HOSTS = NOOBIA + "/aigel/private/intake_hosts.json"
@@ -55,6 +62,9 @@ MAX_LINES = 200
 MAX_LINE_BYTES = 512
 MAX_RESPONSE_BYTES = 65_536
 DEFAULT_SILENCE_S = 1800
+
+RECENT_PER_HOST = 20        # A4: history kept per host
+RECENT_LIMIT = 50           # A4: history returned on the status page
 
 
 def load_host_registry(path: str | Path) -> dict:
@@ -133,13 +143,28 @@ class AigelIntake:
         except OSError:
             pass  # state persistence is best-effort, never fatal
 
-    def _touch_host(self, host: str, decision: str) -> None:
+    def _touch_host(self, host: str, decision: dict,
+                    reason: str = "unknown", n_lines: int = 0) -> None:
         with self._lock:
             now = self.now_fn()
+            entry = self._state.get(host, {})
+            history = entry.get("recent")
+            if not isinstance(history, list):
+                history = []
+            history.append({
+                "t": now,
+                "reason": str(reason)[:64],
+                "lines": int(n_lines),
+                "decision": str(decision.get("decision", "quiet")),
+                "message": (str(decision["message"])[:500]
+                            if decision.get("message") else None),
+                "note": str(decision.get("note") or "")[:240],
+            })
             self._state[host] = {
                 "last_seen": now,
-                "last_decision": decision,
-                "chunks": int(self._state.get(host, {}).get("chunks", 0)) + 1,
+                "last_decision": str(decision.get("decision", "quiet")),
+                "chunks": int(entry.get("chunks", 0)) + 1,
+                "recent": history[-RECENT_PER_HOST:],
             }
             self._save_state()
 
@@ -235,7 +260,7 @@ class AigelIntake:
                 "priority_rules": [], "note": "reply over bound; nothing delivered",
             }, ensure_ascii=False).encode("utf-8")
             decision = json.loads(body.decode("utf-8"))
-        self._touch_host(host, decision["decision"])
+        self._touch_host(host, decision, reason=reason, n_lines=len(lines))
         self.log.write(
             f"decision host={host} decision={decision['decision']} "
             f"patterns={len(decision['patterns'])} priority_rules={len(decision['priority_rules'])} "
@@ -245,11 +270,24 @@ class AigelIntake:
 
     # -- read-only status (A4's data) ----------------------------------------
 
+    def recent_chunks(self, limit: int = RECENT_LIMIT) -> list:
+        """The newest chunks and decisions across hosts, newest first."""
+        with self._lock:
+            out = []
+            for host, entry in self._state.items():
+                for item in (entry.get("recent") or []):
+                    if isinstance(item, dict):
+                        out.append({"host": host, **item})
+        out.sort(key=lambda c: float(c.get("t") or 0), reverse=True)
+        return out[: int(limit)]
+
     def status_body(self) -> dict:
-        return self.host_status()
+        body = self.host_status()
+        body["recent"] = self.recent_chunks()
+        return body
 
 
-def make_handler(intake: AigelIntake):
+def make_handler(intake: AigelIntake, web: AigelWeb | None = None):
     class Handler(BaseHTTPRequestHandler):
         server_version = "Aigel/0.2"
         protocol_version = "HTTP/1.1"
@@ -265,8 +303,18 @@ def make_handler(intake: AigelIntake):
             self.end_headers()
             self.wfile.write(body)
 
+        def _read_body(self, length: int) -> bytes:
+            raw = b""
+            while len(raw) < length:
+                part = self.rfile.read(length - len(raw))
+                if not part:
+                    break
+                raw += part
+            return raw
+
         def do_POST(self):  # noqa: N802
-            if self.path.split("?")[0] != "/api/v1/chunk":
+            path = self.path.split("?")[0]
+            if path not in ("/api/v1/chunk", "/api/v1/chat"):
                 self._send(404, {"error": "not found"})
                 return
             try:
@@ -277,13 +325,14 @@ def make_handler(intake: AigelIntake):
             if length < 0:
                 self._send(400, {"error": "bad Content-Length"})
                 return
-            raw = b""
-            while len(raw) < length:
-                part = self.rfile.read(length - len(raw))
-                if not part:
-                    break
-                raw += part
-            code, obj = intake.handle_chunk(raw, dict(self.headers))
+            raw = self._read_body(length)
+            if path == "/api/v1/chat":
+                if web is None:
+                    self._send(404, {"error": "chat not enabled"})
+                    return
+                code, obj = web.handle_chat(raw, dict(self.headers))
+            else:
+                code, obj = intake.handle_chunk(raw, dict(self.headers))
             self._send(code, obj)
 
         def do_GET(self):  # noqa: N802
@@ -292,7 +341,7 @@ def make_handler(intake: AigelIntake):
                 self._send(200, intake.status_body())
                 return
             if path == "/":
-                page = (
+                page = web.page() if web is not None else (
                     b"<!doctype html><meta charset='utf-8'>"
                     b"<title>Aigel</title><body style='font-family:sans-serif'>"
                     b"<h1>Aigel</h1><p>The little nurse angel is listening.</p>"
@@ -311,8 +360,12 @@ def make_handler(intake: AigelIntake):
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Aigel intake service (PLAN A1)")
-    ap.add_argument("--bind", default="127.0.0.1")
+    ap.add_argument("--bind", default="0.0.0.0",
+                    help="LAN service: host harnesses reach Aigel over the "
+                         "Noobia network (contract section 5)")
     ap.add_argument("--port", type=int, default=112)
+    ap.add_argument("--chat-token", default=os.environ.get("AIGEL_CHAT_TOKEN"),
+                    help="optional Bearer token guarding POST /api/v1/chat")
     ap.add_argument("--hosts", default=DEFAULT_HOSTS,
                     help="private per-host auth registry JSON")
     ap.add_argument("--state", default=DEFAULT_STATE,
@@ -331,7 +384,8 @@ def main() -> int:
     thinker = AigelThinker()
     log = ViewLogger("noobia-aigel", file_dir=args.view_dir, force_file=args.force_file_log)
     intake = AigelIntake(thinker, hosts, log=log, state_file=args.state)
-    httpd = ThreadingHTTPServer((args.bind, args.port), make_handler(intake))
+    web = AigelWeb(intake, log, chat_token=args.chat_token or None)
+    httpd = ThreadingHTTPServer((args.bind, args.port), make_handler(intake, web))
     log.write(f"aigel intake listening on {args.bind}:{args.port} hosts={sorted(hosts)}")
     print(f"aigel: listening on http://{args.bind}:{args.port} ({len(hosts)} registered hosts)")
     try:

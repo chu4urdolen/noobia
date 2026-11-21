@@ -10,19 +10,19 @@ pattern: `python3 -m unittest discover -s lynx/tools/<dir> -p 'test_*.py'`
 
 | Dir | Owner | Purpose | Live/offline | Installed? | Tests (2026-11-21) |
 | --- | --- | --- | --- | --- | --- |
-| `agent/` | Lynx | On-phone agent: lynx-codex-tool, supervised NRP queue, agent-health; `deploy_native_mcp_catalog.py` (known v19 landmine, Aria lane) | on-phone + Nexus side | **yes** (phone runtime) | cancel suite 9 OK (Gwyn #133) |
+| `agent/` | Lynx | On-phone agent: lynx-codex-tool, supervised NRP queue, agent-health; `deploy_native_mcp_catalog.py` (known v19 landmine, Aria lane) | on-phone + Nexus side | **yes** (phone runtime) | 30 OK (incl. cancel suite) |
 | `bluetooth/` | Banshee | BT link-state offline evaluator + acceptance gate; `catalog_proposal/` (schema, wrapper, manifest) | offline; live query gated | **no** (proposal) | 23 OK |
 | `camera_deps/` | Banshee | Camera dependency map + IMX890 (B10) / S5K3P9SP (B11) preflights; double-flag gated read-only live inspector | offline; live gated (`--live --allow-live`) | **no** | 20 OK |
-| `fingerprint/` | Banshee | Under-display fingerprint read-only identity/secure-boundary inventory | offline | **no** | OK |
+| `fingerprint/` | Banshee | Under-display fingerprint read-only identity/secure-boundary inventory | offline | **no** | 7 OK |
 | `flashlight/` | Banshee | Second-light gate + running-DT collector (one lm3642 channel) | offline; live collector read-only | **no** | 9 OK |
-| `gnss/` | Banshee | **B12 IN-FLIGHT** (working tree): GNSS fix-trial readiness checklist + gated read-only collector | offline | **no** | OK (in-flight) |
-| `headset/` | Banshee | Headset insertion evidence collector (interface-state, read-only) | offline; live read-only | **no** | OK |
+| `gnss/` | Banshee | **B12 landed** (`080594b`): GNSS fix-trial readiness checklist, gates, gated read-only live collector | offline; live gated (`--live --allow-live`) | **no** | 8 OK |
+| `headset/` | Banshee | Headset insertion evidence collector + **B13 landed** (`2185a79`): Type-C analog accessory detection trace + accessory classifier (11 tests) | offline; live read-only | **no** | 11 OK |
 | `health/` | Dushich | portable-health/1 board: evaluator + Lynx collector (SSH) + **Nexus local collector** (D11) + report diff (D10) | offline; both collectors read-only | **no** | **139 OK** |
 | `local_calls/` | Lynx | JSON-stdin wrappers for phone hardware (sensor, light, flashlight, motion) — the phone's own agent-call surface | on-phone | **yes** (phone rootfs) | via Gwyn ui manifest checks (113 OK) |
-| `nfc/` | Banshee | SN110T NCI validator + fixtures for the attended tag trial (B14 target) | offline | **no** | 5 OK |
+| `nfc/` | Banshee | SN110T NCI validator + **B14 landed** (`2adb7aa`): offline NCI frame parser + trial receipt decoder | offline (zero RF actuation) | **no** | 18 OK |
 | `ram-log-reader/` | Lynx | ARM-emulated RAM log reader (build + emulation) | offline | **no** | (build/emulate scripts) |
 | `ui/` | Gwyn | Presentation: validation-aware tool manifest, board refresh, a11y checks, state broker (`ui/state/latest.json`) | offline (board refresh reads pinned SSH) | **no** | 113 OK |
-| `usb/` | Banshee | USB ACM NRP transport, boot-persistence initd (B9v2), collector, preflight | offline; collector read-only | **no** (initd NOT installed) | 34 OK |
+| `usb/` | Banshee | USB ACM NRP transport, boot-persistence initd (B9v2), collector, preflight + **B15 landed** (`49cd03e`): serial status proposal staged in `catalog_proposal/` | offline; collector read-only | **no** (initd + proposal NOT installed) | 39 OK |
 
 ## Standalone tools (`lynx/tools/*.py`)
 
@@ -43,7 +43,7 @@ pattern: `python3 -m unittest discover -s lynx/tools/<dir> -p 'test_*.py'`
 
 - Nothing in this index is **deployed** except the phone runtime and
   local_calls surface; every "no" is deliberate and review-gated (Aria
-  owns live deployment, Gwyn reviews, Dushich second-reviews).
+  owns live deployment; Round 6 (2026-11-21): Banshee coordinates and peer-reviews, Dushich second-reviews).
 - All live paths are read-only, bounded, and key-only; RF/capture/writes
   remain HARD_REFUSE until an attended, authorized trial.
 - Build-cache dirs under `lynx/tools/` (alpine-*, aarch64-*, build-deps,

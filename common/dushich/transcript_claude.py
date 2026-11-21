@@ -14,9 +14,29 @@ import sys
 from agents import NOOBIA
 
 # Claude Code names a project's transcript folder after its path, with / as -.
+PROJECTS = NOOBIA / 'gwyn-app-nub/private/claude/projects'
 WORKSPACE = NOOBIA / 'gwyn-app-nub'  # where Gwyn's launcher starts Claude Code
-CONVERSATIONS = (NOOBIA / 'gwyn-app-nub/private/claude/projects'
-                 / str(WORKSPACE).replace('/', '-'))
+CONVERSATIONS = PROJECTS / str(WORKSPACE).replace('/', '-')
+# Before ea2f497 (2026-11-21) the launcher started in gwyn-app-nub/workspace.
+# Sessions begun or resumed from there still write to this folder.
+LEGACY_WORKSPACE = NOOBIA / 'gwyn-app-nub/workspace'
+LEGACY_CONVERSATIONS = PROJECTS / str(LEGACY_WORKSPACE).replace('/', '-')
+
+
+def folders() -> tuple[Path, ...]:
+    """Transcript folders, current first (read at call time for tests)."""
+    return (CONVERSATIONS, LEGACY_CONVERSATIONS)
+
+
+def find(conversation_id: str) -> Path | None:
+    """The transcript for a conversation ID in any known folder, or None."""
+    if not conversation_id or not all(c in '0123456789abcdef-' for c in conversation_id):
+        return None
+    for folder in folders():
+        path = folder / f'{conversation_id}.jsonl'
+        if path.is_file():
+            return path
+    return None
 
 
 def _prompt_text(content) -> str:
@@ -34,7 +54,7 @@ def _prompt_text(content) -> str:
 
 
 def read(path: Path) -> list[dict]:
-    if not path.is_file() or path.suffix != '.jsonl' or path.parent != CONVERSATIONS:
+    if not path.is_file() or path.suffix != '.jsonl' or path.parent not in folders():
         raise ValueError('Unknown Gwyn conversation')
     result = []
     answer = None
@@ -66,17 +86,19 @@ def read(path: Path) -> list[dict]:
 
 
 def latest() -> Path | None:
-    found = list(CONVERSATIONS.glob('*.jsonl'))
+    found = [path for folder in folders() for path in folder.glob('*.jsonl')]
     return max(found, key=lambda p: p.stat().st_mtime) if found else None
 
 
 def locate(conversation_id: str | None) -> Path | None:
     """The conversation's transcript, or the newest one if it is unknown."""
-    path = CONVERSATIONS / f'{conversation_id}.jsonl' if conversation_id else None
-    return path if path and path.is_file() else latest()
+    return find(conversation_id or '') or latest()
 
 
 if __name__ == '__main__':
     if len(sys.argv) != 2 or not all(c in '0123456789abcdef-' for c in sys.argv[1]):
         raise SystemExit('Usage: transcript_claude.py SESSION_ID')
-    print(json.dumps(read(CONVERSATIONS / (sys.argv[1] + '.jsonl')), ensure_ascii=False))
+    path = find(sys.argv[1])
+    if path is None:
+        raise SystemExit('Unknown Gwyn conversation')
+    print(json.dumps(read(path), ensure_ascii=False))

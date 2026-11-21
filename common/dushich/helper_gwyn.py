@@ -22,7 +22,7 @@ from agents import DUSHICH_CODING, STATE
 sys.path.insert(0, str(DUSHICH_CODING))
 import dushich_summarizer
 import helper_mirror as shared
-from transcript_claude import CONVERSATIONS, read as visible_turns
+from transcript_claude import find as find_transcript, read as visible_turns
 
 ROOT = STATE / 'helper-mirror/gwyn'
 SUMMARIZER_CONTEXT_SIZE = 24_000
@@ -73,8 +73,8 @@ def save_state(conversation_id: str, state: dict) -> None:
 def ask(conversation_id: str, question: str) -> str:
     if not question.strip() or len(question.encode('utf-8')) > 8000:
         raise ValueError('Provide a question up to 8 KB')
-    path = CONVERSATIONS / (conversation_id + '.jsonl')
-    if not path.is_file():
+    path = find_transcript(conversation_id)
+    if path is None:
         raise ValueError('Gwyn conversation transcript is unavailable')
     now_str = datetime.now(timezone.utc).strftime('%H:%M:%S')
     log_activity(conversation_id, {'time': now_str, 'type': 'question', 'question': question.strip()})

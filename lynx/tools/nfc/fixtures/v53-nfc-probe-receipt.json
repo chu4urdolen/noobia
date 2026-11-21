@@ -1,0 +1,138 @@
+{
+  "state": "probe-complete-healthy",
+  "boot_partition_writes": false,
+  "persistent_phone_files": false,
+  "radio_transaction_requested": false,
+  "stage": "/run/lynx-nfc-ram-1795213467857639508",
+  "loaded": [
+    "oplus_nfc",
+    "nfc_i2c"
+  ],
+  "steps": [
+    {
+      "name": "identity",
+      "exit": 0,
+      "start_wall_ns": 1795213467857745756,
+      "end_wall_ns": 1795213468445978800,
+      "elapsed_ms": 588
+    },
+    {
+      "name": "health_before",
+      "exit": 0,
+      "start_wall_ns": 1795213468446326757,
+      "end_wall_ns": 1795213469234867859,
+      "elapsed_ms": 788
+    },
+    {
+      "name": "interface_before",
+      "exit": 0,
+      "start_wall_ns": 1795213469235243057,
+      "end_wall_ns": 1795213469550565123,
+      "elapsed_ms": 315
+    },
+    {
+      "name": "stage_dir",
+      "exit": 0,
+      "start_wall_ns": 1795213469550872194,
+      "end_wall_ns": 1795213469867213554,
+      "elapsed_ms": 316
+    },
+    {
+      "name": "oplus_nfc_stage",
+      "exit": 0,
+      "start_wall_ns": 1795213469867613538,
+      "end_wall_ns": 1795213470016001467,
+      "elapsed_ms": 148
+    },
+    {
+      "name": "oplus_nfc_verify",
+      "exit": 0,
+      "start_wall_ns": 1795213470016243838,
+      "end_wall_ns": 1795213470147824957,
+      "elapsed_ms": 131
+    },
+    {
+      "name": "nfc_i2c_stage",
+      "exit": 0,
+      "start_wall_ns": 1795213470148117601,
+      "end_wall_ns": 1795213470305431822,
+      "elapsed_ms": 157
+    },
+    {
+      "name": "nfc_i2c_verify",
+      "exit": 0,
+      "start_wall_ns": 1795213470305737250,
+      "end_wall_ns": 1795213470442414215,
+      "elapsed_ms": 136
+    },
+    {
+      "name": "watchdog_stage",
+      "exit": 0,
+      "start_wall_ns": 1795213470442677645,
+      "end_wall_ns": 1795213470589422441,
+      "elapsed_ms": 146
+    },
+    {
+      "name": "watchdog_arm",
+      "exit": 0,
+      "start_wall_ns": 1795213470589790926,
+      "end_wall_ns": 1795213470824550318,
+      "elapsed_ms": 234
+    },
+    {
+      "name": "oplus_nfc_load",
+      "exit": 0,
+      "start_wall_ns": 1795213470825125468,
+      "end_wall_ns": 1795213470985786342,
+      "elapsed_ms": 160
+    },
+    {
+      "name": "oplus_nfc_post",
+      "exit": 0,
+      "start_wall_ns": 1795213470986234074,
+      "end_wall_ns": 1795213472100891082,
+      "elapsed_ms": 1114
+    },
+    {
+      "name": "nfc_i2c_load",
+      "exit": 0,
+      "start_wall_ns": 1795213472101395200,
+      "end_wall_ns": 1795213472394014374,
+      "elapsed_ms": 292
+    },
+    {
+      "name": "nfc_i2c_post",
+      "exit": 0,
+      "start_wall_ns": 1795213472394496370,
+      "end_wall_ns": 1795213473644093246,
+      "elapsed_ms": 1249
+    },
+    {
+      "name": "interface_after",
+      "exit": 0,
+      "start_wall_ns": 1795213473644486117,
+      "end_wall_ns": 1795213473893165346,
+      "elapsed_ms": 248
+    },
+    {
+      "name": "health_after",
+      "exit": 0,
+      "start_wall_ns": 1795213473893595656,
+      "end_wall_ns": 1795213474661197896,
+      "elapsed_ms": 767
+    },
+    {
+      "name": "watchdog_cancel",
+      "exit": 0,
+      "start_wall_ns": 1795213474661634307,
+      "end_wall_ns": 1795213474814363121,
+      "elapsed_ms": 152
+    }
+  ],
+  "watchdog_armed": true,
+  "watchdog_cancelled": true,
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "attempted": "nfc_i2c",
+  "driver_bound": true,
+  "nq_node": true
+}

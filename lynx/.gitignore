@@ -52,3 +52,10 @@
 !/tools/fingerprint/fixtures/
 /tools/fingerprint/fixtures/*
 !/tools/fingerprint/fixtures/*.json
+!/tools/nfc/
+/tools/nfc/*
+!/tools/nfc/*.py
+!/tools/nfc/README.md
+!/tools/nfc/fixtures/
+/tools/nfc/fixtures/*
+!/tools/nfc/fixtures/*.json

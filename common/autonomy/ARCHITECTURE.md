@@ -175,17 +175,6 @@ will tune this by reassigning priorities and reconfiguring the trigger once
 we see it running. `volume_skips_ranker` and a matching
 `timeout_skips_ranker` (both default `true`) keep this configurable.
 
-**Liveness: silence is a symptom.** On 2026-11-21, Lynx's syslog went
-silent for two hours before she rebooted, and nothing noticed. To catch
-this:
-- Each host harness emits its own heartbeat sense line every
-  `heartbeat_s` (default 300 s), `NOOBIA P0 autonomy heartbeat`.
-- If the trigger's view backend sees **no line at all** (heartbeat
-  included) for `silence_s` (default 900 s), it reports `view.silent`
-  directly to Aigel over the client, not through the log.
-- Aigel, on Nexus, separately marks a host as `silent` when no chunk or
-  heartbeat arrives for `host_silence_s`. That is her first nursing duty.
-
 **Kill switch:** while `/etc/noobia/autonomy.disable` exists, the trigger
 sends nothing. The senses keep logging.
 
@@ -208,11 +197,8 @@ actions and Aigel's words can never set off a trigger.
   noobia-sense`. Lines also carry the fields `NOOBIA_P`, `NOOBIA_SENSE` and
   `NOOBIA_EVENT`.
 - **BusyBox syslogd** (Lynx): tail `/var/log/lynx/messages`, filtered by
-  tag. Sense lines are logged at level `notice` (5). BusyBox `-l N` keeps
-  only messages **more urgent than N**, so Lynx's current `-l 4` drops
-  warnings and notices. Install I-2 raises it to `-l 6`, which keeps notice
-  and drops info
-  (`lynx/linux-port/docs/LYNX-INSTALL-PACKET-I2-SYSLOG-20261121.md`).
+  tag. Sense lines are logged at level `notice`, so install I-2 must raise
+  Lynx's `syslogd -l 4` to `-l 6`, or they are dropped.
 - A fallback like `aigel_dmesg_scout.py`'s `journalctl`/`dmesg` pair.
 
 ## 4. Pattern store and ranker (regex done carefully)

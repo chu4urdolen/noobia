@@ -41,7 +41,6 @@ for Aigel, `lynx` for hardware and installs.
 | E2 | `views.py`: journald (`journalctl -t`) and BusyBox-file backends with a fallback, one reader per view | Banshee | **done** (own tests + live Nexus probe pass) |
 | E3 | `trigger.py`: chunk rules, carry-over, VOLUME sends as-is and resets (configurable `max_lines`, `volume_resets_priority`, `volume_skips_ranker`), bounds, rates, kill switch | Banshee | **done** (`TriggerContract` all pass) |
 | E4 | `ranker.py`: structured patterns, store 200 / active 100 (configurable), archive, cooldowns, validator, persistence. Used **only for PRIORITY chunks**; TIMEOUT and VOLUME chunks go straight to Aigel | Banshee | **done** (`RankerContract` all pass) |
-| E3b | Liveness: harness heartbeat (`P0 autonomy heartbeat`), `view.silent` reported directly to Aigel after `silence_s`; Aigel marks silent hosts (A1) | Banshee (harness), Dushich (Aigel side) |
 | E5 | `route.py`: per-task backends `inference`, `detect`, `stt`, `tts`, in the order Nexus → local → cloud, with health checks, timeouts, a config file re-read on change, and decisions logged to `noobia-autonomy` | Banshee | **done** (own tests pass) |
 | E6 | `aigel_client.py`: send unexplained chunks to Aigel, receive the decision, patterns and message; authenticated, bounded retries | Banshee | **done** (tests against fake Aigel pass) |
 | E7 | Safety review of E1–E6: loops, bounds, regex, privacy | Gwyn | review note |

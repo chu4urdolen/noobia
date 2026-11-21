@@ -18,8 +18,11 @@ LYNX-CONSOLIDATED-SUITE-20261121.md):
 * ``script-failed``-- standalone script exited nonzero.
 * ``env-blocked``  -- the suite could not even be imported because a
                       system dependency is missing (e.g. a Python module
-                      or a binary). The suite did not run; it is reported
-                      with the missing dependency name.
+                      or a binary), or the suite ran and every failure is
+                      a missing machine-specific ``artifacts/`` file
+                      (an untracked build output absent from a fresh
+                      checkout). The suite did not pass; it is reported
+                      with the missing dependency or artifact name.
 
 Exit contract: exit 0 when every suite is ``ok``/``script-ok``, the
 whitespace scan is clean, and no test failed. ``env-blocked`` suites are
@@ -58,6 +61,7 @@ _IMPORT_FAIL_RE = re.compile(r"Failed to import test module")
 _NO_TESTS_RE = re.compile(r"NO TESTS RAN")
 _MISSING_MODULE_RE = re.compile(r"No module named ['\"]([A-Za-z0-9_]+)")
 _MISSING_FILE_RE = re.compile(r"No such file or directory: '([^']+)'")
+_NOT_FOUND_AT_RE = re.compile(r"not found at (\S+)")
 
 
 @dataclass
@@ -153,12 +157,48 @@ def run_script_fallback(test_file: Path, timeout: int,
             duration=duration, detail=f"standalone script, {note}",
         )
     err_tail = _tail(res.stderr, 3)
+    artifacts = _artifact_paths(res.stderr or "")
+    if artifacts:
+        return SuiteResult(
+            suite=module, path=str(test_file), ok=False, status="env-blocked",
+            missing=f"missing artifact: {artifacts[0]}",
+            duration=duration,
+            detail=f"standalone script, exit {res.returncode}"
+                   + (f" | {err_tail}" if err_tail else ""),
+        )
     return SuiteResult(
         suite=module, path=str(test_file), ok=False, status="script-failed",
         duration=duration,
         detail=f"standalone script, exit {res.returncode}"
                + (f" | {err_tail}" if err_tail else ""),
     )
+
+
+def _artifact_paths(stderr: str) -> List[str]:
+    """Missing machine-specific artifact paths (under an ``artifacts/``
+    directory) named anywhere in a child process' stderr."""
+    found: List[str] = []
+    for rx in (_MISSING_FILE_RE, _NOT_FOUND_AT_RE):
+        for m in rx.finditer(stderr):
+            p = m.group(1)
+            if "artifacts/" in p and p not in found:
+                found.append(p)
+    return found
+
+
+def _failure_blocks_artifact_only(stderr: str) -> bool:
+    """True when at least one unittest FAIL/ERROR block exists and every
+    block is a missing-artifact error. A single real failure anywhere
+    keeps the suite ``failed``."""
+    positions = [m.start() for m in
+                 re.finditer(r"^(?:FAIL|ERROR): \S+", stderr, re.M)]
+    if not positions:
+        return False
+    for i, pos in enumerate(positions):
+        end = positions[i + 1] if i + 1 < len(positions) else len(stderr)
+        if not _artifact_paths(stderr[pos:end]):
+            return False
+    return True
 
 
 def _env_blocked_detail(stderr: str) -> str:
@@ -168,7 +208,12 @@ def _env_blocked_detail(stderr: str) -> str:
         return f"missing python module: {m.group(1)}"
     m = _MISSING_FILE_RE.search(stderr)
     if m:
+        if "artifacts/" in m.group(1):
+            return f"missing artifact: {m.group(1)}"
         return f"missing binary: {m.group(1)}"
+    m = _NOT_FOUND_AT_RE.search(stderr)
+    if m and "artifacts/" in m.group(1):
+        return f"missing artifact: {m.group(1)}"
     return "import failed (see detail)"
 
 
@@ -212,9 +257,13 @@ def run_suite(test_file: Path, timeout: int = DEFAULT_TIMEOUT) -> SuiteResult:
     if not ran:
         m = _MISSING_FILE_RE.search(stderr)
         if m:
+            if "artifacts/" in m.group(1):
+                label = f"missing artifact: {m.group(1)}"
+            else:
+                label = f"missing binary: {m.group(1)}"
             return SuiteResult(
                 suite=module, path=str(test_file), ok=False,
-                status="env-blocked", missing=f"missing binary: {m.group(1)}",
+                status="env-blocked", missing=label,
                 duration=duration, detail=_tail(stderr),
             )
         return SuiteResult(
@@ -223,6 +272,13 @@ def run_suite(test_file: Path, timeout: int = DEFAULT_TIMEOUT) -> SuiteResult:
         )
     if _NO_TESTS_RE.search(stderr):
         return run_script_fallback(test_file, timeout, started, env)
+    if _failure_blocks_artifact_only(stderr):
+        return SuiteResult(
+            suite=module, path=str(test_file), tests=int(ran.group(1)),
+            ok=False, status="env-blocked",
+            missing=f"missing artifact: {_artifact_paths(stderr)[0]}",
+            duration=duration, detail=_tail(stderr),
+        )
     return SuiteResult(
         suite=module, path=str(test_file), tests=int(ran.group(1)), ok=False,
         status="failed", duration=duration, detail=_tail(stderr),
@@ -353,7 +409,7 @@ def render_markdown(
     lines.append(f"- Whitespace sanity (git diff --check equivalent): "
                  f"{'CLEAN' if ws_ok else f'{len(ws_violations)} violation(s)'}")
     if env_blocked:
-        lines.append("- Env-blocked (missing system dependency, suite not run): "
+        lines.append("- Env-blocked (missing system dependency or artifact): "
                      + "; ".join(f"`{r.suite}` [{r.missing}]" for r in env_blocked))
     if strict:
         lines.append("- Mode: strict (env-blocked counts as failure)")

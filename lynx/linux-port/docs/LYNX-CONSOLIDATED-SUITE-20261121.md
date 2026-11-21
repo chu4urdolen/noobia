@@ -1,6 +1,6 @@
 # Lynx Consolidated Test-Suite Runner (Round 6, Item D20)
 
-- **Deliverable**: `lynx/tools/run_all_lynx_tests.py` (+ `test_run_all_lynx_tests.py`, 30 tests)
+- **Deliverable**: `lynx/tools/run_all_lynx_tests.py` (+ `test_run_all_lynx_tests.py`, 38 tests)
 - **Purpose**: one command, offline, that runs every Lynx test suite across
   all tool directories, reports per-suite test counts and wall-clock time in
   a formatted markdown (or JSON) summary, and gates on a
@@ -57,14 +57,34 @@ python3 lynx/tools/run_all_lynx_tests.py --strict
 | `script-ok` | file collects zero unittest tests (standalone offline test script); re-run directly as `python3 <file>`, exit 0 | — |
 | `failed` | tests ran, ≥1 failed/errored, or import crashed on a code defect | **yes → exit 1** |
 | `script-failed` | standalone script exited nonzero | **yes → exit 1** |
-| `env-blocked` | suite could not even import because a system dependency is missing (named in the report); suite did not run | **no** by default; **yes** with `--strict` |
+| `env-blocked` | a system dependency is missing (named in the report): the suite could not even import (a Python module or a binary), **or** the suite ran and every failure is a missing machine-specific `artifacts/` file (an untracked build output absent from a fresh checkout) | **no** by default; **yes** with `--strict` |
 
 Exit 0 requires: ≥1 suite discovered, no `failed`/`script-failed`, whitespace
 scan clean (unless `--skip-whitespace`), and — only under `--strict` — no
 `env-blocked`. The env-blocked list is **always** printed, so a dependency gap
 can never hide silently in the report.
 
-### 4.1 Standalone-script fallback
+### 4.1 Missing-artifact classification (D29, Round 9)
+
+A fresh `git clone --no-local` lacks the machine-specific build outputs
+under `lynx/linux-port/artifacts/` (e.g. `busybox-wifi-ssh-twostage-v19/`,
+`stock-cph2493-…/mtu3.ko`, `wifi-dhcp-retry-v47-offline/`). Suites that need
+one used to be misreported as `FAIL`. The runner now classifies a suite
+`env-blocked` when a missing artifact is the cause, detected from the child
+process' stderr:
+
+* import crash naming a file under an `artifacts/` directory, or
+  `…not found at …/artifacts/…`;
+* a unittest run where **every** `FAIL:`/`ERROR:` block is a missing-artifact
+  error (a single real failure anywhere keeps the suite `failed`);
+* a standalone script whose nonzero exit is a missing-artifact `FileNotFoundError`.
+
+The report names the artifact (`missing artifact: <path>`), so an environment
+gap can no longer masquerade as a code defect. A real assertion failure mixed
+with a missing-artifact error is still reported `failed`, so a genuine bug is
+never hidden behind an environment gap.
+
+### 4.2 Standalone-script fallback
 
 Two pre-existing top-level files are standalone scripts with `main()`, not
 unittest modules (they predate the house unittest pattern and are run as

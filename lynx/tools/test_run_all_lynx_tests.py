@@ -250,6 +250,100 @@ class TestOverallOk(unittest.TestCase):
         self.assertIn("1 env-blocked", md)
 
 
+class TestArtifactClassification(unittest.TestCase):
+    """D29: missing-artifact errors classify as env-blocked; real failures stay failed."""
+
+    def _write(self, td: str, name: str, body: str) -> Path:
+        f = Path(td) / name
+        f.write_text(body)
+        return f
+
+    def test_unittest_suite_not_found_at_artifact(self):
+        with tempfile.TemporaryDirectory() as td:
+            f = self._write(td, "test_art1.py",
+                "import unittest\n"
+                "class T(unittest.TestCase):\n"
+                "    def test_one(self):\n"
+                "        raise RuntimeError('stock mtu3.ko not found at "
+                "/x/lynx/linux-port/artifacts/stock/mtu3.ko')\n"
+            )
+            r = R.run_suite(f, timeout=60)
+            self.assertFalse(r.ok)
+            self.assertEqual(r.status, "env-blocked", r.detail)
+            self.assertIn("missing artifact:", r.missing)
+            self.assertIn("artifacts/", r.missing)
+
+    def test_unittest_suite_fileerror_on_artifact(self):
+        with tempfile.TemporaryDirectory() as td:
+            f = self._write(td, "test_art2.py",
+                "import unittest\n"
+                "class T(unittest.TestCase):\n"
+                "    def test_one(self):\n"
+                "        with open('/x/artifacts/busybox/build-validation.json'):\n"
+                "            pass\n"
+            )
+            r = R.run_suite(f, timeout=60)
+            self.assertEqual(r.status, "env-blocked", r.detail)
+            self.assertIn("missing artifact:", r.missing)
+
+    def test_standalone_script_missing_artifact(self):
+        with tempfile.TemporaryDirectory() as td:
+            f = self._write(td, "test_art3.py",
+                "#!/usr/bin/env python3\n"
+                "# uncaught, like the real v47 retry script\n"
+                "with open('/x/artifacts/wifi-dhcp-retry/nord3.img'):\n"
+                "    pass\n"
+            )
+            r = R.run_suite(f, timeout=60)
+            self.assertEqual(r.status, "env-blocked", r.detail)
+            self.assertIn("missing artifact:", r.missing)
+
+    def test_mixed_real_failure_stays_failed(self):
+        with tempfile.TemporaryDirectory() as td:
+            f = self._write(td, "test_mix.py",
+                "import unittest\n"
+                "class T(unittest.TestCase):\n"
+                "    def test_real_failure(self):\n"
+                "        self.fail('deliberate')\n"
+                "    def test_artifact(self):\n"
+                "        raise RuntimeError('not found at /x/artifacts/y/mtu3.ko')\n"
+            )
+            r = R.run_suite(f, timeout=60)
+            self.assertEqual(r.status, "failed", r.detail)
+
+    def test_non_artifact_fileerror_stays_failed(self):
+        with tempfile.TemporaryDirectory() as td:
+            f = self._write(td, "test_nonart.py",
+                "import unittest\n"
+                "class T(unittest.TestCase):\n"
+                "    def test_one(self):\n"
+                "        with open('/x/data/config.json'):\n"
+                "            pass\n"
+            )
+            r = R.run_suite(f, timeout=60)
+            self.assertEqual(r.status, "failed", r.detail)
+
+    def test_env_blocked_detail_labels_artifact(self):
+        stderr = ("ERROR: test_x\n"
+                  "FileNotFoundError: [Errno 2] No such file or directory: "
+                  "'/x/lynx/linux-port/artifacts/a/b.json'\n")
+        self.assertEqual(
+            R._env_blocked_detail(stderr),
+            "missing artifact: /x/lynx/linux-port/artifacts/a/b.json")
+
+    def test_env_blocked_detail_keeps_binary(self):
+        stderr = ("FileNotFoundError: [Errno 2] "
+                  "No such file or directory: '/usr/bin/xyz'\n")
+        self.assertEqual(R._env_blocked_detail(stderr),
+                         "missing binary: /usr/bin/xyz")
+
+    def test_failure_blocks_helper_requires_blocks(self):
+        self.assertFalse(R._failure_blocks_artifact_only("Ran 0 tests"))
+        self.assertTrue(R._failure_blocks_artifact_only(
+            "ERROR: test_a\n"
+            "RuntimeError: not found at /x/artifacts/stock/mtu3.ko\n"))
+
+
 class TestLiveLynxTree(unittest.TestCase):
     def test_tracked_lynx_tree_is_whitespace_clean(self):
         """The real gate: every tracked lynx file passes the scan."""

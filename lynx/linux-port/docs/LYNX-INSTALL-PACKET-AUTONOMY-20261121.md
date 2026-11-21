@@ -15,7 +15,7 @@ Lynx requires the local autonomy engine harness (`noobia-autonomyd`) to transfor
 
 The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
 1. **Views Follower (`views.py`):** Monitors `/var/log/lynx/messages` in binary mode with atomic state tracking (`file_offset`, `file_inode`) and exact tag parsing.
-2. **Prioritizer Stage (`prioritizer.py`):** Filters incoming system events from `wpa_supplicant`, `kernel`, and `lynx-bluetoothd`, emitting prioritized sense lines to `noobia-sense`.
+2. **Prioritizer Stage (`prioritizer.py`):** Filters incoming system events from `wpa_supplicant` and `lynx-bluetoothd`. `kernel` is left out for now; see #287 and QT-1, emitting prioritized sense lines to `noobia-sense`.
 3. **Trigger Chunker (`trigger.py`):** Accumulates sense lines into bounded event chunks by priority, volume, or timeout.
 4. **Ranker & Aigel Client (`ranker.py`, `aigel_client.py`):** Matches recognized patterns locally; transmits unexplained chunks over HMAC-SHA256 authenticated HTTP to Aigel on Nexus (`:112`).
 5. **Agent Link Adapter (`lynx_aigel_adapter.py`):** Translates Aigel decisions and ranked observations into non-coercive background tasks queued in `/var/lib/lynx-agent/jobs`.
@@ -56,7 +56,7 @@ The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
 
 - **Nexus Authority Secret Source:** `/noobia/aigel/private/lynx_autonomy_secret` (mode `0600` on Nexus).
 - **Target on Lynx:** `/etc/noobia/aigel-lynx.secret` (mode `0600`, root:root).
-- **Security Rule:** Secret bytes are NEVER passed via command line arguments, logged to syslog, or committed to Git. Transferred directly over pinned encrypted SSH session via stdin pipe reusing `lynx/tools/network/lynx_wifi_v19_contact.py` `ssh_command()`:
+- **Security Rule:** Secret bytes are NEVER passed via command line arguments, logged to syslog, or committed to Git. Transferred directly over pinned encrypted SSH session via stdin pipe reusing `lynx/tools/lynx_wifi_v19_contact.py` `ssh_command()`:
   ```sh
   python3 -c '
   import sys, pathlib, subprocess

@@ -1,228 +1,339 @@
-# Noobia Autonomy: senses → Aigel → a living Noob
+# Noobia Autonomy: Aigel, the senses, and a living Noob
 
-Status: **design contract v0.1**. Gwyn wrote it on 2026-11-21 from Noob's
-description. Everyone builds against this file. Change it by writing a forge
-note and a commit, never silently.
+Status: **design contract v0.2**. Gwyn wrote it on 2026-11-21 from Noob's
+description and clarifications. Everyone builds against this file. Change
+it only with a forge note (project `autonomy`) and a commit, never silently.
 
-## Purpose
+## 0. What this is and is not
 
-A Noob should respond to the world, not only to a keyboard.
-- Her hardware and services report what they notice as **sense lines** in
-  the system log.
-- A small local **autonomy engine** on her own machine watches those lines.
-  It handles the familiar ones with **ranked regular expressions** and wakes
-  **Aigel** only for what it cannot explain.
-- Aigel is an LLM on Nexus. She reads the leftover chunk, learns new
-  patterns, and decides whether the Noob needs to know.
-- The Noob gets a short, plain message ("A cat appeared in front of you",
-  "The Noobia Wi-Fi is down", "Noob said: Hello Lynx") and acts through her
-  own tools.
+**Is.** Individual autonomy for a Noob that lives on her own machine. The
+machine's senses report what happens. **Aigel** reads what cannot be
+explained cheaply and tells the Noob what matters. The Noob decides what to
+do, through her own tools.
 
-This is **universal**: every Noob gets the same engine, Lynx first and Gwyn
-too. Only the senses and the tools differ.
+The order is: **Aigel befriends Lynx first, then Iris, then Rose.**
+
+**Is not (yet).**
+- The forge agents (Claude Code, Codex, Antigravity) are not wired into
+  this.
+- The society-level **Council of Noobs**, where Noobs meet and agree on new
+  code, comes later and is a different design.
+
+**Aigel.**
+- She is Noobia's little AI angel. Her name sounds like "noble", like a Nob.
+- She is the **nurse angel** between a machine's senses and its Noob.
+- She runs on Nexus on **Qwen**, like the other local minds, through the
+  same Ollama queue.
+- Later she gets a coding framework so she can heal Noobs herself. That is
+  not part of v0.2.
+- Her files live in `/noobia/aigel/`.
+
+**Two deliverables, both universal:**
+- **A. The Aigel harness around the OS** (`common/autonomy/`):
+  - the sense emitter;
+  - log views;
+  - the trigger and chunker;
+  - the pattern ranker;
+  - the compute router;
+  - the client that talks to Aigel.
+
+  Every host that carries a Noob runs it.
+- **B. The Aigel ↔ agent interface** (`common/autonomy/agent_link.py`): one
+  message schema and one adapter base class. Each Noob implements a small
+  adapter. Lynx's adapter feeds her agent, which thinks through the
+  **OpenAI Responses API**.
 
 ```
- hardware / services          local machine (every Noob)                Nexus
- ───────────────────          ─────────────────────────────             ─────
- sense services  ──lines──▶  log  ──▶  trigger  ──▶  regex ranker ──┐
- (wifi, camera,               (journald or      (time / volume /     │ unexplained
-  touch, mic, ...)             BusyBox syslog)   P1..P9 counts)      │ chunk
-                                                        │ explained   ▼
-                                                        │       Aigel (LLM) ◀──▶ web :112 (human)
-                                                        ▼             │ new regexes, messages
-                                   Noob agent  ◀── messages ──────────┘
-                                   (Lynx)  ◀──▶ web page (local)
-                                      └──▶ tools: screen, light, speaker, haptics
+ senses (services)        THE HOST (Lynx)                                   NEXUS
+ ────────────────         ──────────────────────────────────────────        ─────────────
+ wifi, power, camera ─▶  [view: noobia-sense] ─▶ trigger/chunker ─▶ ranker ─┬─ explained ─▶ agent_link ─▶ Lynx's agent
+ touch, mic, ...                                    │ carry-over            └─ unexplained ─▶ Aigel (Qwen) ─▶ agent_link
+                                                    ▼                                         │  ▲
+                        [view: noobia-autonomy]  decisions log                 patterns back ◀┘  └─ web :112 (people)
+                        [view: noobia-agent]     Lynx's own actions (never read by the trigger)
+                        [view: noobia-aigel]     Aigel's messages   (never read by the trigger)
+ Lynx's outputs: screen, flashlight, haptics, speaker (and later voice)   Lynx's own web page (people)
 ```
 
-## 1. Sense lines (the one format everyone writes)
+## 1. Sense lines
 
-A sense service writes one syslog line per observation, with syslog tag
+Each sense writes one syslog line per observation, under the identifier
 `noobia-sense`:
 
 ```
-NOOBIA P<n> <sense> <event> [key=value ...] | <free text for humans and Aigel>
+NOOBIA P<n> <sense> <event> [key=value ...] | <free text for people and Aigel>
 ```
 
-- `P<n>` is the **Noobia priority**, `P1`…`P9`. It is not the syslog level.
-  - `P1` triggers immediately.
-  - `PN` triggers once `N` lines of that priority are in the current chunk.
-  - `P0` means log only: it never triggers by count, but stays in chunks
-    for context.
-- `<sense>` is lowercase `[a-z0-9_]{1,24}`, for example `wifi`, `camera`,
-  `touch`, `mic`, `battery`, `thermal`, `agent`.
-- `<event>` is lowercase `[a-z0-9_.]{1,48}`, for example `link.down`,
-  `object.seen`, `speech.heard`.
-- `key=value` pairs are ASCII, values without spaces or quotes, at most 8
-  pairs.
-- The text after `|` is free UTF-8 and may be read aloud or by Aigel.
-- The whole line is at most 512 bytes. Longer lines are truncated by the
-  emitter, never by the reader.
+- **Priority `Pn`, n from 0 to 99.** `Pn` with n ≥ 1 means: trigger once
+  the current chunk holds **n** lines of `Pn`. So `P1` triggers on the
+  first line and `P15` on the fifteenth. `P0` is plain activity and never
+  triggers by priority.
+- `<sense>` is `[a-z0-9_]{1,24}` and `<event>` is `[a-z0-9_.]{1,48}`.
+- There are at most 8 `key=value` pairs. Keys are `[a-z0-9_]{1,24}`;
+  values are ASCII without spaces, quotes or `|`.
+- The whole line is at most 512 bytes. The emitter truncates on a UTF-8
+  character boundary, never the reader.
+- `cause=self` marks a line caused by the Noob's own action. It is the
+  second guard against loops; views are the first (§3).
+- Everyone emits through `common/autonomy/sense.py` (`format_line`,
+  `emit`) or the `noobia-sense` command. Nobody formats lines by hand.
 
-Examples:
+### Two kinds of senses
 
+- **Event senses (most of them)** emit one line when something happens:
+  `camera object.seen` ("I see a cat"), `sms received` ("I got an SMS
+  saying 'You're a Noob'"), `mic speech.heard`, `touch tap`,
+  `wifi link.down`. No polling interval is involved.
+- **Sampled senses (a few)** watch a value over time, such as battery,
+  thermal or Wi-Fi signal. They follow Aigel's existing granularity
+  convention: `sample_interval_ms` and `sample_period_s` in config, plus
+  per-metric `warn`/`fail` thresholds. They emit a priority line only when
+  a threshold is crossed or the state changes, and otherwise at most `P0`
+  summaries at their period. They never emit every raw sample.
+
+### Default priorities
+
+Gwyn set these defaults; they will be revisited when speech arrives. They
+follow the existing Aigel convention that each threshold has a `warn` and a
+`fail` level (`aigel/config.json`, `aigel/tools/aigel_sentinel.py`).
+
+| Severity | Default priority | Examples |
+| --- | --- | --- |
+| fail, or something a person would want to know now | `P1` | `wifi link.down`, `power battery.critical`, `camera object.seen` (a new label), `mic speech.heard` |
+| warn | `P3` | `thermal hot`, `wifi rssi.low`, `power battery.low` |
+| routine change | `P5` | `touch tap`, `power charging.change` |
+| status sample | `P0` | `battery level`, `wifi rssi` |
+
+Each sense keeps its own map in its config, so a host can retune it.
+
+## 2. The trigger and the chunk rule (exact)
+
+The trigger reads **only** the `noobia-sense` view (§3) and builds one open
+chunk at a time.
+
+**A chunk closes for one of three reasons:**
+
+1. **PRIORITY:** for some n ≥ 1, the chunk holds n lines of `Pn`, counting
+   lines carried over from earlier chunks.
+2. **VOLUME:** more than `max_lines` (default **15**) lines have **arrived
+   during this chunk**. Carried lines don't count here.
+3. **TIMEOUT:** `window_s` (default **60** s) has passed since the chunk
+   opened, and it holds at least one line.
+
+`cause=self` lines count toward **no** rule. They stay in the chunk as
+context, and they do count toward the size limits.
+
+**What is sent, and what is carried:**
+
+- **On PRIORITY:** the whole chunk goes on, carried lines included, in
+  order. Nothing is carried.
+- **On TIMEOUT:**
+  - Every `Pn` line with n ≥ 1, carried or new, is **removed** and
+    **carried, in order, to the front of the next chunk**, where it keeps
+    counting toward its threshold.
+  - The rest (`P0` and `cause=self` lines) goes on.
+  - If nothing is left after the removal, nothing is sent.
+- **On VOLUME:** treated like TIMEOUT. Priority lines are carried and the
+  rest goes on. *(This is Gwyn's default for a case Noob did not specify;
+  confirm it.)*
+
+Example (Noob's, and pinned by a test): 10 `P15` lines arrive within 60 s,
+and the chunk closes on TIMEOUT. Its `P0` lines go to the ranker, and the
+10 `P15` lines start the next chunk. Five more `P15` lines arrive within the
+next 5 s. That makes 15, so the chunk closes on PRIORITY and all 15 lines
+go on together, in order.
+
+**Carry bounds** (Gwyn's proposal, so nothing waits forever):
+- at most `carry_max_lines` (default 200) lines;
+- a carried line older than `carry_max_age_s` (default 600 s) is released
+  into the next chunk that is sent, whatever closed it, marked
+  `carried_expired`.
+
+**Rates:**
+- at most `max_chunk_lines` (200) and 32 KiB per chunk;
+- at most 1 chunk per second, and `max_chunks_per_hour` (30) to Aigel;
+- overflow is counted and logged in the autonomy view, never queued without
+  limit.
+
+**Kill switch:** while `/etc/noobia/autonomy.disable` exists, the trigger
+sends nothing. The senses keep logging.
+
+## 3. Views: how feedback loops are prevented
+
+A **view** is a set of log identifiers, plus a minimum syslog level.
+
+| View | Who writes | Who reads |
+| --- | --- | --- |
+| `noobia-sense` | sense services | the trigger, only this view |
+| `noobia-autonomy` | trigger, ranker and router decisions (explained, sent, dropped, delivered) | people, Aigel as context on request |
+| `noobia-aigel` | Aigel's decisions and messages for this host | people, the Noob's history |
+| `noobia-agent` | the Noob's own actions (tool calls, speech out, screen changes) | people, Aigel as context on request |
+
+The trigger never reads anything except `noobia-sense`, so the Noob's own
+actions and Aigel's words can never set off a trigger.
+
+**Backends:**
+- **journald** (Nexus and other systemd hosts): `journalctl -f -o json -t
+  noobia-sense`. Lines also carry the fields `NOOBIA_P`, `NOOBIA_SENSE` and
+  `NOOBIA_EVENT`.
+- **BusyBox syslogd** (Lynx): tail `/var/log/lynx/messages`, filtered by
+  tag. Sense lines are logged at level `notice`, so install I-2 must raise
+  Lynx's `syslogd -l 4` to `-l 6`, or they are dropped.
+- A fallback like `aigel_dmesg_scout.py`'s `journalctl`/`dmesg` pair.
+
+## 4. Pattern store and ranker (regex done carefully)
+
+Noob's warning: we are bad at regex. So:
+
+- **Patterns are structured matchers, not hand-written regex.**
+
+  ```json
+  {"id": "cat-seen", "match": {"sense": "camera", "event": "object.seen",
+     "fields": {"label": "cat"}, "text_contains": null},
+   "message": "A cat appeared in front of you", "to_noob": true,
+   "cooldown_s": 300, "examples": {"must": ["NOOBIA P1 camera object.seen label=cat conf=0.9"],
+   "must_not": ["NOOBIA P1 camera object.seen label=dog conf=0.9"]},
+   "hits": 0, "last_hit": null, "origin": "human", "added_at": "..."}
+  ```
+
+  - Field and text matches are **exact or contains, on literals**. The
+    engine compiles them, escaping every literal.
+  - An optional `regex` (advanced, rare) is allowed only with at least one
+    `must` and one `must_not` example, at most 200 characters, no
+    back-references and no nested quantifiers, and it must not match a
+    fixed corpus of other senses' lines.
+  - Aigel proposes **structured matchers only**.
+- Every pattern must match all of its `must` examples and none of its
+  `must_not` examples, or it is rejected. This check runs on every load,
+  not just once.
+- **Two sizes, configurable per host:**
+  - `store_capacity`: the full ranked store, default **200**;
+  - `active_capacity`: the top patterns used for matching, default **100**.
+
+  Ranking is by recent hits. A pattern pushed out of the store goes to an
+  archive file, never silently deleted.
+- **Per chunk:**
+  1. Each line is matched against the active patterns in rank order.
+  2. Matched lines are explained. A `to_noob` pattern delivers its message
+     at most once per its own `cooldown_s`.
+  3. Unexplained lines go to Aigel. If none are left, there is no LLM call.
+
+## 5. Aigel (on Nexus, Qwen)
+
+She has three channels:
+- **In:** unexplained chunks from each host's harness, over authenticated
+  HTTP on the Noobia network.
+- **People:** a web page on Nexus port **112**. It is privileged, so it
+  needs `CAP_NET_BIND_SERVICE` or a socket unit.
+- **Out:** messages to a host's Noob via `agent_link`, and structured
+  pattern proposals back to that host's ranker.
+
+For each chunk she returns JSON:
+
+```json
+{"decision": "quiet" | "message", "message": "...", "patterns": [ ... ], "note": "..."}
 ```
-NOOBIA P1 wifi link.down ssid=Noobia | Noobia Wi-Fi dropped
-NOOBIA P1 camera object.seen label=cat conf=0.91 | A cat is in front of the rear camera
-NOOBIA P3 touch tap x=540 y=1200 | Screen tapped
-NOOBIA P0 battery level pct=71 charging=1 | Battery 71% and charging
-NOOBIA P1 mic speech.heard speaker=unknown | Hello Lynx
+
+She describes the world; she never commands hardware.
+
+She shares the single-request Qwen queue with Dushich, so the trigger's rate
+limits are what keep her load small.
+
+## 6. B: the Aigel ↔ agent interface (`agent_link.py`)
+
+**Message** (one JSON object, at most 2 KiB):
+
+```json
+{"v": 1, "id": "<uuid>", "host": "lynx", "time": "<ISO-8601 UTC>",
+ "source": "ranker" | "aigel", "kind": "observation" | "alert" | "speech",
+ "text": "A cat appeared in front of you",
+ "evidence": ["NOOBIA P1 camera object.seen label=cat conf=0.91"],
+ "pattern_id": "cat-seen" | null}
 ```
 
-All senses emit through one shared helper, `common/autonomy/sense.py`
-(`emit(...)`, plus a `noobia-sense` command for shell services). It
-validates the format and writes through syslog.
+**Adapter base class:**
+- `deliver(message) -> receipt` must be idempotent by `id`, rate-limited,
+  and respect the kill switch.
+- Each delivery is logged in the `noobia-autonomy` view.
+- The Noob's resulting actions are logged in `noobia-agent`.
 
-On a **systemd** host it also sets journald fields: `NOOBIA_P`,
-`NOOBIA_SENSE`, `NOOBIA_EVENT`.
+**Lynx's adapter** queues the message into her agent (`AGENT_SUBMIT` /
+`lynx-agent`) with a fixed preamble. Her agent decides what to do with her
+tools: show an image, light the flashlight, buzz, play a sound, or nothing.
 
-On **Lynx** (BusyBox `syslogd`, currently `-l 4`), sense lines are logged at
-syslog level `notice`. Install item **I-2** raises syslogd to `-l 6` so
-notice lines are kept. Until then a sense line would be dropped. That is a
-known blocker, not a bug.
+**Lynx's brain** runs through the **OpenAI Responses API** with dynamic
+backends (§7):
+- first: Nexus, Qwen via the Nexus OpenAI-compatible proxy;
+- then: local, if any;
+- then: cloud, with an API key **installed later** into a private file that
+  is never in Git.
 
-## 2. Trigger (per host, always running, no LLM)
+The backend order and endpoints come from a config file that is re-read on
+change. Switching needs no reinstall.
 
-The trigger tails the host's log backend:
-- `journalctl -f -o json -t noobia-sense` on systemd;
-- `tail -F` of `/var/log/lynx/messages` on Lynx, filtered on the tag.
+## 7. Compute routing: Nexus, then local, then cloud
 
-It cuts **chunks**, closing one when any of these happens:
-- a `P1` line arrives (immediate);
-- for some `n` ≥ 2, the open chunk holds `n` lines of priority `Pn`;
-- the chunk holds more than **15** lines;
-- **60 s** have passed since the chunk opened and it holds at least one
-  line.
+This is a Noobia-wide design rule. Heavy work goes:
+1. **to Nexus** when it is reachable (GPU, and the Google Coral TPU for
+   detection);
+2. **then on the local machine**, if it can do it;
+3. **then to a cloud service**, if one is configured.
 
-Lines marked `cause=self` (the Noob's own actions) count toward **no**
-trigger rule: not the P rules and not the 15-line rule. They stay in the
-chunk as context, and they do count toward the size limits below. Time
-starts when the first line of any kind enters an empty chunk. Pattern
-cooldowns apply per pattern: one message per pattern per `cooldown_s`,
-however many lines match.
+`common/autonomy/route.py` gives every task (`inference`, `detect`, `stt`,
+`tts`) an ordered, configurable backend list with health checks and
+timeouts. The choice is logged in the autonomy view. The existing
+speech-to-text system already works this way: Nexus worker first, local
+fallback (`/noobia/speech_to_text/transcription_scheduler.py`).
 
-Each closed chunk goes to the regex ranker. The trigger itself never calls
-an LLM.
+## 8. Senses we will reuse
 
-Bounds:
-- at most 200 lines and 32 KiB per chunk;
-- at most 1 chunk per second to Aigel, and at most 30 per hour per host,
-  configurable;
-- anything above that is counted and summarized as one line
-  (`NOOBIA P0 autonomy chunk.dropped n=…`), never queued without limit.
+- **Speech in.** `/noobia/speech_to_text/`:
+  - faster-whisper `base`, int8, with VAD;
+  - `decode_engine.py` `Decoder.decode()`;
+  - VAD and phrase chunking from `live.py`;
+  - the JSON-lines socket protocol from `speech_service.py`;
+  - about 1.5–2.2 s per 6 s clip.
+- **Speech out.** Rose's Piper pipeline in `/noobia/rose/voice/`. Lynx needs
+  ALSA output instead of PipeWire.
+- **Vision.** Lynx's camera frames go to a detection service on Nexus,
+  using the Coral TPU where possible. Only labels and confidences come back
+  as sense lines.
 
-## 3. Regex ranker (per host, before any LLM call)
+## 9. Safety invariants (non-negotiable)
 
-The ranker keeps a ranked store of up to **100** patterns per host
-(`common/autonomy/patterns/<host>.json`, versioned). Each pattern has:
-- an `id` and a `regex`;
-- `sense` and `event` filters;
-- a `message` template, for example `"A {label} appeared"`;
-- a `to_noob` flag: deliver, or just absorb as routine;
-- a `cooldown_s`, so a line repeated a million times delivers at most once
-  per cooldown;
-- `hits` and `last_hit`, plus `origin` (`human` or `aigel`) and `added_at`.
-
-For each chunk:
-1. Every line is matched against the patterns in rank order.
-2. Matched lines are **explained**. Their messages go to the Noob, subject
-   to cooldown, and their hit counts rise.
-3. Ranks are re-sorted by recent hits. Below the top 100, the least-used
-   patterns retire to an archive file, never silently deleted.
-4. Only the **unexplained** lines go on to Aigel. If nothing is left, no LLM
-   is called.
-
-Pattern safety, because Python `re` has no timeout:
-- at most 200 characters per pattern;
-- no back-references and no nested quantifiers (such as `(a+)+`);
-- anchored or prefixed by `sense`/`event` filters;
-- each new pattern must match its example line and must **not** match a
-  fixed corpus of other senses' lines before it is accepted.
-
-Patterns from Aigel are proposals until they pass these checks. They are
-recorded with `origin=aigel` and can be reverted.
-
-## 4. Aigel (on Nexus, the LLM in the middle)
-
-Aigel becomes a **service with three channels**:
-
-1. **In:** unexplained chunks from every host's engine, delivered over HTTP
-   to Nexus. Authentication follows the existing NRP or Nexus key pattern.
-2. **Human:** a local web page on Nexus port **112**, where a person can
-   talk to Aigel and see what she has seen and decided. Port 112 is
-   privileged, so it needs `CAP_NET_BIND_SERVICE` or a socket unit. That is
-   an admin step for Aria or Banshee.
-3. **Out:** to the host's Noob: short messages, plus new pattern proposals
-   back to that host's ranker.
-
-For each chunk Aigel must choose one of:
-- `quiet`: all is fine;
-- `message`: one short sentence for the Noob;
-- `pattern`: propose a regex so this never needs an LLM again;
-- or a combination.
-
-She never acts on hardware herself. Her prompt states that she is
-describing the world, not commanding it.
-
-The model is open (decision **D-1** for Noob and Aria). The rules say not to
-load another large model next to Dushich's Qwen, and Qwen serves one request
-at a time. The trigger bounds keep the rate low, but this still needs a
-decision.
-
-## 5. The Noob (Lynx first)
-
-Lynx has three channels:
-- **in:** messages from the ranker or Aigel, delivered into her existing
-  agent queue (`AGENT_SUBMIT` / `lynx-agent`) as a prompt with a fixed
-  prefix (`[sense] …`);
-- **in:** a local web page on Lynx;
-- **out:** her bounded tools: screen images and animations, flashlight,
-  haptics, speaker, and later text-to-speech.
-
-She chooses what to do. The engine never actuates her hardware.
-
-## 6. Safety invariants (non-negotiable)
-
-1. **No feedback loops.** Lines caused by the Noob's own actions carry
-   `cause=self`, and the trigger never counts them toward a trigger.
-2. **Kill switch.**
-   - The file `/etc/noobia/autonomy.disable`, present on a host, stops its
-     trigger from delivering anything. The services keep logging.
-   - On Lynx, a physical switch (the Alert Slider) is proposed as a second
-     override.
-3. **Bounded everything:** line, chunk and pattern sizes, rates, queue
-   depths, and LLM calls per hour.
+1. **No loops:** views first, `cause=self` second.
+2. **Kill switch on every host** (`/etc/noobia/autonomy.disable`). Lynx
+   later also gets a physical override (the Alert Slider).
+3. **Everything is bounded:** line, chunk, carry, store, rates, message
+   sizes, and LLM calls per hour.
 4. **Privacy.**
-   - Camera frames go to Nexus detection only on Noobia's local network and
-     are never stored by default. Only labels and confidences become sense
-     lines.
-   - Audio becomes text only. Raw audio is not kept.
-   - People's speech is shown only as text in the log, the same way Lynx's
-     microphone already keeps no audio.
-5. **Inspectable.** Every chunk decision (explained, sent to Aigel, Aigel's
-   choice, delivered message) is itself logged as a `P0 autonomy` line, so
-   anyone can see why a Noob was told something.
-6. **Installs on Lynx are Aria's.** Everything is built and tested offline
-   first and shipped as install packets.
+   - Camera frames are never stored by default. They travel only on
+     Noobia's network, and only labels become text.
+   - Speech becomes text. Raw audio is not kept.
+5. **Inspectable:** every decision is a line in a view that people can
+   read.
+6. **Installs on Lynx are Aria's**, from reviewed install packets.
 
-## 7. Where code lives
+## 10. First live test
+
+**The camera**, not unplugging the Wi-Fi: cutting the Wi-Fi also cuts
+Lynx's route to inference.
+
+1. Something is shown in front of Lynx's camera.
+2. Nexus detection produces `camera object.seen label=…`.
+3. The ranker explains it, or Aigel learns it.
+4. Lynx gets "A cat appeared in front of you" and responds with her tools.
+
+## 11. Where code lives
 
 | Part | Path | Owner |
 | --- | --- | --- |
-| Sense helper and command | `common/autonomy/sense.py`, `common/bin/noobia-sense` | Banshee |
-| Trigger and chunker | `common/autonomy/trigger.py` | Banshee |
-| Regex ranker and pattern store | `common/autonomy/ranker.py`, `common/autonomy/patterns/` | Banshee |
-| Contract tests (conformance) | `common/autonomy/test_contract.py` | Gwyn |
-| Aigel service, web :112 | `aigel/service/` | Solo Dushich |
-| Sense services for Lynx | `lynx/senses/<sense>/` | Solo Dushich (camera detection service on Nexus: Banshee) |
-| Delivery into Lynx's agent | `lynx/tools/agent/` (new module) | Gwyn |
-| Lynx local web page | `lynx/web/` | Banshee |
+| Harness base: `sense.py`, `views.py`, `trigger.py`, `ranker.py`, `route.py`, `aigel_client.py` | `common/autonomy/` | Banshee |
+| Agent interface: `agent_link.py` (schema and adapter base) | `common/autonomy/` | Gwyn |
+| Contract tests | `common/autonomy/test_contract.py` | Gwyn |
+| Aigel service, web :112, prompts, Qwen calls | `aigel/` (e.g. `aigel/service/`) | Solo Dushich |
+| Lynx senses | `lynx/senses/<sense>/` | Solo Dushich |
+| Lynx adapter and brain config (Responses API, backends) | `lynx/tools/agent/` | Gwyn (adapter), Banshee (brain config) |
+| Nexus detection service (Coral) | `common/autonomy/services/detect/` | Banshee |
+| Lynx web page | `lynx/web/` | Banshee |
 | Installs on Lynx | install packets | Aria |
-
-## Open questions for Noob
-
-- **Q1.** "Chunks with their PRIORITY lines stripped off": does this mean
-  that lines the regex layer already explained are removed before Aigel
-  sees the chunk (this design), or that the `P<n>` markers are removed from
-  the text?
-- **D-1.** Which model runs Aigel, and on what GPU budget?

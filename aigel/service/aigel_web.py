@@ -68,6 +68,9 @@ td, th { text-align: left; padding: .3rem .5rem;
 .badge.awake { background: #2a8a5f; color: #fff; }
 .meta { opacity: .72; font-size: .9em; }
 #recent li { margin: .6rem 0; }
+#replies { list-style: none; padding-left: 0; }
+#replies li { margin: .6rem 0; padding: .6rem .8rem; background: rgba(42,138,95,.12); border-left: 3px solid #2a8a5f; border-radius: .4rem; }
+.reply-quote { font-weight: 500; font-size: 1.05em; margin-bottom: .25rem; }
 #chat { display: flex; gap: .5rem; margin-top: .6rem; }
 #chat input { flex: 1; padding: .5rem .6rem; font: inherit; }
 #talk .them, #talk .her { margin: .55rem 0; max-width: 88%; white-space: pre-wrap;
@@ -84,9 +87,13 @@ button { padding: .5rem .8rem; font: inherit; cursor: pointer; }
 she never commands it.</p>
 
 <h2>Hosts</h2>
+<p class="meta">Learned Ranker Patterns: <b id="pat-count">0</b> / 100 entries (<a href="/api/v1/patterns?host=lynx" target="_blank" style="color:#5c90d2">view top ranker patterns</a>)</p>
 <table id="hosts">
 <tr><th>host</th><th>last seen</th><th>chunks</th><th>last decision</th><th></th></tr>
 </table>
+
+<h2>Lynx's Voice &amp; Reactions <small class="meta">- conscious replies</small></h2>
+<ul id="replies"></ul>
 
 <h2>Recent chunks &amp; decisions</h2>
 <ul id="recent"></ul>
@@ -116,6 +123,7 @@ async function load() {
   try {
     const r = await fetch('/api/v1/status');
     const d = await r.json();
+    if ($('pat-count')) $('pat-count').textContent = d.patterns_count || 0;
     const tbl = $('hosts');
     tbl.querySelectorAll('tr[data-host]').forEach(tr => tr.remove());
     for (const [host, h] of Object.entries(d.hosts || {})) {
@@ -144,6 +152,28 @@ async function load() {
       if (c.note) { const n = document.createElement('div'); n.className = 'meta'; n.textContent = 'note: ' + c.note; li.append(n); }
       ul.append(li);
     });
+    const repliesUl = $('replies');
+    if (repliesUl) {
+      repliesUl.textContent = '';
+      (d.agent_replies || []).forEach(r => {
+        const li = document.createElement('li');
+        const q = document.createElement('div');
+        q.className = 'reply-quote';
+        q.textContent = '"' + r.text + '"';
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        const toolsStr = (r.tools && r.tools.length) ? ' [tool: ' + r.tools.join(', ') + ']' : '';
+        meta.textContent = r.host + toolsStr + ' - ' + rel(r.t);
+        li.append(q, meta);
+        repliesUl.append(li);
+      });
+      if (!d.agent_replies || !d.agent_replies.length) {
+        const li = document.createElement('li');
+        li.className = 'meta';
+        li.textContent = '(no agent responses recorded yet)';
+        repliesUl.append(li);
+      }
+    }
   } catch (e) { $('error').textContent = 'status: ' + e; }
 }
 $('refresh').addEventListener('click', load);

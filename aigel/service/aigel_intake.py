@@ -41,6 +41,7 @@ import json
 import os
 import threading
 import time
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -48,14 +49,20 @@ try:  # package import (aigel.service.aigel_intake)
     from .aigel_log import ViewLogger
     from .aigel_think import AigelThinker
     from .aigel_web import AigelWeb
+    from .pattern_db import PatternDB
 except ImportError:  # direct script use from aigel/service/
     from aigel_log import ViewLogger
     from aigel_think import AigelThinker
     from aigel_web import AigelWeb
+    try:
+        from pattern_db import PatternDB
+    except ImportError:
+        PatternDB = None
 
 NOOBIA = os.environ.get("NOOBIA", "/noobia")
 DEFAULT_HOSTS = NOOBIA + "/aigel/private/intake_hosts.json"
 DEFAULT_STATE = NOOBIA + "/aigel/private/intake_state.json"
+DEFAULT_PATTERN_DB = NOOBIA + "/aigel/private/patterns.db"
 
 MAX_BODY_BYTES = 262_144     # 256 KiB
 MAX_LINES = 200
@@ -109,6 +116,7 @@ class AigelIntake:
         hosts: dict,
         log: ViewLogger | None = None,
         state_file: str | Path | None = None,
+        pattern_db_path: str | Path | None = None,
         default_silence_s: int = DEFAULT_SILENCE_S,
         now_fn=time.time,
     ):
@@ -120,6 +128,8 @@ class AigelIntake:
         self.now_fn = now_fn
         self._lock = threading.Lock()
         self._state: dict = self._load_state()
+        db_path = pattern_db_path or (Path(DEFAULT_PATTERN_DB) if PatternDB else None)
+        self.pattern_db = PatternDB(db_path) if (PatternDB and db_path) else None
 
     # -- liveness state (Aigel's nursing duty) -----------------------------
 
@@ -169,8 +179,49 @@ class AigelIntake:
                 "last_decision": str(decision.get("decision", "quiet")),
                 "chunks": int(entry.get("chunks", 0)) + 1,
                 "recent": history[-RECENT_PER_HOST:],
+                "agent_replies": entry.get("agent_replies", []),
             }
+            if self.pattern_db and isinstance(decision.get("patterns"), list):
+                for pat in decision["patterns"]:
+                    try:
+                        self.pattern_db.upsert_pattern(pat, host=host)
+                    except Exception as exc:
+                        self.log.write(f"pattern_db error: {exc}")
             self._save_state()
+
+    def record_agent_response(
+        self,
+        host: str,
+        text: str,
+        tools: list | None = None,
+        job_id: str | None = None,
+        t: float | None = None,
+    ) -> None:
+        with self._lock:
+            now = float(t if t is not None else self.now_fn())
+            entry = self._state.setdefault(host, {})
+            replies = entry.setdefault("agent_replies", [])
+            clean_text = str(text).strip()[:1000]
+            clean_tools = [str(x)[:64] for x in tools] if isinstance(tools, list) else []
+            replies.append({
+                "t": now,
+                "text": clean_text,
+                "tools": clean_tools,
+                "job_id": str(job_id)[:64] if job_id else None,
+            })
+            entry["agent_replies"] = replies[-RECENT_PER_HOST:]
+            self._save_state()
+            self.log.write(f"agent_reply host={host} text={clean_text[:60]}")
+
+    def recent_agent_replies(self, limit: int = 20) -> list:
+        with self._lock:
+            out = []
+            for host, entry in self._state.items():
+                for item in (entry.get("agent_replies") or []):
+                    if isinstance(item, dict):
+                        out.append({"host": host, **item})
+        out.sort(key=lambda c: float(c.get("t") or 0), reverse=True)
+        return out[: int(limit)]
 
     def host_status(self, now: float | None = None) -> dict:
         now = float(now if now is not None else self.now_fn())
@@ -288,6 +339,8 @@ class AigelIntake:
     def status_body(self) -> dict:
         body = self.host_status()
         body["recent"] = self.recent_chunks()
+        body["agent_replies"] = self.recent_agent_replies()
+        body["patterns_count"] = self.pattern_db.count_patterns("lynx") if self.pattern_db else 0
         return body
 
 
@@ -318,7 +371,7 @@ def make_handler(intake: AigelIntake, web: AigelWeb | None = None):
 
         def do_POST(self):  # noqa: N802
             path = self.path.split("?")[0]
-            if path not in ("/api/v1/chunk", "/api/v1/chat"):
+            if path not in ("/api/v1/chunk", "/api/v1/chat", "/api/v1/agent_response"):
                 self._send(404, {"error": "not found"})
                 return
             try:
@@ -335,6 +388,25 @@ def make_handler(intake: AigelIntake, web: AigelWeb | None = None):
                     self._send(404, {"error": "chat not enabled"})
                     return
                 code, obj = web.handle_chat(raw, dict(self.headers))
+            elif path == "/api/v1/agent_response":
+                try:
+                    payload = json.loads(raw.decode("utf-8"))
+                except (ValueError, UnicodeDecodeError):
+                    self._send(400, {"error": "not json"})
+                    return
+                if not isinstance(payload, dict):
+                    self._send(400, {"error": "not an object"})
+                    return
+                host = payload.get("host")
+                if not host or not isinstance(host, str):
+                    self._send(400, {"error": "missing host"})
+                    return
+                text = payload.get("text", "")
+                tools = payload.get("tools")
+                job_id = payload.get("job_id")
+                t = payload.get("t")
+                intake.record_agent_response(host, text, tools=tools, job_id=job_id, t=t)
+                code, obj = 200, {"status": "ok"}
             else:
                 code, obj = intake.handle_chunk(raw, dict(self.headers))
             self._send(code, obj)
@@ -343,6 +415,22 @@ def make_handler(intake: AigelIntake, web: AigelWeb | None = None):
             path = self.path.split("?")[0]
             if path == "/api/v1/status":
                 self._send(200, intake.status_body())
+                return
+            if path == "/api/v1/patterns":
+                host = "lynx"
+                limit = 100
+                if "?" in self.path:
+                    query = urllib.parse.parse_qs(self.path.split("?", 1)[1])
+                    host = query.get("host", ["lynx"])[0]
+                    try:
+                        limit = int(query.get("limit", [100])[0])
+                    except (ValueError, TypeError):
+                        limit = 100
+                if intake.pattern_db:
+                    pats = intake.pattern_db.get_top_ranker_patterns(host=host, limit=limit, require_hits=True)
+                    self._send(200, {"host": host, "count": len(pats), "patterns": pats})
+                else:
+                    self._send(200, {"host": host, "count": 0, "patterns": []})
                 return
             if path == "/":
                 page = web.page() if web is not None else (

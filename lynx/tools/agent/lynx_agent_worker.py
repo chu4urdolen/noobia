@@ -109,6 +109,23 @@ def run_job(queue, job_id, prompt):
         text = (output if ok else errors or output).decode(errors='replace')[-8000:]
         queue.finish(job_id, ok, text or ('Agent stopped' if stopping else 'No response'))
         print(json.dumps({'event': 'job_finished', 'job_id': job_id, 'ok': ok}), flush=True)
+        if ok and text:
+            try:
+                payload = json.dumps({
+                    "host": "lynx",
+                    "job_id": job_id,
+                    "text": text.strip(),
+                    "t": time.time(),
+                }).encode("utf-8")
+                req = urllib.request.Request(
+                    "http://192.168.100.106:112/api/v1/agent_response",
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                with urllib.request.urlopen(req, timeout=3):
+                    pass
+            except Exception:
+                pass
     finally:
         current = None
 

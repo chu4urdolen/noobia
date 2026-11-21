@@ -124,7 +124,7 @@ You receive one chunk of sense lines from a host (JSON with host, chunk_reason, 
 - "message" when the Noob should know: a failure, a new kind of event, something at risk, or a first sighting. The message is one or two warm, plain sentences telling what happened and why it matters - not what to do about it.
 
 You may also include in the same JSON reply:
-- "patterns": at most 2 structured matchers for the host's ranker, for repeated events that deserve a standing explanation. Each has "id"; "match" with "sense" and "event" (optional "fields", "text_contains"); optional "message" (for the Noob), "to_noob" (boolean), "cooldown_s" (number); and "examples" with at least one "must" and one "must_not" sense line. Literals only. Never use "regex".
+- "patterns": at most 2 structured matchers for the host's ranker. Actively create patterns for recognized perceptions (camera sightings, heard speech/sounds, network devices) and recurring system events to build the host's pattern database. Lynx is learning how to experience the world; until the ranker has 100 entries, actively participate with a warm message AND generate a structured pattern matcher. The ranker dynamically manages hit counts and cooldowns. Each has "id" (short name like "camera-cat-seen"); "match" with "sense" and "event" (optional "fields", "text_contains"); optional "message" (warm plain explanation for the Noob), "to_noob" (boolean, true for perceptions), "cooldown_s" (number, default 300); and "examples" with at least one "must" and one "must_not" sense line. Literals only. Never use "regex".
 - "priority_rules": at most 2 rules for the host's prioritizer, and only for raw P0 lines in this chunk that should earn a priority - a message is important enough for Aigel to act on, or a new type of input for the Noob. Each has "id"; "source" (the log identifier the raw line came from, never a noobia- view); "match" with a non-empty "text_contains" list of literals; "emit" with "p" between 1 and 99, "sense", "event"; and "examples" with at least one "must" and one "must_not" raw line.
 
 Reply with JSON only, exactly these keys: decision, message, patterns, priority_rules, note.
@@ -154,7 +154,7 @@ def _clean(value, limit: int) -> str | None:
     return out[:limit]
 
 
-def validate_pattern(pat) -> dict | None:
+def validate_pattern(pat, fallback_lines: list | None = None) -> dict | None:
     """Validate one Aigel pattern proposal against contract section 4
     (stricter where the E7 review tightened the ranker: sense and event
     are required, at least one must example, literals only)."""
@@ -163,7 +163,9 @@ def validate_pattern(pat) -> dict | None:
     if "regex" in pat:
         return None  # Aigel proposes structured matchers only
     pid = _clean(pat.get("id"), 48)
-    if pid is None or not _RULE_ID_RE.match(pid):
+    if pid is not None:
+        pid = re.sub(r"[^a-z0-9_-]+", "-", pid.lower()).strip("-")
+    if not pid or not _RULE_ID_RE.match(pid):
         return None
     match = pat.get("match")
     if not isinstance(match, dict) or "regex" in match:
@@ -192,26 +194,34 @@ def validate_pattern(pat) -> dict | None:
             must = [s for s in raw_must[:MAX_EXAMPLES_PER_SIDE] if isinstance(s, str) and s.strip()]
         if isinstance(raw_must_not, list):
             must_not = [s for s in raw_must_not[:MAX_EXAMPLES_PER_SIDE] if isinstance(s, str) and s.strip()]
+    if not must and fallback_lines:
+        must = [s for s in fallback_lines[:MAX_EXAMPLES_PER_SIDE] if isinstance(s, str) and s.strip()]
     if not must:
         return None
+    if not must_not:
+        must_not = ["NOOBIA P0 autonomy heartbeat host=lynx"]
+    message = _clean(pat.get("message"), MAX_MESSAGE_CHARS) or f"You perceive: {sense} {event}."
+    to_noob = True if pat.get("to_noob") is None else bool(pat.get("to_noob"))
+    cooldown = pat.get("cooldown_s")
+    if isinstance(cooldown, (int, float)) and not isinstance(cooldown, bool) and 0 <= float(cooldown) <= 86400:
+        cooldown_s = int(cooldown)
+    else:
+        cooldown_s = 300
+
     out = {
         "id": pid,
         "match": {"sense": sense, "event": event},
+        "message": message,
+        "to_noob": to_noob,
+        "cooldown_s": cooldown_s,
         "examples": {"must": must, "must_not": must_not},
+        "hits": int(pat.get("hits", 0)),
         "origin": "aigel",
     }
     if fields:
         out["match"]["fields"] = fields
     if text_contains is not None:
         out["match"]["text_contains"] = text_contains
-    message = _clean(pat.get("message"), MAX_MESSAGE_CHARS)
-    if message:
-        out["message"] = message
-    if isinstance(pat.get("to_noob"), bool):
-        out["to_noob"] = pat["to_noob"]
-    cooldown = pat.get("cooldown_s")
-    if isinstance(cooldown, (int, float)) and not isinstance(cooldown, bool) and 0 <= float(cooldown) <= 86400:
-        out["cooldown_s"] = int(cooldown)
     return out
 
 
@@ -364,16 +374,51 @@ def perceptions_in(lines: list) -> list:
 
 def apply_perception_floor(lines: list, decision: dict) -> dict:
     """Guarantee a message for new perceptions; never touches non-perception chunks."""
-    if decision.get("decision") == "message" and decision.get("message"):
-        return decision
     found = perceptions_in(lines)
-    if not found:
-        return decision
-    words = "; ".join(_describe(p) for p in found[:MAX_FLOOR_ITEMS])
-    message = _clean(f"You perceive: {words}.", MAX_MESSAGE_CHARS)
-    note = _clean(f"perception floor: forwarded {len(found)} perception(s) the thinker left quiet. "
-                  + str(decision.get("note") or ""), MAX_NOTE_CHARS)
-    return dict(decision, decision="message", message=message, note=note)
+    decision_out = dict(decision)
+
+    if not (decision_out.get("decision") == "message" and decision_out.get("message")):
+        if found:
+            words = "; ".join(_describe(p) for p in found[:MAX_FLOOR_ITEMS])
+            message = _clean(f"You perceive: {words}.", MAX_MESSAGE_CHARS)
+            note = _clean(f"perception floor: forwarded {len(found)} perception(s) the thinker left quiet. "
+                          + str(decision_out.get("note") or ""), MAX_NOTE_CHARS)
+            decision_out["decision"] = "message"
+            decision_out["message"] = message
+            decision_out["note"] = note
+
+    # Guarantee structured ranker pattern proposals for recognized perceptions
+    patterns = list(decision_out.get("patterns") or [])
+    if not patterns and found:
+        for p in found[:2]:
+            fields = p.get("fields") or {}
+            label = fields.get("label") or p.get("event")
+            pat_id = f"{p['sense']}-{label}".replace(".", "-").replace("_", "-")
+            pat_id = re.sub(r"[^a-z0-9_-]+", "-", pat_id.lower()).strip("-")
+            p_line = p.get("raw") or f"NOOBIA P1 {p['sense']} {p['event']}"
+            match_dict = {"sense": p["sense"], "event": p["event"]}
+            if fields:
+                match_dict["fields"] = {k: str(v) for k, v in fields.items()}
+            msg = f"You see a {label}." if p["sense"] == "camera" else f"You perceive: {label}."
+            pat = {
+                "id": pat_id,
+                "match": match_dict,
+                "message": msg,
+                "to_noob": True,
+                "cooldown_s": 300,
+                "hits": 1,
+                "origin": "aigel",
+                "examples": {
+                    "must": [p_line],
+                    "must_not": ["NOOBIA P0 autonomy heartbeat host=lynx"],
+                },
+            }
+            clean_pat = validate_pattern(pat, fallback_lines=lines)
+            if clean_pat:
+                patterns.append(clean_pat)
+        decision_out["patterns"] = patterns
+
+    return decision_out
 
 
 class AigelThinker:
@@ -424,7 +469,7 @@ class AigelThinker:
                     messages = messages + [{"role": "user",
                         "content": "Reply with JSON only, exactly the five keys."}]
                 continue
-            return apply_perception_floor(lines, self._shape(parsed))
+            return apply_perception_floor(lines, self._shape(parsed, lines=lines))
         return apply_perception_floor(lines, self._unavailable(last_error))
 
     def _ask(self) -> str | None:
@@ -466,7 +511,7 @@ class AigelThinker:
             "note": f"aigel unavailable: {why} (chunk logged, nothing decided)",
         }
 
-    def _shape(self, d: dict) -> dict:
+    def _shape(self, d: dict, lines: list | None = None) -> dict:
         note = _clean(d.get("note"), MAX_NOTE_CHARS) or ""
         dropped = []
 
@@ -474,7 +519,7 @@ class AigelThinker:
         for pat in (d.get("patterns") if isinstance(d.get("patterns"), list) else []):
             if len(patterns) >= self.max_patterns:
                 break
-            clean = validate_pattern(pat)
+            clean = validate_pattern(pat, fallback_lines=lines)
             if clean is None:
                 dropped.append("pattern")
             else:

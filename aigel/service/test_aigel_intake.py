@@ -245,6 +245,29 @@ class DecisionTests(IntakeServerCase):
         self.assertEqual(obj["decision"], "quiet")
         self.assertIn("unavailable", obj["note"])
 
+    def test_agent_response_endpoint_and_status(self):
+        body = json.dumps({
+            "host": "lynx",
+            "text": "A laptop, just sitting there — good, my eyes are sharp today. *purr*",
+            "tools": ["lynx_haptic_pulse"],
+            "job_id": "job123",
+            "t": 12345.0
+        }).encode("utf-8")
+        req = urllib.request.Request(f"{self.base}/api/v1/agent_response", data=body,
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req) as resp:
+            self.assertEqual(resp.status, 200)
+            data = json.loads(resp.read().decode())
+            self.assertEqual(data.get("status"), "ok")
+
+        with urllib.request.urlopen(f"{self.base}/api/v1/status") as resp:
+            st = json.loads(resp.read().decode())
+            self.assertIn("agent_replies", st)
+            self.assertEqual(len(st["agent_replies"]), 1)
+            self.assertEqual(st["agent_replies"][0]["host"], "lynx")
+            self.assertIn("sharp today", st["agent_replies"][0]["text"])
+            self.assertEqual(st["agent_replies"][0]["tools"], ["lynx_haptic_pulse"])
+
 
 class LivenessTests(IntakeServerCase):
     def test_silence_flag_flips_after_silence_s(self):

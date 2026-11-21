@@ -248,6 +248,13 @@ She has three channels:
 - **Out:** messages to a host's Noob via `agent_link`, and structured
   pattern proposals back to that host's ranker.
 
+**Transport:** a host's harness POSTs each chunk to Aigel, and her decision
+is the HTTP **reply**. Aigel never opens a connection to a host. The host's
+harness then delivers any message locally through its `agent_link` adapter,
+and stores any accepted patterns. If Nexus is unreachable, the chunk waits
+in a bounded local queue, and the `nexus unreachable` sense makes the
+outage visible.
+
 For each chunk she returns JSON:
 
 ```json
@@ -277,8 +284,16 @@ limits are what keep her load small.
 - Each delivery is logged in the `noobia-autonomy` view.
 - The Noob's resulting actions are logged in `noobia-agent`.
 
-**Lynx's adapter** queues the message into her agent (`AGENT_SUBMIT` /
-`lynx-agent`) with a fixed preamble. Her agent decides what to do with her
+**Lynx's adapter** (`lynx/tools/agent/lynx_aigel_adapter.py`) puts the
+message into her local agent queue (`/var/lib/lynx-agent/jobs`, up to 8000
+bytes). The NRP `AGENT_SUBMIT` command is not used, because it accepts only
+255 ASCII bytes. The job prompt is a fixed preamble that frames the message
+as an observation, not an instruction from a person, followed by the
+message as quoted JSON data. The adapter refuses, retryably, when the
+worker is stopped or `max_pending` jobs are already waiting.
+
+On hosts without the repository, such as Lynx, the harness is installed in
+`/usr/local/lib/noobia/autonomy/`. Her agent decides what to do with her
 tools: show an image, light the flashlight, buzz, play a sound, or nothing.
 
 **Lynx's brain** runs through the **OpenAI Responses API** with dynamic

@@ -1,0 +1,11 @@
+{
+  "name": "lynx_usb_serial_status",
+  "description": "Entity: Lynx. Read USB CDC ACM serial link continuity, phone ttyGS0 endpoint, MTU3 gadget binding, and host /dev/ttyACM* enumeration without actuation.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

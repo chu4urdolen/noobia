@@ -46,6 +46,10 @@
 !/tools/usb/fixtures/
 /tools/usb/fixtures/*
 !/tools/usb/fixtures/*.json
+!/tools/usb/catalog_proposal/
+/tools/usb/catalog_proposal/*
+!/tools/usb/catalog_proposal/*.json
+!/tools/usb/catalog_proposal/*.sh
 !/tools/fingerprint/
 /tools/fingerprint/*
 !/tools/fingerprint/*.py

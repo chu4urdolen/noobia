@@ -1,0 +1,18 @@
+{
+  "tool_name": "lynx_usb_serial_status",
+  "tools_map_tuple": [
+    "read_only",
+    "hardware",
+    [
+      "hardware",
+      "usb"
+    ],
+    false
+  ],
+  "effect": "read_only",
+  "group": "hardware",
+  "target_component": "hardware/usb",
+  "coverage_role": "read_tool",
+  "resolves_missing_tool": "an agent usb serial continuity read",
+  "status_only_impact": "Supplies read-only companion tool for USB CDC ACM serial status outside local_calls"
+}

@@ -89,6 +89,24 @@ After 10 minutes, `ls -l /var/log/lynx/messages*` should show growth of
 the same order as before. If it grows more than 10 times faster, roll
 back.
 
+**Record the baseline before installing.** During IS-1a the pre-install
+rate was not measured, so the 10× check could not be evaluated (forge lynx
+#302). Preflight must take two `ls -l /var/log/lynx/messages` readings five
+minutes apart and record bytes per minute.
+
+### What IS-1a showed (2026-11-21)
+
+- Growth was 468 KB in 8 minutes, about 3.5 MB/h. That leaves about 3 h of
+  history in 2 MiB × 5 files.
+- In the last 2000 lines, 1908 were `kern.warn` and 92 `kern.notice`.
+- Nearly all of them come from the UFS storage driver (`ufs_mediatek_mod`:
+  `ufs_mtk_setup_ref_clk`, `ufs_mtk_boost_crypt`), about 7 lines/s. `-l 4`
+  used to drop them.
+- Hypothesis, not verified: a feedback loop, where each log write wakes the
+  UFS reference clock and logs another warning.
+- Follow-up: filter kernel warnings without losing `user.notice` sense
+  lines. See forge lynx #303.
+
 ## Disable and rollback
 
 Copy `v1-installed` back over `/etc/init.d/lynx-local-logs` and run

@@ -151,3 +151,84 @@ Shared rules from the team handoff still apply:
      manifest and offline tests.
    - Do not deploy. Aria decides on the runtime change.
 3. **Review Banshee's queue items 1–3 above** as they land.
+
+## Round 2: reviews and queues (Gwyn coordinating, 2026-11-21 ~01:00 UTC)
+
+### Reviews
+
+Every suite was run from a fresh `git clone --no-local`.
+
+| Item | Commit | Clean-clone tests | Verdict |
+| --- | --- | --- | --- |
+| Banshee 1: identity correction | `fcdd39b` | headset, flashlight and camera_deps OK | **Accepted** (#116). Wording nit: the jack is "absent per published spec", not physically verified |
+| Banshee 2: live running-DT light check | `564f79a` | flashlight 9 OK | **Accepted** |
+| Banshee 3: Bluetooth link-state design | `d5681f5` | bluetooth 18 OK | **Accepted** as an offline design and gated read-only collector |
+| Dushich 1: review of Gwyn items 1–6 | `289565f` | — | **Accepted.** He found a real defect in Gwyn's item 1, now fixed (see below) |
+| Dushich 2: health machine facts | `3fa41fe` | health 95 OK, **2 errors** | **Accepted with one fix** (D3 below) |
+
+**Banshee 2.**
+- The live script is read-only: `find`, `cat`, and a Python reader; the
+  only redirections are `2>/dev/null`. It is gated by `--live --allow-live`.
+- It searches `*lm3642*`, `*flashlight*` and `flash@*`, not only the known
+  node.
+- Her result: one `lm3642@63` with a single `flash@0`, and no other flash
+  node.
+- The second rear circle is the ams TCS3408 colour/ALS sensor (`rear_cct`).
+  This is consistent with the tracked `LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md`.
+- The question of a second rear *light* is answered: there is none in the
+  running DT. Banshee should keep the raw output of that live run as a
+  receipt (B4).
+
+**Banshee 3.** The live script uses only `rc-update show`,
+`rc-service … status`, `lsmod`, and existence tests. No radio or service
+action.
+
+**Dushich 1.** In a clean clone, `test_agent_cancel_contract.py` errored
+because `lynx/tools/agent/lynx_codex_tool.py` had never been committed.
+Gwyn's #74 claim that it was tracked was wrong: that list came from `ls`,
+not `git ls-files`. Fixed by tracking `lynx_codex_tool.py` and
+`lynx_agent_health.py`, after auditing them: no keys, tokens or addresses.
+The clean clone now gives 9 OK.
+
+**Dushich 2.**
+- The three commands are fixed status readers sharing one 45 s budget.
+- Missing facts stay `unknown`. Live run: 7/7 ok.
+- In a clean clone, `DefaultRunnerTests` (2 tests) error. They import
+  `lynx_wifi_v19_contact`, which needs the machine-local
+  `lynx/linux-port/artifacts/busybox-wifi-ssh-twostage-v19/build-validation.json`.
+  They pass on Nexus but not from a clone.
+
+### Queues (offline, same rules as round 1)
+
+**Banshee**
+
+- B4: Store item 2's live DT output as a receipt under `lynx/logs/` and cite
+  it in the analysis doc and forge.
+- B5: USB cold-boot persistence design (offline). What would bring the mtu3
+  ACM gadget up at boot? Cover an OpenRC service design, ordering against
+  Wi-Fi and SSH, a local disable switch, teardown, and rollback. Add fixture
+  tests for any parser or validator. No install and no live gadget change.
+  Aria decides.
+- B6: A catalog-ready proposal for `lynx_bluetooth_link_state`: manifest,
+  wrapper, and an effect classification for Gwyn's coverage table. Do not
+  add it to `local_calls` until Aria approves.
+
+**Solo Dushich**
+
+- D3: Make the two `DefaultRunnerTests` independent of the machine-local
+  artifact: patch `ssh_command`, or skip with an explicit reason when the
+  artifact is absent. Record clean-clone results (95 + 2 → 97 OK).
+- D4 (continuity): Record today's new tool directories in the forge atlas,
+  with owners and tags, and check them with `forge-db path check`:
+  `lynx/tools/ui`, `usb`, `fingerprint`, `nfc`, `bluetooth`, `headset`,
+  `flashlight`, `camera_deps`, `health`, plus the new docs.
+- D5: Independent review of Gwyn's later commits: `7fe3cd8` (display
+  mapping), `79e4526` (touch design), and the source-tracking fix and
+  full-health test in this round.
+
+**Gwyn**
+
+- G4 (done this round): test for Dushich's `lynx-live-20261121-full.json`
+  (7/7 ok, no unknowns).
+- G5: Review B4–B6 and D3–D5 as they land.
+- G6: Keep the coverage tables current as new tools are approved.

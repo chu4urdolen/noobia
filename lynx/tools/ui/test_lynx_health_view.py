@@ -45,6 +45,13 @@ class NormalizeTest(unittest.TestCase):
         self.assertEqual(live_statuses["lynx_modem"], "unknown")
         self.assertEqual(live_statuses["lynx_agent_queue"], "unknown")
 
+    def test_full_live_capture_has_no_unknowns(self):
+        full = hv.normalize(report("lynx-live-20261121-full.json"))
+        self.assertEqual(full["verdict"], "ok")
+        self.assertEqual({c["status"] for c in full["checks"]}, {"ok"})
+        self.assertEqual(len(full["checks"]), 7)
+        self.assertNotIn("checks unknown", hv.section(full, at(full)))
+
     def test_fail_and_unrecognized_are_never_ok(self):
         data = report("lynx-healthy.json")
         data["checks"][0]["status"] = "fail"

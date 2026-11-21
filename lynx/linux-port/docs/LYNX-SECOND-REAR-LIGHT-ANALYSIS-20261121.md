@@ -138,6 +138,12 @@ The physical OnePlus Nord 3 5G chassis features two pale circular apertures belo
   - Type 100: `tcs3408 flicker` (flicker detection sensor)
 - Earlier controlled optical trials (2026-11-15) confirmed repeatable lit–covered–lit responses (median 353 uncovered, 0 covered, 242 uncovered) specifically on this lower circle.
 
+### 5.3 Live Run Receipt
+The verified read-only live device-tree telemetry and evaluator verdict are preserved in:
+- **Receipt Directory**: `lynx/logs/v53-live-dt-flashlight-1795222443064305946/`
+  - `result.json`: Full evaluator verdict and metadata (Boot ID `0fe847d2-44d6-4ac1-9000-2c99df1a51d8`, status `SINGLE_CHANNEL_ONLY`).
+  - `raw_dt.json`: Complete running device-tree query output.
+
 ---
 
 ## 6. Summary & Operational Constraint

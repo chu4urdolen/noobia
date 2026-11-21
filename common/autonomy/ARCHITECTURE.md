@@ -175,8 +175,76 @@ will tune this by reassigning priorities and reconfiguring the trigger once
 we see it running. `volume_skips_ranker` and a matching
 `timeout_skips_ranker` (both default `true`) keep this configurable.
 
+**Liveness: silence is a symptom.** On 2026-11-21, Lynx's syslog went
+silent for two hours before she rebooted, and nothing noticed. To catch
+this:
+- Each host harness emits its own heartbeat sense line every
+  `heartbeat_s` (default 300 s), `NOOBIA P0 autonomy heartbeat`.
+- If the trigger's view backend sees **no line at all** (heartbeat
+  included) for `silence_s` (default 900 s), it reports `view.silent`
+  directly to Aigel over the client, not through the log.
+- Aigel, on Nexus, separately marks a host as `silent` when no chunk or
+  heartbeat arrives for `host_silence_s`. That is her first nursing duty.
+
 **Kill switch:** while `/etc/noobia/autonomy.disable` exists, the trigger
 sends nothing. The senses keep logging.
+
+## 2a. The prioritizer: Aigel decides what matters (Noob, 2026-11-21)
+
+Services do not have to know about priorities. Aigel decides which ordinary
+log messages are worth a `Pn`, so that new services and updates are handled
+entirely by Aigel's system.
+
+**This is what TIMEOUT chunks are for** (Noob): the 60-second chunks let
+Aigel see the ordinary, unprioritized activity of a host, make
+observations over time, and decide which normal messages to turn into
+priority messages, through the priority map.
+
+**Prioritizer** (`prioritizer.py`, one per host):
+- It reads the **raw view**: ordinary log lines from an allowlist of
+  sources (journald identifiers or syslog tags, for example
+  `wpa_supplicant`, `kernel`, `lynx-bluetoothd`).
+- It applies the host's **priority map** and writes each result as a normal
+  sense line into `noobia-sense`.
+  - A **mapped** line becomes the rule's sense line, for example
+    `NOOBIA P1 wifi link.down src=wpa_supplicant rule=wifi-down | <original text>`.
+  - An **unmapped** line from an allowlisted source becomes
+    `NOOBIA P0 raw line src=<ident> | <original text>`, so Aigel sees it in a
+    TIMEOUT or VOLUME chunk.
+- **Repeat collapse:** the same source and text within `repeat_window_s`
+  (default 60 s) is emitted once. Later repeats are counted, not emitted.
+- **Loop guard:** a source starting with `noobia-` is never accepted. The
+  prioritizer cannot read its own output or any other autonomy view.
+
+**Priority map** (`priority_map.json` per host, at most `rules_capacity`,
+default 200 rules). A rule is structured data, never hand-written regex:
+
+```json
+{"id": "wifi-down", "source": "wpa_supplicant",
+ "match": {"text_contains": ["CTRL-EVENT-DISCONNECTED"]},
+ "emit": {"p": 1, "sense": "wifi", "event": "link.down"},
+ "examples": {"must": ["CTRL-EVENT-DISCONNECTED bssid=aa:bb reason=3"],
+              "must_not": ["CTRL-EVENT-CONNECTED - Connection to aa:bb completed"]},
+ "origin": "aigel", "added_at": "...", "hits": 0}
+```
+
+- `text_contains` is a list of literals that must **all** appear in the
+  text.
+- A rule must match every `must` example and no `must_not` example, both
+  at least one, or it is rejected. Rules are checked again on every load.
+- `emit.p` is 0–99, and `emit.sense` and `emit.event` follow §1.
+- Rules from Aigel arrive with her chunk replies (`priority_rules`). They
+  are validated, applied, logged to `noobia-autonomy`, and reversible:
+  `revert(rule_id)` restores the previous version, and every version is
+  kept in an append-only history file.
+
+**When a message earns a `Pn`** (Noob): when it is **important for Aigel to
+act on**, or when it is **a new type of input for the Noob** (a new sense, a
+new kind of event she has never received). Everything else stays `P0`
+context: routine chatter, repeats, and messages that change nothing.
+
+**What Aigel may change:** only the priority map and the pattern store
+(§4), as data. She never edits a service's code or configuration.
 
 ## 3. Views: how feedback loops are prevented
 
@@ -197,8 +265,11 @@ actions and Aigel's words can never set off a trigger.
   noobia-sense`. Lines also carry the fields `NOOBIA_P`, `NOOBIA_SENSE` and
   `NOOBIA_EVENT`.
 - **BusyBox syslogd** (Lynx): tail `/var/log/lynx/messages`, filtered by
-  tag. Sense lines are logged at level `notice`, so install I-2 must raise
-  Lynx's `syslogd -l 4` to `-l 6`, or they are dropped.
+  tag. Sense lines are logged at level `notice` (5). BusyBox `-l N` keeps
+  only messages **more urgent than N**, so Lynx's current `-l 4` drops
+  warnings and notices. Install I-2 raises it to `-l 6`, which keeps notice
+  and drops info
+  (`lynx/linux-port/docs/LYNX-INSTALL-PACKET-I2-SYSLOG-20261121.md`).
 - A fallback like `aigel_dmesg_scout.py`'s `journalctl`/`dmesg` pair.
 
 ## 4. Pattern store and ranker (regex done carefully)

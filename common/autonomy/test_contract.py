@@ -32,6 +32,14 @@ ranker.py
   pattern: id, match{sense, event, fields{}, text_contains}, message, to_noob,
            cooldown_s, examples{must[], must_not[]}, hits, last_hit, origin,
            optional regex
+
+prioritizer.py
+  validate_rule(rule: dict) -> None                 # ValueError if invalid
+  Prioritizer(rules, sources: list[str], repeat_window_s=60, rules_capacity=200)
+    .process(source: str, text: str, now: float) -> str | None   # a sense line or None
+    .add_rule(rule) / .revert(rule_id) / .rules
+  rule: id, source, match{text_contains: [literals]}, emit{p, sense, event},
+        examples{must[], must_not[]}, origin, hits
 """
 
 import importlib
@@ -343,6 +351,102 @@ class RankerContract(unittest.TestCase):
         rk = self.r.Ranker([self.pat("dog", "dog"), self.pat("cat", "cat")])
         rk.process([self.seen("cat")] * 3, 0.0)
         self.assertEqual(rk.store[0]["id"], "cat")
+
+
+class PrioritizerContract(unittest.TestCase):
+    def setUp(self):
+        self.s = need("sense")
+        self.pz = need("prioritizer")
+
+    def rule(self, rid="wifi-down", **changes):
+        r = {"id": rid, "source": "wpa_supplicant",
+             "match": {"text_contains": ["CTRL-EVENT-DISCONNECTED"]},
+             "emit": {"p": 1, "sense": "wifi", "event": "link.down"},
+             "examples": {"must": ["CTRL-EVENT-DISCONNECTED bssid=aa:bb reason=3"],
+                          "must_not": ["CTRL-EVENT-CONNECTED - Connection to aa:bb completed"]},
+             "origin": "aigel", "hits": 0}
+        r.update(changes)
+        return r
+
+    def make(self, rules=None, **kw):
+        return self.pz.Prioritizer([self.rule()] if rules is None else rules,
+                                   sources=["wpa_supplicant", "kernel"], **kw)
+
+    def test_mapped_line_becomes_its_sense_line(self):
+        line = self.make().process("wpa_supplicant", "CTRL-EVENT-DISCONNECTED bssid=aa:bb reason=3", 0.0)
+        d = self.s.parse_line(line)
+        self.assertEqual((d["p"], d["sense"], d["event"]), (1, "wifi", "link.down"))
+        self.assertEqual((d["fields"]["src"], d["fields"]["rule"]), ("wpa_supplicant", "wifi-down"))
+        self.assertIn("CTRL-EVENT-DISCONNECTED", d["text"])
+
+    def test_unmapped_line_from_allowed_source_is_p0_raw(self):
+        d = self.s.parse_line(self.make().process("kernel", "usb 1-1: new device", 0.0))
+        self.assertEqual((d["p"], d["sense"], d["event"], d["fields"]["src"]), (0, "raw", "line", "kernel"))
+
+    def test_sources_outside_allowlist_and_noobia_views_are_ignored(self):
+        p = self.make()
+        self.assertIsNone(p.process("sshd", "Accepted publickey", 0.0))
+        loop = self.pz.Prioritizer([self.rule()], sources=["noobia-sense", "noobia-agent", "kernel"])
+        self.assertIsNone(loop.process("noobia-sense", "NOOBIA P1 wifi link.down", 0.0))
+        self.assertIsNone(loop.process("noobia-agent", "flashlight on", 0.0))
+
+    def test_repeats_collapse_within_window(self):
+        p = self.make()
+        text = "CTRL-EVENT-DISCONNECTED bssid=aa:bb reason=3"
+        self.assertIsNotNone(p.process("wpa_supplicant", text, 0.0))
+        for i in range(1, 50):
+            self.assertIsNone(p.process("wpa_supplicant", text, float(i)))
+        self.assertIsNotNone(p.process("wpa_supplicant", text, 61.0))
+
+    def test_literal_matching_all_terms(self):
+        r = self.rule(match={"text_contains": ["reason=3", ".*"]},
+                      examples={"must": ["x reason=3 .*"], "must_not": ["x reason=3 y"]})
+        self.pz.validate_rule(r)
+        p = self.make([r])
+        d = self.s.parse_line(p.process("wpa_supplicant", "x reason=3 anything", 0.0))
+        self.assertEqual(d["p"], 0)                       # ".*" is a literal, not regex
+
+    def test_rule_validation(self):
+        self.pz.validate_rule(self.rule())
+        bad = {
+            "no must": self.rule(examples={"must": [], "must_not": ["x"]}),
+            "no must_not": self.rule(examples={"must": ["CTRL-EVENT-DISCONNECTED"], "must_not": []}),
+            "misses must": self.rule(examples={"must": ["CTRL-EVENT-CONNECTED"], "must_not": ["y"]}),
+            "hits must_not": self.rule(examples={"must": ["CTRL-EVENT-DISCONNECTED a"],
+                                                 "must_not": ["CTRL-EVENT-DISCONNECTED b"]}),
+            "empty match": self.rule(match={"text_contains": []}),
+            "empty literal": self.rule(match={"text_contains": [""]}),
+            "bad priority": self.rule(emit={"p": 100, "sense": "wifi", "event": "link.down"}),
+            "bad sense": self.rule(emit={"p": 1, "sense": "Wi-Fi", "event": "link.down"}),
+            "noobia source": self.rule(source="noobia-sense"),
+        }
+        for label, r in bad.items():
+            with self.subTest(label), self.assertRaises(ValueError):
+                self.pz.validate_rule(r)
+
+    def test_invalid_rules_rejected_on_load(self):
+        broken = self.rule("broken", match={"text_contains": []})
+        p = self.make([self.rule(), broken])
+        self.assertEqual([r["id"] for r in p.rules], ["wifi-down"])
+
+    def test_add_and_revert(self):
+        p = self.make()
+        text = "CTRL-EVENT-DISCONNECTED bssid=aa:bb reason=3"
+        p.add_rule(self.rule(emit={"p": 5, "sense": "wifi", "event": "link.down"}))   # Aigel retunes
+        self.assertEqual(self.s.parse_line(p.process("wpa_supplicant", text, 0.0))["p"], 5)
+        p.revert("wifi-down")
+        self.assertEqual(self.s.parse_line(p.process("wpa_supplicant", text, 100.0))["p"], 1)
+        with self.assertRaises(ValueError):
+            p.add_rule(self.rule(match={"text_contains": []}))
+
+    def test_rules_capacity(self):
+        rules = [self.rule(f"r{i}", match={"text_contains": [f"T{i}"]},
+                           examples={"must": [f"T{i} x"], "must_not": ["zzz"]}) for i in range(5)]
+        p = self.make(rules, rules_capacity=3)
+        self.assertEqual(len(p.rules), 3)
+        with self.assertRaises(ValueError):
+            p.add_rule(self.rule("r9", match={"text_contains": ["T9"]},
+                                 examples={"must": ["T9 x"], "must_not": ["zzz"]}))
 
 
 if __name__ == "__main__":

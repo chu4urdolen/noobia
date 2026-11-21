@@ -41,6 +41,10 @@ for Aigel, `lynx` for hardware and installs.
 | E2 | `views.py`: journald (`journalctl -t`) and BusyBox-file backends with a fallback, one reader per view | Banshee | **done** (own tests + live Nexus probe pass) |
 | E3 | `trigger.py`: chunk rules, carry-over, VOLUME sends as-is and resets (configurable `max_lines`, `volume_resets_priority`, `volume_skips_ranker`), bounds, rates, kill switch | Banshee | **done** (`TriggerContract` all pass) |
 | E4 | `ranker.py`: structured patterns, store 200 / active 100 (configurable), archive, cooldowns, validator, persistence. Used **only for PRIORITY chunks**; TIMEOUT and VOLUME chunks go straight to Aigel | Banshee | **done** (`RankerContract` all pass) |
+| E3b | Liveness: harness heartbeat (`P0 autonomy heartbeat`), `view.silent` reported directly to Aigel after `silence_s`; Aigel marks silent hosts (A1) | Banshee (harness), Dushich (Aigel side) |
+| E8 | `prioritizer.py` + `priority_map.json`: raw view → priority map → sense lines; unmapped lines as `P0 raw line`; repeat collapse; `noobia-` loop guard; validated, versioned, revertible rules (§2a) | Banshee | `PrioritizerContract` all pass |
+| H0 | `harness.py`: the host loop. Sense view → chunker → ranker (PRIORITY only) or Aigel → `agent_link`. Applies Aigel's patterns (validated) and priority rules; bounded queue while Aigel is unreachable; rate limits (1/s, 30/h, replacing E7 finding C3); heartbeat that never wakes Aigel; silence report | Gwyn |
+| V1 | `views.py` follower: new lines since last read (journald `--cursor`, BusyBox file offset plus rotation), the `read_new()` the harness needs | Banshee |
 | E5 | `route.py`: per-task backends `inference`, `detect`, `stt`, `tts`, in the order Nexus → local → cloud, with health checks, timeouts, a config file re-read on change, and decisions logged to `noobia-autonomy` | Banshee | **done** (own tests pass) |
 | E6 | `aigel_client.py`: send unexplained chunks to Aigel, receive the decision, patterns and message; authenticated, bounded retries | Banshee | **done** (tests against fake Aigel pass) |
 | E7 | Safety review of E1–E6: loops, bounds, regex, privacy | Gwyn | review note |
@@ -62,6 +66,7 @@ for Aigel, `lynx` for hardware and installs.
 | A2 | The thinking step on **Qwen** (shared Ollama queue): JSON decision `quiet` or `message`, plus structured `patterns` and a `note`. Her prompt: describe the world, never command hardware. Keep her personality from `aigel/AGENTS.md` |
 | A3 | Pattern proposals back to hosts, validated by the host ranker (E4) before use |
 | A4 | Web page on Nexus port **112**: talk to Aigel, see recent chunks and decisions, read-only on hosts. The privileged port is an admin step, in an install session |
+| A6 | Aigel decides priorities: from unmapped `P0 raw line`s in TIMEOUT chunks she proposes `priority_rules` (structured, with must/must_not examples) in her replies, for messages she must act on or that are a new type of input for the Noob (§2a) |
 | A5 | Keep her existing diagnostics tools (`aigel/tools/`). Later, her healing and coding framework (not in v0.2) |
 
 ## Lynx's senses (`lynx/senses/<sense>/`), Solo Dushich, with Banshee where marked

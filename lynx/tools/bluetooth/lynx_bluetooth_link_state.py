@@ -17,6 +17,31 @@ from typing import Any, Dict, List, Optional
 DEFAULT_LYNX_HOST = "192.168.100.107"
 DEFAULT_LYNX_PORT = 2222
 SSH_TIMEOUT = 8
+DISABLE_SWITCH = Path("/etc/lynx/disable-bluetooth-link-state")
+
+SH_TELEMETRY_SCRIPT = r"""
+cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo "UNKNOWN_BOOT"
+echo "===RUNLEVEL==="
+rc-update show default 2>/dev/null
+echo "===MODULES==="
+lsmod
+echo "===DEVICES==="
+test -e /dev/stpbt && echo "STPBT_EXISTS" || echo "STPBT_ABSENT"
+test -d /sys/class/bluetooth/hci0 && echo "HCI0_EXISTS" || echo "HCI0_ABSENT"
+test -f /run/lynx/bluetooth/ready && echo "READY_FLAG_EXISTS" || echo "READY_FLAG_ABSENT"
+echo "===SERVICES==="
+rc-service lynx-bluetooth status 2>&1
+echo "---"
+rc-service bluetooth status 2>&1
+echo "---"
+rc-service dbus status 2>&1
+echo "===BTCTL_SHOW==="
+bluetoothctl show 2>/dev/null || echo "BTCTL_FAILED"
+echo "===BTCTL_DEVICES==="
+bluetoothctl devices Connected 2>/dev/null || echo "NO_DEVICES"
+echo "===BATTERY==="
+cat /sys/class/power_supply/battery/capacity 2>/dev/null || echo "0"
+"""
 
 
 @dataclass
@@ -102,6 +127,19 @@ def evaluate_bluetooth_link_state(
             active_connections_count=0,
             summary="Link-state data is missing or empty",
             failures=["missing_data"],
+        )
+
+    if data.get("disabled_by_switch"):
+        return BluetoothLinkStateVerdict(
+            status="DISABLED_BY_SWITCH",
+            is_valid=False,
+            radio_powered=False,
+            supervisor_running=False,
+            active_connections_count=0,
+            summary=f"Bluetooth link state evaluation disabled via {DISABLE_SWITCH}",
+            connected_peers=[],
+            details=data,
+            failures=["disabled_by_switch"],
         )
 
     failures: List[str] = []
@@ -239,59 +277,8 @@ def evaluate_bluetooth_link_state(
         )
 
 
-def collect_live_bluetooth_link_state(
-    host: str = DEFAULT_LYNX_HOST,
-    port: int = DEFAULT_LYNX_PORT,
-    timeout: int = SSH_TIMEOUT,
-) -> Dict[str, Any]:
-    """Execute bounded read-only inspection of Bluetooth link state on Lynx."""
-    repo_root = Path(__file__).resolve().parent.parent.parent
-    known_hosts = repo_root / "secrets/lynx_known_hosts"
-    key_file = repo_root / "secrets/nexus_lynx_ed25519"
-
-    sh_script = r"""
-cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo "UNKNOWN_BOOT"
-echo "===RUNLEVEL==="
-rc-update show default 2>/dev/null
-echo "===MODULES==="
-lsmod
-echo "===DEVICES==="
-test -e /dev/stpbt && echo "STPBT_EXISTS" || echo "STPBT_ABSENT"
-test -d /sys/class/bluetooth/hci0 && echo "HCI0_EXISTS" || echo "HCI0_ABSENT"
-test -f /run/lynx/bluetooth/ready && echo "READY_FLAG_EXISTS" || echo "READY_FLAG_ABSENT"
-echo "===SERVICES==="
-rc-service lynx-bluetooth status 2>&1
-echo "---"
-rc-service bluetooth status 2>&1
-echo "---"
-rc-service dbus status 2>&1
-echo "===BTCTL_SHOW==="
-bluetoothctl show 2>/dev/null || echo "BTCTL_FAILED"
-echo "===BTCTL_DEVICES==="
-bluetoothctl devices Connected 2>/dev/null || echo "NO_DEVICES"
-echo "===BATTERY==="
-cat /sys/class/power_supply/battery/capacity 2>/dev/null || echo "0"
-"""
-    cmd = [
-        "ssh",
-        "-o", "BatchMode=yes",
-        "-o", "IdentitiesOnly=yes",
-        "-o", "StrictHostKeyChecking=yes",
-        "-o", "GlobalKnownHostsFile=/dev/null",
-        "-o", "HostKeyAlias=lynx",
-        "-o", f"UserKnownHostsFile={known_hosts}",
-        "-o", "ConnectTimeout=5",
-        "-i", str(key_file),
-        "-p", str(port),
-        f"root@{host}",
-        "sh", "-s",
-    ]
-
-    res = subprocess.run(cmd, input=sh_script, capture_output=True, text=True, timeout=timeout)
-    if res.returncode != 0:
-        return {"error": f"SSH returned {res.returncode}: {res.stderr.strip()}"}
-
-    out = res.stdout
+def parse_raw_telemetry(out: str) -> Dict[str, Any]:
+    """Parse raw telemetry shell script output into structured link state dict."""
     parts = out.split("===RUNLEVEL===")
     boot_id = parts[0].strip()
 
@@ -356,6 +343,57 @@ cat /sys/class/power_supply/battery/capacity 2>/dev/null || echo "0"
     }
 
 
+def collect_local_bluetooth_link_state() -> Dict[str, Any]:
+    """Execute bounded local telemetry collection on Lynx directly."""
+    if DISABLE_SWITCH.exists():
+        return {"disabled_by_switch": True, "error": f"disabled by {DISABLE_SWITCH}"}
+
+    try:
+        res = subprocess.run(
+            ["sh", "-c", SH_TELEMETRY_SCRIPT],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        if res.returncode != 0:
+            return {"error": f"local collection exit {res.returncode}: {res.stderr.strip()}"}
+        return parse_raw_telemetry(res.stdout)
+    except Exception as exc:
+        return {"error": f"local collection failed: {exc}"}
+
+
+def collect_live_bluetooth_link_state(
+    host: str = DEFAULT_LYNX_HOST,
+    port: int = DEFAULT_LYNX_PORT,
+    timeout: int = SSH_TIMEOUT,
+) -> Dict[str, Any]:
+    """Execute bounded read-only inspection of Bluetooth link state on Lynx via SSH."""
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    known_hosts = repo_root / "secrets/lynx_known_hosts"
+    key_file = repo_root / "secrets/nexus_lynx_ed25519"
+
+    cmd = [
+        "ssh",
+        "-o", "BatchMode=yes",
+        "-o", "IdentitiesOnly=yes",
+        "-o", "StrictHostKeyChecking=yes",
+        "-o", "GlobalKnownHostsFile=/dev/null",
+        "-o", "HostKeyAlias=lynx",
+        "-o", f"UserKnownHostsFile={known_hosts}",
+        "-o", "ConnectTimeout=5",
+        "-i", str(key_file),
+        "-p", str(port),
+        f"root@{host}",
+        "sh", "-s",
+    ]
+
+    res = subprocess.run(cmd, input=SH_TELEMETRY_SCRIPT, capture_output=True, text=True, timeout=timeout)
+    if res.returncode != 0:
+        return {"error": f"SSH returned {res.returncode}: {res.stderr.strip()}"}
+
+    return parse_raw_telemetry(res.stdout)
+
+
 def main() -> None:
     import argparse
 
@@ -368,6 +406,11 @@ def main() -> None:
         nargs="?",
         default=None,
         help="Path to link-state JSON fixture",
+    )
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Execute local telemetry collection directly on Lynx",
     )
     parser.add_argument(
         "--live",
@@ -391,6 +434,13 @@ def main() -> None:
         help="Lynx SSH port for live query",
     )
     args = parser.parse_args()
+
+    # Local mode: either explicitly requested or default on Alpine phone
+    if args.local or (not args.fixture and not args.live and Path("/etc/alpine-release").exists()):
+        data = collect_local_bluetooth_link_state()
+        verdict = evaluate_bluetooth_link_state(data)
+        print(json.dumps(verdict.to_dict(), indent=2))
+        sys.exit(0 if verdict.is_valid else 1)
 
     if args.live:
         if not args.allow_live:

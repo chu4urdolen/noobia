@@ -139,6 +139,13 @@ Controller F4:2A:7D:01:23:45 (public)
         parsed_err = json.loads(res.stderr)
         self.assertIn("refusing live execution", parsed_err["error"])
 
+    def test_disable_switch_active(self):
+        data = {"disabled_by_switch": True, "error": "disabled"}
+        verdict = evaluate_bluetooth_link_state(data)
+        self.assertEqual(verdict.status, "DISABLED_BY_SWITCH")
+        self.assertFalse(verdict.is_valid)
+        self.assertIn("disabled_by_switch", verdict.failures)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,29 @@
+#!/openrc-bin/sh
+
+# lynx-watchdogd — MT6983 TOPRGU hardware watchdog petting daemon (Round 8, D25).
+# STAGED for review; NOT installed into /etc/init.d/ until approved.
+# Device : watchdog@1c007000 (mediatek,mt6983-wdt), MMIO 0x1c007000, 1..32 s HW range.
+# Contract: pre-pet health gate (RAM > 50MB, rootfs writable, loadavg < 16.0);
+#           SIGTERM/SIGINT -> magic 'V' + close (clean admin stop);
+#           health-gate failure -> stop petting WITHOUT 'V' (HW watchdog recovery).
+
+name=lynx-watchdogd
+description="Lynx MT6983 TOPRGU hardware watchdog petting daemon (staged, D25)"
+
+command="/usr/bin/python3"
+command_args="/noobia/lynx/tools/watchdog_daemon/lynx_watchdogd.py --live --allow-live --cycles 0 --interval 5 --state-file /tmp/lynx_watchdog_state.json"
+
+depend() {
+	need bootmisc sysfs
+	provide watchdog
+	before net
+}
+
+stop() {
+	# Clean administrative stop: SIGTERM triggers the magic-'V' handler,
+	# so the daemon writes 'V' to /dev/watchdog before closing.
+	kill -TERM "${PID}" 2>/dev/null
+	return 0
+}
+
+exit 0

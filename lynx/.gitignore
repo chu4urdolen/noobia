@@ -236,3 +236,11 @@
 !/tools/autonomy_check/fixtures/
 /tools/autonomy_check/fixtures/*
 !/tools/autonomy_check/fixtures/*.json
+!/tools/watchdog_daemon/
+/tools/watchdog_daemon/*
+!/tools/watchdog_daemon/*.py
+!/tools/watchdog_daemon/*.initd
+!/tools/watchdog_daemon/README.md
+!/tools/watchdog_daemon/fixtures/
+/tools/watchdog_daemon/fixtures/*
+!/tools/watchdog_daemon/fixtures/*.json

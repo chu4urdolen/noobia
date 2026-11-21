@@ -1,0 +1,22 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "watchdog": {
+    "node": "watchdog@1c007001",
+    "compatible": "mediatek,mt6983-wdt",
+    "base": "0x1c007000",
+    "size": "0x1000",
+    "reboot_mode_offset": "0x24",
+    "reboot_mode_compatible": "syscon-reboot-mode",
+    "timeout_s": 99
+  },
+  "petting": {
+    "interval_s": 5.0,
+    "max_cycles": 3,
+    "magic": "X"
+  },
+  "health_probes": [
+    {"free_ram_mb": 512.0, "rootfs_writable": true, "loadavg_1m": 1.0}
+  ],
+  "signal": null,
+  "expected_state": "COMPLETED"
+}

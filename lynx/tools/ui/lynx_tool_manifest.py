@@ -79,6 +79,7 @@ TOOLS = {
     "lynx_usb_status": ("read_only", "system", ("platform", "usb"), True),
     "lynx_display_status": ("read_only", "display", ("platform", "display"), True),
     "lynx_touch_status": ("read_only", "display", ("platform", "touch"), True),
+    "lynx_touch_events": ("read_only", "display", ("platform", "touch"), False),
     "lynx_fingerprint_status": ("read_only", "display", ("peripheral", "fingerprint"), True),
     "lynx_camera": ("read_only", "camera", ("hardware", "camera"), True),
     "lynx_flashlight": ("read_only", "light", ("hardware", "flashlight"), True),

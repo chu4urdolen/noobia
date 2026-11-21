@@ -16,6 +16,7 @@ sys.path.insert(0, str(HERE))
 import lynx_tool_board as board  # noqa: E402
 import lynx_tool_manifest as mm  # noqa: E402
 from test_lynx_snapshot_age import CAPTURED, fixture  # noqa: E402
+N_TOOLS = len(list((Path(__file__).resolve().parents[1] / "local_calls").glob("*.json")))
 
 
 class Outline(HTMLParser):
@@ -86,8 +87,8 @@ class BoardStructureTest(unittest.TestCase):
         self.assertIn('lang="en"', self.html)
 
     def test_cards_are_list_items_in_labelled_sections(self):
-        self.assertEqual(self.doc.cards, 38)
-        self.assertEqual(self.doc.cards_in_list, 38)
+        self.assertEqual(self.doc.cards, N_TOOLS)
+        self.assertEqual(self.doc.cards_in_list, N_TOOLS)
         self.assertEqual(self.doc.sections, self.doc.sections_labelled)
         self.assertIn('<span class="sr">(3 tools)</span>', self.html)  # Haptics
 
@@ -98,9 +99,9 @@ class BoardStructureTest(unittest.TestCase):
             self.assertIn(href[1:], self.doc.ids)
 
     def test_badges_have_spoken_labels(self):
-        self.assertEqual(self.html.count('<span class="sr">Effect: </span>'), 38)
-        self.assertEqual(self.html.count('<span class="sr">Phone state: </span>'), 38)
-        self.assertEqual(self.html.count('<span class="sr">Install: </span>'), 38)
+        self.assertEqual(self.html.count('<span class="sr">Effect: </span>'), N_TOOLS)
+        self.assertEqual(self.html.count('<span class="sr">Phone state: </span>'), N_TOOLS)
+        self.assertEqual(self.html.count('<span class="sr">Install: </span>'), N_TOOLS)
         self.assertIn('<span class="sr">Human check: </span>attended', self.html)
 
     def test_stale_state_is_spoken_on_every_badge(self):

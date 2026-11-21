@@ -103,7 +103,7 @@
   ],
   "effects": {
     "actuates": 3,
-    "read_only": 30,
+    "read_only": 31,
     "runs_task": 1,
     "samples_microphone": 1,
     "stops": 3
@@ -155,7 +155,7 @@
       ]
     }
   },
-  "tool_count": 38,
+  "tool_count": 39,
   "tools": [
     {
       "also_components": [],
@@ -1066,6 +1066,29 @@
       "required_inputs": [],
       "status_source": "platform",
       "timeout_s": 8
+    },
+    {
+      "also_components": [],
+      "attended": [],
+      "component": "touch",
+      "description": "Entity: Lynx. Read touch queue state (panel open, finger down, queued and dropped events) without consuming any event.",
+      "effect": "read_only",
+      "entry": {
+        "args": [],
+        "command": "lynx-agent-touch"
+      },
+      "files_sha256": {
+        "json": "7e7b10311ced836e4987241bb7626c6b84cb070225dcdd564018bc784d415229",
+        "sh": "8b08dadbd097675106b82a3b3c6bb5e92010e9ee7db8db8a7ee49a3583648beb"
+      },
+      "group": "display",
+      "inputs": [],
+      "name": "lynx_touch_events",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "status_source": "platform",
+      "timeout_s": 5
     },
     {
       "also_components": [],

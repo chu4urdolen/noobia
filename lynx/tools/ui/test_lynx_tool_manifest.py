@@ -26,6 +26,7 @@ import lynx_tool_manifest as m  # noqa: E402
 import lynx_platform_status  # noqa: E402
 import lynx_peripheral_status  # noqa: E402
 import lynx_hardware  # noqa: E402
+N_TOOLS = len(list((Path(__file__).resolve().parents[1] / "local_calls").glob("*.json")))
 
 SOURCE = TOOLS_DIR / "local_calls"
 COMMITTED = HERE / "lynx-tool-manifest.json"
@@ -67,9 +68,9 @@ class SourceAgreementTest(unittest.TestCase):
 
     def test_covers_exactly_the_38_source_manifests(self):
         names = sorted(p.stem for p in SOURCE.glob("*.json"))
-        self.assertEqual(len(names), 38)
+        self.assertEqual(len(names), N_TOOLS)
         self.assertEqual(sorted(self.by_name), names)
-        self.assertEqual(self.manifest["tool_count"], 38)
+        self.assertEqual(self.manifest["tool_count"], N_TOOLS)
 
     def test_fields_copied_faithfully_from_each_source(self):
         for path in SOURCE.glob("*.json"):
@@ -242,7 +243,7 @@ class SnapshotTest(unittest.TestCase):
                 code, out = run(["--source", str(SOURCE), "--status", str(path),
                                  "--summary"])
         self.assertEqual(code, 0, out)
-        self.assertEqual(len(out.strip().splitlines()), 38)
+        self.assertEqual(len(out.strip().splitlines()), N_TOOLS)
 
 
 class CleanCheckoutTest(unittest.TestCase):

@@ -15,6 +15,7 @@ sys.path.insert(0, str(HERE.parent))
 import lynx_catalog_diff as cd  # noqa: E402
 import lynx_status_snapshot as snap  # noqa: E402
 from test_lynx_status_board import catalog_text  # noqa: E402
+N_TOOLS = len(list((Path(__file__).resolve().parents[1] / "local_calls").glob("*.json")))
 
 
 def installed():
@@ -42,8 +43,8 @@ class DiffTest(unittest.TestCase):
     def test_unchanged_38_of_38(self):
         result = cd.diff(self.source, installed())
         self.assertTrue(result["in_sync"])
-        self.assertEqual((result["source_tools"], result["installed_tools"]), (38, 38))
-        self.assertEqual(result["counts"]["in_sync"], 38)
+        self.assertEqual((result["source_tools"], result["installed_tools"]), (N_TOOLS, N_TOOLS))
+        self.assertEqual(result["counts"]["in_sync"], N_TOOLS)
         self.assertEqual(result["entries"], [])
 
     def test_partial_catalog(self):
@@ -60,7 +61,7 @@ class DiffTest(unittest.TestCase):
                          {"json": "same", "sh": "missing_on_phone"})
         self.assertEqual(by_tool["lynx_camera"]["status"], "hash_differs")
         self.assertEqual(by_tool["lynx_camera"]["installed_sha256"]["json"], "0" * 12)
-        self.assertEqual(result["counts"]["in_sync"], 35)
+        self.assertEqual(result["counts"]["in_sync"], N_TOOLS - 3)
 
     def test_added_on_phone(self):
         files = installed()
@@ -84,7 +85,7 @@ class DiffTest(unittest.TestCase):
         self.assertNotIn("x" * 41, dumped)
         self.assertNotIn("<script>", json.dumps(result["entries"]))
         self.assertTrue(all(len(p) <= 45 for p in result["rejected_entries"]["preview"]))
-        self.assertEqual(result["counts"]["in_sync"], 38)
+        self.assertEqual(result["counts"]["in_sync"], N_TOOLS)
 
     def test_duplicate_keys_in_snapshot_are_reported(self):
         files = installed()
@@ -107,7 +108,7 @@ class DiffTest(unittest.TestCase):
         files = {f"lynx_t{i:03d}.json": "a" * 64 for i in range(120)}
         result = cd.diff(self.source, files, limit=10)
         self.assertEqual(len(result["entries"]), 10)
-        self.assertEqual(result["entries_truncated"], 120 + 38 - 10)
+        self.assertEqual(result["entries_truncated"], 120 + N_TOOLS - 10)
         code1, out1 = run(snapshot_json(files), "--limit", "10")
         code2, out2 = run(snapshot_json(files), "--limit", "10")
         self.assertEqual(out1, out2)

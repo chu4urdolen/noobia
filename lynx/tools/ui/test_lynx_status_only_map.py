@@ -35,7 +35,7 @@ class MapTest(unittest.TestCase):
         report = cov.audit(self.manifest)
         self.assertEqual({e["component"] for e in self.entries},
                          set(report["gaps"]["status_only_components"]))
-        self.assertEqual(len(self.entries), 14)
+        self.assertEqual(len(self.entries), len(set(cov.audit(self.manifest)["gaps"]["status_only_components"])))
         self.assertNotIn("platform/display", {e["component"] for e in self.entries})
 
     def test_every_cited_path_exists_in_repo(self):
@@ -73,11 +73,12 @@ class MapTest(unittest.TestCase):
         camera = rows["hardware/camera"]
         self.assertEqual(camera["gap"], "trial_needed")
         self.assertFalse(camera["driver_loaded_this_boot"])
-        self.assertEqual(rows["platform/touch"]["gap"], "missing_tool")
-        self.assertIsNone(rows["platform/touch"]["driver_loaded_this_boot"])
+        self.assertEqual(rows["platform/usb"]["gap"], "trial_needed")      # no driver flags at all
+        self.assertIsNone(rows["platform/usb"]["driver_loaded_this_boot"])
+        self.assertNotIn("platform/touch", rows)                           # touch gained a read tool (#296)
         self.assertTrue(rows["hardware/bluetooth"]["driver_loaded_this_boot"])
         self.assertEqual(rows["platform/battery"]["gap"], "none")
-        self.assertEqual([r["priority"] for r in result["components"]], list(range(1, 15)))
+        self.assertEqual([r["priority"] for r in result["components"]], list(range(1, len(self.entries) + 1)))
 
     def test_source_only_has_unknown_phone_state(self):
         result = smap.build(cov.audit(self.manifest), self.entries)
@@ -95,7 +96,7 @@ class MapTest(unittest.TestCase):
         report = cov.audit(self.manifest)
         with self.assertRaisesRegex(smap.MapError, "stale"):
             smap.build(report, [e for e in self.entries if e["component"] != "platform/sim"])
-        report["gaps"]["status_only_components"].remove("platform/touch")
+        report["gaps"]["status_only_components"].remove("peripheral/headset")
         with self.assertRaisesRegex(smap.MapError, "no longer status-only"):
             smap.build(report, self.entries)
 
@@ -126,8 +127,8 @@ class MapTest(unittest.TestCase):
                     self.assertEqual(smap.main(argv), 0)
                 outputs.append(buf.getvalue())
         self.assertEqual(outputs[0], outputs[1])
-        self.assertEqual(len(json.loads(outputs[0])["components"]), 14)
-        self.assertIn("1. platform/touch [missing_tool]", outputs[2])
+        self.assertEqual(len(json.loads(outputs[0])["components"]), len(self.entries))
+        self.assertIn("1. peripheral/headset [trial_needed]", outputs[2])
         self.assertIn("driver NOT loaded this boot", outputs[2])
         self.assertIn("snapshot none (source-only)", outputs[3])
 

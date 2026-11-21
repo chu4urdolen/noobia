@@ -17,6 +17,7 @@ import lynx_status_snapshot as snap  # noqa: E402
 import lynx_tool_board as board  # noqa: E402
 import lynx_tool_manifest as m  # noqa: E402
 from test_lynx_tool_manifest import snapshot_from_fixture_tree  # noqa: E402
+N_TOOLS = len(list((Path(__file__).resolve().parents[1] / "local_calls").glob("*.json")))
 
 SOURCE = HERE.parent / "local_calls"
 NOW = datetime(2026, 11, 21, 0, 5, tzinfo=timezone.utc)
@@ -64,13 +65,13 @@ class BrokerTest(unittest.TestCase):
                                         r"ccci_mdinit|pulse|play|>)\b|>")
         self.assertEqual(result["errors"], {})
         self.assertEqual(result["captured_at"], "2026-11-21T00:05:00Z")
-        self.assertEqual(len(result["catalog"]["files"]), 76)
+        self.assertEqual(len(result["catalog"]["files"]), 2 * N_TOOLS)
 
     def test_full_capture_joins_as_current_and_status_aware(self):
         with TemporaryDirectory() as temp:
             result = snap.capture(FakeLynx(Path(temp)), NOW)
         joined = m.apply_snapshot(m.build(SOURCE), result)
-        self.assertEqual(joined["snapshot"]["install_states"], {"current": 38})
+        self.assertEqual(joined["snapshot"]["install_states"], {"current": N_TOOLS})
         tools = {t["name"]: t for t in joined["tools"]}
         self.assertEqual(tools["lynx_battery_status"]["live"]["state"], "validated")
         self.assertEqual(tools["lynx_haptic_pulse"]["live"]["state"], "interface_only")
@@ -146,7 +147,7 @@ class BoardTest(unittest.TestCase):
             captured = snap.capture(FakeLynx(Path(temp)),
                                     datetime(2026, 11, 21, 0, 0, tzinfo=timezone.utc))
             page = self.render_with(captured)
-        self.assertEqual(page.count('class="card"'), 38)
+        self.assertEqual(page.count('class="card"'), N_TOOLS)
         for tag in ("<script", "<form", "<button", "<input", "http://", "https://"):
             self.assertNotIn(tag, page.lower())
         self.assertIn("5 min old", page)
@@ -157,7 +158,7 @@ class BoardTest(unittest.TestCase):
         page = self.render_with(None)
         self.assertIn("No status snapshot", page)
         self.assertNotIn(">proven<", page)
-        self.assertEqual(page.count("badge s-unknown"), 38)
+        self.assertEqual(page.count("badge s-unknown"), N_TOOLS)
 
     def test_board_warns_on_errors_and_drift(self):
         with TemporaryDirectory() as temp:

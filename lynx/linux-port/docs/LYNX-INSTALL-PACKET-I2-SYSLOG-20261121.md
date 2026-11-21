@@ -55,6 +55,24 @@ python3 lynx/tools/lynx_remote.py run "sha256sum /etc/init.d/lynx-local-logs; st
 The service's own `stop` removes its pidfiles, and `start` proves both
 logger processes. Logging pauses for about a second during the restart.
 
+## Warning: the restart cascades (found by Aria during IS-1a, forge lynx #296)
+
+`rc-service lynx-local-logs restart` also restarts the OpenRC services that
+depend on it: **display, haptic, audio and sensorhub**. During IS-1a this
+left their start markers stranded until Aria repaired them. Plan for it:
+1. Before the restart, note `rc-status` and that the portrait renderer is
+   running.
+2. After the restart, check each dependent service with
+   `rc-service <name> status`.
+3. If one is stuck, recover it the way Aria did: confirm the real process
+   or renderer is alive first. Repair the marker if the process is healthy;
+   otherwise run `rc-service <name> zap` then `rc-service <name> start`, one
+   service at a time.
+4. Finish with `lynx-status --assert-ready`.
+
+Future logging packets should avoid restarting `lynx-local-logs`, or should
+list the cascade in their own steps.
+
 ## Verify
 
 ```sh

@@ -19,6 +19,7 @@ import lynx_board_refresh as refresh_mod  # noqa: E402
 import lynx_status_snapshot as snap  # noqa: E402
 import lynx_tool_board as board  # noqa: E402
 from test_lynx_status_board import BOOT, FakeLynx, catalog_text  # noqa: E402
+N_TOOLS = len(list((Path(__file__).resolve().parents[1] / "local_calls").glob("*.json")))
 
 OTHER_BOOT = "11111111-2222-3333-4444-555555555555"
 
@@ -120,7 +121,7 @@ class RefreshTest(unittest.TestCase):
         self.assertIn("Lynx rebooted since previous snapshot", result["problems"])
         self.assertIn("catalog drift", result["problems"])
         self.assertEqual(result["catalog"]["not_in_sync"], ["lynx_gnss"])
-        self.assertEqual(result["catalog"]["counts"], {"in_sync": 37, "hash_differs": 1})
+        self.assertEqual(result["catalog"]["counts"], {"in_sync": N_TOOLS - 1, "hash_differs": 1})
 
     def test_overall_deadline_skips_remaining_commands(self):
         ticks = iter([0, 1, 2, 61, 62, 63, 64])

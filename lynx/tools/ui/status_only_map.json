@@ -1,5 +1,5 @@
 {
-  "about": "Gwyn backlog item 2: implementation map for the components lynx_tool_coverage.py reports as status-only (no separate read or action agent tool). Priority 1 is the most useful next agent tool that is safe to build. Source paths are relative to /noobia; line numbers are as of commit 8aff46d. This map proposes work; it implements nothing and grants no hardware authority. 2026-11-21: platform/display left the status-only set once lynx_media_play/stop/status (kind=image) were mapped to it as secondary components; priorities renumbered. Sources starting with 'upstream:' cite a third-party repository (OnePlus kernel) that is not in Git; Nexus keeps an untracked snapshot under lynx/linux-port/sources/.",
+  "about": "Gwyn backlog item 2: implementation map for the components lynx_tool_coverage.py reports as status-only (no separate read or action agent tool). Priority 1 is the most useful next agent tool that is safe to build. Source paths are relative to /noobia; line numbers are as of commit 8aff46d. This map proposes work; it implements nothing and grants no hardware authority. 2026-11-21: platform/display left the status-only set once lynx_media_play/stop/status (kind=image) were mapped to it as secondary components; priorities renumbered. Sources starting with 'upstream:' cite a third-party repository (OnePlus kernel) that is not in Git; Nexus keeps an untracked snapshot under lynx/linux-port/sources/. 2026-11-21: platform/touch left the status-only set when lynx_touch_events (non-consuming TOUCH_STATUS read tool) was installed by Aria (forge lynx #296).",
   "kinds": {
     "missing_wrapper": "a safe read or action route already exists on Lynx; only the agent tool is missing",
     "trial_needed": "a route exists only as a trial or preflight tool; a reviewed live trial must come before an agent tool",
@@ -8,30 +8,8 @@
   },
   "components": [
     {
-      "component": "platform/touch",
-      "priority": 1,
-      "kind": "missing_wrapper",
-      "owner": "Gwyn (tool), after Aria agrees on how events are consumed",
-      "existing_routes": [
-        {
-          "route": "NRP 380 TOUCH_STATUS: panel open, finger down, queued and dropped counts",
-          "source": "lynx/tools/lynx_noob_runtime.py:717,991-995"
-        },
-        {
-          "route": "NRP 381 TOUCH_POLL: pops one queued touch event",
-          "source": "lynx/tools/lynx_noob_runtime.py:718,997-999"
-        }
-      ],
-      "missing_tool": "lynx_touch_events: read-only queue state through TOUCH_STATUS, plus an explicit, bounded 'drain N events' read through TOUCH_POLL",
-      "companions_needed": "none for reads; TOUCH_POLL consumes events, so the tool must say so and cap the count",
-      "physical_proof_absent": "no receipt of a person's touch arriving through an agent call (V50-TOUCH-UI-AND-AUDIO.md records the panel and UI, not an agent read)",
-      "docs": [
-        "lynx/linux-port/docs/V50-TOUCH-UI-AND-AUDIO.md"
-      ]
-    },
-    {
       "component": "peripheral/headset",
-      "priority": 2,
+      "priority": 1,
       "kind": "trial_needed",
       "owner": "Aria with Noob attending",
       "existing_routes": [
@@ -50,7 +28,7 @@
     },
     {
       "component": "hardware/bluetooth",
-      "priority": 3,
+      "priority": 2,
       "kind": "trial_needed",
       "owner": "Aria",
       "existing_routes": [
@@ -78,7 +56,7 @@
     },
     {
       "component": "hardware/camera",
-      "priority": 4,
+      "priority": 3,
       "kind": "trial_needed",
       "owner": "Aria (camera lane)",
       "existing_routes": [
@@ -101,7 +79,7 @@
     },
     {
       "component": "hardware/gnss",
-      "priority": 5,
+      "priority": 4,
       "kind": "trial_needed",
       "owner": "Aria, last (Noob deferred)",
       "existing_routes": [
@@ -124,7 +102,7 @@
     },
     {
       "component": "peripheral/nfc",
-      "priority": 6,
+      "priority": 5,
       "kind": "trial_needed",
       "owner": "Aria (live) and Banshee (analysis)",
       "existing_routes": [
@@ -147,7 +125,7 @@
     },
     {
       "component": "platform/usb",
-      "priority": 7,
+      "priority": 6,
       "kind": "trial_needed",
       "owner": "Banshee",
       "existing_routes": [
@@ -170,7 +148,7 @@
     },
     {
       "component": "peripheral/fingerprint",
-      "priority": 8,
+      "priority": 7,
       "kind": "trial_needed",
       "owner": "Banshee (offline analysis)",
       "existing_routes": [
@@ -188,7 +166,7 @@
     },
     {
       "component": "platform/cellular",
-      "priority": 9,
+      "priority": 8,
       "kind": "blocked",
       "owner": "Banshee (analysis) and Aria (live); no live work authorized",
       "existing_routes": [
@@ -206,7 +184,7 @@
     },
     {
       "component": "platform/sim",
-      "priority": 10,
+      "priority": 9,
       "kind": "blocked",
       "owner": "Aria; Noob inserts a SIM only for a scoped trial",
       "existing_routes": [],
@@ -219,7 +197,7 @@
     },
     {
       "component": "platform/battery",
-      "priority": 11,
+      "priority": 10,
       "kind": "status_is_function",
       "owner": "none needed",
       "existing_routes": [
@@ -235,7 +213,7 @@
     },
     {
       "component": "platform/thermal",
-      "priority": 12,
+      "priority": 11,
       "kind": "status_is_function",
       "owner": "none needed",
       "existing_routes": [
@@ -251,7 +229,7 @@
     },
     {
       "component": "platform/storage",
-      "priority": 13,
+      "priority": 12,
       "kind": "status_is_function",
       "owner": "none needed",
       "existing_routes": [],
@@ -262,7 +240,7 @@
     },
     {
       "component": "platform/wifi",
-      "priority": 14,
+      "priority": 13,
       "kind": "status_is_function",
       "owner": "none needed",
       "existing_routes": [],

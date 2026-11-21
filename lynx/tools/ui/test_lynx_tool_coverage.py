@@ -18,6 +18,7 @@ import lynx_tool_coverage as cov  # noqa: E402
 import lynx_tool_manifest as mm  # noqa: E402
 from test_lynx_status_board import FakeLynx, NOW  # noqa: E402
 import lynx_status_snapshot as snap  # noqa: E402
+N_TOOLS = len(list((Path(__file__).resolve().parents[1] / "local_calls").glob("*.json")))
 
 SOURCE = HERE.parent / "local_calls"
 
@@ -173,7 +174,7 @@ class CommandTest(unittest.TestCase):
             code3, text = self.run_main(["--status", str(path), "--text"])
         self.assertEqual((code1, code2, code3), (0, 0, 0))
         self.assertEqual(first, second)
-        self.assertEqual(json.loads(first)["tool_count"], 38)
+        self.assertEqual(json.loads(first)["tool_count"], N_TOOLS)
         self.assertIn("action lynx_codex (agent/*): missing stop", text)
         self.assertIn("not ready hardware/flashlight: driver_not_loaded", text)
         self.assertIn("attended (separate): haptic-pulse-2026-11-21", text)

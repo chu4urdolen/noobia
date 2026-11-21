@@ -77,6 +77,28 @@ Expect:
    ```
    Expect: JSON with `status: DISABLED_BY_SWITCH` and `failures: ["disabled_by_switch"]`.
 
+## Repository Registration Steps (Post-Install)
+
+After Aria confirms installation on the phone, update the repository:
+1. Copy catalog files to local calls:
+   ```sh
+   cp lynx/tools/bluetooth/catalog_proposal/lynx_bluetooth_link_state.* lynx/tools/local_calls/
+   ```
+2. Add entry to `TOOLS` table in `lynx/tools/ui/lynx_tool_manifest.py`:
+   ```python
+   ("read_only", "radio", ("hardware", "bluetooth"), False),
+   ```
+3. Remove `hardware/bluetooth` entry from `lynx/tools/ui/status_only_map.json` and renumber remaining priorities.
+4. Regenerate manifest:
+   ```sh
+   python3 lynx/tools/ui/lynx_tool_manifest.py --write
+   ```
+5. Verify board sync:
+   ```sh
+   lynx-board
+   ```
+   Expect: 39/39 in sync (or 40/40 if touch installed first).
+
 ## Rollback
 
 ```sh

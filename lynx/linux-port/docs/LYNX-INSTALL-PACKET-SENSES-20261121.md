@@ -4,7 +4,7 @@
 - **Revision 2 (Dushich):** camera capture now runs the installed H2 tool via bounded subprocess (no importable `lynx` package exists on Lynx), staged camera preconditions, honest verify expectation, title corrected. Camera sense sha256 refreshed.
 - **Reviews:** Dushich second-reviews (as reviewer of record per Gwyn note #259). Aria installs in session IS-2.
 - **Risk:** low. Read-only hardware telemetry (NRP TOUCH_STATUS socket, `iw`, `lynx-status`, TCP connect probe). Never touches hardware control or commands actions. Writes to syslog only under `noobia-sense` ident.
-- **Precondition:** 
+- **Precondition:**
   1. I-2 Syslog installed (`/etc/init.d/lynx-local-logs` running `-l 6` so notice lines are retained).
   2. Autonomy harness installed (`/usr/local/lib/noobia/autonomy/sense.py` present).
   3. (S1 camera only, staged - not required for S2/S3/S4/S8) capture tool `lynx-camera-capture` installed per the camera spec `LYNX-CAMERA-FOR-SENSES-SPEC-20261121.md` (stages C1-C4), and Nexus `nexus_detect` service active on :5050. Until then S1 reports an honest `available: false` every cycle and never blocks the other senses.

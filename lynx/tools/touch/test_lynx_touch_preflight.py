@@ -270,9 +270,12 @@ class TestSafetyBoundaries(unittest.TestCase):
         if not local_calls.is_dir():
             self.skipTest("local_calls directory absent")
         touch_rows = sorted(p.name for p in local_calls.rglob("*touch*"))
-        # Only the previously approved bounded status pair (commit 88a913f)
-        # may exist in the agent catalog.
-        self.assertEqual(touch_rows, ["lynx_touch_status.json", "lynx_touch_status.sh"])
+        # Only the previously approved status pair (commit 88a913f) and the
+        # approved non-consuming touch events pair (commit 0a662a1) may exist.
+        expected = ["lynx_touch_status.json", "lynx_touch_status.sh"]
+        if "lynx_touch_events.json" in touch_rows:
+            expected = sorted(expected + ["lynx_touch_events.json", "lynx_touch_events.sh"])
+        self.assertEqual(touch_rows, expected)
         # The preflight tool must not be wired into the agent catalog.
         for name in touch_rows:
             content = (local_calls / name).read_text()

@@ -12,12 +12,11 @@ read-only receipt in forge. Commit and push only task-owned files on `main`;
 check the shared tree and remote before each Git operation. If another owner
 has begun the same source area, coordinate in forge before editing.
 
-## 0. Repair the modem RF assessment (forge #85)
+## 0. Repair the modem RF assessment (completed by Banshee)
 
-Revise `LYNX-MODEM-RF-ISOLATION-20261121.md` as specified in forge note #85.
-Keep the no-go conclusion, remove unsafe regulator-disable advice, label
-unverified stop behavior and RF assumptions, cite exact evidence, and make
-`git show --check` clean. Complete this before other modem work. MD1 remains off.
+Banshee reports this completed in commit `7d51092` and forge note #86. Aria's
+review of that revision remains separate. Begin new work at item 1. MD1
+remains off.
 
 ## 1. USB ACM continuity and teardown gate
 

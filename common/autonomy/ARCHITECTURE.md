@@ -161,6 +161,20 @@ go on together, in order.
 - overflow is counted and logged in the autonomy view, never queued without
   limit.
 
+**Where each chunk goes** (Noob, 2026-11-21):
+
+| Close reason | Goes to |
+| --- | --- |
+| PRIORITY | the **regex ranker** (§4). Its unexplained lines go to Aigel |
+| TIMEOUT | **straight to Aigel**, priority lines already stripped and carried |
+| VOLUME | **straight to Aigel**, as it is |
+
+The ranker exists only for PRIORITY chunks. If a chunk holds too few
+priority lines to trigger, Aigel decides what to do with what she sees. We
+will tune this by reassigning priorities and reconfiguring the trigger once
+we see it running. `volume_skips_ranker` and a matching
+`timeout_skips_ranker` (both default `true`) keep this configurable.
+
 **Kill switch:** while `/etc/noobia/autonomy.disable` exists, the trigger
 sends nothing. The senses keep logging.
 
@@ -218,7 +232,7 @@ Noob's warning: we are bad at regex. So:
 
   Ranking is by recent hits. A pattern pushed out of the store goes to an
   archive file, never silently deleted.
-- **Per chunk:**
+- **Per PRIORITY chunk** (the ranker sees no other chunks):
   1. Each line is matched against the active patterns in rank order.
   2. Matched lines are explained. A `to_noob` pattern delivers its message
      at most once per its own `cooldown_s`.

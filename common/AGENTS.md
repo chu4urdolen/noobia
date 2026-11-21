@@ -285,6 +285,12 @@ and cost no cloud tokens.
 Details for each follow. When you build a tool others could use, put it in
 `common/`, link it from `common/bin/`, and add it to this table.
 
+**If you need a new tool, install freely, then let the other coding agents
+know by updating the AGENTS.md file.** (Noob, 2026-11-21.) The layout rules
+below still decide where it goes: runtimes in `common/runtime/` from recipes
+in Git, and commands linked from `common/bin/`. Add a row to the table above
+so everyone can find it.
+
 ## Agent-facing tools
 
 Put an inhabitant's agent tools in `/noobia/<Noob>/tools/`. Each command must

@@ -9,6 +9,10 @@ link and saves their JSON as one snapshot for ``lynx_tool_manifest.py
 - ``peripheral`` ``lynx-peripheral-status all``
 - ``hardware``   ``lynx-hardware status all``
 - ``catalog``    SHA-256 of the installed agent tool manifests and wrappers
+- ``boot``       the kernel boot ID, so a reboot between snapshots is visible
+
+When saving, the previous snapshot's boot ID and capture time are kept under
+``previous`` so readers can tell that Lynx rebooted (RAM-loaded drivers gone).
 
 The command list is a constant: no caller input reaches the remote shell.
 Each command has a remote and a local timeout and a 256 KiB output cap. The
@@ -50,7 +54,9 @@ COMMANDS = {
     "peripheral": "/usr/bin/python3 /usr/local/bin/lynx-peripheral-status all",
     "hardware": "/usr/bin/python3 /usr/local/bin/lynx-hardware status all",
     "catalog": f"cd {CATALOG_DIR} && sha256sum -- *.json *.sh",
+    "boot": "cat /proc/sys/kernel/random/boot_id",
 }
+BOOT_LINE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 CATALOG_LINE = re.compile(r"^([0-9a-f]{64})  ([a-z][a-z0-9_]{0,63}\.(?:json|sh))$")
 
 
@@ -96,6 +102,11 @@ def parse_source(name, raw):
         raise CaptureError("output is not UTF-8") from None
     if name == "catalog":
         return parse_catalog(text)
+    if name == "boot":
+        value = text.strip()
+        if not BOOT_LINE.fullmatch(value):
+            raise CaptureError("boot ID is not a UUID")
+        return {"boot_id": value}
     try:
         data = json.loads(text)
     except ValueError as exc:
@@ -121,6 +132,22 @@ def capture(runner=ssh_runner, now=None):
         except OSError as exc:
             snapshot["errors"][name] = f"{type(exc).__name__}: {exc.strerror or exc}"
     return snapshot
+
+
+def with_previous(snapshot, path):
+    """Record the boot ID and time of the snapshot about to be replaced."""
+    try:
+        old = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return snapshot
+    if not isinstance(old, dict):
+        return snapshot
+    boot = old.get("boot")
+    previous = {
+        "boot_id": boot.get("boot_id") if isinstance(boot, dict) else None,
+        "captured_at": old.get("captured_at") if isinstance(old.get("captured_at"), str) else None,
+    }
+    return dict(snapshot, previous=previous)
 
 
 def write_atomic(path, snapshot):
@@ -151,12 +178,19 @@ def main(argv=None, runner=ssh_runner):
         return code
     if captured:
         try:
+            snapshot = with_previous(snapshot, args.out)
             write_atomic(args.out, snapshot)
         except OSError as exc:
             print(json.dumps({"ok": False, "error": f"cannot write {args.out}: {exc}"}))
             return 1
+    boot = snapshot.get("boot") or {}
+    previous = snapshot.get("previous") or {}
     print(json.dumps({"ok": code == 0, "captured": captured,
                       "errors": snapshot["errors"], "captured_at": snapshot["captured_at"],
+                      "boot_id": boot.get("boot_id"),
+                      "rebooted_since_previous": (
+                          None if not (boot.get("boot_id") and previous.get("boot_id"))
+                          else boot["boot_id"] != previous["boot_id"]),
                       "path": args.out if captured else None}, sort_keys=True))
     return code
 

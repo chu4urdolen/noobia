@@ -21,6 +21,7 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import lynx_snapshot_age as age_mod  # noqa: E402
 import lynx_tool_manifest as manifest_mod  # noqa: E402
 
 STATE_DIR = HERE / "state"
@@ -92,22 +93,6 @@ def esc(value):
     return html.escape(str(value), quote=True)
 
 
-def age_text(captured_at, now):
-    try:
-        then = datetime.strptime(captured_at, "%Y-%m-%dT%H:%M:%SZ").replace(
-            tzinfo=timezone.utc)
-    except (TypeError, ValueError):
-        return "unknown age"
-    seconds = int((now - then).total_seconds())
-    if seconds < 0:
-        return "from the future (check clocks)"
-    if seconds < 120:
-        return f"{seconds} s old"
-    if seconds < 7200:
-        return f"{seconds // 60} min old"
-    return f"{seconds // 3600} h old"
-
-
 def card(tool, attended=None):
     live = tool.get("live", {"state": "unknown"})
     state = live["state"]
@@ -153,10 +138,19 @@ def render(manifest, now=None):
            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">",
            "<title>Lynx Tool Board</title>", f"<style>{CSS}</style></head><body><main>",
            "<h1>Lynx tool board</h1>"]
+    fresh = age_mod.freshness(snap, now) if snap else None
     if snap:
-        out.append(f'<p class="sub">Snapshot {esc(snap["captured_at"] or "time unknown")} '
-                   f'({esc(age_text(snap["captured_at"], now))}) · '
-                   f'{manifest["tool_count"]} tools · read-only view</p>')
+        boot = fresh["boot_id"] or "unknown"
+        out.append(f'<p class="sub" data-freshness="{esc(fresh["state"])}" '
+                   f'data-boot="{esc(fresh["boot_state"])}">'
+                   f'Snapshot {esc(snap["captured_at"] or "time unknown")} · '
+                   f'{esc(age_mod.age_text(fresh["age_s"]) if fresh["state"] == "fresh" else fresh["state"].replace("_", " "))} · '
+                   f'boot {esc(boot)} · {manifest["tool_count"]} tools · read-only view</p>')
+        if not fresh["current"] or fresh["boot_state"] == "changed_since_previous":
+            out.append(f'<div class="warn-box stale-box" role="status"><strong>'
+                       f'{esc(fresh["summary"])}.</strong> Every state below is what Lynx '
+                       'reported at capture time, not now. Refresh with '
+                       'lynx_tool_board.py --refresh.</div>')
         if snap.get("errors"):
             items = "; ".join(f"{k}: {v}" for k, v in sorted(snap["errors"].items()))
             out.append(f'<div class="warn-box">Some sources failed, so their tools '
@@ -168,7 +162,9 @@ def render(manifest, now=None):
                        f'{esc(json.dumps(drift))}'
                        + (f"; installed only on phone: {esc(extra)}" if extra else "")
                        + "</div>")
-        out.append("<h2>Hardware components</h2><div class=\"chips\">")
+        heading = ("Hardware components" if fresh["current"]
+                   else "Hardware components (as captured, not current)")
+        out.append(f"<h2>{esc(heading)}</h2><div class=\"chips\">")
         for name, state in snap["components"].items():
             out.append(f'<span class="chip s-{esc(state)}">{esc(name.split("/", 1)[1])}: '
                        f'{esc(STATE_LABEL.get(state, state))}</span>')
@@ -203,6 +199,14 @@ def render(manifest, now=None):
         for entry in attended.values():
             component = entry["component"].split("/", 1)[1]
             boot = f" · boot {entry['boot']}" if entry.get("boot") else ""
+            relation = age_mod.attended_boot(entry.get("boot"),
+                                             fresh["boot_id"] if fresh else None)
+            relation_text = {
+                "same_boot": "Same boot as this snapshot; still history, not a live check.",
+                "earlier_boot": "Earlier boot than this snapshot; may not hold now.",
+                "boot_not_recorded": "Boot not recorded; may not hold now.",
+                "snapshot_boot_unknown": "Snapshot boot unknown; may not hold now.",
+            }[relation]
             out.append('<div class="evidence">'
                        f'<p><span class="badge h-attended">{esc(component)}</span> '
                        f'{esc(entry["date"])} · {esc(entry["observer"])}{esc(boot)}</p>'
@@ -210,6 +214,8 @@ def render(manifest, now=None):
                        f'<p class="next">Does not establish: '
                        f'{esc("; ".join(entry["does_not_establish"]))}</p>'
                        f'<p class="meta">Receipts: {esc("; ".join(entry["receipts"]))}</p>'
+                       f'<p class="meta" data-boot-relation="{esc(relation)}">'
+                       f'{esc(relation_text)}</p>'
                        "</div>")
     out.append(f"<footer>Rendered {esc(now.strftime('%Y-%m-%d %H:%M:%S UTC'))} by "
                "lynx/tools/ui/lynx_tool_board.py. This page cannot act on Lynx.</footer>")
@@ -231,6 +237,7 @@ def main(argv=None):
         snapshot = snapshot_mod.capture()
         captured = [n for n in snapshot_mod.COMMANDS if n in snapshot]
         if captured:
+            snapshot = snapshot_mod.with_previous(snapshot, args.status)
             snapshot_mod.write_atomic(args.status, snapshot)
         capture_result = {"captured": captured, "errors": snapshot["errors"]}
     try:
@@ -246,8 +253,10 @@ def main(argv=None):
         print(json.dumps({"ok": False, "error": str(exc)}))
         return 1
     snap = manifest.get("snapshot") or {}
+    fresh = age_mod.freshness(snap) if snap else None
     result = {"ok": True, "path": str(out), "tool_count": manifest["tool_count"],
               "snapshot": snap.get("captured_at"),
+              "freshness": fresh["summary"] if fresh else "no snapshot",
               "component_states": snap.get("component_states", {}),
               "install_states": snap.get("install_states", {})}
     if capture_result is not None:

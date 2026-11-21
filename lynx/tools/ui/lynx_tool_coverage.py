@@ -35,6 +35,7 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import lynx_snapshot_age as age_mod  # noqa: E402
 import lynx_tool_manifest as mm  # noqa: E402
 
 DEFAULT_STATUS = HERE / "state" / "latest.json"
@@ -59,7 +60,7 @@ def driver_flags(evidence):
             if isinstance(evidence.get(key), bool)}
 
 
-def audit(manifest, snapshot=None):
+def audit(manifest, snapshot=None, now=None):
     if snapshot is not None:
         manifest = mm.apply_snapshot(manifest, snapshot)
     attended = {e["id"]: e for e in manifest["attended_evidence"]}
@@ -162,6 +163,7 @@ def audit(manifest, snapshot=None):
         "tool_count": manifest["tool_count"],
         "snapshot": (snap or {}).get("captured_at") if snap else None,
         "snapshot_errors": (snap or {}).get("errors", {}) if snap else {},
+        "snapshot_freshness": age_mod.freshness(snapshot, now) if snapshot is not None else None,
         "note": ("phone_state comes only from Lynx's status code; 'attended' "
                  "lists separate human confirmations and never changes it. A "
                  "false driver flag means absent on this boot, not that a "
@@ -184,6 +186,12 @@ def text_report(report):
     gaps = report["gaps"]
     lines = [f"Lynx tool coverage: {report['tool_count']} tools; snapshot "
              f"{report['snapshot'] or 'none (source-only)'}"]
+    fresh = report["snapshot_freshness"]
+    if fresh:
+        lines.append(f"snapshot freshness: {fresh['state']}; boot "
+                     f"{fresh['boot_id'] or 'unknown'} ({fresh['boot_state']}); {fresh['summary']}")
+        if not fresh["current"]:
+            lines.append("WARNING: states below are as captured, not current")
     if report["snapshot_errors"]:
         lines.append("snapshot errors: " + "; ".join(
             f"{k}: {v}" for k, v in sorted(report["snapshot_errors"].items())))
@@ -228,6 +236,8 @@ def main(argv=None):
     group.add_argument("--status", metavar="FILE")
     group.add_argument("--no-status", action="store_true")
     parser.add_argument("--text", action="store_true", help="short human report")
+    parser.add_argument("--now", metavar="UTC", help="evaluate age at this time "
+                        "(YYYY-MM-DDTHH:MM:SSZ), for reproducible output")
     args = parser.parse_args(argv)
     try:
         manifest = mm.build(args.source, args.attended)
@@ -236,7 +246,12 @@ def main(argv=None):
             path = Path(args.status) if args.status else DEFAULT_STATUS
             if args.status or path.exists():
                 snapshot = mm.load_snapshot(path)
-        report = audit(manifest, snapshot)
+        now = None
+        if args.now:
+            now = age_mod.parse_time(args.now)
+            if now is None:
+                raise mm.ManifestError("--now must be YYYY-MM-DDTHH:MM:SSZ")
+        report = audit(manifest, snapshot, now)
     except (mm.ManifestError, OSError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}))
         return 1

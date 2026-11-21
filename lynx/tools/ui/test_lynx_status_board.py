@@ -20,6 +20,7 @@ from test_lynx_tool_manifest import snapshot_from_fixture_tree  # noqa: E402
 
 SOURCE = HERE.parent / "local_calls"
 NOW = datetime(2026, 11, 21, 0, 5, tzinfo=timezone.utc)
+BOOT = "0fe847d2-44d6-4ac1-9000-2c99df1a51d8"
 
 
 def catalog_text(source=SOURCE):
@@ -41,6 +42,7 @@ class FakeLynx:
             snap.COMMANDS["peripheral"]: (0, json.dumps(fixture["peripheral"]).encode(), b""),
             snap.COMMANDS["hardware"]: (0, json.dumps(fixture["hardware"]).encode(), b""),
             snap.COMMANDS["catalog"]: (0, catalog_text(), b""),
+            snap.COMMANDS["boot"]: (0, (BOOT + "\n").encode(), b""),
         }
         for name, answer in (overrides or {}).items():
             self.answers[snap.COMMANDS[name]] = answer
@@ -80,6 +82,7 @@ class BrokerTest(unittest.TestCase):
                 "peripheral": (0, b"not json", b""),
                 "hardware": (0, b"x" * (snap.MAX_OUTPUT + 1), b""),
                 "catalog": (0, b"abc  ../../etc/passwd\n", b""),
+                "boot": (0, b"not-a-uuid; rm -rf /\n", b""),
             })
             result = snap.capture(fake, NOW)
         self.assertEqual(set(result["errors"]), set(snap.COMMANDS))
@@ -87,6 +90,7 @@ class BrokerTest(unittest.TestCase):
         self.assertIn("not JSON", result["errors"]["peripheral"])
         self.assertIn("exceeds", result["errors"]["hardware"])
         self.assertIn("unexpected catalog line", result["errors"]["catalog"])
+        self.assertIn("not a UUID", result["errors"]["boot"])
         for name in snap.COMMANDS:
             self.assertNotIn(name, result)
 

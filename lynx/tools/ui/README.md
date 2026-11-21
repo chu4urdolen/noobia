@@ -172,13 +172,35 @@ Current order:
 4. **Cellular and SIM (blocked).**
 5. **Battery, thermal, storage, Wi-Fi (no gap).**
 
+## Snapshot age and boot guard (`lynx_snapshot_age.py`)
+
+Each snapshot now also records Lynx's kernel boot ID
+(`/proc/sys/kernel/random/boot_id`, a fifth fixed read-only command). When it
+is saved, the previous snapshot's boot ID and time go under `previous`.
+
+The board and the coverage report classify every snapshot:
+- `fresh`: at most 15 minutes old;
+- `stale`;
+- `future`: more than 2 minutes ahead, meaning a clock problem;
+- `unknown_time`;
+- `malformed_time`.
+
+They also report the boot as `same_as_previous`, `changed_since_previous`,
+`no_previous`, or `unknown`. A snapshot that is not fresh, or comes after a
+reboot, gets a warning banner, and the component heading changes to "as
+captured, not current". Validation is never altered.
+
+Each attended entry says whether it was on the same boot as the snapshot.
+Even then it is "still history, not a live check". For reproducible output,
+`lynx_tool_coverage.py --now YYYY-MM-DDTHH:MM:SSZ` fixes the clock.
+
 ## Tests
 
 ```sh
 python3 -m unittest discover -s lynx/tools/ui -p 'test_*.py'
 ```
 
-These 53 tests are all offline. Status fixtures come from the real
+These 66 tests are all offline. Status fixtures come from the real
 `inventory()` functions run over temporary directory trees, and the broker
 uses a fake runner.
 
@@ -192,6 +214,9 @@ uses a fake runner.
 - **Status-only map:** agreement with the coverage audit, every cited path
   exists, cited NRP line numbers name the right functions, staleness and
   bad-entry rejection, and driver state kept apart from gaps.
+- **Age and boot guard:** fresh, stale, clock skew, missing and malformed
+  time, changed or unknown boot, previous-boot recording, the stale banner,
+  attended boot relation, and no scripts.
 - **Coverage:** companion rules, missing tools, the different not-ready
   causes, drift, keeping attended evidence separate, and JSON output that
   repeats exactly for the same input.

@@ -338,6 +338,9 @@ def apply_snapshot(manifest, snapshot):
     result["snapshot"] = {
         "captured_at": snapshot.get("captured_at") if isinstance(
             snapshot.get("captured_at"), str) else None,
+        "boot": snapshot.get("boot") if isinstance(snapshot.get("boot"), dict) else None,
+        "previous": (snapshot.get("previous")
+                     if isinstance(snapshot.get("previous"), dict) else None),
         "component_states": dict(sorted(summary.items())),
         "install_states": dict(sorted(installs.items())),
         "installed_not_in_source": extra,

@@ -1,0 +1,10 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "expect": "spec_rejected",
+  "spec": {
+    "memory_max_bytes": 268435456,
+    "memory_high_bytes": 301989888
+  },
+  "expected_error_contains": "memory_high_bytes",
+  "pressure_series": []
+}

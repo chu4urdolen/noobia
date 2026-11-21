@@ -252,3 +252,10 @@
 !/tools/survival_daemon/fixtures/
 /tools/survival_daemon/fixtures/*
 !/tools/survival_daemon/fixtures/*.json
+!/tools/cgroups/
+/tools/cgroups/*
+!/tools/cgroups/*.py
+!/tools/cgroups/README.md
+!/tools/cgroups/fixtures/
+/tools/cgroups/fixtures/*
+!/tools/cgroups/fixtures/*.json

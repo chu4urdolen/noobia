@@ -117,3 +117,10 @@
 !/tools/audio/fixtures/
 /tools/audio/fixtures/*
 !/tools/audio/fixtures/*.json
+!/tools/charger/
+/tools/charger/*
+!/tools/charger/*.py
+!/tools/charger/README.md
+!/tools/charger/fixtures/
+/tools/charger/fixtures/*
+!/tools/charger/fixtures/*.json

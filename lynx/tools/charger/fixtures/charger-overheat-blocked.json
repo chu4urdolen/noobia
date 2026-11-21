@@ -1,0 +1,10 @@
+{
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "voltage_now_mv": 8400,
+  "capacity_percent": 85,
+  "temp_c": 48.0,
+  "status": "Charging",
+  "charger_online": true,
+  "charge_protocol": "USB_SUPERVOOC",
+  "gauge_device_type": 42495
+}

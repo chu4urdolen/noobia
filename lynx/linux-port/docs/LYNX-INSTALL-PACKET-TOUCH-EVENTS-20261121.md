@@ -53,9 +53,17 @@ Then, in the repository:
 1. Copy the two catalog files into `lynx/tools/local_calls/`.
 2. Gwyn adds `lynx_touch_events` to the `TOOLS` table in
    `lynx/tools/ui/lynx_tool_manifest.py` as
-   `("read_only", "display", ("platform", "touch"), True)`.
-3. Regenerate with `lynx_tool_manifest.py --write`.
-4. `lynx-board` should then report 39/39 in sync.
+   `("read_only", "display", ("platform", "touch"), False)`.
+   It is a **read** tool for touch, not touch's status reporter, which is
+   still `lynx_touch_status`. With `True`, `--write` fails, because a status
+   tool must run `lynx-platform-status touch`. Dushich found this in his
+   second review (forge lynx #234).
+3. Remove `platform/touch` from `lynx/tools/ui/status_only_map.json` and
+   renumber the priorities: touch now has a read tool, so it is no longer
+   status-only, and `lynx_status_only_map.py` would otherwise refuse the
+   stale map.
+4. Regenerate with `lynx_tool_manifest.py --write`.
+5. `lynx-board` should then report 39/39 in sync.
 
 ## 5. Attended proof (optional, Noob present)
 

@@ -171,7 +171,7 @@ The 2026-11-21 result from the 23:55 UTC snapshot:
 
 ## `lynx_status_only_map.py`: what each status-only part still needs
 
-`status_only_map.json` is a curated map of the 15 status-only components, with
+`status_only_map.json` is a curated map of the 14 status-only components, with
 a source citation for every route. The command checks it against the coverage
 audit and fails if the map is stale. It adds phone state, attended IDs, and
 whether the driver is loaded on this boot.
@@ -192,11 +192,15 @@ missing tool nor proof that a driver ever worked.
 Current order:
 1. **Touch (missing tool).** `TOUCH_STATUS`/`TOUCH_POLL` exist, but
    `TOUCH_POLL` consumes events, so a wrapper needs Aria's agreement.
-2. **Display (missing tool).** Image play and stop already exist through the
-   media tools but are classified under audio.
-3. **Headset, Bluetooth, camera, GNSS, NFC, USB, fingerprint (trial needed).**
-4. **Cellular and SIM (blocked).**
-5. **Battery, thermal, storage, Wi-Fi (no gap).**
+2. **Headset, Bluetooth, camera, GNSS, NFC, USB, fingerprint (trial needed).**
+3. **Cellular and SIM (blocked).**
+4. **Battery, thermal, storage, Wi-Fi (no gap).**
+
+The display left this list on 2026-11-21. The media tools take `kind=image`,
+so `lynx_media_play`, `lynx_media_stop`, `lynx_media_status` and
+`lynx_media_catalog` are now also listed under `platform/display`. A tool's
+live state still comes only from its primary component (audio), and the
+attended beep stays audio evidence.
 
 ## Snapshot age and boot guard (`lynx_snapshot_age.py`)
 

@@ -102,6 +102,16 @@ TOOLS = {
     "lynx_proximity_read": ("read_only", "sensors", ("platform", "sensorhub"), False),
 }
 
+# Tools that also act on or read a second component. The media tools take
+# kind=sound or kind=image; images go to the screen (lynx_agent_media.py:16-30).
+# Live state still comes from the primary component only.
+ALSO_COMPONENTS = {
+    "lynx_media_catalog": ("platform/display",),
+    "lynx_media_status": ("platform/display",),
+    "lynx_media_play": ("platform/display",),
+    "lynx_media_stop": ("platform/display",),
+}
+
 
 class ManifestError(Exception):
     pass
@@ -135,6 +145,11 @@ def source_tools(source_dir=SOURCE_DIR):
     if names != scripts:
         missing = sorted(set(names) ^ set(scripts))
         raise ManifestError(f"manifest/script pairs differ: {missing}")
+    for name, extra in ALSO_COMPONENTS.items():
+        for key in extra:
+            source, _, part = key.partition("/")
+            if name not in TOOLS or part not in SOURCES.get(source, ("", ()))[1]:
+                raise ManifestError(f"bad secondary component {key!r} for {name}")
     unclassified = sorted(set(names) - set(TOOLS))
     if unclassified:
         raise ManifestError(f"unclassified tools: {unclassified}")
@@ -176,6 +191,7 @@ def source_tools(source_dir=SOURCE_DIR):
             "status_source": component[0] if component else None,
             "component": component[1] if component else None,
             "reports_component_status": reports,
+            "also_components": list(ALSO_COMPONENTS.get(name, ())),
             "inputs": sorted(properties),
             "required_inputs": sorted(schema.get("required") or []),
             "timeout_s": timeout,

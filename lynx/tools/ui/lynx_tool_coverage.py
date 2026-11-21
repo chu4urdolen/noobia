@@ -79,18 +79,21 @@ def audit(manifest, snapshot=None, now=None):
             continue  # aggregate overview tools report every component
         key = (f"{tool['status_source']}/{tool['component']}"
                if tool["status_source"] else AGENT)
-        entry = components[key]
-        if tool["effect"] in NEEDS_STOP:
-            entry["action_tools"].append(tool["name"])
-        elif tool["effect"] == "stops":
-            entry["stop_tools"].append(tool["name"])
-        elif tool["reports_component_status"] or key == AGENT:
-            entry["status_tools"].append(tool["name"])
-        else:
-            entry["read_tools"].append(tool["name"])
-        for ident in tool["attended"]:
-            if ident not in entry["attended"]:
-                entry["attended"].append(ident)
+        for target in [key] + list(tool.get("also_components", [])):
+            entry = components[target]
+            primary = target == key
+            if tool["effect"] in NEEDS_STOP:
+                entry["action_tools"].append(tool["name"])
+            elif tool["effect"] == "stops":
+                entry["stop_tools"].append(tool["name"])
+            elif primary and (tool["reports_component_status"] or key == AGENT):
+                entry["status_tools"].append(tool["name"])
+            else:
+                entry["read_tools"].append(tool["name"])
+            if primary:  # attended evidence belongs to the primary component only
+                for ident in tool["attended"]:
+                    if ident not in entry["attended"]:
+                        entry["attended"].append(ident)
 
     no_tool, status_only, unverified, unknown, not_ready = [], [], [], [], []
     for key, entry in components.items():

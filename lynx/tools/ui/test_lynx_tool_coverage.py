@@ -77,6 +77,26 @@ class CoverageTest(unittest.TestCase):
         self.assertEqual([c["tool"] for c in report["gaps"]["actions_missing_companions"]],
                          ["lynx_codex"])
 
+    def test_media_image_actions_cover_the_display(self):
+        report = cov.audit(self.manifest)
+        display = report["components"]["platform/display"]
+        self.assertEqual(display["action_tools"], ["lynx_media_play"])
+        self.assertEqual(display["stop_tools"], ["lynx_media_stop"])
+        self.assertEqual(display["status_tools"], ["lynx_display_status"])
+        self.assertIn("lynx_media_status", display["read_tools"])
+        self.assertEqual(display["attended"], [])  # the beep is audio evidence only
+        self.assertNotIn("platform/display", report["gaps"]["status_only_components"])
+        by_component = {(c["tool"], c["component"]): c["missing"]
+                        for c in report["action_companions"]}
+        self.assertEqual(by_component[("lynx_media_play", "platform/display")], [])
+
+    def test_secondary_component_never_changes_live_state(self):
+        snapshot = {"platform": {"display": {"interface_ready": True, "validated": True},
+                                 "audio": {"interface_ready": True, "validated": False}}}
+        tools = {t["name"]: t for t in mm.apply_snapshot(self.manifest, snapshot)["tools"]}
+        self.assertEqual(tools["lynx_media_play"]["live"]["state"], "interface_only")
+        self.assertEqual(tools["lynx_media_play"]["also_components"], ["platform/display"])
+
     def test_removing_a_stop_tool_is_flagged(self):
         manifest = copy.deepcopy(self.manifest)
         manifest["tools"] = [t for t in manifest["tools"] if t["name"] != "lynx_haptic_stop"]

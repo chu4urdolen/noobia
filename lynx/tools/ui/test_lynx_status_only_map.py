@@ -35,7 +35,8 @@ class MapTest(unittest.TestCase):
         report = cov.audit(self.manifest)
         self.assertEqual({e["component"] for e in self.entries},
                          set(report["gaps"]["status_only_components"]))
-        self.assertEqual(len(self.entries), 15)
+        self.assertEqual(len(self.entries), 14)
+        self.assertNotIn("platform/display", {e["component"] for e in self.entries})
 
     def test_every_cited_path_exists_in_repo(self):
         for path in smap.cited_paths(self.entries):
@@ -59,7 +60,7 @@ class MapTest(unittest.TestCase):
         self.assertIsNone(rows["platform/touch"]["driver_loaded_this_boot"])
         self.assertTrue(rows["hardware/bluetooth"]["driver_loaded_this_boot"])
         self.assertEqual(rows["platform/battery"]["gap"], "none")
-        self.assertEqual([r["priority"] for r in result["components"]], list(range(1, 16)))
+        self.assertEqual([r["priority"] for r in result["components"]], list(range(1, 15)))
 
     def test_source_only_has_unknown_phone_state(self):
         result = smap.build(cov.audit(self.manifest), self.entries)
@@ -108,7 +109,7 @@ class MapTest(unittest.TestCase):
                     self.assertEqual(smap.main(argv), 0)
                 outputs.append(buf.getvalue())
         self.assertEqual(outputs[0], outputs[1])
-        self.assertEqual(len(json.loads(outputs[0])["components"]), 15)
+        self.assertEqual(len(json.loads(outputs[0])["components"]), 14)
         self.assertIn("1. platform/touch [missing_tool]", outputs[2])
         self.assertIn("driver NOT loaded this boot", outputs[2])
         self.assertIn("snapshot none (source-only)", outputs[3])

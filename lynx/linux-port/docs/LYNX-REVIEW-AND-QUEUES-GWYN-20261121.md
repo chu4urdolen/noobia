@@ -330,3 +330,57 @@ substring check (M3) passed it.
   - Add tests, including a fixture with `-t`. Offline only.
 - **Dushich D8:** Re-review B9. Check every `timeout` call against the
   BusyBox 1.37 usage quoted above.
+
+## Round 5 queues (Gwyn coordinating; Noob asked for a larger batch)
+
+These are offline unless stated. Work in order, one commit and one forge note
+per item. Gwyn reviews, and Dushich gives a second review on Banshee's
+hardware items. No phone writes, module loads, installs, radio or light
+actions. Read-only live reads are allowed only behind
+`--live --allow-live`.
+
+**Banshee** (after B9):
+
+- **B10: Main camera IMX890 bring-up preflight.**
+  - From Lynx's Nord 3 source tree, map its DT node, power rails and
+    sequence, C-PHY lanes, clock, VCM, and required modules.
+  - Add a gated read-only collector for the current bound and unbound state.
+  - Add fixtures, tests, and a doc. No module load, no capture.
+- **B11: Front camera S5K3P9SP.** The same preflight as B10.
+- **B12: GNSS fix-trial readiness.**
+  - Write an offline checklist and a gated read-only collector: driver and
+    node state, last NMEA receipt summary, and a sky-view and power gate.
+  - Aria runs the trial, last.
+- **B13: Headset path.** Trace the Type-C analog accessory detection in the
+  Nord 3 source (accdet and Type-C mux) and explain what each switch bit
+  means on this phone. Fixtures and tests for the decoder.
+- **B14: NFC receipt decoder.**
+  - Build an offline NCI frame parser: CORE_RESET/INIT,
+    RF_DISCOVER, RF_INTF_ACTIVATED and DATA.
+  - Add fixtures from the SN110 spec, so the attended tag trial produces a
+    parseable, bounded receipt.
+- **B15: USB serial status tool proposal.** A catalog-ready read-only tool,
+  staged outside `local_calls` like B6.
+
+**Solo Dushich** (after D8):
+
+- **D9: Battery reserve policy evidence.**
+  - Read the installed `lynx-battery-reserve` source in the repo and
+    document its real thresholds and actions.
+  - Compare them with the evaluator's proposed bands; label each as
+    verified or proposed.
+- **D10: Health report diff.** An offline tool comparing two saved
+  `portable-health/1` reports: changed statuses, new unknowns, bounded
+  output. Fixtures and tests. No periodic job.
+- **D11: Nexus self-check.**
+  - Run the portable common checks on Nexus itself, local and read-only
+    (battery absent, so unknown).
+  - Document what overlaps with Aigel's board. Do not edit `aigel/`.
+- **D12: Second reviewer** for Banshee's B10–B15 as they land.
+- **D13: Atlas hygiene.** Run `forge-db path list --prefix /noobia/lynx
+  --sort hits` and `path check`. Flag stale or unused rows in a note; delete
+  nothing without asking.
+- **D14: Lynx tool index.**
+  `lynx/linux-port/docs/LYNX-TOOL-INDEX-20261121.md`, one page listing
+  every tool directory created today: owner, purpose, live or offline,
+  installed or not, and its test command. Read-only on the code.

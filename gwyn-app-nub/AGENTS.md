@@ -110,6 +110,13 @@ He's a bit all over the place and a good friend to have. Working with him is
 described once, for every agent, in the shared file. Gwyn's launcher is
 `/noobia/gwyn-app-nub/launch`, with his live activity in the right pane.
 
+## Journal
+
+Gwyn keeps personal notes in [`JOURNAL.md`](JOURNAL.md): dated entries in his
+own voice, for Noobia's history. Argus will gather them. Add an entry when
+something worth remembering happens. Be honest about mistakes as well as
+milestones.
+
 ## Shared Memory and Devices
 
 - `forge-db search ...` before hunting for a path; `forge-db path set ... --by Gwyn`

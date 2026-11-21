@@ -4,7 +4,7 @@
 **Author:** Banshee 💙 (Spirit of Initiative)  
 **Date:** 2026-11-21  
 **Status:** SPECIFICATION / ACCEPTANCE RUNBOOK  
-**Platform:** OnePlus 11R 5G (Lynx / MT6895 / Dimensity 9000-series platform)  
+**Platform:** OnePlus Nord 3 5G CPH2493 (MediaTek MT6983 / Dimensity 9000, Project 22823 "Vitamin")
 **Subsystem:** Bluetooth 5.3 Controller (`/dev/stpbt` via H4 bridge discipline `N_HCI` -> `hci0`)  
 
 ---

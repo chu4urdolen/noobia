@@ -25,6 +25,8 @@ pattern: `python3 -m unittest discover -s lynx/tools/<dir> -p 'test_*.py'`
 | `nfc/` | Banshee | SN110T NCI validator + **B14 landed** (`2adb7aa`): offline NCI frame parser + trial receipt decoder | offline (zero RF actuation) | **no** | 18 OK |
 | `ram-log-reader/` | Lynx | ARM-emulated RAM log reader (build + emulation) | offline | **no** | (build/emulate scripts) |
 | `touch/` | Dushich | **D18 landed** (`7143e3e`): touchscreen preflight gate (Synaptics S3908, `&i2c0` @ `0x4B`, IRQ GPIO8 / reset GPIO3); driver-link + input-class binding evidence, no unverified module asserts | offline; live gated (`--live --allow-live`) | **no** | **29 OK** |
+| `tri_state_key/` | Banshee | **B25 landed**: OnePlus Alert Slider dual-hall preflight gate (MagnaChip MXM1120 / Isentek IST8801 on `&i2c0` @ `0x0C`/`0x0D` or `0x18`/`0x19`, GPIO4/5, Silent/Vibrate/Ring state machine); double-gated read-only live collector | offline; live gated (`--live --allow-live`) | **no** | **10 OK** |
+| `ufs/` | Banshee | **B26 landed**: UFS 3.1 host controller & JEDEC health telemetry preflight gate (`ufshci@112b0000`, 5 clocks, 3 resets, VUFS18/12, Gear 4 M-PHY @ `0x11fa0000`, Pre-EOL / Lifetime Est A & B); double-gated read-only live collector | offline; live gated (`--live --allow-live`) | **no** | **10 OK** |
 | `ui/` | Gwyn | Presentation: validation-aware tool manifest, board refresh, a11y checks, state broker (`ui/state/latest.json`) | offline (board refresh reads pinned SSH) | **no** | 113 OK |
 | `usb/` | Banshee | USB ACM NRP transport, boot-persistence initd (B9v2), collector, preflight + **B15 landed** (`49cd03e`): serial status proposal staged in `catalog_proposal/` | offline; collector read-only | **no** (initd + proposal NOT installed) | 39 OK |
 

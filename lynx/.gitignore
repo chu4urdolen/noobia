@@ -187,3 +187,17 @@
 !/tools/haptics/fixtures/
 /tools/haptics/fixtures/*
 !/tools/haptics/fixtures/*.json
+!/tools/tri_state_key/
+/tools/tri_state_key/*
+!/tools/tri_state_key/*.py
+!/tools/tri_state_key/README.md
+!/tools/tri_state_key/fixtures/
+/tools/tri_state_key/fixtures/*
+!/tools/tri_state_key/fixtures/*.json
+!/tools/ufs/
+/tools/ufs/*
+!/tools/ufs/*.py
+!/tools/ufs/README.md
+!/tools/ufs/fixtures/
+/tools/ufs/fixtures/*
+!/tools/ufs/fixtures/*.json

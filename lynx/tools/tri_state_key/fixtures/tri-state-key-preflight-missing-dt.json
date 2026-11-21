@@ -1,0 +1,18 @@
+{
+  "device_tree": {
+    "i2c_bus": "i2c@11e00000",
+    "i2c_compatible": "mediatek,mt6983-i2c",
+    "downhall": {
+      "node": "magnachip@0C",
+      "compatible": "invalid_hall_driver",
+      "reg": "0x0c",
+      "dhall_id": 99,
+      "irq_gpio": 999
+    }
+  },
+  "runtime": {
+    "uphall_triggered": false,
+    "downhall_triggered": false,
+    "driver_bound": false
+  }
+}

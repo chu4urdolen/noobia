@@ -1,0 +1,33 @@
+{
+  "device_tree": {
+    "i2c_bus": "i2c@11e00000",
+    "i2c_compatible": "mediatek,mt6983-i2c",
+    "downhall": {
+      "node": "magnachip@0C",
+      "compatible": "oplus,hall-mxm1120,down",
+      "reg": "0x0c",
+      "dhall_id": 2,
+      "irq_gpio": 5,
+      "pinctrl_state": "downhall_tri_state_key_active"
+    },
+    "uphall": {
+      "node": "magnachip@0D",
+      "compatible": "oplus,hall-mxm1120,up",
+      "reg": "0x0d",
+      "dhall_id": 1,
+      "irq_gpio": 4,
+      "pinctrl_state": "uphall_tri_state_key_active"
+    },
+    "supplies": {
+      "vio": "VIO18",
+      "vdd": "VIO28"
+    }
+  },
+  "runtime": {
+    "uphall_triggered": false,
+    "downhall_triggered": false,
+    "driver_bound": true,
+    "uphall_sysfs_device": "/sys/bus/i2c/devices/0-000d",
+    "downhall_sysfs_device": "/sys/bus/i2c/devices/0-000c"
+  }
+}

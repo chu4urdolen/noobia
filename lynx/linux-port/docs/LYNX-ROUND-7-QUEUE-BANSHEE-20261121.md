@@ -79,4 +79,14 @@ Banshee executes items B21 through B24 in order, alongside peer-reviewing Dushic
 - **Details:** Evaluate TI BQ28Z610 SBS telemetry (State of Health %, Full Charge Capacity vs Design Capacity, internal impedance increase, cycle count progression). Build evaluator, fixtures, tests, and doc.
 
 ### Item B24: Peer Review & Acceptance for D21–D24
-- **Objective:** Primary peer review for all Round 7 landings by Solo Dushich.
+- **Objective:** Primary peer review for all Round 7 landings by Solo Dushich (D21 ACCEPT, D22 ACCEPT, D23 pending, D24 pending).
+
+### Item B25: OnePlus Alert Slider (Tri-State Key) Hardware Mapping & Preflight Gate
+- **Objective:** Establish the hardware map and preflight validator for the OnePlus Nord 3 physical 3-position contact-less magnetic Alert Slider.
+- **Directory:** `lynx/tools/tri_state_key/`
+- **Details:** Map dual Hall sensors on `i2c0` (`0x11e00000`): MagnaChip MXM1120 down (`0x0C`, GPIO5) and up (`0x0D`, GPIO4); second source Isentek IST8801 down (`0x18`) and up (`0x19`). Validate 3-position state machine (Silent / Vibrate / Ring) and flag magnetic anomalies. Build validator, fixtures, 10 unit tests, and architecture doc.
+
+### Item B26: UFS 3.1 Host Controller & Storage Subsystem Preflight Gate
+- **Objective:** Establish the preflight validator for the MediaTek MT6983 UFS 3.1 host controller, M-PHY Gear 4 link, and JEDEC JESD220E health telemetry.
+- **Directory:** `lynx/tools/ufs/`
+- **Details:** Map `ufshci@112b0000` (IRQ 169), 5 required clocks, syscon resets (`unipro_rst`, `crypto_rst`, `hci_rst`), voltage supplies (`vufs18`, `vufs12`), and UFS PHY at `0x11fa0000`. Evaluate JEDEC health descriptors (`bPreEOLInfo`, `bDeviceLifeTimeEstA`, `bDeviceLifeTimeEstB`). Build validator, fixtures, 10 unit tests, and architecture doc.

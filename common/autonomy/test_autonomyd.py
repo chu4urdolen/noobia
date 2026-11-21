@@ -68,7 +68,8 @@ class DaemonTest(unittest.TestCase):
         os.chmod(self.secret, 0o600)
         self.config = {
             "host": "lynx",
-            "view": {"backend": "file", "log_file": str(self.d / "messages")},
+            "view": {"backend": "file", "log_file": str(self.d / "messages"),
+                     "state_file": str(self.d / "view-state.json")},
             "aigel": {"url": "http://127.0.0.1:9/api/v1/chunk", "hmac_secret_file": str(self.secret)},
             "adapter": {"path": str(self.d / "adapters"), "spec": "fake_adapter:FakeAdapter",
                         "state_dir": str(self.d / "adapter-state")},
@@ -184,6 +185,46 @@ class DaemonTest(unittest.TestCase):
         summary = dm.step()
         self.assertEqual(summary["prioritized"], 0)
         self.assertEqual(client.chunks, [])
+
+    def _file_daemon(self, client):
+        cfg = dict(self.config)
+        cfg["view"] = {"backend": "file", "log_file": str(self.d / "messages"),
+                       "state_file": str(self.d / "state" / "view-state.json")}
+        path = self.d / "autonomy.json"
+        path.write_text(json.dumps(cfg))
+        return ad.Daemon(ad.load_config(path), emit=self.emitted.append, log=self.logs.append,
+                         clock=lambda: 0.0, client=client)
+
+    def test_real_file_reader_never_replays_history_on_start_or_restart(self):
+        log = self.d / "messages"
+        old = sense.format_line(1, "autonomy", "install.test", text="from before the daemon")
+        log.write_text(f"Nov 21 18:55:35 lynx user.notice noobia-sense: {old}\n")
+        client = FakeClient()
+        dm = self._file_daemon(client)
+        dm.step()
+        self.assertEqual(client.chunks, [])                   # history skipped on first start
+        new = sense.format_line(1, "camera", "object.seen", {"label": "cat"}, "cat")
+        with log.open("a") as f:
+            f.write(f"Nov 21 19:01:00 lynx user.notice noobia-sense: {new}\n")
+        dm.step()
+        self.assertEqual(len(client.chunks), 1)
+        self.assertIn("label=cat", " ".join(map(str, client.chunks[0]["lines"])))
+        self.assertTrue((self.d / "state" / "view-state.json").is_file())   # dir was created
+        again_client = FakeClient()
+        again = self._file_daemon(again_client)               # restart / respawn
+        again.step()
+        self.assertEqual(again_client.chunks, [])             # nothing replayed after restart
+
+    def test_unwritable_state_dir_is_reported_not_fatal(self):
+        cfg = dict(self.config)
+        cfg["view"] = {"backend": "file", "log_file": str(self.d / "messages"),
+                       "state_file": "/proc/noobia-cannot-exist/view-state.json"}
+        path = self.d / "autonomy.json"
+        path.write_text(json.dumps(cfg))
+        dm = ad.Daemon(ad.load_config(path), emit=self.emitted.append, log=self.logs.append,
+                       clock=lambda: 0.0, client=FakeClient())
+        self.assertTrue(any("NOT persisted" in l for l in self.logs))
+        dm.step()
 
     def test_adapter_must_be_an_agent_link_adapter(self):
         (self.d / "adapters" / "not_adapter.py").write_text("class Nope:\n    pass\n")

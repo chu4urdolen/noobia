@@ -124,6 +124,9 @@ def autonomy_logger(ident="noobia-autonomy"):
     return log
 
 
+DEFAULT_VIEW_STATE = "/var/lib/noobia/autonomy/view-state.json"
+
+
 def load_adapter(spec, path, state_dir, kill_switch, log):
     if path:
         sys.path.insert(0, str(path))
@@ -148,8 +151,19 @@ class Daemon:
         view = config["view"]
         if reader is None:
             import views
+            # Start at the END of the view on first run and resume from a saved position
+            # after a restart or respawn, so history is never replayed to Aigel as new.
+            state_file = view.get("state_file", DEFAULT_VIEW_STATE)
+            if state_file:
+                try:
+                    Path(state_file).parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                except OSError as exc:
+                    self.log(f"autonomyd view position NOT persisted ({state_file}: {exc}); "
+                             "starting at the end of the view on every start")
+                    state_file = None
             reader = views.ViewReader("noobia-sense", backend=view.get("backend", "auto"),
-                                      log_file=view.get("log_file"))
+                                      log_file=view.get("log_file"), state_file=state_file,
+                                      start_at_end=bool(view.get("start_at_end", True)))
         self.reader = reader
 
         r = config.get("ranker", {})

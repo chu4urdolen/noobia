@@ -43,7 +43,7 @@ The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
 | `common/autonomy/agent_link.py` | `/usr/local/lib/noobia/autonomy/agent_link.py` | `0644` | root:root | `1cc73eba20670d5b31425ef7064f4ae6ebb21304147b109ce35e843aa542a56d` |
 | `common/autonomy/aigel_client.py` | `/usr/local/lib/noobia/autonomy/aigel_client.py` | `0644` | root:root | `f7f5007ffa56fee10f0e77c62f0e0f6036b84ee39cb43df5c071246214d9a536` |
 | `common/autonomy/viewlog.py` | `/usr/local/lib/noobia/autonomy/viewlog.py` | `0644` | root:root | `5291e8f7acd466bc8f10574d3d29dc4483f57282e136e8ccd8273404deb4fcba` |
-| `common/autonomy/autonomyd.py` | `/usr/local/lib/noobia/autonomy/autonomyd.py` | `0755` | root:root | `d839ba102af5098de2eb110069f035bfdb2ae4b3d78952ef6cec52a31ac68f73` |
+| `common/autonomy/autonomyd.py` | `/usr/local/lib/noobia/autonomy/autonomyd.py` | `0755` | root:root | `2f9fc62855496ceb6f4f184e2a7c0095c7ed80797161b785b747ad4a706accc8` |
 | `lynx/autonomy/noobia-autonomyd.sh` | `/usr/local/bin/noobia-autonomyd` | `0755` | root:root | `c0763258f1d576246acc6610fad9231056702a7fa0c87ff647f82eb7fa1f02bd` |
 | `lynx/tools/agent/lynx_aigel_adapter.py` | `/usr/local/lib/noobia/lynx/lynx_aigel_adapter.py` | `0644` | root:root | `acee2f5c659558cee58695c740b3d5d6ecf29b36593ac6a4e689923545738ed5` |
 | `lynx/tools/agent/lynx_agent_queue.py` | `/usr/local/lib/noobia/lynx/lynx_agent_queue.py` | `0644` | root:root | `7abc08ca92c6b8d636d2b35887d87b604852e41a3a78c0f6ac5e9247423d1a33` |
@@ -251,3 +251,34 @@ Re-verify clean system state with `rc-status`.
 - Import closure checked: every shipped module imports only shipped
   modules.
 - Kill switch fixed after Aria's REVISE #340 (Gwyn, owner of harness.py/autonomyd.py): `common/autonomy/trigger.py`, `common/autonomy/harness.py`, `common/autonomy/autonomyd.py` re-hashed.
+
+## Update U-1 for an installed Lynx (Gwyn, 2026-11-21, after the first live run)
+
+**Why.** The first live run (19:00Z) showed that `autonomyd` built its view
+reader **without** `start_at_end` and without a state file. On Lynx's file
+backend it read `/var/log/lynx/messages` from offset 0. It would do that
+again on every restart or respawn, sending old priority lines such as
+`IS-2 link check` to Aigel as if they were new. On the first run only one
+old sense line was in the file, so the harm was one extra line in a chunk.
+
+**Fix.** The first start begins at the end of the view. A restart resumes
+from `/var/lib/noobia/autonomy/view-state.json`; the directory is created
+with mode 0700, and a failure to create it is logged, not fatal. Only
+`common/autonomy/autonomyd.py` changed, to `2f9fc62855496ceb6f4f184e2a7c0095c7ed80797161b785b747ad4a706accc8`. Tests: 127/127;
+`test_real_file_reader_never_replays_history_on_start_or_restart`, which
+mutation-checked.
+
+**Steps.**
+1. Preflight: `sha256sum /usr/local/lib/noobia/autonomy/autonomyd.py` shows
+   the previous hash.
+2. Copy the new `autonomyd.py` with mode 0755 and check its sha256.
+3. `rc-service noobia-autonomyd restart`. Only this service restarts. It
+   depends on `lynx-local-logs`; nothing depends on it.
+4. Verify:
+   - the log shows `autonomyd started`;
+   - `/var/lib/noobia/autonomy/view-state.json` exists;
+   - **no** chunk is sent to Aigel within 60 s of the restart. Check Aigel's
+     page; nothing is replayed;
+   - then `busybox logger -t noobia-sense -p user.notice 'NOOBIA P1 autonomy install.test | U-1 check'`
+     reaches Aigel as a 1-line chunk.
+5. Rollback: copy the previous `autonomyd.py` back and restart the service.

@@ -280,6 +280,7 @@ and cost no cloud tokens.
 | A clean Python environment for a project | `uv venv`, `uv pip install ...`, `uv run` |
 | Audio, video, databases | `ffmpeg`, `sqlite3` |
 | Lynx, Iris, Rose, Lolth hardware | the `noobia` MCP server (`common/mcp/`); `lynx/tools/lynx_remote.py` |
+| Lynx's live status, tool coverage, and drift at a glance | `lynx-board` (read-only refresh; opens nothing on Lynx but status reads; writes `lynx/tools/ui/state/board.html`) |
 
 Details for each follow. When you build a tool others could use, put it in
 `common/`, link it from `common/bin/`, and add it to this table.

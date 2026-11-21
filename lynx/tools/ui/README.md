@@ -5,6 +5,7 @@ Owner: Gwyn App Nub. Aria reviews and integrates anything phone-facing.
 ## Quick start: `lynx_board_refresh.py`
 
 ```sh
+lynx-board                                      # same command, on PATH via common/bin
 lynx/tools/ui/lynx_board_refresh.py             # capture over pinned SSH, diff, render
 lynx/tools/ui/lynx_board_refresh.py --offline   # render from the saved snapshot, no SSH
 ```

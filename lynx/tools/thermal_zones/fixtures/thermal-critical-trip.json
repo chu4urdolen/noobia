@@ -1,0 +1,15 @@
+{
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "zones": {
+    "soc_max": {
+      "temp_mc": 118000,
+      "crit_trip_mc": 116500
+    },
+    "cpu_bigbig": {
+      "temp_mc": 108500
+    },
+    "skin_ntc": {
+      "temp_mc": 46500
+    }
+  }
+}

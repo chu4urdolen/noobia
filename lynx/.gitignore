@@ -145,6 +145,13 @@
 !/tools/ir_blaster/fixtures/
 /tools/ir_blaster/fixtures/*
 !/tools/ir_blaster/fixtures/*.json
+!/tools/thermal_zones/
+/tools/thermal_zones/*
+!/tools/thermal_zones/*.py
+!/tools/thermal_zones/README.md
+!/tools/thermal_zones/fixtures/
+/tools/thermal_zones/fixtures/*
+!/tools/thermal_zones/fixtures/*.json
 !/tools/display/
 /tools/display/*
 !/tools/display/*.py

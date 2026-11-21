@@ -49,7 +49,7 @@ class Harness:
                  emit=None, log=None, on_priority_rules=None, validate_pattern=None,
                  clock=time.monotonic, heartbeat_s=300.0, silence_s=900.0,
                  min_interval_s=1.0, max_per_hour=30, queue_max=20,
-                 extra_heartbeat_fields=None):
+                 extra_heartbeat_fields=None, disabled=None):
         self.host, self.read_new, self.chunker = host, read_new, chunker
         self.client, self.adapter, self.ranker = client, adapter, ranker
         self.emit = emit or (lambda line: None)
@@ -60,6 +60,11 @@ class Harness:
         self.heartbeat_s, self.silence_s = heartbeat_s, silence_s
         self.min_interval_s, self.max_per_hour = min_interval_s, max_per_hour
         self.extra_heartbeat_fields = extra_heartbeat_fields
+        # Kill switch (ARCHITECTURE section 9.2). While it holds, step() reads new lines only
+        # to discard them, sends nothing, delivers nothing, drops anything queued, and logs
+        # once on each transition. Re-enabling starts fresh: no stale replay.
+        self.disabled = disabled or (lambda: False)
+        self._was_disabled = False
         self.queue = deque()
         self.queue_max = queue_max
         self.dropped = 0
@@ -76,6 +81,15 @@ class Harness:
     def step(self):
         """One pass: read, chunk, route, flush. Returns a small summary."""
         now = self.clock()
+        if self.disabled():
+            return self._step_disabled(now)
+        if self._was_disabled:
+            self._was_disabled = False
+            if hasattr(self.chunker, "reset"):
+                self.chunker.reset()
+            self.last_line_at = now
+            self.silence_reported = False
+            self.log("autonomy re-enabled: starting fresh; lines from the disabled period were discarded")
         self._heartbeat(now)
         lines = self.read_new()
         closed = []
@@ -94,6 +108,21 @@ class Harness:
         delivered += self._flush(now)
         return {"lines": len(lines), "chunks": len(closed), "delivered": delivered,
                 "queued": len(self.queue), "dropped": self.dropped}
+
+    def _step_disabled(self, now):
+        discarded = len(self.read_new())         # advance past them: never replayed later
+        dropped_now = len(self.queue)
+        if dropped_now:
+            self.queue.clear()
+            self.dropped += dropped_now
+        if not self._was_disabled:
+            self._was_disabled = True
+            self.log(f"autonomy disabled by kill switch: sending nothing; "
+                     f"dropped {dropped_now} queued chunk(s)")
+        elif dropped_now:
+            self.log(f"autonomy disabled: dropped {dropped_now} queued chunk(s)")
+        return {"lines": discarded, "chunks": 0, "delivered": 0, "queued": 0,
+                "dropped": self.dropped, "disabled": True}
 
     def run(self, interval_s=1.0, stop=lambda: False):  # pragma: no cover - live loop
         while not stop():

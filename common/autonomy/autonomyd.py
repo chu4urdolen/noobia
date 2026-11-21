@@ -205,7 +205,7 @@ class Daemon:
             clock=clock, heartbeat_s=float(h.get("heartbeat_s", 300)),
             silence_s=float(h.get("silence_s", 900)),
             max_per_hour=int(h.get("max_per_hour", 30)), queue_max=int(h.get("queue_max", 20)),
-            extra_heartbeat_fields=self._heartbeat_fields)
+            extra_heartbeat_fields=self._heartbeat_fields, disabled=kill.exists)
         self.interval_s = float(config.get("interval_s", 1.0))
         self._dirty = False
 
@@ -240,6 +240,14 @@ class Daemon:
 
     def step(self):
         now = self.harness.clock()
+        if self.kill_switch.exists():
+            # Kill switch: raw lines are read only to be discarded, so the prioritizer
+            # emits nothing now and replays nothing when the switch is lifted.
+            if self.prioritizer is not None:
+                self.reader.read_new_tagged(self.sources)
+            summary = self.harness.step()
+            summary["prioritized"] = 0
+            return summary
         emitted = self._prioritize(now)
         summary = self.harness.step()
         summary["prioritized"] = emitted

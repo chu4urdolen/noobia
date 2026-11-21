@@ -81,6 +81,16 @@ class Chunker:
         self._carried = kept
         return expired
 
+    def reset(self) -> None:
+        """Forget every pending, open and carried line (used after the kill
+        switch is lifted, so nothing from before it can close later)."""
+        self._carried = []
+        self._current = []
+        self._overflow_carried = []
+        self._chunk_open_time = None
+        self._last_line_time = None
+        self._silence_reported = False
+
     def feed(self, line: str | dict, now: float) -> list[dict]:
         """Feed a sense line at time `now`. Returns a list of Closed chunks."""
         if self.disabled():

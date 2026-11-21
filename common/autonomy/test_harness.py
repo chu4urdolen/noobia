@@ -73,6 +73,59 @@ class HarnessTest(unittest.TestCase):
                           validate_pattern=lambda p: rk.validate_pattern(p, []),
                           clock=self.clock, **kw)
 
+    # --- kill switch (Aria's IS-2 review #340) ---------------------------
+    def test_kill_switch_drops_a_chunk_already_queued_and_sends_nothing(self):
+        self.aigel.down = True                      # first send fails -> chunk stays queued
+        h = self.make(disabled=lambda: self.off)
+        self.off = False
+        self.inbox.append(DOG)
+        h.step()
+        self.assertEqual(len(h.queue), 1)
+        self.aigel.down = False
+        self.off = True
+        self.clock.t += 400                         # past any backoff
+        summary = h.step()
+        self.assertEqual(self.aigel.chunks, [])     # Aria's reproduction: was sent once
+        self.assertEqual(len(h.queue), 0)
+        self.assertTrue(summary["disabled"])
+        self.assertEqual(self.adapter.messages, [])
+        self.assertEqual(sum("disabled by kill switch" in l for l in self.logs), 1)
+
+    def test_kill_switch_discards_new_lines_and_reenable_does_not_replay_them(self):
+        self.off = True
+        h = self.make(disabled=lambda: self.off)
+        self.inbox.append(DOG)
+        h.step()
+        self.clock.t += 120
+        h.step(); h.step()
+        self.assertEqual(sum("disabled by kill switch" in l for l in self.logs), 1)  # one notice
+        self.off = False
+        self.clock.t += 120
+        h.step()
+        self.assertEqual(self.aigel.chunks, [])     # the dog seen while disabled is never sent
+        self.assertTrue(any("re-enabled" in l for l in self.logs))
+        self.inbox.append(DOG)                      # a fresh line after re-enable works normally
+        h.step()
+        self.assertEqual(len(self.aigel.chunks), 1)
+
+    def test_reenable_discards_a_chunk_that_was_open_before_the_switch(self):
+        self.off = False
+        h = self.make(disabled=lambda: self.off)
+        self.inbox.append(sense.format_line(0, "wifi", "status.sample", {"dbm": "-60"}))
+        h.step()                                    # opens a chunk, nothing closes yet
+        self.off = True
+        h.step()
+        self.off = False
+        self.clock.t += 600                         # long past the 60 s timeout
+        h.step()
+        self.assertEqual(self.aigel.chunks, [])     # the pre-switch line never surfaces
+        # control: without the switch, the same line DOES go to Aigel on timeout
+        self.inbox.append(sense.format_line(0, "wifi", "status.sample", {"dbm": "-60"}))
+        h.step()
+        self.clock.t += 600
+        h.step()
+        self.assertEqual(len(self.aigel.chunks), 1)
+
     def test_known_priority_line_is_explained_without_aigel(self):
         h = self.make()
         self.inbox.append(CAT)

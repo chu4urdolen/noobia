@@ -36,14 +36,14 @@ The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
 |---|---|---|---|---|
 | `common/autonomy/sense.py` | `/usr/local/lib/noobia/autonomy/sense.py` | `0644` | root:root | `2c0b418951a52aad96ea3f402df1456c25a07459a07c229ea2338a074d7af4fb` |
 | `common/autonomy/views.py` | `/usr/local/lib/noobia/autonomy/views.py` | `0644` | root:root | `f1a9d03e319cba4971c503559cd73fa6b312f7d88569abb5b12f3c64854b7a25` |
-| `common/autonomy/trigger.py` | `/usr/local/lib/noobia/autonomy/trigger.py` | `0644` | root:root | `51ae0c4f821fa587197712a8ea617dc8857518587c59ccdbdcccc0272c196353` |
+| `common/autonomy/trigger.py` | `/usr/local/lib/noobia/autonomy/trigger.py` | `0644` | root:root | `9cd0f8a85b7a350f55bae23b5c8eae24e62f95e925f23427436d442e8083548f` |
 | `common/autonomy/ranker.py` | `/usr/local/lib/noobia/autonomy/ranker.py` | `0644` | root:root | `94aa04d9e301fadea5f81397b680a54da5162e112c87f0320aa8b42b92acf169` |
 | `common/autonomy/prioritizer.py` | `/usr/local/lib/noobia/autonomy/prioritizer.py` | `0644` | root:root | `310742cbcc946fc2743fcc17a6bc70bd6ce6853e618009fba6835b0255e11532` |
-| `common/autonomy/harness.py` | `/usr/local/lib/noobia/autonomy/harness.py` | `0644` | root:root | `c72816a36159573ba05e3f724183046fd7d50678e1d71a19842bcb693ace8379` |
+| `common/autonomy/harness.py` | `/usr/local/lib/noobia/autonomy/harness.py` | `0644` | root:root | `e20facab0acb8f6567224623480fe41db48543858a9eee3df658283e1931f613` |
 | `common/autonomy/agent_link.py` | `/usr/local/lib/noobia/autonomy/agent_link.py` | `0644` | root:root | `1cc73eba20670d5b31425ef7064f4ae6ebb21304147b109ce35e843aa542a56d` |
 | `common/autonomy/aigel_client.py` | `/usr/local/lib/noobia/autonomy/aigel_client.py` | `0644` | root:root | `f7f5007ffa56fee10f0e77c62f0e0f6036b84ee39cb43df5c071246214d9a536` |
 | `common/autonomy/viewlog.py` | `/usr/local/lib/noobia/autonomy/viewlog.py` | `0644` | root:root | `5291e8f7acd466bc8f10574d3d29dc4483f57282e136e8ccd8273404deb4fcba` |
-| `common/autonomy/autonomyd.py` | `/usr/local/lib/noobia/autonomy/autonomyd.py` | `0755` | root:root | `4664376d966e79e3e55ce9bfed989990ce282ca4f4f691be001d3b9e2af6855c` |
+| `common/autonomy/autonomyd.py` | `/usr/local/lib/noobia/autonomy/autonomyd.py` | `0755` | root:root | `d839ba102af5098de2eb110069f035bfdb2ae4b3d78952ef6cec52a31ac68f73` |
 | `lynx/autonomy/noobia-autonomyd.sh` | `/usr/local/bin/noobia-autonomyd` | `0755` | root:root | `c0763258f1d576246acc6610fad9231056702a7fa0c87ff647f82eb7fa1f02bd` |
 | `lynx/tools/agent/lynx_aigel_adapter.py` | `/usr/local/lib/noobia/lynx/lynx_aigel_adapter.py` | `0644` | root:root | `acee2f5c659558cee58695c740b3d5d6ecf29b36593ac6a4e689923545738ed5` |
 | `lynx/tools/agent/lynx_agent_queue.py` | `/usr/local/lib/noobia/lynx/lynx_agent_queue.py` | `0644` | root:root | `7abc08ca92c6b8d636d2b35887d87b604852e41a3a78c0f6ac5e9247423d1a33` |
@@ -78,7 +78,19 @@ The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
 - **Path:** `/etc/noobia/autonomy.disable`
 - **Behavior:**
   - `start_pre()` in `/etc/init.d/noobia-autonomyd` refuses to start the service when present.
-  - Active daemon loop checks `kill_switch` every cycle: if present, stops reading views, suppresses transmissions to Aigel, and logs one quiet notice.
+  - The daemon loop checks `kill_switch` every cycle. While it is present:
+    - **nothing is sent to Aigel and nothing is delivered to the agent**;
+    - chunks already queued are **dropped**, counted and logged;
+    - the prioritizer emits **no** sense lines;
+    - new view lines are read **only to be discarded**. This is deliberate:
+      if the daemon stopped reading, lifting the switch would replay every
+      line from the disabled period as a burst of stale perceptions;
+    - one notice is logged when it turns on, and one when it turns off.
+  - When the switch is lifted, the chunker is reset, so no line from
+    before or during the disabled period can close a chunk later.
+  - Regression tests (Aria #340): `test_harness.py` kill-switch tests and
+    `test_autonomyd.py::test_kill_switch_stops_the_prioritizer_and_does_not_replay`.
+    A mutation check removing each of the three gates fails a test.
 
 ---
 
@@ -238,3 +250,4 @@ Re-verify clean system state with `rc-status`.
 - Secret copy: the import path is `/noobia/lynx/tools`; `/noobia/lynx/tools/network` does not exist. Added `timeout=20` to the SSH call.
 - Import closure checked: every shipped module imports only shipped
   modules.
+- Kill switch fixed after Aria's REVISE #340 (Gwyn, owner of harness.py/autonomyd.py): `common/autonomy/trigger.py`, `common/autonomy/harness.py`, `common/autonomy/autonomyd.py` re-hashed.

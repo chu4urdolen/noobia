@@ -170,6 +170,21 @@ class DaemonTest(unittest.TestCase):
         self.assertEqual(client.chunks, [])
         self.assertTrue(dm.check()["kill_switch_active"])
 
+    def test_kill_switch_stops_the_prioritizer_and_does_not_replay(self):
+        reader, client = FakeReader(), FakeClient()
+        dm = self.daemon(reader=reader, client=client)
+        dm._accept_rules([RULE])
+        (self.d / "autonomy.disable").touch()
+        reader.raw += [("wpa_supplicant", "CTRL-EVENT-DISCONNECTED bssid=aa reason=3")]
+        summary = dm.step()
+        self.assertEqual(summary["prioritized"], 0)
+        self.assertEqual([l for l in self.emitted if "heartbeat" not in l], [])
+        self.assertEqual(reader.raw, [])            # consumed, so never replayed
+        (self.d / "autonomy.disable").unlink()
+        summary = dm.step()
+        self.assertEqual(summary["prioritized"], 0)
+        self.assertEqual(client.chunks, [])
+
     def test_adapter_must_be_an_agent_link_adapter(self):
         (self.d / "adapters" / "not_adapter.py").write_text("class Nope:\n    pass\n")
         with self.assertRaisesRegex(ad.ConfigError, "not an agent_link.Adapter"):

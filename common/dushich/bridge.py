@@ -309,39 +309,50 @@ def monitor(session_id: str, once: bool = False) -> None:
         except Exception:
             pass  # the monitor must keep running whatever a transcript contains
 
-        current_jobs = jobs(session_id, conversation_id=cid)
-        if not current_jobs and once:
-            print(f"Waiting for {AGENT.name}'s first handoff.", flush=True)
-        for run_id in current_jobs:
-            if run_id not in offsets:
-                offsets[run_id] = 0
-                print(f"\n=== Handoff {run_id} ===", flush=True)
-                print((job_path(run_id) / "brief.txt").read_text(encoding="utf-8")
-                      .split("\n\n", 1)[0], flush=True)
-            try:
-                raw = dushich_file(str(agents.TASK_RUNS / f"{run_id}.jsonl"))
-            except ValueError:
-                raw = ""
-            lines = raw.splitlines()
-            for line in lines[offsets[run_id]:]:
+        try:
+            current_jobs = jobs(session_id, conversation_id=cid)
+            if not current_jobs and once:
+                print(f"Waiting for {AGENT.name}'s first handoff.", flush=True)
+            for run_id in current_jobs:
+                if run_id not in offsets:
+                    offsets[run_id] = 0
+                    print(f"\n=== Handoff {run_id} ===", flush=True)
+                    try:
+                        brief_file = job_path(run_id) / "brief.txt"
+                        if brief_file.is_file():
+                            print(brief_file.read_text(encoding="utf-8")
+                                  .split("\n\n", 1)[0], flush=True)
+                    except Exception:
+                        pass
                 try:
-                    event = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                kind = event.get("type")
-                item = event.get("item") or {}
-                if kind == "item.completed" and item.get("type") == "command_execution":
-                    print(f"$ {item.get('command', '')}\n{item.get('aggregated_output', '')}", flush=True)
-                elif kind == "item.completed" and item.get("type") == "file_change":
-                    print(f"File change: {item.get('changes', '')}", flush=True)
-                elif kind == "item.completed" and item.get("type") == "agent_message":
-                    print(f"Dushich: {item.get('text', '')}", flush=True)
-                elif kind == "error":
-                    print(f"Error: {event.get('message', '')}", flush=True)
-            offsets[run_id] = len(lines)
-            if finished(state(run_id)["status"]) and run_id not in completed:
-                print("\n=== Independent verification ===\n" + report(run_id), flush=True)
-                completed.add(run_id)
+                    raw = dushich_file(str(agents.TASK_RUNS / f"{run_id}.jsonl"))
+                except ValueError:
+                    raw = ""
+                lines = raw.splitlines()
+                for line in lines[offsets[run_id]:]:
+                    try:
+                        event = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    kind = event.get("type")
+                    item = event.get("item") or {}
+                    if kind == "item.completed" and item.get("type") == "command_execution":
+                        print(f"$ {item.get('command', '')}\n{item.get('aggregated_output', '')}", flush=True)
+                    elif kind == "item.completed" and item.get("type") == "file_change":
+                        print(f"File change: {item.get('changes', '')}", flush=True)
+                    elif kind == "item.completed" and item.get("type") == "agent_message":
+                        print(f"Dushich: {item.get('text', '')}", flush=True)
+                    elif kind == "error":
+                        print(f"Error: {event.get('message', '')}", flush=True)
+                offsets[run_id] = len(lines)
+                try:
+                    if finished(state(run_id)["status"]) and run_id not in completed:
+                        print("\n=== Independent verification ===\n" + report(run_id), flush=True)
+                        completed.add(run_id)
+                except Exception:
+                    pass
+        except Exception:
+            pass
         if once:
             return
         time.sleep(1)

@@ -120,6 +120,15 @@ elif [[ -n "$resume_id" ]]; then
         tmux select-pane -t "$session":0.0 -T 'Aria + Noob • Codex'
         tmux select-pane -t "$session":0.0
     fi
+    if [[ $(tmux list-panes -t "$session":0 2>/dev/null | wc -l) -lt 2 ]]; then
+        tmux split-window -h -p 50 -t "$session":0 -c $NOOBIA \
+            "/bin/bash -c 'while true; do $monitor_command; sleep 1; done'"
+        tmux set-window-option -t "$session":0 pane-border-status top
+        tmux set-window-option -t "$session":0 pane-border-format ' #{pane_title} '
+        tmux select-pane -t "$session":0.0 -T 'Aria + Noob • Codex'
+        tmux select-pane -t "$session":0.1 -T 'Dushich • live activity'
+        tmux select-pane -t "$session":0.0
+    fi
 fi
 
 if "$detached"; then

@@ -15,8 +15,10 @@ import argparse
 from datetime import datetime, timezone
 import html
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -96,6 +98,23 @@ a{color:var(--hum);text-underline-offset:2px}
 a:focus-visible{outline:3px solid var(--ink);outline-offset:2px;border-radius:3px}
 .asof{font-style:italic}
 """
+
+
+def write_text_atomic(path, text):
+    """Write a file so readers see either the old or the new page, never half."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=".board-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 
 def esc(value):
@@ -285,9 +304,7 @@ def main(argv=None):
             except (health_mod.HealthError, OSError) as exc:
                 health_error = str(exc)
         out = Path(args.out)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(render(manifest, health=health, health_error=health_error),
-                       encoding="utf-8")
+        write_text_atomic(out, render(manifest, health=health, health_error=health_error))
     except (manifest_mod.ManifestError, OSError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}))
         return 1

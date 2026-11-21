@@ -2,6 +2,32 @@
 
 Owner: Gwyn App Nub. Aria reviews and integrates anything phone-facing.
 
+## Quick start: `lynx_board_refresh.py`
+
+```sh
+lynx/tools/ui/lynx_board_refresh.py             # capture over pinned SSH, diff, render
+lynx/tools/ui/lynx_board_refresh.py --offline   # render from the saved snapshot, no SSH
+```
+
+One bounded command does four things:
+1. Captures a snapshot through the existing broker: fixed read-only
+   commands, per-command timeouts, and a 60 s overall deadline.
+2. Checks catalog drift.
+3. Renders `state/board.html` atomically, with `state/health.json` if
+   present.
+4. Prints one short JSON result: board path, captured and failed sources,
+   snapshot age and boot state, drift, health, and `problems`.
+
+If nothing is captured, the previous snapshot is kept and rendered with its
+age. Exit codes:
+- `0`: complete and current;
+- `2`: rendered with a problem (partial or failed capture, stale, rebooted,
+  or drift);
+- `1`: nothing rendered.
+
+There is no periodic service, browser server, or phone write. A live run on
+2026-11-21 took 1.9 s: 5/5 sources, 38/38 in sync, fresh, same boot.
+
 ## `lynx_tool_manifest.py`
 
 Builds a read-only manifest of Lynx's local agent tools from the source pairs in
@@ -276,7 +302,7 @@ Health never changes the phone-reported validation.
 python3 -m unittest discover -s lynx/tools/ui -p 'test_*.py'
 ```
 
-These 95 tests are all offline. Status fixtures come from the real
+These 106 tests are all offline. Status fixtures come from the real
 `inventory()` functions run over temporary directory trees, and the broker
 uses a fake runner.
 
@@ -305,6 +331,10 @@ uses a fake runner.
   rejected, bounded output, stale and offset times, escaping, and a bad file
   still renders a board. It uses Dushich's own evaluator on his tracked
   examples, read-only.
+- **Operator command:** a complete live run with a fake phone, offline mode
+  never calling SSH, unreachable SSH keeping the previous snapshot, timeouts
+  on every source, partial status, reboot and drift problems, the overall
+  deadline, atomic board writes, and write failure.
 - **Coverage:** companion rules, missing tools, the different not-ready
   causes, drift, keeping attended evidence separate, and JSON output that
   repeats exactly for the same input.
@@ -319,4 +349,4 @@ uses a fake runner.
   `lynx/tools/agent/lynx_agent.py` is still untracked. That file is Aria's.
   The manifest does not need it.
 - A periodic refresh would be a service install, so it waits for Aria's
-  review.
+  review. `lynx_board_refresh.py` is the on-demand path.

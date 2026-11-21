@@ -40,7 +40,12 @@ install.
   (the interim collector that left modem/queue `unknown`) and
   `examples/lynx-live-20261121-full.json` (all seven checks evaluated).
   Nexus GPU/RAM/SMART collection stays with Aigel's board.
-  Suite: 97 offline fixture tests.
+- Report diff (`portable_health_diff.py`): offline, bounded diff of two
+  **saved** evaluator reports — changed check statuses, new unknowns,
+  resolved unknowns, added/removed checks, verdict change. Reads only the
+  two given files (512 KiB cap each, 256-check cap), never contacts a
+  machine, no periodic job.
+  Suite: 114 offline fixture tests.
 
 ## Usage
 
@@ -52,6 +57,16 @@ python3 lynx/tools/health/portable_health.py --snapshot snap.json --max-age 3600
 
 Exit codes: `0` ok, `1` warn, `2` fail, `3` all checks unknown,
 `4` invalid snapshot/schema.
+
+### Diffing two saved reports (offline)
+
+```sh
+python3 lynx/tools/health/portable_health_diff.py report-early.json report-late.json
+python3 lynx/tools/health/portable_health_diff.py report-early.json report-late.json --json
+```
+
+Exit codes: `0` diff computed (whether or not anything changed),
+`2` usage error, `4` invalid report (schema, shape, or size/check bounds).
 
 ### Collecting a snapshot from Lynx (read-only)
 

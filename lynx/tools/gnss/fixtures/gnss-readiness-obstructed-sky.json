@@ -1,0 +1,26 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "trial_mode": "ACTIVE_FIX_TRIAL",
+  "battery": {
+    "gauge_device_type": 42495,
+    "temperature_millidegrees_celsius": 28000,
+    "temperature_error": 0,
+    "pack_voltage_mv": 8200,
+    "voltage_error": 0,
+    "capacity_percent": 80,
+    "capacity_error": 0
+  },
+  "charger_status": "Charging",
+  "loaded_modules": [
+    "conninfra",
+    "gps_drv"
+  ],
+  "dev_nodes": [
+    "/dev/stpgps"
+  ],
+  "raw_nmea_sentences": [
+    "$GNGGA,013000.00,,,,,0,02,12.5,,M,,M,,*4E",
+    "$GNRMC,013000.00,V,,,,,,,211126,,,N*66"
+  ]
+}

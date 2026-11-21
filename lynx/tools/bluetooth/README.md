@@ -18,6 +18,9 @@ Provides an agent-facing, read-only link-state report on top of `BT_STATUS` (NRP
 - **Safety Auditing**: Audits default OpenRC runlevels (ensuring `lynx-bluetooth` is not autostarted) and validates `pairable` mode is disabled.
 - **Read-Only / Live Gating**: Strictly offline evaluator with optional read-only live query requiring explicit `--live --allow-live`.
 
+### 3. Catalog Proposal (`catalog_proposal/`)
+Maintains the staged MCP tool schema (`lynx_bluetooth_link_state.json`), executable wrapper script (`lynx_bluetooth_link_state.sh`), manifest entry, and coverage mapping. Awaiting Aria's approval before installation into `lynx/tools/local_calls/`.
+
 ## Usage
 
 ```bash

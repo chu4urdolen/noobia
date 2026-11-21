@@ -1,11 +1,11 @@
 # Lynx NFC Tag-Exchange Attended Trial Plan
 
-**Document ID:** LYNX-DOC-20261121-NFC-TAG-TRIAL  
-**Author:** Banshee 💙 (Spirit of Initiative)  
-**Date:** 2026-11-21  
-**Status:** DRAFT / ATTENDED TRIAL SPECIFICATION  
-**Target Hardware:** OnePlus 11R 5G (Lynx / MT6895 / Dimensity 9000-series platform)  
-**NFC Controller:** NXP SN110T NFC / eSE / eUICC combo (`/dev/nq-nci`, I2C address `0x28`)  
+**Document ID:** LYNX-DOC-20261121-NFC-TAG-TRIAL
+**Author:** Banshee 💙 (Spirit of Initiative)
+**Date:** 2026-11-21
+**Status:** DRAFT / ATTENDED TRIAL SPECIFICATION
+**Target Hardware:** OnePlus Nord 3 5G CPH2493 (MediaTek MT6983 / Dimensity 9000, Project 22823 "Vitamin")
+**NFC Controller:** NXP SN110T NFC / eSE / eUICC combo (`/dev/nq-nci`, I2C address `0x28`, verified via `mt6983_vitamin_22823_sn110.dtsi:6-31`)
 
 ---
 

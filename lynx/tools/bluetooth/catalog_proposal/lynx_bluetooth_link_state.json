@@ -1,0 +1,11 @@
+{
+  "name": "lynx_bluetooth_link_state",
+  "description": "Entity: Lynx. Read bluetooth controller power, OpenRC supervisor status, runlevel autostart safety, and active connected peer topologies without radio actuation.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 10
+}

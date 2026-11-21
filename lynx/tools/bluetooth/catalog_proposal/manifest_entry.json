@@ -1,0 +1,19 @@
+{
+  "also_components": [],
+  "attended": [],
+  "component": "bluetooth",
+  "description": "Entity: Lynx. Read bluetooth controller power, OpenRC supervisor status, runlevel autostart safety, and active connected peer topologies without radio actuation.",
+  "effect": "read_only",
+  "entry": {
+    "args": [],
+    "command": "lynx-bluetooth-link-state"
+  },
+  "group": "radio",
+  "inputs": [],
+  "name": "lynx_bluetooth_link_state",
+  "nrp_id": null,
+  "reports_component_status": false,
+  "required_inputs": [],
+  "status_source": "hardware",
+  "timeout_s": 10
+}

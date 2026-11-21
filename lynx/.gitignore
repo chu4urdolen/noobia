@@ -67,6 +67,10 @@
 !/tools/bluetooth/fixtures/
 /tools/bluetooth/fixtures/*
 !/tools/bluetooth/fixtures/*.json
+!/tools/bluetooth/catalog_proposal/
+/tools/bluetooth/catalog_proposal/*
+!/tools/bluetooth/catalog_proposal/*.json
+!/tools/bluetooth/catalog_proposal/*.sh
 !/tools/headset/
 /tools/headset/*
 !/tools/headset/*.py

@@ -1,0 +1,18 @@
+{
+  "tool_name": "lynx_bluetooth_link_state",
+  "tools_map_tuple": [
+    "read_only",
+    "radio",
+    [
+      "hardware",
+      "bluetooth"
+    ],
+    false
+  ],
+  "effect": "read_only",
+  "group": "radio",
+  "target_component": "hardware/bluetooth",
+  "coverage_role": "read_tool",
+  "resolves_missing_tool": "an agent link-state read",
+  "status_only_impact": "Resolves status-only priority 4 requirement by supplying a read-only companion tool"
+}

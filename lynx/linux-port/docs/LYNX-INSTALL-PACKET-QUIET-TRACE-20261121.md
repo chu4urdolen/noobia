@@ -128,7 +128,8 @@ it: after any boot, `cat /proc/sys/kernel/tracepoint_printk` should print
 
 ## Disable and rollback
 
-- Disable at boot only: `touch /etc/noobia/quiet-trace.disable`.
+- Disable at boot only: `mkdir -p /etc/noobia && touch /etc/noobia/quiet-trace.disable`.
+  `/etc/noobia` may not exist yet. Dushich's review note, #315.
 - Full rollback:
 
   ```sh

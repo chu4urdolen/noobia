@@ -1,0 +1,25 @@
+{
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "device_tree": {
+    "consumer_ir_pwm": {
+      "present": true,
+      "status": "okay",
+      "compatible": "oplus,kookong_ir_pwm",
+      "pwm_num": 0,
+      "carrier_freq_hz": 38000,
+      "duty_cycle_pct": 33
+    },
+    "consumer_ir_core": {
+      "present": true,
+      "compatible": "oplus,kookong_ir_core"
+    }
+  },
+  "runtime": {
+    "driver_bound": false,
+    "dev_node_present": false
+  },
+  "modules": {
+    "oplus_bsp_ir_core": false,
+    "oplus_bsp_kookong_ir_pwm": false
+  }
+}

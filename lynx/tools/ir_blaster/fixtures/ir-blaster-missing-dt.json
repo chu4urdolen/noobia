@@ -1,0 +1,25 @@
+{
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "device_tree": {
+    "consumer_ir_pwm": {
+      "present": false,
+      "status": "disabled",
+      "compatible": "",
+      "pwm_num": null,
+      "carrier_freq_hz": null,
+      "duty_cycle_pct": null
+    },
+    "consumer_ir_core": {
+      "present": false,
+      "compatible": ""
+    }
+  },
+  "runtime": {
+    "driver_bound": false,
+    "dev_node_present": false
+  },
+  "modules": {
+    "oplus_bsp_ir_core": false,
+    "oplus_bsp_kookong_ir_pwm": false
+  }
+}

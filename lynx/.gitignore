@@ -138,6 +138,13 @@
 !/tools/lpm/fixtures/
 /tools/lpm/fixtures/*
 !/tools/lpm/fixtures/*.json
+!/tools/ir_blaster/
+/tools/ir_blaster/*
+!/tools/ir_blaster/*.py
+!/tools/ir_blaster/README.md
+!/tools/ir_blaster/fixtures/
+/tools/ir_blaster/fixtures/*
+!/tools/ir_blaster/fixtures/*.json
 !/tools/display/
 /tools/display/*
 !/tools/display/*.py

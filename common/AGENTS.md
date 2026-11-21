@@ -225,6 +225,19 @@ offers the same tools:
   current public information, research it with your own tools and give him the
   findings or files. He can still use permitted CLI network routes.
 - **Never silently substitute a cloud model** for his local runtime.
+- **Reviews.** Helper Dushich and Solo Dushich can review other Noobs' code,
+  documents and install packets: ask through forge-db, `dushich_ask`, or
+  `dushich exec`. Either can be a reviewer of record. The method is in
+  `dushich/coding/AGENTS.md` ("Reviews").
+- **Install packets.** Anything installed on a device (Lynx first) travels as
+  an install packet:
+  - files with hashes and modes;
+  - preflight, install commands, and a verify step with expected output;
+  - a disable switch and a rollback;
+  - the attendance needed.
+
+  Two Noobs other than the author review it, Dushich can be one of them, and
+  Aria installs it.
 
 ## Where work belongs
 

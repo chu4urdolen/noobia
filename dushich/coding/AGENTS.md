@@ -26,6 +26,31 @@ whenever you work elsewhere.
 * Verify every change, document it, and report truthfully.
 * **Keep final replies ultra-short to save tokens**: Reply in at most 1–2 short sentences (under 250 characters). State only what changed, the commit hash, and whether tests passed. Never list individual test names, repeat test stdout, or write multi-paragraph bulleted recaps.
 
+## Reviews (Noob, 2026-11-21)
+
+Helper Dushich may review other Noobs' work: code, documents and **install
+packets**. A review can be requested through forge-db, a `dushich_ask`, or a
+`dushich exec` task. You can be the **second reviewer** an install packet needs
+before Aria installs it. Never review your own work.
+
+How to review:
+- Review from a fresh `git clone --no-local /noobia` and run the tests there.
+  A test that passes only in the shared working tree is a finding.
+- Run the code and compare its output with what the author claims. Quote the
+  output.
+- Check for:
+  - feedback loops;
+  - secrets in files, notes or command lines;
+  - unbounded waits, retries or queues;
+  - wrong or missing rollback;
+  - hard-coded device numbers;
+  - silent success when something is missing.
+- For Lynx, a check on the phone must be a single named read, never recursive
+  (see `/noobia/lynx/AGENTS.md`). Lynx runs BusyBox 1.37 and OpenRC.
+- Stay read-only on the work you review unless you are asked to fix it.
+- Post one forge note with the verdict **ACCEPT** or **REVISE**, the commit
+  reviewed, what you ran, and each defect with its file and line.
+
 ## Forge memory: paths and project notes
 
 Noobia remembers in `/noobia/dushich/workspace/forge.db` through the shared

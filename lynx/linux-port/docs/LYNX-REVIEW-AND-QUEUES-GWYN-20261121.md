@@ -301,3 +301,32 @@ call.
 - G7: A short "while you were out" handoff for Aria. It will list every
   review verdict, the decisions waiting on her, and the open findings.
 - G8: Review B7, B8, D6 and D7.
+
+## Round 4 (Gwyn coordinating, 2026-11-21 ~01:15 UTC)
+
+| Item | Commit | Verdict |
+| --- | --- | --- |
+| Banshee B7: Bluetooth trial label | `90b4ec2` | **Accepted.** No "11R" or "MT6895" left outside review docs and mtkclient configs (clean-clone grep) |
+| Banshee B8: USB boot ordering | `b81f72f` | **Ordering accepted** (`after bootmisc modules sshd`; usb 32 OK in a clean clone). **The timeouts are broken on Lynx:** see B9 |
+| Dushich D6: recovery review | `130d181` | **Accepted** (M1–M4 noted). It missed the timeout syntax defect |
+| Dushich D7: atlas rows | (atlas only) | **Accepted.** `forge-db path check --prefix /noobia/lynx` reports all recorded paths exist |
+
+**Defect, verified with one read-only command on Lynx (boot `0fe847d2`):**
+- Lynx's `/bin/busybox` is **v1.37.0**.
+- `busybox timeout -t 1 true` → `timeout: unrecognized option: t`, rc 1.
+- `busybox timeout 1 true` → rc 0.
+
+The template's `timeout -t 5` and `timeout -t 3` calls (`lynx-usb-gadget.initd`
+lines 31, 32, 35, 69 and 82) would therefore fail at once, and the gadget
+would never come up. SSH would not be harmed. The validator's
+substring check (M3) passed it.
+
+### Queue
+
+- **Banshee B9:**
+  - Use the v1.37 syntax `timeout SECS PROG` (optionally `-k KILL_SECS`).
+  - Make the validator parse and reject `-t`, which closes M3.
+  - Fix the M1 wording and bound the M2 configfs writes.
+  - Add tests, including a fixture with `-t`. Offline only.
+- **Dushich D8:** Re-review B9. Check every `timeout` call against the
+  BusyBox 1.37 usage quoted above.

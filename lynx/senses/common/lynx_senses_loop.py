@@ -32,6 +32,7 @@ from pathlib import Path
 
 SENSES_ROOT = Path(__file__).resolve().parent.parent
 TOUCH_EVERY_S = 2.0
+FAST_SAMPLE_EVERY_S = 10.0
 SAMPLE_EVERY_S = 30.0
 
 _stop = False
@@ -52,19 +53,30 @@ def load_module(name: str, rel: str):
     return module
 
 
-def load_senses():
-    touch = load_module("lynx_sense_touch", "touch/lynx_sense_touch.py")
-    wifi = load_module("lynx_sense_wifi", "wifi/lynx_sense_wifi.py")
-    power = load_module("lynx_sense_power", "power/lynx_sense_power.py")
-    nexus = load_module("lynx_sense_nexus", "nexus/lynx_sense_nexus.py")
-    camera = None
-    if (SENSES_ROOT / "camera" / "lynx_sense_camera.py").exists():
+def load_optional(name: str, rel: str):
+    path = SENSES_ROOT / rel
+    if path.exists():
         try:
-            camera = load_module("lynx_sense_camera", "camera/lynx_sense_camera.py")
+            return load_module(name, rel)
         except Exception as exc:
-            print(f"optional sense camera: {type(exc).__name__}: {str(exc)[:160]}",
+            print(f"optional sense {name}: {type(exc).__name__}: {str(exc)[:160]}",
                   file=sys.stderr)
-    return touch, wifi, power, nexus, camera
+    return None
+
+
+def load_senses():
+    senses = {
+        "touch": load_module("lynx_sense_touch", "touch/lynx_sense_touch.py"),
+        "wifi": load_module("lynx_sense_wifi", "wifi/lynx_sense_wifi.py"),
+        "power": load_module("lynx_sense_power", "power/lynx_sense_power.py"),
+        "nexus": load_module("lynx_sense_nexus", "nexus/lynx_sense_nexus.py"),
+        "light": load_optional("lynx_sense_light", "light/lynx_sense_light.py"),
+        "proximity": load_optional("lynx_sense_proximity", "proximity/lynx_sense_proximity.py"),
+        "network": load_optional("lynx_sense_network", "network/lynx_sense_network.py"),
+        "hearing": load_optional("lynx_sense_hearing", "hearing/lynx_sense_hearing.py"),
+        "camera": load_optional("lynx_sense_camera", "camera/lynx_sense_camera.py"),
+    }
+    return senses
 
 
 def call(name: str, fn) -> dict:
@@ -82,33 +94,49 @@ def call(name: str, fn) -> dict:
                 "error": type(exc).__name__}
 
 
-def one_cycle(touch, wifi, power, nexus, camera=None) -> dict:
-    results = {
-        "touch": call("touch", touch.run),
-        "wifi": call("wifi", wifi.run),
-        "power": call("power", power.run),
-        "nexus": call("nexus", nexus.run),
-    }
-    if camera is not None:
-        results["camera"] = call("camera", camera.run)
+def one_cycle(*args, **kwargs) -> dict:
+    if len(args) == 1 and isinstance(args[0], dict):
+        senses = args[0]
+    else:
+        # Positional signature: touch, wifi, power, nexus, [camera]
+        keys = ("touch", "wifi", "power", "nexus", "camera")
+        senses = {keys[i]: a for i, a in enumerate(args) if i < len(keys)}
+        for k, v in kwargs.items():
+            senses[k] = v
+    results = {}
+    for name, mod in senses.items():
+        if mod is not None:
+            results[name] = call(name, mod.run)
     return results
 
 
-def run_loop(touch, wifi, power, nexus, camera=None) -> int:
+def run_loop(*args, **kwargs) -> int:
     signal.signal(signal.SIGTERM, _on_term)
+    if len(args) == 1 and isinstance(args[0], dict):
+        senses = args[0]
+    else:
+        keys = ("touch", "wifi", "power", "nexus", "camera")
+        senses = {keys[i]: a for i, a in enumerate(args) if i < len(keys)}
+        for k, v in kwargs.items():
+            senses[k] = v
     last_touch = 0.0
+    last_fast = 0.0
     last_sample = 0.0
     while not _stop:
         now = time.monotonic()
         if now - last_touch >= TOUCH_EVERY_S:
-            call("touch", touch.run)
+            if senses.get("touch"):
+                call("touch", senses["touch"].run)
             last_touch = now
+        if now - last_fast >= FAST_SAMPLE_EVERY_S:
+            for name in ("light", "proximity", "hearing"):
+                if senses.get(name):
+                    call(name, senses[name].run)
+            last_fast = now
         if now - last_sample >= SAMPLE_EVERY_S:
-            call("wifi", wifi.run)
-            call("power", power.run)
-            call("nexus", nexus.run)
-            if camera is not None:
-                call("camera", camera.run)
+            for name in ("wifi", "power", "nexus", "network", "camera"):
+                if senses.get(name):
+                    call(name, senses[name].run)
             last_sample = now
         time.sleep(0.5)
     return 0
@@ -116,14 +144,13 @@ def run_loop(touch, wifi, power, nexus, camera=None) -> int:
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    senses = load_senses()
     if "--once" in argv:
-        touch, wifi, power, nexus, camera = load_senses()
-        summary = one_cycle(touch, wifi, power, nexus, camera=camera)
+        summary = one_cycle(senses)
         print(json.dumps({"ok": all(r.get("ok") for r in summary.values()),
                           "results": summary}, sort_keys=True))
         return 0
-    touch, wifi, power, nexus, camera = load_senses()
-    return run_loop(touch, wifi, power, nexus, camera=camera)
+    return run_loop(senses)
 
 
 if __name__ == "__main__":

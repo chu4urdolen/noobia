@@ -11,7 +11,7 @@ name=lynx-watchdogd
 description="Lynx MT6983 TOPRGU hardware watchdog petting daemon (staged, D25)"
 
 command="/usr/bin/python3"
-command_args="/noobia/lynx/tools/watchdog_daemon/lynx_watchdogd.py --live --allow-live --cycles 0 --interval 5 --state-file /tmp/lynx_watchdog_state.json"
+command_args="/noobia/lynx/tools/watchdog_daemon/lynx_watchdogd.py --live --allow-live --daemon --cycles 0 --interval 5 --state-file /tmp/lynx_watchdog_state.json"
 
 depend() {
 	need bootmisc sysfs

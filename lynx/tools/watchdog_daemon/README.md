@@ -6,9 +6,19 @@ reboot-mode syscon child at `0x24`). See `../../linux-port/docs/LYNX-WATCHDOG-DA
 
 Safety model:
 
+- **Critical Kernel Behavior:** Opening `/dev/watchdog` arms the MediaTek
+  TOPRGU hardware watchdog timer. Administrative exit requires writing the magic
+  character `V` before closing. If the process is terminated via `SIGKILL` or an
+  unhandled fatal signal, signal handlers are bypassed, leaving `/dev/watchdog`
+  armed without petting. After ~30 seconds of starvation, the SoC hardware
+  watchdog fires a cold hardware reset of Lynx. All live runs must be attended.
 - **Offline by default:** `--validate FIXTURE` simulates the full pet loop,
   health gates, and SIGTERM/SIGINT magic-'V' handling in-process. No hardware
   is ever touched.
+- **Platform Verification:** Refuses live execution unless `/proc/device-tree/compatible`
+  names `mt6983` and the device tree model names the MT6983 / Nord 3 platform.
+- **Bounded Manual Execution:** Manual live runs require `--cycles >= 1` (unbounded
+  execution is strictly gated behind `--daemon` for supervised OpenRC service runs).
 - **Live is double-gated:** `--live --allow-live` (refused otherwise), bounded
   by `--cycles` / `--interval` / `--wall-cap`.
 - **Pre-pet health gate:** free RAM > 50 MB, rootfs writable, 1-min loadavg

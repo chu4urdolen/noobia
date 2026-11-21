@@ -252,6 +252,8 @@ class FixtureAndCommandTests(unittest.TestCase):
 
 class LiveParserTests(unittest.TestCase):
     def test_parse_actual_alpine_layout(self):
+        if not Path(DEFAULT_STOCK_MTU3_PATH).is_file():
+            self.skipTest(f"Stock mtu3.ko artifact absent: {DEFAULT_STOCK_MTU3_PATH}")
         raw_output = sample_alpine_stdout()
         obs = parse_live_output(raw_output, DEFAULT_STOCK_MTU3_PATH)
         self.assertEqual(obs["boot_id"], PINNED_V53_BOOT_ID)
@@ -273,6 +275,8 @@ class LiveParserTests(unittest.TestCase):
             parse_live_output(sample_alpine_stdout(), "/nonexistent/mtu3.ko")
 
     def test_parse_corrupt_status_json_raises(self):
+        if not Path(DEFAULT_STOCK_MTU3_PATH).is_file():
+            self.skipTest(f"Stock mtu3.ko artifact absent: {DEFAULT_STOCK_MTU3_PATH}")
         bad_output = "===LYNX_STATUS===\n{not valid json\n===SYSFS===\n"
         with self.assertRaises(LiveCollectionError):
             parse_live_output(bad_output, DEFAULT_STOCK_MTU3_PATH)

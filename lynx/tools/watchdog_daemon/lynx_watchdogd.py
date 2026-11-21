@@ -8,6 +8,12 @@ Hardware (verified facts, see LYNX-WATCHDOG-RECOVERY-PREFLIGHT-20261121.md, B27)
   * MMIO      : 0x1c007000, size 0x1000
   * reboot-mode syscon child, register 0x24 (syscon-reboot-mode)
   * HW timeout range 1..32 s; recommended 30 s
+  * CRITICAL KERNEL BEHAVIOR: Opening /dev/watchdog arms the MediaTek TOPRGU
+    hardware timer. Administrative exit requires writing the magic character 'V'
+    before closing. If the process terminates abnormally or receives SIGKILL
+    (which bypasses userspace signal handlers), the hardware timer remains armed
+    without petting, and the SoC undergoes an unannounced hardware reset after ~30s.
+    Therefore, all live testing must be strictly attended.
 
 Safety contract (enforced in test_lynx_watchdogd.py):
   * Default mode is OFFLINE SIMULATION: `--validate FIXTURE` runs the complete
@@ -412,6 +418,40 @@ def run_live(max_cycles: int, interval_s: float, state_file: Optional[Path], wal
     return 0
 
 
+def verify_target_platform(
+    dt_compat_path: Path | str = "/proc/device-tree/compatible",
+    dt_model_path: Path | str = "/proc/device-tree/model",
+) -> Tuple[bool, str]:
+    """Verify host is OnePlus Nord 3 (MT6983) before live hardware watchdog interaction."""
+    p_compat = Path(dt_compat_path)
+    p_model = Path(dt_model_path)
+
+    if not p_compat.is_file():
+        return False, f"Missing device-tree compatible node: {p_compat}"
+
+    try:
+        compat = p_compat.read_bytes().decode("utf-8", errors="replace").lower()
+    except OSError as e:
+        return False, f"Failed to read device-tree compatible: {e}"
+
+    if "mt6983" not in compat:
+        return False, f"Device-tree compatible {compat!r} does not name 'mt6983'"
+
+    if not p_model.is_file():
+        return False, f"Missing device-tree model node: {p_model}"
+
+    try:
+        model = p_model.read_bytes().decode("utf-8", errors="replace").strip().rstrip("\x00")
+    except OSError as e:
+        return False, f"Failed to read device-tree model: {e}"
+
+    model_lower = model.lower()
+    if not any(k in model_lower for k in ("mt6983", "nord 3", "22823", "cph2493")):
+        return False, f"Device-tree model {model!r} does not name MT6983 / Nord 3 platform"
+
+    return True, f"Verified platform: compatible={compat.strip()}, model={model}"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="lynx-watchdogd",
@@ -420,7 +460,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--validate", type=str, metavar="FIXTURE", help="Run offline simulation against FIXTURE JSON")
     parser.add_argument("--live", action="store_true", help="Run live petting (requires --allow-live)")
     parser.add_argument("--allow-live", action="store_true", help="Explicit authorization for live petting")
-    parser.add_argument("--cycles", type=int, default=0, help="Max pet cycles; 0 = unbounded daemon mode")
+    parser.add_argument("--daemon", action="store_true", help="Unbounded daemon mode (OpenRC supervisor only)")
+    parser.add_argument("--cycles", type=int, default=0, help="Max pet cycles; required >= 1 for manual runs")
     parser.add_argument("--interval", type=float, default=PET_INTERVAL_DEFAULT_S, help="Seconds between pets")
     parser.add_argument("--wall-cap", type=float, default=0.0, help="Live-only wall-clock cap in seconds; 0 = none")
     parser.add_argument("--state-file", type=str, default=DEFAULT_STATE_FILE, help="Where to write the state JSON report")
@@ -436,6 +477,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.live and not args.allow_live:
         print("REFUSED: live petting requires BOTH --live and --allow-live", file=sys.stderr)
         return 2
+    if args.live:
+        if args.cycles < 1 and not args.daemon:
+            print("REFUSED: manual live petting requires --cycles >= 1 (or --daemon for supervised OpenRC service)", file=sys.stderr)
+            return 2
+        ok, reason = verify_target_platform()
+        if not ok:
+            print(f"REFUSED: target platform check failed: {reason}", file=sys.stderr)
+            return 2
     if args.validate:
         state_file = Path(args.state_file) if args.state_file else None
         return run_offline(Path(args.validate), state_file)

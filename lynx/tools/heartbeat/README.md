@@ -1,6 +1,8 @@
-# Lynx Autonomous Health Heartbeat Publisher
+# Lynx Autonomous Health Heartbeat Payload Generator and Validator
 
-Publishes structured autonomous telemetry packets aggregating battery fuel gauge, thermal zones, survival policy state, and watchdog status for the OnePlus Nord 3 (`oplus6983_22823`).
+Generates and validates structured autonomous health telemetry payloads aggregating battery fuel gauge, thermal zones, survival policy state, and watchdog status for the OnePlus Nord 3 (`oplus6983_22823`).
+
+**Note on Scope:** This tool is a payload formatter and schema validator (payload-only). It formats telemetry dictionaries, validates them against the autonomous health heartbeat schema, and prints JSON to stdout (`--emit`) or inspects read-only state via double-gated SSH (`--live --allow-live`). It does not run a standing daemon, broadcast UDP packets, or transmit over the network.
 
 ## Usage
 

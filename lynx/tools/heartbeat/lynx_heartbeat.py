@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-Lynx Autonomous Health Heartbeat Telemetry Publisher
+Lynx Autonomous Health Heartbeat Payload Generator and Validator
 OnePlus Nord 3 (oplus6983_22823)
 
-Aggregates and formats autonomous telemetry packets:
+Aggregates, formats, and validates autonomous telemetry payloads:
   - Battery Fuel Gauge (BQ28Z610): SoC %, voltage, current, cell balancing delta
   - Thermal Zones (LVTS + NTC): shell temp, soc_max temp
   - Survival Policy State: nominal, throttle, suspend, emergency
   - Hardware Watchdog: active, timeout, petting interval
   - Cgroup Sandbox: agent memory usage, memory limit, pressure
 
-Safety Invariant: Passive status aggregation. Zero packet flooding, zero disk writes.
+Safety Invariant: Passive status aggregation and schema validation.
+Payload-only tool; does not broadcast packets, run as a daemon, or make network transmissions.
 """
 
 from __future__ import annotations

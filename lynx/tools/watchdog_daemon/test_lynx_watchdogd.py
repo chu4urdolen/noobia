@@ -27,6 +27,7 @@ from lynx_watchdogd import (
     make_pet_plan,
     simulate_pet_loop,
     validate_watchdogd_spec,
+    verify_target_platform,
 )
 
 HERE = Path(__file__).resolve().parent
@@ -340,6 +341,51 @@ class TestSafetyBoundaries(unittest.TestCase):
         self.assertIn("STAGED", text)
         self.assertNotIn("systemctl", text)
         self.assertNotIn("mkinitrd", text)
+
+    def test_verify_target_platform(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile("wb", delete=False) as tf_compat, \
+             tempfile.NamedTemporaryFile("wb", delete=False) as tf_model:
+            tf_compat.write(b"mediatek,MT6983\x00")
+            tf_model.write(b"MT6983Z/CZA\x00")
+            tf_compat.flush()
+            tf_model.flush()
+            compat_path = tf_compat.name
+            model_path = tf_model.name
+
+        try:
+            ok, msg = verify_target_platform(compat_path, model_path)
+            self.assertTrue(ok)
+            self.assertIn("MT6983", msg)
+
+            # Wrong compatible
+            with open(compat_path, "wb") as f:
+                f.write(b"qcom,sm8450\x00")
+            ok, msg = verify_target_platform(compat_path, model_path)
+            self.assertFalse(ok)
+            self.assertIn("does not name 'mt6983'", msg)
+
+            # Wrong model
+            with open(compat_path, "wb") as f:
+                f.write(b"mediatek,MT6983\x00")
+            with open(model_path, "wb") as f:
+                f.write(b"Generic Unknown Board\x00")
+            ok, msg = verify_target_platform(compat_path, model_path)
+            self.assertFalse(ok)
+            self.assertIn("does not name MT6983 / Nord 3", msg)
+        finally:
+            Path(compat_path).unlink(missing_ok=True)
+            Path(model_path).unlink(missing_ok=True)
+
+    def test_cli_manual_live_refuses_zero_cycles(self):
+        res = run_cli("--live", "--allow-live", "--cycles", "0")
+        self.assertEqual(res.returncode, 2)
+        self.assertIn("requires --cycles >= 1", res.stderr)
+
+    def test_cli_manual_live_refuses_on_mismatched_platform(self):
+        res = run_cli("--live", "--allow-live", "--cycles", "1")
+        self.assertEqual(res.returncode, 2)
+        self.assertIn("target platform check failed", res.stderr)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,38 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / Project 22823 'Vitamin')",
+  "source_mode": "running_device_tree",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "controller": {
+    "node": "lm3642:lm3642@63",
+    "chip": "Texas Instruments LM3642",
+    "path": "/sys/firmware/devicetree/base/i2c@11e02000/lm3642@63",
+    "compatible": "mediatek,lm3642_22823",
+    "reg": 99,
+    "cooling_cells": 2,
+    "subnodes": {
+      "flash@0": {
+        "reg": 0,
+        "type": 0,
+        "ct": 0,
+        "part": 0,
+        "remote_endpoint": "&flashlight_0"
+      }
+    }
+  },
+  "other_flashlight_nodes": [
+    "/sys/firmware/devicetree/base/flashlight_core",
+    "/sys/firmware/devicetree/base/thermal-zones/flashlight_ntc"
+  ],
+  "rear_optical_sensor": {
+    "present": true,
+    "chip": "ams TCS3408",
+    "subsystem": "sensorhub / hf_manager",
+    "device_name": "rear_cct",
+    "sensor_types": [
+      { "type": 98, "name": "tcs3408 als" },
+      { "type": 99, "name": "tcs3408 cct" },
+      { "type": 100, "name": "tcs3408 flicker" }
+    ],
+    "explanation": "The second pale rear circle houses the rear CCT / ALS optical sensor (ams TCS3408), not a second light."
+  }
+}

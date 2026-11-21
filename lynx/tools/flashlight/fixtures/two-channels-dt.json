@@ -1,0 +1,30 @@
+{
+  "platform": "Synthetic Dual-Channel Platform",
+  "source_mode": "mock_device_tree",
+  "controller": {
+    "node": "lm3644:lm3644@63",
+    "chip": "Texas Instruments LM3644 (Dual Channel)",
+    "path": "/sys/firmware/devicetree/base/i2c@11e02000/lm3644@63",
+    "compatible": "mediatek,flashlights_lm3644",
+    "reg": 99,
+    "subnodes": {
+      "flash@0": {
+        "reg": 0,
+        "type": 0,
+        "ct": 0,
+        "part": 0,
+        "remote_endpoint": "&flashlight_0"
+      },
+      "flash@1": {
+        "reg": 1,
+        "type": 0,
+        "ct": 1,
+        "part": 1,
+        "remote_endpoint": "&flashlight_1"
+      }
+    }
+  },
+  "other_flashlight_nodes": [
+    "/sys/firmware/devicetree/base/flashlight_core"
+  ]
+}

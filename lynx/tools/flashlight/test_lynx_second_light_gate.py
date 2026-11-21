@@ -3,15 +3,18 @@
 
 import json
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 
 from lynx_second_light_gate import evaluate_flashlight_topology
 
 FIXTURES = Path(__file__).parent / "fixtures"
+TOOL_SCRIPT = Path(__file__).parent / "lynx_second_light_gate.py"
 
 
 class TestLynxSecondLightGate(unittest.TestCase):
-    def test_lynx_22823_single_channel_dt(self):
+    def test_lynx_22823_source_single_channel_dt(self):
         dt_data = json.loads((FIXTURES / "lynx-22823-flashlight-dt.json").read_text())
         verdict = evaluate_flashlight_topology(dt_data)
         self.assertTrue(verdict.is_valid)
@@ -24,6 +27,33 @@ class TestLynxSecondLightGate(unittest.TestCase):
         self.assertEqual(ch0["ct_id"], 0)
         self.assertEqual(ch0["part_id"], 0)
         self.assertIn("source DT declares one lm3642 channel; live confirmation pending", verdict.summary)
+
+    def test_one_channel_live_dt(self):
+        dt_data = json.loads((FIXTURES / "one-channel-live-dt.json").read_text())
+        verdict = evaluate_flashlight_topology(dt_data)
+        self.assertTrue(verdict.is_valid)
+        self.assertEqual(verdict.status, "SINGLE_CHANNEL_ONLY")
+        self.assertFalse(verdict.second_channel_exists)
+        self.assertEqual(len(verdict.channels_found), 1)
+        self.assertIn("in running device tree", verdict.summary)
+        self.assertIn("rear CCT/ALS optical sensor (ams tcs3408)", verdict.summary)
+        self.assertIn("rear_optical_sensor", verdict.details)
+        self.assertTrue(verdict.details["rear_optical_sensor"]["present"])
+
+    def test_two_channels_dt(self):
+        dt_data = json.loads((FIXTURES / "two-channels-dt.json").read_text())
+        verdict = evaluate_flashlight_topology(dt_data)
+        self.assertTrue(verdict.is_valid)
+        self.assertEqual(verdict.status, "DUAL_CHANNEL_FOUND")
+        self.assertTrue(verdict.second_channel_exists)
+        self.assertEqual(len(verdict.channels_found), 2)
+
+    def test_missing_node_dt(self):
+        dt_data = json.loads((FIXTURES / "missing-node-dt.json").read_text())
+        verdict = evaluate_flashlight_topology(dt_data)
+        self.assertFalse(verdict.is_valid)
+        self.assertEqual(verdict.status, "ABSENT")
+        self.assertIn("missing_controller_node", verdict.failures)
 
     def test_synthetic_dual_channel_dt(self):
         dt_data = json.loads((FIXTURES / "synthetic-dual-channel-dt.json").read_text())
@@ -49,14 +79,25 @@ class TestLynxSecondLightGate(unittest.TestCase):
         self.assertFalse(verdict_empty.is_valid)
         self.assertEqual(verdict_empty.status, "ABSENT")
 
+    def test_live_gating_refusal(self):
+        # Must fail when --live is passed without --allow-live
+        res = subprocess.run(
+            [sys.executable, str(TOOL_SCRIPT), "--live"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 2)
+        self.assertIn("refusing live execution without both --live and --allow-live", res.stderr)
+
     def test_source_citations_present(self):
         dt_data = json.loads((FIXTURES / "lynx-22823-flashlight-dt.json").read_text())
         verdict = evaluate_flashlight_topology(dt_data)
-        self.assertTrue(len(verdict.source_citations) >= 3)
+        self.assertTrue(len(verdict.source_citations) >= 4)
         self.assertTrue(
             any("cust_mt6983_vitamin_camera_v4l2.dtsi" in c for c in verdict.source_citations)
         )
         self.assertTrue(any("flashlights-lm3642.c" in c for c in verdict.source_citations))
+        self.assertTrue(any("oneplus_nord_3_5g" in c for c in verdict.source_citations))
 
 
 if __name__ == "__main__":

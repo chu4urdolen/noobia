@@ -1,0 +1,6 @@
+{
+  "platform": "Missing Controller Platform",
+  "source_mode": "mock_device_tree",
+  "controller": {},
+  "other_flashlight_nodes": []
+}

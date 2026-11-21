@@ -15,10 +15,10 @@
 During earlier hardware trials, a single bounded 100 ms rear LED pulse verified that the primary torch channel (`0 0 0 1`) can be commanded via `flashlight_torch` to illuminate the rear LED. However, questions remained regarding whether a secondary rear light source (e.g., dual-tone LED, auxiliary fill LED, or independent emitter) exists and can be actuated independently.
 
 ### Technical Determination
-> **Source DT declares one lm3642 channel; live confirmation pending.**
-> **In the OnePlus Nord 3 5G (`22823` / Vitamin) kernel source tree, the device tree binding and driver strictly configure a single channel `(type=0, ct=0, part=0)` under the LM3642 driver.**
+> **Source DT declares one lm3642 channel; confirmed on live running device tree.**
+> **In the OnePlus Nord 3 5G (`22823` / Vitamin) kernel source tree and on Lynx's live running device tree (`/sys/firmware/devicetree/base`), the hardware strictly configures a single flash channel `(type=0, ct=0, part=0)` under the LM3642 driver.**
 
-A source device tree proves what the vendor intended for that configuration, but live running device-tree confirmation remains pending. Furthermore, a second light could sit on another controller, or the "second rear circle" in the chassis could correspond to the rear ambient-light sensor (ALS) window rather than an emitter. No independent second rear light control path is exposed by `lm3642_22823`.
+The hypothesis regarding the "second rear light" has been conclusively resolved: the second pale circular aperture on the rear camera island does not house a second light emitter, but rather the **rear Correlated Color Temperature (CCT) and Ambient Light Sensor (ams TCS3408)**, connected via the MediaTek sensorhub (`/dev/hf_manager`, device `rear_cct`).
 
 ---
 
@@ -118,7 +118,29 @@ if len(list(DT.parent.glob("flash@*"))) != 1:
 
 ---
 
-## 5. Summary & Operational Constraint
+## 5. Live Running Device Tree & Rear Optical Sensor Evidence
+
+An attended, read-only live query of Lynx's running device tree under `/sys/firmware/devicetree/base` was conducted using `lynx_second_light_gate.py --live --allow-live`:
+
+### 5.1 Running Device Tree Inventory
+1. **Flash Controller Node:** `/sys/firmware/devicetree/base/i2c@11e02000/lm3642@63`
+   - `compatible`: `mediatek,lm3642_22823`
+   - `reg`: `99` (`0x63`)
+   - `flash@0`: `reg = <0>`, `type = <0>`, `ct = <0>`, `part = <0>`
+2. **Other Flash Nodes:** Only `/sys/firmware/devicetree/base/flashlight_core` and thermal zone `/sys/firmware/devicetree/base/thermal-zones/flashlight_ntc` exist. No other flashlight nodes or channels are present in running kernel memory.
+
+### 5.2 Resolution of the Second Rear Aperture: Rear CCT / ALS Sensor
+The physical OnePlus Nord 3 5G chassis features two pale circular apertures below the primary camera lenses. Testing the light-sensor-window hypothesis against `lynx_light_read.py`, `/proc/hf_manager`, and [`LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md`](LYNX-REAR-LIGHT-AND-COLOR-SENSOR.md) confirms:
+- **Upper Aperture:** Contains the single LM3642 white LED flashlight emitter.
+- **Lower Aperture:** Houses the **ams TCS3408** optical sensor, registered under MediaTek sensorhub (`/proc/hf_manager` device `rear_cct` on task 1):
+  - Type 98: `tcs3408 als` (ambient light sensor)
+  - Type 99: `tcs3408 cct` (correlated color temperature sensor)
+  - Type 100: `tcs3408 flicker` (flicker detection sensor)
+- Earlier controlled optical trials (2026-11-15) confirmed repeatable lit–covered–lit responses (median 353 uncovered, 0 covered, 242 uncovered) specifically on this lower circle.
+
+---
+
+## 6. Summary & Operational Constraint
 
 1. **No-Write Gate Conclusion:** No test or script should attempt to actuate or probe a second rear LED channel. Doing so is syntactically invalid under the MediaTek driver and can produce kernel error logs or unexpected driver unbinds.
 2. **Attended Flash Testing Boundary:** Any future visual or photometric assessment of the rear flash will actuate only the primary unitary channel `flash@0` (`0 0 0 1`).

@@ -78,12 +78,16 @@ def main() -> int:
     visible = 0
     if mirror.eligible(args.session_id):
         with mirror.locked(args.session_id):
-            for _ in range(100):
-                state = mirror.sync_locked(args.session_id)
-                if state['sent'] >= state.get('events', 0):
-                    break
+            state = mirror.state_for(args.session_id)
+            # Bounded sync: do not block on 100 replay turns; background watch keeps mirror
+            if state['sent'] < state.get('events', 0):
+                try:
+                    state = mirror.sync_locked(args.session_id)
+                except Exception:
+                    pass
             thread_id, events = mirror.run_turn(prompt, state.get('thread_id'))
             state['thread_id'] = thread_id
+            state['sent'] = state.get('events', state.get('sent', 0))
             mirror.save_state(args.session_id, state)
     else:
         thread_id, events = mirror.run_turn(prompt, None)

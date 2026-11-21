@@ -249,13 +249,34 @@ views. Minimum contrast is 5.24:1 in light mode and 6.2:1 in dark. All 13
 links are reached by Tab with visible focus. No overflow at 390 px. There is
 still no script, form, button, input, or remote asset.
 
+## Health section (`lynx_health_view.py`)
+
+`lynx_tool_board.py --health FILE` adds an optional section from a **saved**
+`portable-health/1` report. Without `--health` it uses `state/health.json` if
+that exists. The report comes from Dushich's
+`lynx/tools/health/portable_health.py` or `lynx_health_collect.py --evaluate`.
+The board never runs his collector or evaluator, and never edits
+`lynx/tools/health/`.
+
+How it reads the report:
+- `ok`, `warn`, `fail` and `unknown` are shown exactly. Anything else is
+  `unrecognized`, never ok.
+- The verdict carries a count of unknown checks.
+- Missing values stay missing.
+- The section states that thresholds are Dushich's proposals, not validated
+  Lynx limits.
+- Stale or offset-timestamped reports are aged correctly.
+- A report with the wrong schema or host is explained, not shown.
+
+Health never changes the phone-reported validation.
+
 ## Tests
 
 ```sh
 python3 -m unittest discover -s lynx/tools/ui -p 'test_*.py'
 ```
 
-These 83 tests are all offline. Status fixtures come from the real
+These 95 tests are all offline. Status fixtures come from the real
 `inventory()` functions run over temporary directory trees, and the broker
 uses a fake runner.
 
@@ -279,6 +300,11 @@ uses a fake runner.
   footer outside `main`, cards as list items in labelled sections, in-page
   links only, spoken badge labels, and "(as captured)" on every known state
   when stale.
+- **Health section:** statuses preserved and the unknown count shown,
+  unrecognized values never ok, no invented values, wrong schema or host
+  rejected, bounded output, stale and offset times, escaping, and a bad file
+  still renders a board. It uses Dushich's own evaluator on his tracked
+  examples, read-only.
 - **Coverage:** companion rules, missing tools, the different not-ready
   causes, drift, keeping attended evidence separate, and JSON output that
   repeats exactly for the same input.

@@ -21,12 +21,14 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import lynx_health_view as health_mod  # noqa: E402
 import lynx_snapshot_age as age_mod  # noqa: E402
 import lynx_tool_manifest as manifest_mod  # noqa: E402
 
 STATE_DIR = HERE / "state"
 DEFAULT_STATUS = STATE_DIR / "latest.json"
 DEFAULT_OUT = STATE_DIR / "board.html"
+DEFAULT_HEALTH = STATE_DIR / "health.json"
 
 GROUPS = [
     ("overview", "Overview"), ("power", "Power"), ("system", "System"),
@@ -144,12 +146,12 @@ def card(tool, attended=None, current=True):
     return "".join(parts)
 
 
-def render(manifest, now=None):
+def render(manifest, now=None, health=None, health_error=None):
     now = now or datetime.now(timezone.utc)
     snap = manifest.get("snapshot")
     out = ["<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">",
            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">",
-           "<title>Lynx Tool Board</title>", f"<style>{CSS}</style></head><body><main>",
+           "<title>Lynx Tool Board</title>", f"<style>{CSS}{health_mod.CSS}</style></head><body><main>",
            "<header><h1>Lynx tool board</h1>"]
     fresh = age_mod.freshness(snap, now) if snap else None
     if snap:
@@ -185,6 +187,7 @@ def render(manifest, now=None):
     sections = [(key, title, by_group.pop(key)) for key, title in GROUPS if key in by_group]
     sections += [(key, key, tools) for key, tools in sorted(by_group.items())]
     links = ([("components", "Hardware components")] if snap else [])
+    links += [("health", "Health")] if (health or health_error) else []
     links += [(f"g-{key}", title) for key, title, _ in sections]
     links += [("attended", "Attended confirmations")] if attended else []
     out.append('<nav aria-label="Sections"><ul>' + "".join(
@@ -207,6 +210,8 @@ def render(manifest, now=None):
                'person confirmed one specific function once, with a receipt. It '
                'does not change the phone-reported state and may not hold on '
                'the current boot.</p>')
+    if health or health_error:
+        out.append(health_mod.section(health, now, health_error))
     for key, title, tools in sections:
         count = f"{len(tools)} tool" + ("s" if len(tools) != 1 else "")
         out.append(f'<section aria-labelledby="g-{esc(key)}"><h2 id="g-{esc(key)}">{esc(title)}'
@@ -251,6 +256,9 @@ def main(argv=None):
     parser.add_argument("--status", default=str(DEFAULT_STATUS))
     parser.add_argument("--out", default=str(DEFAULT_OUT))
     parser.add_argument("--source", default=str(manifest_mod.SOURCE_DIR))
+    parser.add_argument("--health", metavar="FILE",
+                        help="saved portable-health/1 report (default: state/health.json "
+                             "if present); never collected by this command")
     parser.add_argument("--refresh", action="store_true",
                         help="capture a fresh read-only snapshot before rendering")
     args = parser.parse_args(argv)
@@ -269,9 +277,17 @@ def main(argv=None):
         if status_path.exists():
             manifest = manifest_mod.apply_snapshot(
                 manifest, manifest_mod.load_snapshot(status_path))
+        health = health_error = None
+        health_path = Path(args.health) if args.health else DEFAULT_HEALTH
+        if args.health or health_path.exists():
+            try:
+                health = health_mod.load_report(health_path)
+            except (health_mod.HealthError, OSError) as exc:
+                health_error = str(exc)
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(render(manifest), encoding="utf-8")
+        out.write_text(render(manifest, health=health, health_error=health_error),
+                       encoding="utf-8")
     except (manifest_mod.ManifestError, OSError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}))
         return 1
@@ -280,6 +296,8 @@ def main(argv=None):
     result = {"ok": True, "path": str(out), "tool_count": manifest["tool_count"],
               "snapshot": snap.get("captured_at"),
               "freshness": fresh["summary"] if fresh else "no snapshot",
+              "health": (health["verdict"] if health else
+                         f"not shown: {health_error}" if health_error else "not provided"),
               "component_states": snap.get("component_states", {}),
               "install_states": snap.get("install_states", {})}
     if capture_result is not None:

@@ -1,0 +1,22 @@
+{
+  "phone": {
+    "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+    "udcs": [
+      "11201000.usb0",
+      "11211000.usb1",
+      "dummy_udc.0"
+    ],
+    "mtu3_mode": "3",
+    "ttygs_present": true,
+    "gadget_bound": true
+  },
+  "nexus": {
+    "ttyacm_present": true,
+    "device_node": "/dev/ttyACM0",
+    "vendor_id": "1d6b",
+    "product_id": "0104",
+    "serial": "LYNX001",
+    "product_name": "Lynx_Nord_3",
+    "driver": "cdc_acm"
+  }
+}

@@ -38,3 +38,10 @@
 !/tools/health/examples/
 /tools/health/examples/*
 !/tools/health/examples/*.json
+!/tools/usb/
+/tools/usb/*
+!/tools/usb/*.py
+!/tools/usb/README.md
+!/tools/usb/fixtures/
+/tools/usb/fixtures/*
+!/tools/usb/fixtures/*.json

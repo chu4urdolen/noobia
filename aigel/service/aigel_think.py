@@ -344,6 +344,7 @@ PERCEPTIONS = {
     "audio": {"speech.heard", "sound.heard", "word.heard"},
     "hearing": {"speech.heard", "sound.heard", "word.heard"},
     "network": {"device.seen", "device.new", "device.recognized"},
+    "touch": {"tap", "hold"},
 }
 MAX_FLOOR_ITEMS = 3
 
@@ -402,7 +403,12 @@ def apply_perception_floor(lines: list, decision: dict) -> dict:
             match_dict = {"sense": p["sense"], "event": p["event"]}
             if fields:
                 match_dict["fields"] = {k: str(v) for k, v in fields.items()}
-            msg = f"You see a {label}." if p["sense"] == "camera" else f"You perceive: {label}."
+            if p["sense"] == "camera":
+                msg = f"You see a {label}."
+            elif p["sense"] == "touch":
+                msg = f"Someone is touching or holding your screen ({label})."
+            else:
+                msg = f"You perceive: {label}."
             pat = {
                 "id": pat_id,
                 "match": match_dict,

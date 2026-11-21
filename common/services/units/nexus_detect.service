@@ -1,0 +1,18 @@
+[Unit]
+Description=Nexus Object Detection Service (port 5050)
+After=network.target
+
+[Service]
+Type=simple
+User=aria
+Group=aria
+WorkingDirectory=/noobia/common/autonomy/services/detect
+ExecStart=/noobia/common/services/nexus_detect.sh
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

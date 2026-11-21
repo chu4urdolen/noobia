@@ -476,10 +476,20 @@ class PrioritizerContract(unittest.TestCase):
         # Matching kernel lines are dropped
         self.assertIsNone(p.process("kernel", "[  100.123456] [ESD]check doze mode=0", 0.0))
         self.assertEqual(drop_rule["hits"], 1)
+        self.assertEqual(drop_rule["dropped"], 1)
+        self.assertEqual(p.total_dropped, 1)
         # Non-matching line passes as raw P0
         raw = p.process("kernel", "usb 1-1: new device", 1.0)
         self.assertIsNotNone(raw)
         self.assertIn("usb 1-1", raw)
+
+    def test_non_kernel_brackets_do_not_collapse(self):
+        p = self.pz.Prioritizer([], sources=["lynx-agent"])
+        # Non-kernel messages starting with brackets (e.g. job counts) must not collapse
+        line1 = "[3] jobs pending"
+        line2 = "[4] jobs pending"
+        self.assertIsNotNone(p.process("lynx-agent", line1, 0.0))
+        self.assertIsNotNone(p.process("lynx-agent", line2, 5.0))
 
     def test_drop_rule_validation(self):
         bad_action = {

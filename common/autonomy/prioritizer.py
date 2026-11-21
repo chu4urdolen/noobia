@@ -38,10 +38,11 @@ class PrioritizerError(ValueError):
 def normalize_repeat_key(source: str, text: str) -> tuple[str, str]:
     """Normalize raw text for repeat collapse key.
 
-    Strips kernel uptime timestamps and task IDs so identical kernel messages
-    occurring across different timestamps properly collapse within the window.
+    Strips kernel uptime timestamps and task IDs strictly for source == 'kernel'
+    so identical kernel messages occurring across different timestamps properly
+    collapse within the window without conflating non-kernel bracketed messages.
     """
-    if source == "kernel" or text.startswith("["):
+    if source == "kernel":
         norm_text = KERNEL_PREFIX_RE.sub("", text)
     else:
         norm_text = text
@@ -162,6 +163,10 @@ class Prioritizer:
     def rules(self) -> list[dict]:
         return list(self._rules)
 
+    @property
+    def total_dropped(self) -> int:
+        return sum(r.get("dropped", 0) for r in self._rules)
+
     def add_rule(self, rule: dict, origin: str = "aigel", revertible: bool = True) -> None:
         """Validate, add or update a rule with history tracking."""
         validate_rule(rule)
@@ -222,6 +227,7 @@ class Prioritizer:
                 r["hits"] = r.get("hits", 0) + 1
                 emit_spec = r["emit"]
                 if emit_spec.get("action") == "drop":
+                    r["dropped"] = r.get("dropped", 0) + 1
                     return None
                 return format_line(
                     p=emit_spec["p"],

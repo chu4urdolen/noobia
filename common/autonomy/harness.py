@@ -48,7 +48,8 @@ class Harness:
     def __init__(self, *, host, read_new, chunker, client, adapter, ranker=None,
                  emit=None, log=None, on_priority_rules=None, validate_pattern=None,
                  clock=time.monotonic, heartbeat_s=300.0, silence_s=900.0,
-                 min_interval_s=1.0, max_per_hour=30, queue_max=20):
+                 min_interval_s=1.0, max_per_hour=30, queue_max=20,
+                 extra_heartbeat_fields=None):
         self.host, self.read_new, self.chunker = host, read_new, chunker
         self.client, self.adapter, self.ranker = client, adapter, ranker
         self.emit = emit or (lambda line: None)
@@ -58,6 +59,7 @@ class Harness:
         self.clock = clock
         self.heartbeat_s, self.silence_s = heartbeat_s, silence_s
         self.min_interval_s, self.max_per_hour = min_interval_s, max_per_hour
+        self.extra_heartbeat_fields = extra_heartbeat_fields
         self.queue = deque()
         self.queue_max = queue_max
         self.dropped = 0
@@ -204,7 +206,15 @@ class Harness:
     def _heartbeat(self, now):
         if self.last_heartbeat_at is None or now - self.last_heartbeat_at >= self.heartbeat_s:
             self.last_heartbeat_at = now
-            self.emit(sense.format_line(0, "autonomy", "heartbeat", {"host": self.host}))
+            fields: dict[str, str | int] = {"host": self.host}
+            if self.extra_heartbeat_fields:
+                try:
+                    extra = self.extra_heartbeat_fields()
+                    if isinstance(extra, dict):
+                        fields.update(extra)
+                except Exception:
+                    pass
+            self.emit(sense.format_line(0, "autonomy", "heartbeat", fields))
 
     def _check_silence(self, now):
         if self.silence_reported or now - self.last_line_at < self.silence_s:

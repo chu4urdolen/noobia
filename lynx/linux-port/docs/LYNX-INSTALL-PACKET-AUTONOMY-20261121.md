@@ -55,9 +55,19 @@ The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
 
 - **Nexus Authority Secret Source:** `/noobia/aigel/private/lynx_autonomy_secret` (mode `0600` on Nexus).
 - **Target on Lynx:** `/etc/noobia/aigel-lynx.secret` (mode `0600`, root:root).
-- **Security Rule:** Secret bytes are NEVER passed via command line arguments, logged to syslog, or committed to Git. Transferred directly over pinned encrypted SSH session via stdin pipe:
+- **Security Rule:** Secret bytes are NEVER passed via command line arguments, logged to syslog, or committed to Git. Transferred directly over pinned encrypted SSH session via stdin pipe reusing `lynx/tools/network/lynx_wifi_v19_contact.py` `ssh_command()`:
   ```sh
-  cat /noobia/aigel/private/lynx_autonomy_secret | ssh -i /noobia/common/secrets/id_ed25519 -o UserKnownHostsFile=/noobia/lynx/tools/network/known_hosts -o HostKeyAlias=lynx -o BatchMode=yes -p 2222 root@192.168.100.107 "mkdir -p /etc/noobia && cat > /etc/noobia/aigel-lynx.secret && chmod 0600 /etc/noobia/aigel-lynx.secret && chown root:root /etc/noobia/aigel-lynx.secret"
+  python3 -c '
+  import sys, pathlib, subprocess
+  sys.path.insert(0, "/noobia/lynx/tools/network")
+  from lynx_wifi_v19_contact import ssh_command
+
+  secret = pathlib.Path("/noobia/aigel/private/lynx_autonomy_secret").read_bytes()
+  remote_cmd = "mkdir -p /etc/noobia && cat > /etc/noobia/aigel-lynx.secret && chmod 0600 /etc/noobia/aigel-lynx.secret && chown root:root /etc/noobia/aigel-lynx.secret"
+  argv = ssh_command("192.168.100.107", remote_cmd)
+  argv[-2:-2] = ["-p", "2222"]
+  subprocess.run(argv, input=secret, check=True)
+  '
   ```
 
 ---

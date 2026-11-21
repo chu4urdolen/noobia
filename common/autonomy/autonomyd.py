@@ -204,9 +204,16 @@ class Daemon:
             validate_pattern=lambda p: ranker_mod.validate_pattern(p, self.ranker.corpus),
             clock=clock, heartbeat_s=float(h.get("heartbeat_s", 300)),
             silence_s=float(h.get("silence_s", 900)),
-            max_per_hour=int(h.get("max_per_hour", 30)), queue_max=int(h.get("queue_max", 20)))
+            max_per_hour=int(h.get("max_per_hour", 30)), queue_max=int(h.get("queue_max", 20)),
+            extra_heartbeat_fields=self._heartbeat_fields)
         self.interval_s = float(config.get("interval_s", 1.0))
         self._dirty = False
+
+    def _heartbeat_fields(self):
+        if not self.prioritizer:
+            return {}
+        dropped = self.prioritizer.total_dropped
+        return {"dropped": dropped} if dropped > 0 else {}
 
     def _accept_rules(self, rules):
         if self.prioritizer is None:

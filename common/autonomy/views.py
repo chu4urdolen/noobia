@@ -58,14 +58,18 @@ class ViewReader:
             self.backend = backend
 
         self._file_offset: int = 0
+        self._file_inode: int | None = None
         self._journal_cursor: str | None = None
 
         if start_at_end:
             if self.backend in ("file", "fallback") and self.log_file.exists():
                 try:
-                    self._file_offset = self.log_file.stat().st_size
+                    st = self.log_file.stat()
+                    self._file_offset = st.st_size
+                    self._file_inode = st.st_ino
                 except OSError:
                     self._file_offset = 0
+                    self._file_inode = None
 
     def read_recent(self, lines: int = 100) -> list[str]:
         """Read up to `lines` recent entries for this view."""
@@ -146,39 +150,53 @@ class ViewReader:
             return []
 
         matched = []
-        pattern = re.compile(rf"(?:^|[\s:]){re.escape(self.view)}:\s*(.*)$")
         for raw in all_lines:
-            m = pattern.search(raw)
-            if m:
-                matched.append(m.group(1).strip() if m.group(1).strip() else raw.strip())
-            elif self.view in raw:
-                matched.append(raw.strip())
+            payload = self.parse_syslog_line(raw)
+            if payload is not None:
+                matched.append(payload)
         return matched[-lines:]
 
     def _read_new_file(self) -> list[str]:
         if not self.log_file.exists():
             return []
         try:
-            size = self.log_file.stat().st_size
-            if size < self._file_offset:
-                # Log rotation detected; reset offset to 0
-                self._file_offset = 0
+            st = self.log_file.stat()
+            size = st.st_size
+            inode = st.st_ino
 
-            with open(self.log_file, "r", encoding="utf-8", errors="replace") as f:
+            # F4: detect rotation by inode change as well as shrink
+            if self._file_inode is not None and inode != self._file_inode:
+                self._file_offset = 0
+            elif size < self._file_offset:
+                self._file_offset = 0
+            self._file_inode = inode
+
+            # F3: open file in binary mode and keep byte offsets
+            with open(self.log_file, "rb") as f:
                 f.seek(self._file_offset)
-                new_chunk = f.readlines()
-                self._file_offset = f.tell()
+                chunk = f.read()
+
+            if not chunk:
+                return []
+
+            # F1: SPLIT LINES - consume only up to the last newline
+            last_nl = chunk.rfind(b"\n")
+            if last_nl == -1:
+                return []
+
+            consumed = chunk[:last_nl + 1]
+            self._file_offset += len(consumed)
+
+            text = consumed.decode("utf-8", errors="replace")
+            new_lines = text.splitlines()
         except OSError:
             return []
 
         matched = []
-        pattern = re.compile(rf"(?:^|[\s:]){re.escape(self.view)}:\s*(.*)$")
-        for raw in new_chunk:
-            m = pattern.search(raw)
-            if m:
-                matched.append(m.group(1).strip() if m.group(1).strip() else raw.strip())
-            elif self.view in raw:
-                matched.append(raw.strip())
+        for raw in new_lines:
+            payload = self.parse_syslog_line(raw)
+            if payload is not None:
+                matched.append(payload)
         return matched
 
     def _read_fallback(self, lines: int) -> list[str]:
@@ -193,8 +211,11 @@ class ViewReader:
 
     def parse_syslog_line(self, line: str) -> str | None:
         """Extract view message payload from a raw syslog line if it matches this view."""
-        pattern = re.compile(rf"(?:^|[\s:]){re.escape(self.view)}:\s*(.*)$")
-        m = pattern.search(line)
+        # F2: Strict tag match (BSD, ISO-8601, or no header) with optional PID, zero loop risk
+        pattern = re.compile(
+            rf"^(?:(?:[A-Za-z]{{3}}\s+\d+\s+\d{{2}}:\d{{2}}:\d{{2}}|\d{{4}}-\d{{2}}-\d{{2}}[T\s]\d{{2}}:\d{{2}}:\d{{2}}(?:\.\d+)?(?:Z|[+-]\d{{2}}:?\d{{2}})?)(?:\s+\S+){{0,2}}\s+)?{re.escape(self.view)}(?:\[\d+\])?:\s*(.*)$"
+        )
+        m = pattern.match(line.strip())
         if m:
             return m.group(1).strip()
         return None

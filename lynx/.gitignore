@@ -259,3 +259,10 @@
 !/tools/cgroups/fixtures/
 /tools/cgroups/fixtures/*
 !/tools/cgroups/fixtures/*.json
+!/tools/openrc_validator/
+/tools/openrc_validator/*
+!/tools/openrc_validator/*.py
+!/tools/openrc_validator/README.md
+!/tools/openrc_validator/fixtures/
+/tools/openrc_validator/fixtures/*
+!/tools/openrc_validator/fixtures/*.json

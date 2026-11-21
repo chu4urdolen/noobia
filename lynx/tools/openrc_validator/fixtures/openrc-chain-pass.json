@@ -1,0 +1,18 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin') — Alpine Linux untethered boot chain",
+  "services": [
+    {"name": "bootmisc"},
+    {"name": "sysfs", "need": ["bootmisc"]},
+    {"name": "networking", "need": ["bootmisc"], "use": ["sysfs"]},
+    {"name": "lynx-watchdogd", "need": ["bootmisc", "sysfs"], "after": ["networking"]},
+    {"name": "lynx-survivald", "need": ["bootmisc", "sysfs"], "after": ["lynx-watchdogd"]},
+    {"name": "lynx-cgroups", "need": ["bootmisc", "sysfs"], "after": ["lynx-survivald"]},
+    {"name": "lynx-agent", "need": ["lynx-cgroups"], "after": ["lynx-survivald"]},
+    {"name": "lynx-presence", "need": ["lynx-agent"]}
+  ],
+  "known_external": [],
+  "expected": {
+    "verdict": "PASS",
+    "expected_chain": ["bootmisc", "sysfs", "networking", "lynx-watchdogd", "lynx-survivald", "lynx-cgroups", "lynx-agent", "lynx-presence"]
+  }
+}

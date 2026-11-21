@@ -1,0 +1,13 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin') — broken chain: contradictory weak ordering",
+  "services": [
+    {"name": "bootmisc"},
+    {"name": "lynx-survivald", "after": ["lynx-watchdogd"]},
+    {"name": "lynx-watchdogd", "after": ["lynx-survivald"]}
+  ],
+  "known_external": [],
+  "expected": {
+    "verdict": "FAIL",
+    "expect_order_conflict": ["lynx-survivald", "lynx-watchdogd"]
+  }
+}

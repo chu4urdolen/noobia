@@ -1,0 +1,15 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin') — broken chain: need-cycle + undefined prerequisite",
+  "services": [
+    {"name": "bootmisc"},
+    {"name": "sysfs", "need": ["bootmisc"]},
+    {"name": "lynx-agent", "need": ["lynx-presence", "lynx-gateway"]},
+    {"name": "lynx-presence", "need": ["lynx-agent"]}
+  ],
+  "known_external": [],
+  "expected": {
+    "verdict": "FAIL",
+    "expect_hard_cycle": ["lynx-agent", "lynx-presence"],
+    "expect_missing": [["lynx-agent", "lynx-gateway"]]
+  }
+}

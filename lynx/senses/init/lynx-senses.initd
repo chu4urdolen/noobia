@@ -1,0 +1,45 @@
+#!/sbin/openrc-run
+# Lynx senses (S2 touch, S3 wifi, S4 power, S8 nexus) - sampled loop.
+#
+# Source of record: lynx/senses/init/lynx-senses.initd (Dushich, 2026-11-21).
+# Install belongs to IS-2 (Aria); this file is NOT installed by itself.
+# Depends on the autonomy install (IS-2): the canonical sense formatter
+# under /usr/local/lib/noobia/autonomy and the senses under
+# /usr/local/lib/noobia/senses/ (see lynx/senses/README.md).
+#
+# Senses write to syslog under the noobia-sense ident (I-2 raises the
+# logger to -l 6 so notice lines are kept). Loop errors go to the
+# error log; sense lines never do (they are syslog, by design).
+
+name="Lynx senses (touch wifi power nexus)"
+description="Sampled sense emitters for the Noobia autonomy harness"
+
+command="/usr/bin/python3"
+command_args="/usr/local/lib/noobia/senses/common/lynx_senses_loop.py"
+command_background="yes"
+pidfile="/run/lynx/lynx-senses.pid"
+output_log="/var/log/lynx-senses.log"
+error_log="/var/log/lynx-senses.log"
+
+depend() {
+	needs net
+	after lynx-local-logs lynx-wifi
+}
+
+checkpath() {
+	# Honest preflight: the autonomy install must be in place.
+	eaccess x /usr/local/lib/noobia/senses/common/lynx_senses_loop.py
+	eaccess x /usr/local/lib/noobia/autonomy/sense.py
+}
+
+start_pre() {
+	checkpath || return 1
+	ebegin "Starting Lynx senses"
+	return 0
+}
+
+stop_pre() {
+	# The loop exits on SIGTERM; nothing else to clean up (state files
+	# are always consistent, written atomically).
+	true
+}

@@ -90,7 +90,9 @@ class SightService:
                     continue
 
                 boot_id = status.get("boot_id")
-                battery_pct = status.get("battery", {}).get("capacity_percent", 0)
+                battery = status.get("battery", {})
+                battery_pct = battery.get("capacity_percent", 0)
+                current_mA = battery.get("current_mA_signed", 0)
                 temp_c = status.get("thermal", {}).get("max_mC", 0) / 1000.0
 
                 if battery_pct < 20:
@@ -98,9 +100,9 @@ class SightService:
                     time.sleep(30)
                     continue
 
-                if temp_c > 45.0:
-                    self.log(f"SAFETY: temperature high ({temp_c:.1f}°C), cooling down 20s.")
-                    time.sleep(20)
+                if temp_c > 41.0:
+                    self.log(f"SAFETY: temperature warm ({temp_c:.1f}°C), cooling down 25s.")
+                    time.sleep(25)
                     continue
 
                 # 2. Capture frame
@@ -149,7 +151,8 @@ class SightService:
                     self.log(f"frame #{iteration} detect error: {det_res.stderr.strip()[:100]}")
 
                 # 4. Settle interval
-                for _ in range(int(self.interval_s * 2)):
+                effective_interval = max(self.interval_s, 25.0) if current_mA < 0 else self.interval_s
+                for _ in range(int(effective_interval * 2)):
                     if not self.running:
                         break
                     time.sleep(0.5)

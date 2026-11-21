@@ -152,6 +152,13 @@
 !/tools/thermal_zones/fixtures/
 /tools/thermal_zones/fixtures/*
 !/tools/thermal_zones/fixtures/*.json
+!/tools/battery_health/
+/tools/battery_health/*
+!/tools/battery_health/*.py
+!/tools/battery_health/README.md
+!/tools/battery_health/fixtures/
+/tools/battery_health/fixtures/*
+!/tools/battery_health/fixtures/*.json
 !/tools/display/
 /tools/display/*
 !/tools/display/*.py

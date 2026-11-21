@@ -1,0 +1,12 @@
+{
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "gauge": {
+    "design_capacity_mah": 5000,
+    "full_charge_capacity_mah": 3850,
+    "state_of_health_pct": 77.0,
+    "cycle_count": 940,
+    "cell1_voltage_mv": 3920,
+    "cell2_voltage_mv": 3865,
+    "internal_impedance_mohm": 48
+  }
+}

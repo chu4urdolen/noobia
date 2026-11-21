@@ -1,6 +1,6 @@
 """Structured pattern store and ranker (ARCHITECTURE.md §4).
 
-Deliverable A, task E4.
+Deliverable A, task E4. Review fixes R1-R5 applied.
 
 Used only for PRIORITY chunks. Explains lines using active structured patterns
 compiled with exact literal matches and validated against examples.
@@ -9,23 +9,30 @@ Unexplained lines are routed to Aigel.
 
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
 import re
+import tempfile
 from typing import Any
+
 try:
     from .sense import parse_line
 except (ImportError, ValueError):
     from sense import parse_line
 
 BACKREF_RE = re.compile(r"\\[1-9]|\(\?P=[a-zA-Z0-9_]+\)")
-NESTED_QUANT_RE = re.compile(r"\([^)]*[\*\+\?][^)]*\)[\*\+\?]")
+# Catches nested quantifiers including {n,}, e.g. (a+)+, (a+){2,}
+NESTED_QUANT_RE = re.compile(r"\([^)]*[\*\+\?][^)]*\)(?:[\*\+\?]|\{[0-9,]+\})")
 
 
 def _pattern_matches(pattern: dict, line: dict) -> bool:
     """Check if pattern matches parsed line dictionary."""
     match = pattern.get("match", {})
-    if match.get("sense") and match["sense"] != line.get("sense"):
+    # R1: sense and event must match
+    if match.get("sense") != line.get("sense"):
         return False
-    if match.get("event") and match["event"] != line.get("event"):
+    if match.get("event") != line.get("event"):
         return False
 
     expected_fields = match.get("fields")
@@ -58,6 +65,16 @@ def validate_pattern(pattern: dict, corpus: list[str]) -> None:
         if req not in pattern:
             raise ValueError(f"missing required pattern field: {req}")
 
+    match = pattern.get("match")
+    if not isinstance(match, dict):
+        raise ValueError("pattern match must be a dictionary")
+
+    # R1: Require non-empty sense and event in pattern match
+    sense = match.get("sense")
+    event = match.get("event")
+    if not sense or not isinstance(sense, str) or not event or not isinstance(event, str):
+        raise ValueError("pattern match must include non-empty 'sense' and 'event'")
+
     examples = pattern.get("examples")
     if not isinstance(examples, dict) or "must" not in examples or "must_not" not in examples:
         raise ValueError("examples must contain 'must' and 'must_not' lists")
@@ -66,6 +83,10 @@ def validate_pattern(pattern: dict, corpus: list[str]) -> None:
     must_not = examples.get("must_not", [])
     if not isinstance(must, list) or not isinstance(must_not, list):
         raise ValueError("must and must_not must be lists of strings")
+
+    # R2: Require at least one must example
+    if len(must) < 1:
+        raise ValueError("pattern requires at least one 'must' example")
 
     regex = pattern.get("regex")
     if regex is not None:
@@ -108,14 +129,27 @@ class Ranker:
         patterns: list[dict],
         store_capacity: int = 200,
         active_capacity: int = 100,
+        corpus: list[str] = (),
     ):
         self.store_capacity = int(store_capacity)
         self.active_capacity = int(active_capacity)
+        self.corpus = list(corpus)
+        self._history: list[dict] = []
 
-        # Sort input patterns stably by hits descending
-        sorted_pats = sorted(patterns, key=lambda p: p.get("hits", 0), reverse=True)
+        valid_patterns = []
+        invalid_patterns = []
+
+        # R3: Validate patterns on load; invalid -> archive
+        for p in patterns:
+            try:
+                validate_pattern(p, self.corpus)
+                valid_patterns.append(p)
+            except Exception:
+                invalid_patterns.append(p)
+
+        sorted_pats = sorted(valid_patterns, key=lambda p: p.get("hits", 0), reverse=True)
         self._store = sorted_pats[:self.store_capacity]
-        self._archive = sorted_pats[self.store_capacity:]
+        self._archive = sorted_pats[self.store_capacity:] + invalid_patterns
         self._last_delivery: dict[str, float] = {}
 
     @property
@@ -130,11 +164,79 @@ class Ranker:
     def archive(self) -> list[dict]:
         return self._archive
 
-    def process(self, lines: list[dict], now: float) -> dict[str, Any]:
-        """Match lines against active patterns.
+    def add_pattern(
+        self,
+        pattern: dict,
+        corpus: list[str] | None = None,
+        origin: str = "aigel",
+        revertible: bool = True,
+    ) -> None:
+        """Add new validated pattern, recording history for revertibility (R4)."""
+        check_corpus = self.corpus if corpus is None else corpus
+        validate_pattern(pattern, check_corpus)
+        pattern["origin"] = origin
 
-        Returns dict(explained=[(line, pattern_id)], unexplained=[line], messages=[str]).
-        """
+        # Record prior state if replacing existing ID
+        existing = next((p for p in self._store if p.get("id") == pattern.get("id")), None)
+        if revertible:
+            self._history.append({"action": "add", "id": pattern["id"], "prev": existing})
+
+        if existing:
+            self._store.remove(existing)
+
+        self._store.insert(0, pattern)
+        if len(self._store) > self.store_capacity:
+            overflow = self._store.pop()
+            self._archive.append(overflow)
+
+    def revert_pattern(self, pattern_id: str) -> bool:
+        """Revert pattern to prior version from history (R4)."""
+        for i in range(len(self._history) - 1, -1, -1):
+            entry = self._history[i]
+            if entry.get("id") == pattern_id:
+                prev = entry.get("prev")
+                # Remove current
+                self._store = [p for p in self._store if p.get("id") != pattern_id]
+                if prev:
+                    self._store.insert(0, prev)
+                del self._history[i]
+                return True
+        return False
+
+    def save_patterns(self, path: Path | str) -> None:
+        """Atomic persistence to JSON file (R4)."""
+        target = Path(path)
+        data = {
+            "version": 1,
+            "store_capacity": self.store_capacity,
+            "active_capacity": self.active_capacity,
+            "store": self._store,
+            "archive": self._archive,
+        }
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", dir=target.parent, delete=False, encoding="utf-8") as tf:
+            json.dump(data, tf, indent=2, ensure_ascii=False)
+            temp_name = tf.name
+        os.replace(temp_name, target)
+
+    @classmethod
+    def load_patterns(cls, path: Path | str, corpus: list[str] = ()) -> Ranker:
+        """Load patterns from atomic JSON file (R4)."""
+        target = Path(path)
+        if not target.exists():
+            return cls([], corpus=corpus)
+        with open(target, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        pats = data.get("store", []) + data.get("archive", [])
+        return cls(
+            pats,
+            store_capacity=data.get("store_capacity", 200),
+            active_capacity=data.get("active_capacity", 100),
+            corpus=corpus,
+        )
+
+    def process(self, lines: list[dict], now: float) -> dict[str, Any]:
+        """Match lines against active patterns."""
         explained = []
         unexplained = []
         messages = []

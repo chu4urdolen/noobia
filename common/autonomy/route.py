@@ -1,11 +1,12 @@
 """Compute routing for Noobia autonomy (ARCHITECTURE.md §7).
 
-Deliverable A, task E5.
+Deliverable A, task E5. Review fixes Rt1-Rt3 applied.
 
 Routing order: Nexus -> local -> cloud.
 Tasks: inference, detect, stt, tts.
 Config re-read on change (tracks file mtime).
 Decisions logged to noobia-autonomy.
+Endpoints use authenticated proxies and bounded health probes.
 """
 
 from __future__ import annotations
@@ -16,12 +17,15 @@ import os
 from pathlib import Path
 import time
 from typing import Callable
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 import syslog
 
 TASKS = ("inference", "detect", "stt", "tts")
 TIERS = ("nexus", "local", "cloud")
-DEFAULT_CONFIG_PATH = Path("/noobia/common/autonomy/route.json")
+NOOBIA_ROOT = Path(os.environ.get("NOOBIA", "/noobia"))
 SYSTEM_CONFIG_PATH = Path("/etc/noobia/route.json")
+FALLBACK_CONFIG_PATH = NOOBIA_ROOT / "common" / "autonomy" / "route.json"
 LOG_IDENT = "noobia-autonomy"
 
 
@@ -35,15 +39,54 @@ class Backend:
     tier: str
     endpoint: str
     timeout_s: float = 5.0
-    api_key: str | None = None
+    key_file: str | None = None
     health_check: Callable[[], bool] | None = None
+    _health_cached_until: float = 0.0
+    _health_cache_value: bool = True
 
-    def is_healthy(self) -> bool:
+    def read_key(self) -> str | None:
+        """Read key from external key_file outside Git (Rt1)."""
+        if not self.key_file:
+            return None
+        p = Path(self.key_file)
+        if not p.is_file():
+            return None
+        val = p.read_text(encoding="utf-8").strip()
+        return val if val else None
+
+    def is_healthy(self, now: float | None = None) -> bool:
+        """Check backend health with bounded probe and brief caching (Rt2)."""
+        curr = time.time() if now is None else now
+        if curr < self._health_cached_until:
+            return self._health_cache_value
+
+        healthy = self._probe()
+        self._health_cache_value = healthy
+        self._health_cached_until = curr + 5.0  # 5s cache TTL
+        return healthy
+
+    def _probe(self) -> bool:
         if self.health_check is not None:
             try:
                 return bool(self.health_check())
             except Exception:
                 return False
+
+        # Built-in HTTP probe if endpoint is HTTP/HTTPS
+        if self.endpoint.startswith(("http://", "https://")):
+            health_url = self.endpoint.rstrip("/")
+            if health_url.endswith("/v1"):
+                health_url = health_url[:-3]
+            health_url += "/health"
+            try:
+                req = Request(health_url, headers={"User-Agent": "NoobiaRouter/1.0"})
+                with urlopen(req, timeout=min(2.0, self.timeout_s)) as resp:
+                    return resp.status == 200
+            except HTTPError:
+                return True  # Server answered with HTTP status
+            except (URLError, OSError, TimeoutError):
+                return False
+
         return True
 
 
@@ -64,7 +107,7 @@ class Router:
         custom_backends: dict[str, list[Backend]] | None = None,
     ):
         self.config_path = Path(config_path) if config_path else (
-            SYSTEM_CONFIG_PATH if SYSTEM_CONFIG_PATH.exists() else DEFAULT_CONFIG_PATH
+            SYSTEM_CONFIG_PATH if SYSTEM_CONFIG_PATH.exists() else FALLBACK_CONFIG_PATH
         )
         self._last_mtime: float | None = None
         self._backends: dict[str, list[Backend]] = {}
@@ -78,7 +121,6 @@ class Router:
             return
 
         if not self.config_path.exists():
-            # Default fallback configuration
             self._backends = self._default_config()
             return
 
@@ -105,29 +147,79 @@ class Router:
                         tier=b.get("tier", "nexus"),
                         endpoint=b.get("endpoint", ""),
                         timeout_s=float(b.get("timeout_s", 5.0)),
-                        api_key=b.get("api_key"),
+                        key_file=b.get("key_file"),
                     )
                 )
             parsed[task] = parsed_list
         return parsed
 
     def _default_config(self) -> dict[str, list[Backend]]:
+        # Rt3: Default inference endpoint is authenticated Nexus proxy on :8080/v1
         return {
             "inference": [
-                Backend(name="nexus-qwen", tier="nexus", endpoint="http://192.168.100.106:11434/v1", timeout_s=30.0),
-                Backend(name="local-qwen", tier="local", endpoint="http://127.0.0.1:11434/v1", timeout_s=30.0),
+                Backend(
+                    name="nexus-qwen",
+                    tier="nexus",
+                    endpoint="http://192.168.100.106:8080/v1",
+                    key_file="/etc/lynx/nexus-inference.key",
+                    timeout_s=30.0,
+                ),
+                Backend(
+                    name="local-qwen",
+                    tier="local",
+                    endpoint="http://127.0.0.1:11434/v1",
+                    key_file="/etc/lynx/local-inference.key",
+                    timeout_s=30.0,
+                ),
+                Backend(
+                    name="cloud-openai",
+                    tier="cloud",
+                    endpoint="https://api.openai.com/v1",
+                    key_file="/etc/lynx/openai.key",
+                    timeout_s=30.0,
+                ),
             ],
             "detect": [
-                Backend(name="nexus-coral", tier="nexus", endpoint="http://192.168.100.106:5050/detect", timeout_s=5.0),
-                Backend(name="local-cpu", tier="local", endpoint="http://127.0.0.1:5050/detect", timeout_s=10.0),
+                Backend(
+                    name="nexus-coral",
+                    tier="nexus",
+                    endpoint="http://192.168.100.106:5050/detect",
+                    timeout_s=5.0,
+                ),
+                Backend(
+                    name="local-cpu",
+                    tier="local",
+                    endpoint="http://127.0.0.1:5050/detect",
+                    timeout_s=10.0,
+                ),
             ],
             "stt": [
-                Backend(name="nexus-whisper", tier="nexus", endpoint="http://192.168.100.106:5051/transcribe", timeout_s=10.0),
-                Backend(name="local-whisper", tier="local", endpoint="http://127.0.0.1:5051/transcribe", timeout_s=20.0),
+                Backend(
+                    name="nexus-whisper",
+                    tier="nexus",
+                    endpoint="http://192.168.100.106:5051/transcribe",
+                    timeout_s=10.0,
+                ),
+                Backend(
+                    name="local-whisper",
+                    tier="local",
+                    endpoint="http://127.0.0.1:5051/transcribe",
+                    timeout_s=20.0,
+                ),
             ],
             "tts": [
-                Backend(name="nexus-piper", tier="nexus", endpoint="http://192.168.100.106:5052/tts", timeout_s=5.0),
-                Backend(name="local-alsa", tier="local", endpoint="alsa://default", timeout_s=5.0),
+                Backend(
+                    name="nexus-piper",
+                    tier="nexus",
+                    endpoint="http://192.168.100.106:5052/tts",
+                    timeout_s=5.0,
+                ),
+                Backend(
+                    name="local-alsa",
+                    tier="local",
+                    endpoint="alsa://default",
+                    timeout_s=5.0,
+                ),
             ],
         }
 
@@ -146,7 +238,6 @@ class Router:
         if not backends:
             raise RoutingError(f"no backends configured for task: {task}")
 
-        # Iterate in priority order (Nexus -> local -> cloud)
         for backend in backends:
             if backend.is_healthy():
                 _log_decision(task, backend.tier, backend.endpoint, status="selected")

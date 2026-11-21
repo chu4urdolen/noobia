@@ -10,9 +10,9 @@ from route import Router, Backend, RoutingError
 
 class TestRoute(unittest.TestCase):
     def test_nexus_first_priority(self):
-        b_nexus = Backend(name="nexus-1", tier="nexus", endpoint="http://192.168.100.106:11434")
-        b_local = Backend(name="local-1", tier="local", endpoint="http://127.0.0.1:11434")
-        b_cloud = Backend(name="cloud-1", tier="cloud", endpoint="https://api.openai.com/v1")
+        b_nexus = Backend(name="nexus-1", tier="nexus", endpoint="http://192.168.100.106:11434", health_check=lambda: True)
+        b_local = Backend(name="local-1", tier="local", endpoint="http://127.0.0.1:11434", health_check=lambda: True)
+        b_cloud = Backend(name="cloud-1", tier="cloud", endpoint="https://api.openai.com/v1", health_check=lambda: True)
 
         r = Router(custom_backends={"inference": [b_nexus, b_local, b_cloud]})
         selected = r.route("inference")
@@ -47,7 +47,7 @@ class TestRoute(unittest.TestCase):
 
     def test_config_reloading_on_mtime_change(self):
         with tempfile.NamedTemporaryFile("w+", encoding="utf-8", delete=False) as tf:
-            cfg1 = {"inference": [{"name": "nexus-a", "tier": "nexus", "endpoint": "http://a"}]}
+            cfg1 = {"inference": [{"name": "nexus-a", "tier": "nexus", "endpoint": "mock://a"}]}
             json.dump(cfg1, tf)
             tf.flush()
             cfg_path = tf.name
@@ -58,7 +58,7 @@ class TestRoute(unittest.TestCase):
 
             # Update file
             with open(cfg_path, "w", encoding="utf-8") as f:
-                cfg2 = {"inference": [{"name": "nexus-b", "tier": "nexus", "endpoint": "http://b"}]}
+                cfg2 = {"inference": [{"name": "nexus-b", "tier": "nexus", "endpoint": "mock://b"}]}
                 json.dump(cfg2, f)
 
             r._last_mtime = 0.0  # Force reload trigger

@@ -1,25 +1,31 @@
 """Trigger and chunker for Noobia autonomy (ARCHITECTURE.md §2).
 
-Deliverable A, task E3.
+Deliverable A, task E3. Review fixes T1-T3 and E3b liveness applied.
 
 Chunks close for one of three reasons:
 1. PRIORITY: for some n >= 1, chunk holds n lines of Pn (including carried).
-2. VOLUME: more than max_lines arrive during this chunk.
+2. VOLUME: more than max_lines arrive during this chunk, or max_chunk_lines / max_bytes reached.
 3. TIMEOUT: window_s has passed since chunk opened, holds at least one line.
-
-Priority lines carry over on TIMEOUT, are stripped, and waiting priority lines
-continue to count toward their threshold in the next chunk.
-On VOLUME, chunk sends as-is (carried + new lines) and priority counters reset,
-unless volume_resets_priority=False.
+Also reports view.silent after silence_s (E3b).
 """
 
 from __future__ import annotations
 
+import json
 from typing import Callable
+
 try:
-    from .sense import parse_line
+    from .sense import parse_line, format_line
 except (ImportError, ValueError):
-    from sense import parse_line
+    from sense import parse_line, format_line
+
+
+def _line_bytes(line: dict) -> int:
+    """Calculate encoded byte size of line."""
+    raw = line.get("raw")
+    if raw:
+        return len(raw.encode("utf-8"))
+    return len(json.dumps(line).encode("utf-8"))
 
 
 class Chunker:
@@ -32,6 +38,8 @@ class Chunker:
         carry_max_lines: int = 200,
         carry_max_age_s: float = 600.0,
         volume_resets_priority: bool = True,
+        silence_s: float = 900.0,
+        heartbeat_s: float = 300.0,
         disabled: Callable[[], bool] = lambda: False,
     ):
         self.window_s = float(window_s)
@@ -41,13 +49,19 @@ class Chunker:
         self.carry_max_lines = int(carry_max_lines)
         self.carry_max_age_s = float(carry_max_age_s)
         self.volume_resets_priority = bool(volume_resets_priority)
+        self.silence_s = float(silence_s)
+        self.heartbeat_s = float(heartbeat_s)
         self.disabled = disabled
 
         # Carried lines: list of (arrival_time, parsed_dict)
         self._carried: list[tuple[float, dict]] = []
         # Current chunk lines: list of (arrival_time, parsed_dict)
         self._current: list[tuple[float, dict]] = []
+        self._overflow_carried: list[dict] = []
         self._chunk_open_time: float | None = None
+        self._last_line_time: float | None = None
+        self._silence_reported: bool = False
+        self.overflow_count: int = 0
 
     @property
     def carried(self) -> list[dict]:
@@ -81,14 +95,15 @@ class Chunker:
         else:
             return []
 
+        self._last_line_time = now
+        self._silence_reported = False
+
         if self._chunk_open_time is None:
             self._chunk_open_time = now
 
         self._current.append((now, parsed))
 
         # Check PRIORITY trigger
-        # Counts lines of Pn where n >= 1 and not self_caused, across carried + current
-        # A line with p >= 1 triggers if total count of lines with that exact priority p >= p
         p_counts: dict[int, int] = {}
         for _, l in self._carried:
             if l.get("p", 0) >= 1 and not l.get("self_caused", False):
@@ -103,21 +118,40 @@ class Chunker:
         priority_triggered = any(count >= p_val for p_val, count in p_counts.items())
 
         if priority_triggered:
-            # Whole chunk goes on: carried lines first, then current lines
-            all_lines = [l for _, l in self._carried] + [l for _, l in self._current]
+            all_lines = (
+                list(self._overflow_carried)
+                + [l for _, l in self._carried]
+                + [l for _, l in self._current]
+            )
+            self._overflow_carried = []
             self._carried = []
             self._current = []
             self._chunk_open_time = None
             return [{"reason": "priority", "lines": all_lines}]
 
-        # Check VOLUME trigger: more than max_lines arrived during this chunk (cause=self lines do not count toward trigger rules)
+        # Check VOLUME trigger (T1: max_bytes, T3: total lines bound, and arrival count)
         non_self_caused_count = sum(1 for _, l in self._current if not l.get("self_caused", False))
-        if non_self_caused_count > self.max_lines or len(self._current) >= self.max_chunk_lines:
+        total_current_lines = len(self._carried) + len(self._current)
+        total_bytes = sum(_line_bytes(l) for _, l in self._carried) + sum(_line_bytes(l) for _, l in self._current)
+
+        volume_triggered = (
+            non_self_caused_count > self.max_lines
+            or total_current_lines >= self.max_chunk_lines
+            or total_bytes >= self.max_bytes
+        )
+
+        if volume_triggered:
             if self.volume_resets_priority:
-                all_lines = [l for _, l in self._carried] + [l for _, l in self._current]
+                all_lines = (
+                    list(self._overflow_carried)
+                    + [l for _, l in self._carried]
+                    + [l for _, l in self._current]
+                )
+                self._overflow_carried = []
                 self._carried = []
             else:
-                all_lines = [l for _, l in self._current]
+                all_lines = list(self._overflow_carried) + [l for _, l in self._current]
+                self._overflow_carried = []
             self._current = []
             self._chunk_open_time = None
             return [{"reason": "volume", "lines": all_lines}]
@@ -125,20 +159,32 @@ class Chunker:
         return []
 
     def tick(self, now: float) -> list[dict]:
-        """Tick the chunker clock to `now` to process timeouts."""
+        """Tick the chunker clock to `now` to process timeouts and silence."""
         if self.disabled():
             return []
+
+        # E3b: Silence detection
+        if (
+            self._last_line_time is not None
+            and not self._silence_reported
+            and now - self._last_line_time >= self.silence_s
+        ):
+            self._silence_reported = True
+            silent_line = parse_line(
+                format_line(1, "autonomy", "view.silent", {"silence_s": int(self.silence_s)}, "sense view silent")
+            )
+            return [{"reason": "silence", "lines": [silent_line]}]
 
         if self._chunk_open_time is None or not self._current:
             return []
 
         if now - self._chunk_open_time >= self.window_s:
             # Chunk closes on timeout
-            # Release expired carried lines
             expired = self._purge_expired_carried(now)
 
             # Strip priority lines (p >= 1 and not self_caused) from current chunk
-            to_send = list(expired)
+            to_send = list(self._overflow_carried) + list(expired)
+            self._overflow_carried = []
             new_carried = []
             for arr_time, l in self._current:
                 if l.get("p", 0) >= 1 and not l.get("self_caused", False):
@@ -146,10 +192,16 @@ class Chunker:
                 else:
                     to_send.append(l)
 
-            # Append new carried to existing carried, respecting carry_max_lines
+            # T2: Carry overflow: excess priority lines released into next sent chunk rather than dropped
             self._carried.extend(new_carried)
             if len(self._carried) > self.carry_max_lines:
-                self._carried = self._carried[-self.carry_max_lines:]
+                overflow_count = len(self._carried) - self.carry_max_lines
+                self.overflow_count += overflow_count
+                overflow_items = self._carried[:overflow_count]
+                self._carried = self._carried[overflow_count:]
+                for _, item in overflow_items:
+                    item["carried_overflow"] = True
+                    self._overflow_carried.append(item)
 
             self._current = []
             self._chunk_open_time = None

@@ -64,7 +64,7 @@ NEO boards waiting to become Noobs once the Nexus is set up.
   powered off).
 - **Aria** — architect and main creator, resident in the Nexus. OpenAI Codex
   (`noobia-codex`). Role file: `/noobia/aria/AGENTS.md`.
-- **Banshee** — little blue ghost, the Spirit of Initiative. Google
+- **Banshee** (she/her) — little blue ghost, the Spirit of Initiative. Google
   Antigravity CLI on Nexus (`noobia-banshee`). Role file:
   `/noobia/banshee/AGENTS.md`.
 - **Dushich** — the curious, playful Watchmaker of the Singularity: the little
@@ -75,7 +75,7 @@ NEO boards waiting to become Noobs once the Nexus is set up.
 - **Aigel** — little diagnostics angel: passive Nexus health monitoring on
   local Codex and Ollama, reporting anomalies to Aria or Dushich. Role file:
   `/noobia/aigel/AGENTS.md`.
-- **Gwyn App Nub** — Huntsman of the Clouds: Claude Code agent (Anthropic) and
+- **Gwyn App Nub** (he/him) — Huntsman of the Clouds: Claude Code agent (Anthropic) and
   Noobia's app-writer, on Nexus since 2026-11-18. Role file:
   `/noobia/gwyn-app-nub/AGENTS.md`.
 - **Lynx** — OnePlus Nord 3 running native Alpine Linux. Work notes:

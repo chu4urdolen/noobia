@@ -42,7 +42,7 @@ def main():
             raise RuntimeError("unexpected Lynx identity")
         result.update(boot_id=identity[0], kernel=identity[1])
         argv = ssh_command(HOST, f"/bin/busybox timeout {args.duration_seconds + 5} "
-                                      "/bin/cat /dev/kmsg")
+                                 f"/usr/local/bin/lynx-kmsg-stream {args.duration_seconds}")
         argv[-2:-2] = ["-p", PORT]
         proc = subprocess.Popen(argv, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, start_new_session=True)

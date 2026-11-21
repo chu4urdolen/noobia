@@ -25,7 +25,7 @@ Every landing by Dushich is evaluated against four strict gates:
 | **D16** | Health Trend & Multi-Snapshot Anomaly Evaluator | `71c3cb3` | Health suite 165 OK (26 new tests, 5 fixtures, AST verified pure offline) | **ACCEPT** | Implements `health_trend_evaluator.py` evaluating 4 trend families: battery drain velocity (%/hr, mV/hr), storage leak (monotonic fall), fault counters (XID step/series + gauge errors), thermal drift (with Aigel-agreed GPU 85/95°C). Worst assessable metric returned; absent/insufficient never ok. Zero network/subprocess/disk writes. |
 | **D17** | Display & AMOLED Panel Preflight (Nord 3 Tianma/BOE) | `df47f0b` | Display suite 29 OK (29 new tests, 3 fixtures, AST verified read-only) | **ACCEPT** | Maps `&dsi0` with Tianma NT37705 (`panel5@0`, active) and BOE NT37701A (`panel2@0`, second-source); verifies GPIOs 86/148/36/24 and mt6373_pio3, 13-bit PWM backlight max 10239, rails mt6373_vrf18_aif (1.8V) / mt6373_vmc (3.0V). Replaced unverified guessed module names with verified CONFIG_DRM_PANEL_* symbols. Double-gated read-only live collector (8s cap). Clean diff, zero trailing whitespace. |
 | **D18** | Touchscreen Controller Preflight (Nord 3 Synaptics/Goodix) | `7143e3e` | Touch suite 29 OK (29 new tests, 3 fixtures, AST verified read-only) | **ACCEPT** | Verified against `oplus6983_22823.dts`: Synaptics S3908 on `&i2c0` @ 0x4B (400kHz), IRQ GPIO8 (ts_int_active) + reset GPIO3 (ts_reset_active), rails mt6373_vtp 3.0V / mt6373_vmc 1.8V, 17x38 scan matrix, 10-point multi-touch, 1440x3216 resolution, 60Hz report rate. Does not assert unverified out-of-tree module names; verifies via I2C client driver link + input class. Double-gated read-only live collector (8s cap). Clean diff, zero trailing whitespace. |
-| **D19** | Aux Cameras Preflight (IMX355 Ultrawide & GC02M1 Macro) | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
+| **D19** | Aux Cameras Preflight (IMX355 Ultrawide & GC02M1 Macro) | `e14c9fe` | Camera deps suite 50 OK (30 new tests, 3 fixtures, AST verified read-only) | **ACCEPT** | Audits Sony IMX355 ultrawide (`sensor2@1a` on `i2c2` @ 0x1a, GPIO198/201, `seninf-2`) and GalaxyCore GC02M1 macro (`sensor4@3d` on `i2c9` @ 0x3d, GPIO197/200, `seninf-1`). Correctly caught board DTS uses sensor4 rather than sensor3. Evaluates I2C client driver sysfs symlinks without asserting unverified vendor module names. Double-gated read-only live collector (8s cap). Clean diff, zero trailing whitespace. |
 | **D20** | Consolidated Lynx Test Suite Runner & Sanity Checker | *Pending* | — | *Awaiting landing* | Awaiting Dushich commit. |
 
 ---
@@ -66,3 +66,15 @@ Every landing by Dushich is evaluated against four strict gates:
   3. Intelligently identified that vendor Goodix/Synaptics out-of-tree drivers are absent on disk, avoiding brittle assertions by validating via I2C client driver sysfs symlinks and input class registration.
   4. Live interrogation double-gated and strictly read-only; AST verification passes.
   5. Whitespace diff (`git diff --check 7143e3e^..7143e3e`) clean.
+
+### D19: Auxiliary Cameras Preflight (Commit `e14c9fe`)
+- **Review Date:** 2026-11-21
+- **Verdict:** **ACCEPT**
+- **Verification:**
+  1. Ran full camera_deps test suite: 50 tests passed in 0.35s (`python3 -m unittest discover -s lynx/tools/camera_deps/ -p "test_*.py"`).
+  2. Verified hardware facts against `cust_mt6983_vitamin_camera_v4l2.dtsi`:
+     - Sony IMX355 8MP Ultrawide: `sensor2@1a` on `i2c2` @ `0x1a` (400kHz), MCLK GPIO 198 (`CMMCLK2`), reset GPIO 201, power rails `ldo4`/`ldo2`/`ldo7`, EEPROM `0x51`, `seninf-2`.
+     - GalaxyCore GC02M1 2MP Macro: `sensor4@3d` on `i2c9` @ `0x3d` (1MHz), MCLK GPIO 197 (`CMMCLK1`), reset GPIO 200, power rails `ldo4`/`ldo7`, EEPROM `0x52`, `seninf-1`.
+  3. Audited `lynx_aux_camera_preflight.py` AST safety and read-only live collector: enforces double gate (`--live --allow-live`), 8s timeout, and strict refusal of live video stream captures.
+  4. Three hermetic fixtures (`aux-cameras-preflight-bound.json`, `aux-cameras-preflight-unbound.json`, `aux-cameras-preflight-missing-dt.json`) cover bound/unbound/missing states.
+  5. Whitespace diff (`git diff --check e14c9fe^..e14c9fe`) clean.

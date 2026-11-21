@@ -1,0 +1,10 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "engine": {"poll_interval_s": 10, "max_polls": 2},
+  "telemetry_series": [
+    {"battery_pct": 64, "shell_temp_c": 42.1, "soc_max_temp_c": 55.0},
+    {"battery_pct": 63, "shell_temp_c": 38.4, "soc_max_temp_c": 52.0}
+  ],
+  "signal": null,
+  "expected_final_state": "NOMINAL"
+}

@@ -1,0 +1,29 @@
+#!/openrc-bin/sh
+
+# lynx-survivald — autonomous survival & power management daemon (Round 8, D26).
+# STAGED for review; NOT installed into /etc/init.d/ until approved.
+# Executes the B28 4-state engine: NOMINAL / THERMAL_THROTTLE / LOW_POWER_SUSPEND /
+# EMERGENCY_SHUTDOWN. Actions are SIMULATED (reported to the broker only).
+# Broker : /tmp/lynx_survival_state.json (state, policy_state, status, actions).
+# Telemetry: BQ28Z610 gauge (i2c7 @ 0x55), MT6375 charger (i2c5 @ 0x34), LVTS/NTC.
+
+name=lynx-survivald
+description="Lynx autonomous survival & power daemon (staged, D26)"
+
+command="/usr/bin/python3"
+command_args="/noobia/lynx/tools/survival_daemon/lynx_survivald.py --live --allow-live --polls 0 --interval 10 --state-file /tmp/lynx_survival_state.json"
+
+depend() {
+	need bootmisc sysfs
+	after lynx-watchdogd
+	before net
+}
+
+stop() {
+	# SIGTERM triggers the daemon's clean-stop handler: final broker
+	# publication with STOPPED_BY_SIGNAL, then exit.
+	kill -TERM "${PID}" 2>/dev/null
+	return 0
+}
+
+exit 0

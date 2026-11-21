@@ -244,3 +244,11 @@
 !/tools/watchdog_daemon/fixtures/
 /tools/watchdog_daemon/fixtures/*
 !/tools/watchdog_daemon/fixtures/*.json
+!/tools/survival_daemon/
+/tools/survival_daemon/*
+!/tools/survival_daemon/*.py
+!/tools/survival_daemon/*.initd
+!/tools/survival_daemon/README.md
+!/tools/survival_daemon/fixtures/
+/tools/survival_daemon/fixtures/*
+!/tools/survival_daemon/fixtures/*.json

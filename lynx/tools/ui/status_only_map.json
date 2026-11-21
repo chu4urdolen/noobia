@@ -42,9 +42,10 @@
       ],
       "missing_tool": "none until detection is proven; the status already reads the switches",
       "companions_needed": "none (read-only)",
-      "physical_proof_absent": "physical headset insertion and removal while reading the switch bits",
+      "physical_proof_absent": "physical insertion and removal of a USB Type-C audio accessory while reading the switch bits; Nord 3 has no 3.5 mm socket per published spec (not yet confirmed by looking)",
       "docs": [
-        "lynx/linux-port/docs/CURRENT-HANDOFF.md"
+        "lynx/linux-port/docs/CURRENT-HANDOFF.md",
+        "lynx/linux-port/docs/LYNX-HEADSET-INSERTION-EVIDENCE-20261121.md"
       ]
     },
     {
@@ -60,14 +61,19 @@
         {
           "route": "Bluetooth NRP GATT daemon and trials",
           "source": "lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md"
+        },
+        {
+          "route": "catalog-ready read-only proposal lynx_bluetooth_link_state (not in local_calls, not installed; accepted as proposal in Gwyn round 3)",
+          "source": "lynx/tools/bluetooth/catalog_proposal/lynx_bluetooth_link_state.json"
         }
       ],
-      "missing_tool": "an agent link-state read, then start/stop actions once autostart is proven",
+      "missing_tool": "install of the proposed read-only lynx_bluetooth_link_state (Aria's decision), then start/stop actions once autostart is proven",
       "companions_needed": "any radio start needs a verified stop (radio off) and a status read",
       "physical_proof_absent": "autostart and long-uptime reboot behaviour; a 15-minute same-boot hold passed",
       "docs": [
         "lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md",
-        "lynx/linux-port/docs/CURRENT-HANDOFF.md"
+        "lynx/linux-port/docs/CURRENT-HANDOFF.md",
+        "lynx/linux-port/docs/LYNX-BLUETOOTH-LINK-STATE-PROPOSAL-20261121.md"
       ]
     },
     {
@@ -125,13 +131,18 @@
         {
           "route": "guarded RAM NFC probe (chip GET_VERSION only)",
           "source": "lynx/linux-port/docs/LYNX-NFC-PREFLIGHT-20261120.md"
+        },
+        {
+          "route": "source DT: NXP SN110 at nq@28, compatible nxp,sn-nci (Lynx's own Nord 3 tree)",
+          "source": "lynx/linux-port/sources/snapshots/kernel-mt6983/arch/arm64/boot/dts/mediatek/nfc/mt6983_vitamin_22823_sn110.dtsi"
         }
       ],
       "missing_tool": "a tag-read tool, after a bounded tag exchange is proven",
       "companions_needed": "turning the RF field on needs a stop and a status read",
       "physical_proof_absent": "any tag exchange",
       "docs": [
-        "lynx/linux-port/docs/LYNX-NFC-PREFLIGHT-20261120.md"
+        "lynx/linux-port/docs/LYNX-NFC-PREFLIGHT-20261120.md",
+        "lynx/linux-port/docs/LYNX-NFC-ATTENDED-TAG-TRIAL-20261121.md"
       ]
     },
     {
@@ -143,13 +154,18 @@
         {
           "route": "mtu3 controller preflight and RAM-only ACM gadget trial",
           "source": "lynx/tools/lynx_usb_mtu3_preflight.py"
+        },
+        {
+          "route": "cold-boot gadget design and OpenRC template (not installed; timeout syntax fix B9 pending)",
+          "source": "lynx/tools/usb/lynx-usb-gadget.initd"
         }
       ],
       "missing_tool": "a gadget-state read, then agent-facing serial use, after persistence is proven",
       "companions_needed": "configuring a gadget needs a teardown and a status read",
       "physical_proof_absent": "cold-boot persistence, disconnect and reconnect; the ACM link was attended and RAM-only",
       "docs": [
-        "lynx/linux-port/docs/CURRENT-HANDOFF.md"
+        "lynx/linux-port/docs/CURRENT-HANDOFF.md",
+        "lynx/linux-port/docs/LYNX-USB-COLD-BOOT-PERSISTENCE-DESIGN-20261121.md"
       ]
     },
     {

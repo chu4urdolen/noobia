@@ -4,7 +4,10 @@ from pathlib import Path
 from lynx_decode_stages import decode
 ROOT=Path(__file__).resolve().parent.parent
 F=ROOT/'linux-port/artifacts/busybox-wifi-ssh-twostage-v19'
-BUILD=json.loads((F/'build-validation.json').read_text())
+try:
+    BUILD=json.loads((F/'build-validation.json').read_text())
+except OSError:
+    BUILD={}
 KERNEL='5.10.149-android12-9-o-g311738fbb5a8'
 BB_SHA='999cb969d09093a71716cfc747bb53cdada3f332c05eb5046c56e0f66a4d6d22'
 def expected_init_hashes():

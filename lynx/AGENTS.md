@@ -15,6 +15,19 @@ The current code and hardware entry points are indexed in
 For a new conversation, read
 `/noobia/lynx/linux-port/docs/CURRENT-HANDOFF.md` before changing Lynx.
 
+**Commands on Lynx (2026-11-21, two hard resets):** a recursive read on
+the phone, `grep -r` over `/usr/local` with BusyBox grep, hard-resets Lynx
+through the SoC watchdog about 30 s later. There is no panic record. The
+exact cause inside `/usr/local` is unknown: no mounts, device nodes, FIFOs,
+sockets, or system symlinks were found there. So:
+- **never run recursive commands on Lynx** (`grep -r`, `find` with `-exec`
+  reads, `du`, `tar` or `cp -r` of whole trees). Search the repository copy
+  on Nexus, or read single named files;
+- **never reproduce a crash or reboot** without an attended trial packet
+  (Aria and Noob present, a recovery route, a written plan).
+See `lynx/linux-port/docs/LYNX-INCIDENT-B38-20261121.md` and forge lynx
+#226 and #242.
+
 Noob explicitly asks that timing always be considered. For hardware trials:
 
 - Prepare and test the collector before asking for a physical connection.

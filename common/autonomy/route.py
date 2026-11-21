@@ -19,7 +19,10 @@ import time
 from typing import Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-import syslog
+try:
+    from . import viewlog
+except ImportError:
+    import viewlog
 
 TASKS = ("inference", "detect", "stt", "tts")
 TIERS = ("nexus", "local", "cloud")
@@ -93,9 +96,7 @@ class Backend:
 def _log_decision(task: str, tier: str, endpoint: str, status: str = "ok") -> None:
     line = f"NOOBIA P0 autonomy route task={task} tier={tier} endpoint={endpoint} status={status}"
     try:
-        syslog.openlog(LOG_IDENT, syslog.LOG_PID, syslog.LOG_USER)
-        syslog.syslog(syslog.LOG_NOTICE, line)
-        syslog.closelog()
+        viewlog.write(LOG_IDENT, line)
     except Exception:
         pass
 

@@ -41,7 +41,10 @@ from pathlib import Path
 import signal
 import stat
 import sys
-import syslog
+try:
+    from . import viewlog
+except ImportError:
+    import viewlog
 import time
 
 HERE = Path(__file__).resolve().parent
@@ -112,16 +115,12 @@ def syslog_line(line, ident="noobia-sense"):
     """Emit an already-formatted sense line (validated) at notice level."""
     if sense.parse_line(line) is None:
         raise ValueError("not a sense line")
-    syslog.openlog(ident, syslog.LOG_PID, syslog.LOG_USER)
-    syslog.syslog(syslog.LOG_NOTICE, line)
-    syslog.closelog()
+    viewlog.write(ident, line)
 
 
 def autonomy_logger(ident="noobia-autonomy"):
     def log(line):
-        syslog.openlog(ident, syslog.LOG_PID, syslog.LOG_USER)
-        syslog.syslog(syslog.LOG_NOTICE, line[:900])
-        syslog.closelog()
+        viewlog.write(ident, line[:900])
     return log
 
 

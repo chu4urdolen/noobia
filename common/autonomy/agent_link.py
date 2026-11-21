@@ -104,11 +104,13 @@ def validate(message):
 
 def syslog_logger(ident=LOG_IDENT):
     """Default logger: one line per outcome in the noobia-autonomy view."""
-    import syslog
+    try:
+        from . import viewlog
+    except ImportError:
+        import viewlog
 
     def log(line):
-        syslog.openlog(ident, 0, syslog.LOG_USER)
-        syslog.syslog(syslog.LOG_NOTICE, line)
+        viewlog.write(ident, line, option=0)
     return log
 
 

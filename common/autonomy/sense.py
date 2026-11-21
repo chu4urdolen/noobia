@@ -24,7 +24,19 @@ import os
 from pathlib import Path
 import re
 import sys
-import syslog
+import syslog  # noqa: F401  (kept for callers that read sense.syslog)
+
+try:
+    from . import viewlog
+except ImportError:
+    # Also loaded by file path (lynx_senses_lib.import_sense): find viewlog.py
+    # next to this file, which is where IS-2 installs both.
+    import os as _os
+    import sys as _sys
+    _here = _os.path.dirname(_os.path.abspath(__file__))
+    if _here not in _sys.path:
+        _sys.path.insert(0, _here)
+    import viewlog
 
 SENSE_NAME_RE = re.compile(r"^[a-z0-9_]{1,24}\Z")
 EVENT_NAME_RE = re.compile(r"^[a-z0-9_.]{1,48}\Z")
@@ -177,9 +189,7 @@ def emit(
     """Format a sense line and emit it to syslog / journald at level LOG_NOTICE."""
     line = format_line(p, sense, event, fields=fields, text=text)
     try:
-        syslog.openlog(ident, syslog.LOG_PID, syslog.LOG_USER)
-        syslog.syslog(syslog.LOG_NOTICE, line)
-        syslog.closelog()
+        viewlog.write(ident, line)
     except Exception:
         # Fallback to stderr/stdout if syslog daemon is unreachable
         pass

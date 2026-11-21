@@ -29,7 +29,9 @@ trace.
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import sys
 import syslog
 
 IDENT = "noobia-agent"
@@ -61,7 +63,14 @@ def syslog_writer(ident: str, level: int, message: str) -> None:
     """The default writer: one bounded line to syslog under the
     given ident. Never raises for a missing daemon (Lynx has BusyBox
     syslogd; on a test box without one the line is still returned by
-    emit_action, which is the honest contract)."""
+    emit_action, which is the honest contract).
+
+    Same rule as common/autonomy/viewlog.py (kept inline so this tool
+    stays standalone): under unit tests, or with NOOBIA_VIEWS_SINK=null,
+    nothing is written to the live view."""
+    sink = os.environ.get("NOOBIA_VIEWS_SINK", "").strip().lower()
+    if sink == "null" or (sink != "syslog" and "unittest" in sys.modules):
+        return
     syslog.openlog(ident, 0, syslog.LOG_USER)
     syslog.syslog(level, message)
     syslog.closelog()

@@ -28,7 +28,12 @@ class CameraSense:
         detect_url: str = "http://192.168.100.106:5050/detect",
         seen_window_s: float = 300.0,
         timeout_s: float = 5.0,
+        emit_fn=None,
     ):
+        # emit_fn(p, sense, event, fields=..., text=...) -> line. Defaults to
+        # sense.emit (real syslog). Tests must pass a collector so they never
+        # write sense lines into a live noobia-sense view.
+        self.emit_fn = emit_fn or emit
         self.detect_url = detect_url
         self.seen_window_s = seen_window_s
         self.timeout_s = timeout_s
@@ -60,7 +65,7 @@ class CameraSense:
 
             self._last_seen[label] = now
             conf_str = f"{conf:.2f}"
-            line = emit(p, "camera", "object.seen", fields={"label": label, "conf": conf_str}, text=f"{label} seen by camera")
+            line = self.emit_fn(p, "camera", "object.seen", fields={"label": label, "conf": conf_str}, text=f"{label} seen by camera")
             emitted_lines.append(line)
 
         return emitted_lines

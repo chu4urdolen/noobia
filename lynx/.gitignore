@@ -103,3 +103,10 @@
 !/tools/gnss/fixtures/
 /tools/gnss/fixtures/*
 !/tools/gnss/fixtures/*.json
+!/tools/modem/
+/tools/modem/*
+!/tools/modem/*.py
+!/tools/modem/README.md
+!/tools/modem/fixtures/
+/tools/modem/fixtures/*
+!/tools/modem/fixtures/*.json

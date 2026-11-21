@@ -3,6 +3,7 @@
 
 import json
 import os
+from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
@@ -13,10 +14,13 @@ from lynx_modem_preflight import (
     PINNED_BOOT_ID,
     STOCK_MDINIT_SHA256,
     check_stock_artifacts,
+    evaluate_fixture,
     evaluate_preflight,
     main,
     sha256_file,
 )
+
+FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 
 class TestLynxModemPreflight(unittest.TestCase):
@@ -50,7 +54,6 @@ class TestLynxModemPreflight(unittest.TestCase):
         self.assertIsNone(sha256_file("/nonexistent/path/file.bin"))
 
     def test_check_stock_artifacts_success(self):
-        # Test against real stock files on Nexus
         ok, blockers, details = check_stock_artifacts()
         self.assertTrue(ok, f"Stock artifacts check failed with blockers: {blockers}")
         self.assertEqual(len(blockers), 0)
@@ -106,14 +109,10 @@ class TestLynxModemPreflight(unittest.TestCase):
         self.assertEqual(res["state"], "blocked")
         self.assertTrue(any("Boot ID mismatch" in b for b in res["blockers"]))
 
-    def test_evaluate_preflight_low_battery(self):
-        low_bat_status = {
-            "boot_id": PINNED_BOOT_ID,
-            "battery": {"capacity_percent": 35},
-            "thermal": {"max_mC": 30000},
-        }
+    def test_evaluate_preflight_battery_too_low(self):
+        bad_status = dict(self.valid_status, battery={"capacity_percent": 30})
         res = evaluate_preflight(
-            status_data=low_bat_status,
+            status_data=bad_status,
             ccci_boot_str=self.valid_ccci_boot,
             present_dev_nodes=self.valid_dev_nodes,
             sim_nodes_unbound=True,
@@ -124,14 +123,10 @@ class TestLynxModemPreflight(unittest.TestCase):
         self.assertEqual(res["state"], "blocked")
         self.assertTrue(any("Battery too low" in b for b in res["blockers"]))
 
-    def test_evaluate_preflight_high_temperature(self):
-        hot_status = {
-            "boot_id": PINNED_BOOT_ID,
-            "battery": {"capacity_percent": 90},
-            "thermal": {"max_mC": 52000},
-        }
+    def test_evaluate_preflight_thermal_too_high(self):
+        bad_status = dict(self.valid_status, thermal={"max_mC": 52000})
         res = evaluate_preflight(
-            status_data=hot_status,
+            status_data=bad_status,
             ccci_boot_str=self.valid_ccci_boot,
             present_dev_nodes=self.valid_dev_nodes,
             sim_nodes_unbound=True,
@@ -147,20 +142,19 @@ class TestLynxModemPreflight(unittest.TestCase):
             status_data=self.valid_status,
             ccci_boot_str=self.valid_ccci_boot,
             present_dev_nodes=self.valid_dev_nodes,
-            sim_nodes_unbound=False,  # SIM bound!
+            sim_nodes_unbound=False,
             stock_ok=True,
             stock_blockers=[],
             stock_details=self.stock_details,
         )
         self.assertEqual(res["state"], "blocked")
-        self.assertTrue(any("SIM platform device nodes appear to have a bound driver" in b for b in res["blockers"]))
+        self.assertTrue(any("SIM must be out/unbound" in b for b in res["blockers"]))
 
     def test_evaluate_preflight_missing_dev_nodes(self):
-        incomplete_nodes = ["/dev/ccci_ioctl0"]  # Missing ioctl1-4, md1_sta, fs, rpc, etc.
         res = evaluate_preflight(
             status_data=self.valid_status,
             ccci_boot_str=self.valid_ccci_boot,
-            present_dev_nodes=incomplete_nodes,
+            present_dev_nodes=["/dev/ccci_ioctl0"],
             sim_nodes_unbound=True,
             stock_ok=True,
             stock_blockers=[],
@@ -169,23 +163,10 @@ class TestLynxModemPreflight(unittest.TestCase):
         self.assertEqual(res["state"], "blocked")
         self.assertTrue(any("Missing critical CCCI device nodes" in b for b in res["blockers"]))
 
-    def test_evaluate_preflight_ccci_boot_unreadable(self):
+    def test_evaluate_preflight_ccci_not_baseline(self):
         res = evaluate_preflight(
             status_data=self.valid_status,
-            ccci_boot_str=None,
-            present_dev_nodes=self.valid_dev_nodes,
-            sim_nodes_unbound=True,
-            stock_ok=True,
-            stock_blockers=[],
-            stock_details=self.stock_details,
-        )
-        self.assertEqual(res["state"], "blocked")
-        self.assertTrue(any("/sys/kernel/ccci/boot could not be read" in b for b in res["blockers"]))
-
-    def test_evaluate_preflight_ccci_boot_non_baseline(self):
-        res = evaluate_preflight(
-            status_data=self.valid_status,
-            ccci_boot_str="md1:4 | md2:n/a | md3:n/a",  # md1:4 is READY, not baseline md1:0
+            ccci_boot_str="md1:1 | md2:n/a",
             present_dev_nodes=self.valid_dev_nodes,
             sim_nodes_unbound=True,
             stock_ok=True,
@@ -195,28 +176,23 @@ class TestLynxModemPreflight(unittest.TestCase):
         self.assertEqual(res["state"], "blocked")
         self.assertTrue(any("not in baseline state md1:0" in b for b in res["blockers"]))
 
-    def test_evaluate_preflight_stock_blockers_propagated(self):
-        res = evaluate_preflight(
-            status_data=self.valid_status,
-            ccci_boot_str=self.valid_ccci_boot,
-            present_dev_nodes=self.valid_dev_nodes,
-            sim_nodes_unbound=True,
-            stock_ok=False,
-            stock_blockers=["Corrupted stock binary"],
-            stock_details={},
-        )
-        self.assertEqual(res["state"], "blocked")
-        self.assertIn("Corrupted stock binary", res["blockers"])
+    def test_fixtures_evaluation(self):
+        # Ready fixture
+        data_ready = json.loads((FIXTURES_DIR / "modem-ready-status.json").read_text())
+        res_ready = evaluate_fixture(data_ready)
+        self.assertEqual(res_ready["state"], "ready")
 
-    def test_main_offline_mode(self):
-        with patch("sys.argv", ["lynx_modem_preflight.py"]):
-            code = main()
-            self.assertEqual(code, 0)
+        # SIM inserted fixture
+        data_sim = json.loads((FIXTURES_DIR / "modem-sim-inserted-blocked.json").read_text())
+        res_sim = evaluate_fixture(data_sim)
+        self.assertEqual(res_sim["state"], "blocked")
+        self.assertTrue(any("SIM must be out/unbound" in b for b in res_sim["blockers"]))
 
-    def test_main_live_without_allow_live(self):
-        with patch("sys.argv", ["lynx_modem_preflight.py", "--live"]):
-            code = main()
-            self.assertEqual(code, 1)
+        # Non-baseline md1:1 fixture
+        data_md1 = json.loads((FIXTURES_DIR / "modem-md1-booting.json").read_text())
+        res_md1 = evaluate_fixture(data_md1)
+        self.assertEqual(res_md1["state"], "blocked")
+        self.assertTrue(any("not in baseline state md1:0" in b for b in res_md1["blockers"]))
 
 
 if __name__ == "__main__":

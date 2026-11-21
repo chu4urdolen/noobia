@@ -1,0 +1,31 @@
+{
+  "status_data": {
+    "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+    "battery": {
+      "capacity_percent": 85
+    },
+    "thermal": {
+      "max_mC": 31000
+    }
+  },
+  "ccci_boot_str": "md1:0 | md2:n/a | md3:n/a | md4:n/a | md5:n/a",
+  "present_dev_nodes": [
+    "/dev/ccci_ioctl0",
+    "/dev/ccci_ioctl1",
+    "/dev/ccci_ioctl2",
+    "/dev/ccci_ioctl3",
+    "/dev/ccci_ioctl4",
+    "/dev/ccci_md1_sta",
+    "/dev/ccci_fs",
+    "/dev/ccci_rpc",
+    "/dev/ttyC0"
+  ],
+  "sim_nodes_unbound": false,
+  "stock_ok": true,
+  "stock_blockers": [],
+  "stock_details": {
+    "ccci_mdinit_sha256": "a288eb339fbc13c7a1c135855dbd2de94b01fadc93059ec4e9f5075528582849",
+    "md1img_sha256": "7cf648e726d4ef57e9e82eb918c113156c73f0f4118f1011973c022af10c2fa7",
+    "md1img_size": 80928768
+  }
+}

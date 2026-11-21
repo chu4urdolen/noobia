@@ -23,7 +23,6 @@
     "map_file": "/var/lib/noobia/autonomy/priority_map.json",
     "sources": [
       "wpa_supplicant",
-      "kernel",
       "lynx-bluetoothd"
     ]
   },

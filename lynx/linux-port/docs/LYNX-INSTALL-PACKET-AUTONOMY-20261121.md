@@ -38,7 +38,7 @@ The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
 | `common/autonomy/views.py` | `/usr/local/lib/noobia/autonomy/views.py` | `0644` | root:root | `f1a9d03e319cba4971c503559cd73fa6b312f7d88569abb5b12f3c64854b7a25` |
 | `common/autonomy/trigger.py` | `/usr/local/lib/noobia/autonomy/trigger.py` | `0644` | root:root | `51ae0c4f821fa587197712a8ea617dc8857518587c59ccdbdcccc0272c196353` |
 | `common/autonomy/ranker.py` | `/usr/local/lib/noobia/autonomy/ranker.py` | `0644` | root:root | `94aa04d9e301fadea5f81397b680a54da5162e112c87f0320aa8b42b92acf169` |
-| `common/autonomy/prioritizer.py` | `/usr/local/lib/noobia/autonomy/prioritizer.py` | `0644` | root:root | `4b2c4c4d46717b75f66ddc9be27f0cd1bfa0cdf6dba6d43c870bb7bcd9f16e3f` |
+| `common/autonomy/prioritizer.py` | `/usr/local/lib/noobia/autonomy/prioritizer.py` | `0644` | root:root | `5aef4b2687f72ae6cfc56e67e1410f6608eaf0a30628cfde993500310e073390` |
 | `common/autonomy/harness.py` | `/usr/local/lib/noobia/autonomy/harness.py` | `0644` | root:root | `04a8d1ef5efdfd30061cfb4faa2e74d1f41a9b08062fc0f41c95cd0431671f3e` |
 | `common/autonomy/agent_link.py` | `/usr/local/lib/noobia/autonomy/agent_link.py` | `0644` | root:root | `7d9ff97b13ce371b319f0ba02a8ba20ef84b6b0411d967bd9f09113e6d6fadf9` |
 | `common/autonomy/aigel_client.py` | `/usr/local/lib/noobia/autonomy/aigel_client.py` | `0644` | root:root | `f7f5007ffa56fee10f0e77c62f0e0f6036b84ee39cb43df5c071246214d9a536` |
@@ -46,8 +46,8 @@ The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
 | `lynx/autonomy/noobia-autonomyd.sh` | `/usr/local/bin/noobia-autonomyd` | `0755` | root:root | `c0763258f1d576246acc6610fad9231056702a7fa0c87ff647f82eb7fa1f02bd` |
 | `lynx/tools/agent/lynx_aigel_adapter.py` | `/usr/local/lib/noobia/lynx/lynx_aigel_adapter.py` | `0644` | root:root | `acee2f5c659558cee58695c740b3d5d6ecf29b36593ac6a4e689923545738ed5` |
 | `lynx/tools/agent/lynx_agent_queue.py` | `/usr/local/lib/noobia/lynx/lynx_agent_queue.py` | `0644` | root:root | `7abc08ca92c6b8d636d2b35887d87b604852e41a3a78c0f6ac5e9247423d1a33` |
-| `lynx/autonomy/autonomy.lynx.json` | `/etc/noobia/autonomy.json` | `0644` | root:root | `28c39e3043bd0c45b0f99bea09c4203d35cd55a96fd8b8b2dc08abc16529b9ec` |
-| `lynx/autonomy/noobia-autonomyd.initd` | `/etc/init.d/noobia-autonomyd` | `0755` | root:root | `cbc57c9ad66424adad2da57ac5d28f2f85c9588c3f142b561d4f755edcb580a2` |
+| `lynx/autonomy/autonomy.lynx.json` | `/etc/noobia/autonomy.json` | `0644` | root:root | `d22bd069b48ff1765557578a848de72f3ed260f342482dd539d83c0558de207c` |
+| `lynx/autonomy/noobia-autonomyd.initd` | `/etc/init.d/noobia-autonomyd` | `0755` | root:root | `583b6514ee2691360b5a60f35c03dada09598adb69aca0525301aacad7df938f` |
 
 ---
 
@@ -55,9 +55,9 @@ The engine runs as an OpenRC supervised daemon (`noobia-autonomyd`):
 
 - **Nexus Authority Secret Source:** `/noobia/aigel/private/lynx_autonomy_secret` (mode `0600` on Nexus).
 - **Target on Lynx:** `/etc/noobia/aigel-lynx.secret` (mode `0600`, root:root).
-- **Security Rule:** Secret bytes are NEVER passed via command line arguments, logged to syslog, or committed to Git. Transferred directly over encrypted SSH session via stdin pipe:
+- **Security Rule:** Secret bytes are NEVER passed via command line arguments, logged to syslog, or committed to Git. Transferred directly over pinned encrypted SSH session via stdin pipe:
   ```sh
-  cat /noobia/aigel/private/lynx_autonomy_secret | ssh -p 2222 root@192.168.100.107 "mkdir -p /etc/noobia && cat > /etc/noobia/aigel-lynx.secret && chmod 0600 /etc/noobia/aigel-lynx.secret && chown root:root /etc/noobia/aigel-lynx.secret"
+  cat /noobia/aigel/private/lynx_autonomy_secret | ssh -i /noobia/common/secrets/id_ed25519 -o UserKnownHostsFile=/noobia/lynx/tools/network/known_hosts -o HostKeyAlias=lynx -o BatchMode=yes -p 2222 root@192.168.100.107 "mkdir -p /etc/noobia && cat > /etc/noobia/aigel-lynx.secret && chmod 0600 /etc/noobia/aigel-lynx.secret && chown root:root /etc/noobia/aigel-lynx.secret"
   ```
 
 ---
@@ -158,7 +158,7 @@ Expect: `200`.
      "kill_switch_active": false,
      "ok": true,
      "patterns": 0,
-     "prioritizer": "0 rules, sources=['wpa_supplicant', 'kernel', 'lynx-bluetoothd']",
+     "prioritizer": "0 rules, sources=['wpa_supplicant', 'lynx-bluetoothd']",
      "view_backend": "file"
    }
    ```
@@ -176,9 +176,9 @@ Expect: `200`.
    **Expect:** `status: started`.
 
 4. **End-to-End Observation Pipeline Test:**
-   Emit a synthetic test sense line via logger:
+   Emit a synthetic test sense line via logger in canonical NOOBIA format:
    ```sh
-   python3 lynx/tools/lynx_remote.py run "logger -t noobia-sense -p user.notice \"$(date -u +'%Y-%m-%dT%H:%M:%SZ') lynx test-sense: autonomous link verified\""
+   python3 lynx/tools/lynx_remote.py run "busybox logger -t noobia-sense -p user.notice 'NOOBIA P1 autonomy install.test | IS-2 link check'"
    ```
    Verify on Nexus via Aigel status endpoint:
    ```sh
@@ -186,7 +186,7 @@ Expect: `200`.
    ```
    **Expect:**
    - `"silent": false`
-   - `"last_decision"` populated
+   - `"last_reason": "priority"` (or `"last_decision"` populated)
    - `"chunks" >= 1`
 
 5. **Kill Switch Verification:**

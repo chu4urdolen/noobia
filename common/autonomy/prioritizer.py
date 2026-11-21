@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import re
 import tempfile
 from typing import Any
 
@@ -26,9 +27,25 @@ except (ImportError, ValueError):
 DEFAULT_RULES_CAPACITY = 200
 DEFAULT_REPEAT_WINDOW_S = 60.0
 
+# Kernel timestamp/tid prefix regex, e.g. '[ 1234.567890][T1234] ' or '[  12.345678] '
+KERNEL_PREFIX_RE = re.compile(r"^\[\s*\d+(?:\.\d+)?\](?:\s*\[\s*T?\s*\d+\])?\s*")
+
 
 class PrioritizerError(ValueError):
     pass
+
+
+def normalize_repeat_key(source: str, text: str) -> tuple[str, str]:
+    """Normalize raw text for repeat collapse key.
+
+    Strips kernel uptime timestamps and task IDs so identical kernel messages
+    occurring across different timestamps properly collapse within the window.
+    """
+    if source == "kernel" or text.startswith("["):
+        norm_text = KERNEL_PREFIX_RE.sub("", text)
+    else:
+        norm_text = text
+    return (source, norm_text)
 
 
 def _rule_matches(rule: dict, source: str, text: str) -> bool:
@@ -75,15 +92,21 @@ def validate_rule(rule: dict) -> None:
     emit = rule.get("emit")
     if not isinstance(emit, dict):
         raise PrioritizerError("emit must be a dictionary")
-    p = emit.get("p")
-    if not isinstance(p, int) or isinstance(p, bool) or not (0 <= p <= 99):
-        raise PrioritizerError(f"emit priority must be 0..99, got {p!r}")
-    sense = emit.get("sense")
-    if not isinstance(sense, str) or not SENSE_NAME_RE.match(sense):
-        raise PrioritizerError(f"emit sense must match ^[a-z0-9_]{{1,24}}$, got {sense!r}")
-    event = emit.get("event")
-    if not isinstance(event, str) or not EVENT_NAME_RE.match(event):
-        raise PrioritizerError(f"emit event must match ^[a-z0-9_.]{{1,48}}$, got {event!r}")
+
+    action = emit.get("action")
+    if action is not None:
+        if action != "drop":
+            raise PrioritizerError(f"unknown emit action: {action!r}")
+    else:
+        p = emit.get("p")
+        if not isinstance(p, int) or isinstance(p, bool) or not (0 <= p <= 99):
+            raise PrioritizerError(f"emit priority must be 0..99, got {p!r}")
+        sense = emit.get("sense")
+        if not isinstance(sense, str) or not SENSE_NAME_RE.match(sense):
+            raise PrioritizerError(f"emit sense must match ^[a-z0-9_]{{1,24}}$, got {sense!r}")
+        event = emit.get("event")
+        if not isinstance(event, str) or not EVENT_NAME_RE.match(event):
+            raise PrioritizerError(f"emit event must match ^[a-z0-9_.]{{1,48}}$, got {event!r}")
 
     examples = rule.get("examples")
     if not isinstance(examples, dict) or "must" not in examples or "must_not" not in examples:
@@ -183,7 +206,7 @@ class Prioritizer:
             return None
 
         # Repeat collapse
-        key = (source, text)
+        key = normalize_repeat_key(source, text)
         last_seen = self._recent_lines.get(key)
         if last_seen is not None and now - last_seen < self.repeat_window_s:
             return None
@@ -198,6 +221,8 @@ class Prioritizer:
             if _rule_matches(r, source, text):
                 r["hits"] = r.get("hits", 0) + 1
                 emit_spec = r["emit"]
+                if emit_spec.get("action") == "drop":
+                    return None
                 return format_line(
                     p=emit_spec["p"],
                     sense=emit_spec["sense"],

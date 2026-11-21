@@ -101,6 +101,69 @@ class TestPrioritizer(unittest.TestCase):
         finally:
             Path(path).unlink(missing_ok=True)
 
+    def test_kernel_timestamp_repeat_collapse(self):
+        p = Prioritizer(allowlist={"kernel"}, repeat_window_s=60.0)
+        line1 = "[ 1234.567890][T1234] [ESD]check doze mode=0"
+        line2 = "[ 1239.123456][T1234] [ESD]check doze mode=0"
+        line3 = "[ 1244.999999][T5678] [ESD]check doze mode=0"
+
+        # First line emits
+        r1 = p.process_line("kernel", line1, 0.0)
+        self.assertIsNotNone(r1)
+        self.assertTrue(r1.startswith("NOOBIA P0 raw line src=kernel"))
+
+        # Subsequent lines with different uptime timestamps within 60s collapse
+        r2 = p.process_line("kernel", line2, 5.0)
+        self.assertIsNone(r2)
+
+        r3 = p.process_line("kernel", line3, 10.0)
+        self.assertIsNone(r3)
+
+        # After window passes (65s), it emits again
+        r4 = p.process_line("kernel", line3, 65.0)
+        self.assertIsNotNone(r4)
+
+    def test_drop_rule_action(self):
+        drop_rule = {
+            "id": "drop-esd",
+            "source": "kernel",
+            "match": {"text_contains": ["[ESD]check doze mode"]},
+            "emit": {"action": "drop"},
+            "examples": {
+                "must": ["[ESD]check doze mode=0"],
+                "must_not": ["[ESD]check active mode=1"],
+            },
+            "hits": 0,
+            "origin": "aigel",
+        }
+        validate_rule(drop_rule)
+
+        p = Prioritizer(rules=[drop_rule], allowlist={"kernel"})
+
+        # Matching line is suppressed completely (not even P0 raw)
+        res = p.process_line("kernel", "[ 1234.567890] [ESD]check doze mode=0", 0.0)
+        self.assertIsNone(res)
+        self.assertEqual(drop_rule["hits"], 1)
+
+        # Non-matching line from kernel still emits P0 raw
+        res_other = p.process_line("kernel", "[ 1234.567890] usb 1-1: new device", 1.0)
+        self.assertIsNotNone(res_other)
+        self.assertTrue(res_other.startswith("NOOBIA P0 raw line src=kernel"))
+
+    def test_drop_rule_validation(self):
+        # Invalid action
+        bad_action = {
+            "id": "bad-action",
+            "source": "kernel",
+            "match": {"text_contains": ["test"]},
+            "emit": {"action": "ignore"},
+            "examples": {"must": ["test"], "must_not": ["other"]},
+            "hits": 0,
+            "origin": "aigel",
+        }
+        with self.assertRaises(PrioritizerError):
+            validate_rule(bad_action)
+
 
 if __name__ == "__main__":
     unittest.main()

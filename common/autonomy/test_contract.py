@@ -448,6 +448,52 @@ class PrioritizerContract(unittest.TestCase):
             p.add_rule(self.rule("r9", match={"text_contains": ["T9"]},
                                  examples={"must": ["T9 x"], "must_not": ["zzz"]}))
 
+    def test_kernel_timestamp_repeat_collapse(self):
+        p = self.make()
+        line1 = "[  100.123456][T1234] [ESD]check doze mode=0"
+        line2 = "[  105.654321][T1234] [ESD]check doze mode=0"
+        line3 = "[  110.000000][T5678] [ESD]check doze mode=0"
+        self.assertIsNotNone(p.process("kernel", line1, 0.0))
+        self.assertIsNone(p.process("kernel", line2, 5.0))
+        self.assertIsNone(p.process("kernel", line3, 10.0))
+        self.assertIsNotNone(p.process("kernel", line2, 65.0))
+
+    def test_drop_rule_action(self):
+        drop_rule = {
+            "id": "drop-esd",
+            "source": "kernel",
+            "match": {"text_contains": ["[ESD]check doze mode"]},
+            "emit": {"action": "drop"},
+            "examples": {
+                "must": ["[ESD]check doze mode=0"],
+                "must_not": ["[ESD]check active mode=1"],
+            },
+            "origin": "aigel",
+            "hits": 0,
+        }
+        self.pz.validate_rule(drop_rule)
+        p = self.make([drop_rule])
+        # Matching kernel lines are dropped
+        self.assertIsNone(p.process("kernel", "[  100.123456] [ESD]check doze mode=0", 0.0))
+        self.assertEqual(drop_rule["hits"], 1)
+        # Non-matching line passes as raw P0
+        raw = p.process("kernel", "usb 1-1: new device", 1.0)
+        self.assertIsNotNone(raw)
+        self.assertIn("usb 1-1", raw)
+
+    def test_drop_rule_validation(self):
+        bad_action = {
+            "id": "bad-act",
+            "source": "kernel",
+            "match": {"text_contains": ["test"]},
+            "emit": {"action": "invalid_action"},
+            "examples": {"must": ["test"], "must_not": ["other"]},
+            "origin": "aigel",
+            "hits": 0,
+        }
+        with self.assertRaises(ValueError):
+            self.pz.validate_rule(bad_action)
+
 
 if __name__ == "__main__":
     unittest.main()

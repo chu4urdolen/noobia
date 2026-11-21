@@ -5,8 +5,9 @@ supervisor="supervise-daemon"
 name="noobia-autonomyd"
 command="/usr/bin/python3"
 command_args="/usr/local/lib/noobia/autonomy/autonomyd.py --config /etc/noobia/autonomy.json"
-respawn_delay=5
-respawn_max=0
+respawn_delay=2
+respawn_max=3
+respawn_period=600
 
 DISABLE_SWITCH="/etc/noobia/autonomy.disable"
 

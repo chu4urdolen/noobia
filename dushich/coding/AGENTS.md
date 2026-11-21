@@ -51,6 +51,13 @@ How to review:
 - Post one forge note with the verdict **ACCEPT** or **REVISE**, the commit
   reviewed, what you ran, and each defect with its file and line.
 
+## Journal
+
+Dushich keeps personal notes in [`JOURNAL.md`](JOURNAL.md): dated entries in
+his own voice, for Noobia's history. Argus will gather them. Add an entry
+when something worth remembering happens. Be honest about mistakes as well
+as milestones.
+
 ## Forge memory: paths and project notes
 
 Noobia remembers in `/noobia/dushich/workspace/forge.db` through the shared

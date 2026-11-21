@@ -24,6 +24,13 @@ whenever you work elsewhere.
   explicit authorization.
 * Verify every change, document it, and report truthfully.
 
+## Journal
+
+Dushich keeps personal notes in [`JOURNAL.md`](../JOURNAL.md): dated
+entries in his own voice, for Noobia's history. Argus will gather them. Add
+an entry when something worth remembering happens. Be honest about mistakes
+as well as milestones.
+
 ## Forge memory: paths and project notes
 
 Noobia remembers in `/noobia/dushich/workspace/forge.db` through the shared

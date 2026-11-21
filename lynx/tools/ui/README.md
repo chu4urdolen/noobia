@@ -143,13 +143,42 @@ The 2026-11-21 result from the 23:55 UTC snapshot:
   success.
 - The SIM interface is absent.
 
+## `lynx_status_only_map.py`: what each status-only part still needs
+
+`status_only_map.json` is a curated map of the 15 status-only components, with
+a source citation for every route. The command checks it against the coverage
+audit and fails if the map is stale. It adds phone state, attended IDs, and
+whether the driver is loaded on this boot.
+
+```sh
+lynx/tools/ui/lynx_status_only_map.py --text
+```
+
+Each component's gap is one of:
+- `missing_tool`: a safe route exists and only the agent tool is missing;
+- `trial_needed`: a reviewed live trial must come first;
+- `blocked`;
+- `none`: the status read is the function.
+
+`driver_loaded_this_boot=false` is reported separately. It is neither a
+missing tool nor proof that a driver ever worked.
+
+Current order:
+1. **Touch (missing tool).** `TOUCH_STATUS`/`TOUCH_POLL` exist, but
+   `TOUCH_POLL` consumes events, so a wrapper needs Aria's agreement.
+2. **Display (missing tool).** Image play and stop already exist through the
+   media tools but are classified under audio.
+3. **Headset, Bluetooth, camera, GNSS, NFC, USB, fingerprint (trial needed).**
+4. **Cellular and SIM (blocked).**
+5. **Battery, thermal, storage, Wi-Fi (no gap).**
+
 ## Tests
 
 ```sh
 python3 -m unittest discover -s lynx/tools/ui -p 'test_*.py'
 ```
 
-These 44 tests are all offline. Status fixtures come from the real
+These 53 tests are all offline. Status fixtures come from the real
 `inventory()` functions run over temporary directory trees, and the broker
 uses a fake runner.
 
@@ -160,6 +189,9 @@ uses a fake runner.
 - **Broker:** the exact command list, timeouts, bad JSON, oversized output,
   hostile catalog lines, atomic writes, and install drift.
 - **Board:** HTML escaping, and no scripts or controls.
+- **Status-only map:** agreement with the coverage audit, every cited path
+  exists, cited NRP line numbers name the right functions, staleness and
+  bad-entry rejection, and driver state kept apart from gaps.
 - **Coverage:** companion rules, missing tools, the different not-ready
   causes, drift, keeping attended evidence separate, and JSON output that
   repeats exactly for the same input.

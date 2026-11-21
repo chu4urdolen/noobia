@@ -1,0 +1,205 @@
+{
+  "about": "Gwyn backlog item 2: implementation map for the components lynx_tool_coverage.py reports as status-only (no separate read or action agent tool). Priority 1 is the most useful next agent tool that is safe to build. Source paths are relative to /noobia; line numbers are as of commit 8aff46d. This map proposes work; it implements nothing and grants no hardware authority.",
+  "kinds": {
+    "missing_wrapper": "a safe read or action route already exists on Lynx; only the agent tool is missing",
+    "trial_needed": "a route exists only as a trial or preflight tool; a reviewed live trial must come before an agent tool",
+    "blocked": "no approved route; owner analysis says stop",
+    "status_is_function": "the status read is the function; no further tool is needed"
+  },
+  "components": [
+    {
+      "component": "platform/touch",
+      "priority": 1,
+      "kind": "missing_wrapper",
+      "owner": "Gwyn (tool), after Aria agrees on how events are consumed",
+      "existing_routes": [
+        {"route": "NRP 380 TOUCH_STATUS: panel open, finger down, queued and dropped counts", "source": "lynx/tools/lynx_noob_runtime.py:717,991-995"},
+        {"route": "NRP 381 TOUCH_POLL: pops one queued touch event", "source": "lynx/tools/lynx_noob_runtime.py:718,997-999"}
+      ],
+      "missing_tool": "lynx_touch_events: read-only queue state through TOUCH_STATUS, plus an explicit, bounded 'drain N events' read through TOUCH_POLL",
+      "companions_needed": "none for reads; TOUCH_POLL consumes events, so the tool must say so and cap the count",
+      "physical_proof_absent": "no receipt of a person's touch arriving through an agent call (V50-TOUCH-UI-AND-AUDIO.md records the panel and UI, not an agent read)",
+      "docs": ["lynx/linux-port/docs/V50-TOUCH-UI-AND-AUDIO.md"]
+    },
+    {
+      "component": "platform/display",
+      "priority": 2,
+      "kind": "missing_wrapper",
+      "owner": "Gwyn (manifest and companion mapping)",
+      "existing_routes": [
+        {"route": "lynx_media_play kind=image and lynx_media_stop kind=image already act on the screen", "source": "lynx/tools/lynx_agent_media.py:16-30"},
+        {"route": "NRP 310-319 IMAGE_* and 330-333 IMAGE_CYCLE_*", "source": "lynx/tools/lynx_noob_runtime.py:671-684"}
+      ],
+      "missing_tool": "none new; image actions exist but are classified under platform/audio, so the display looks status-only. Map image play/stop/status to the display, or add a display-image status view",
+      "companions_needed": "already present: lynx_media_stop (kind=image) and lynx_media_status",
+      "physical_proof_absent": "no attended receipt that an agent-selected image appeared on screen",
+      "docs": ["lynx/linux-port/docs/V50-DISPLAY-UI.md"]
+    },
+    {
+      "component": "peripheral/headset",
+      "priority": 3,
+      "kind": "trial_needed",
+      "owner": "Aria with Noob attending",
+      "existing_routes": [
+        {"route": "lynx-peripheral-status headset reads jack switch bits through a read-only ioctl", "source": "lynx/tools/lynx_peripheral_status.py"}
+      ],
+      "missing_tool": "none until detection is proven; the status already reads the switches",
+      "companions_needed": "none (read-only)",
+      "physical_proof_absent": "physical headset insertion and removal while reading the switch bits",
+      "docs": ["lynx/linux-port/docs/CURRENT-HANDOFF.md"]
+    },
+    {
+      "component": "hardware/bluetooth",
+      "priority": 4,
+      "kind": "trial_needed",
+      "owner": "Aria",
+      "existing_routes": [
+        {"route": "NRP 393 BT_STATUS", "source": "lynx/tools/lynx_noob_runtime.py:727"},
+        {"route": "Bluetooth NRP GATT daemon and trials", "source": "lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md"}
+      ],
+      "missing_tool": "an agent link-state read, then start/stop actions once autostart is proven",
+      "companions_needed": "any radio start needs a verified stop (radio off) and a status read",
+      "physical_proof_absent": "autostart and long-uptime reboot behaviour; a 15-minute same-boot hold passed",
+      "docs": ["lynx/linux-port/docs/LYNX-BLUETOOTH-NRP.md", "lynx/linux-port/docs/CURRENT-HANDOFF.md"]
+    },
+    {
+      "component": "hardware/camera",
+      "priority": 5,
+      "kind": "trial_needed",
+      "owner": "Aria (camera lane)",
+      "existing_routes": [
+        {"route": "NRP 394 CAMERA_STATUS", "source": "lynx/tools/lynx_noob_runtime.py:728"},
+        {"route": "RAM-patched ISP frame capture (trial tool)", "source": "lynx/tools/lynx_camsv_dmabuf_capture.py"}
+      ],
+      "missing_tool": "lynx_camera_capture, only after a guarded cold-boot ISP package and a local disable switch",
+      "companions_needed": "capture must be bounded and need no stop; any preview mode needs a stop",
+      "physical_proof_absent": "main IMX890 and front S5K3P9SP untested; macro and wide produced frames only with a RAM-patched ISP; drivers are not loaded after a reboot",
+      "docs": ["lynx/linux-port/docs/LYNX-CAMERA-FLASHLIGHT-20261102.md", "lynx/linux-port/docs/CURRENT-HANDOFF.md"]
+    },
+    {
+      "component": "hardware/gnss",
+      "priority": 6,
+      "kind": "trial_needed",
+      "owner": "Aria, last (Noob deferred)",
+      "existing_routes": [
+        {"route": "NRP 392 GNSS_STATUS", "source": "lynx/tools/lynx_noob_runtime.py:726"},
+        {"route": "guarded mnld sandbox trial", "source": "lynx/tools/trial_v52_gnss_mnld.py"}
+      ],
+      "missing_tool": "a position read, after a clear-sky fix is proven",
+      "companions_needed": "starting the receiver needs a stop and a status read",
+      "physical_proof_absent": "a position fix; 108 checksum-valid NMEA sentences had fix quality 0",
+      "docs": ["lynx/linux-port/docs/LYNX-CONNECTIVITY-PRECAL.md", "lynx/linux-port/docs/CURRENT-HANDOFF.md"]
+    },
+    {
+      "component": "peripheral/nfc",
+      "priority": 7,
+      "kind": "trial_needed",
+      "owner": "Aria (live) and Banshee (analysis)",
+      "existing_routes": [
+        {"route": "guarded RAM NFC probe (chip GET_VERSION only)", "source": "lynx/linux-port/docs/LYNX-NFC-PREFLIGHT-20261120.md"}
+      ],
+      "missing_tool": "a tag-read tool, after a bounded tag exchange is proven",
+      "companions_needed": "turning the RF field on needs a stop and a status read",
+      "physical_proof_absent": "any tag exchange",
+      "docs": ["lynx/linux-port/docs/LYNX-NFC-PREFLIGHT-20261120.md"]
+    },
+    {
+      "component": "platform/usb",
+      "priority": 8,
+      "kind": "trial_needed",
+      "owner": "Banshee",
+      "existing_routes": [
+        {"route": "mtu3 controller preflight and RAM-only ACM gadget trial", "source": "lynx/tools/lynx_usb_mtu3_preflight.py"}
+      ],
+      "missing_tool": "a gadget-state read, then agent-facing serial use, after persistence is proven",
+      "companions_needed": "configuring a gadget needs a teardown and a status read",
+      "physical_proof_absent": "cold-boot persistence, disconnect and reconnect; the ACM link was attended and RAM-only",
+      "docs": ["lynx/linux-port/docs/CURRENT-HANDOFF.md"]
+    },
+    {
+      "component": "peripheral/fingerprint",
+      "priority": 9,
+      "kind": "trial_needed",
+      "owner": "Banshee (offline analysis)",
+      "existing_routes": [
+        {"route": "offline spi7.0 oplus,fp_spi trace; no driver bound", "source": "lynx/linux-port/docs/LYNX-FINGERPRINT-PREFLIGHT-20261121.md"}
+      ],
+      "missing_tool": "none until a sensor identity, driver and secure userspace route exist",
+      "companions_needed": "unknown until a route exists",
+      "physical_proof_absent": "sensor identity, a bound driver, and any function",
+      "docs": ["lynx/linux-port/docs/LYNX-FINGERPRINT-PREFLIGHT-20261121.md"]
+    },
+    {
+      "component": "platform/cellular",
+      "priority": 10,
+      "kind": "blocked",
+      "owner": "Banshee (analysis) and Aria (live); no live work authorized",
+      "existing_routes": [
+        {"route": "no-write modem preflight", "source": "lynx/tools/lynx_modem_preflight.py"}
+      ],
+      "missing_tool": "none; MD1 power-on is a recorded no-go",
+      "companions_needed": "any future modem start needs a proven RF isolation and abort gate",
+      "physical_proof_absent": "modem start, registration, and RF isolation",
+      "docs": ["lynx/linux-port/docs/LYNX-MODEM-RF-ISOLATION-20261121.md"]
+    },
+    {
+      "component": "platform/sim",
+      "priority": 11,
+      "kind": "blocked",
+      "owner": "Aria; Noob inserts a SIM only for a scoped trial",
+      "existing_routes": [],
+      "missing_tool": "none; no SIM is installed and the modem is not started",
+      "companions_needed": "not applicable",
+      "physical_proof_absent": "SIM presence and the SIM path",
+      "docs": ["lynx/linux-port/docs/CURRENT-HANDOFF.md"]
+    },
+    {
+      "component": "platform/battery",
+      "priority": 12,
+      "kind": "status_is_function",
+      "owner": "none needed",
+      "existing_routes": [
+        {"route": "NRP 350-353 BATTERY_PERCENT, TEMP, CURRENT, VOLTAGE", "source": "lynx/tools/lynx_noob_runtime.py:692-695"}
+      ],
+      "missing_tool": "none",
+      "companions_needed": "not applicable",
+      "physical_proof_absent": "none for reading; charge policy is Dushich and Aria's health lane",
+      "docs": []
+    },
+    {
+      "component": "platform/thermal",
+      "priority": 13,
+      "kind": "status_is_function",
+      "owner": "none needed",
+      "existing_routes": [
+        {"route": "NRP 354 SOC_TEMP", "source": "lynx/tools/lynx_noob_runtime.py:696"}
+      ],
+      "missing_tool": "none",
+      "companions_needed": "not applicable",
+      "physical_proof_absent": "none for reading",
+      "docs": []
+    },
+    {
+      "component": "platform/storage",
+      "priority": 14,
+      "kind": "status_is_function",
+      "owner": "none needed",
+      "existing_routes": [],
+      "missing_tool": "none",
+      "companions_needed": "not applicable",
+      "physical_proof_absent": "none for reading",
+      "docs": []
+    },
+    {
+      "component": "platform/wifi",
+      "priority": 15,
+      "kind": "status_is_function",
+      "owner": "none needed",
+      "existing_routes": [],
+      "missing_tool": "none; scanning would be a radio action and is not proposed",
+      "companions_needed": "not applicable",
+      "physical_proof_absent": "none for reading",
+      "docs": []
+    }
+  ]
+}

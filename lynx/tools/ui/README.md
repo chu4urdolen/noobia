@@ -194,13 +194,33 @@ Each attended entry says whether it was on the same boot as the snapshot.
 Even then it is "still history, not a live check". For reproducible output,
 `lynx_tool_coverage.py --now YYYY-MM-DDTHH:MM:SSZ` fixes the clock.
 
+## `lynx_catalog_diff.py`: source versus installed tools
+
+Compares tracked `local_calls` pairs with the installed catalog hashes in a
+saved snapshot. For each file it reports `same`, `differs`,
+`missing_on_phone`, or `added_on_phone`, and gives each tool one status:
+`in_sync`, `hash_differs`, `missing_on_phone`, `added_on_phone`, or `partial`.
+
+The output holds names and 12-character hash prefixes only, never file
+contents. It is bounded (`--limit`, default 50, with exact counts) and sorted.
+Hostile names are counted, with at most a 40-character escaped preview.
+Duplicate keys in the snapshot are reported; the snapshot capture now
+rejects duplicate catalog lines.
+
+```sh
+lynx/tools/ui/lynx_catalog_diff.py --text            # IN SYNC / DRIFT
+lynx/tools/ui/lynx_catalog_diff.py --fail-on-drift   # exit 2 on drift
+```
+
+It never syncs or writes. 2026-11-21 00:10 UTC: IN SYNC, 38/38.
+
 ## Tests
 
 ```sh
 python3 -m unittest discover -s lynx/tools/ui -p 'test_*.py'
 ```
 
-These 66 tests are all offline. Status fixtures come from the real
+These 76 tests are all offline. Status fixtures come from the real
 `inventory()` functions run over temporary directory trees, and the broker
 uses a fake runner.
 
@@ -217,6 +237,9 @@ uses a fake runner.
 - **Age and boot guard:** fresh, stale, clock skew, missing and malformed
   time, changed or unknown boot, previous-boot recording, the stale banner,
   attended boot relation, and no scripts.
+- **Catalog diff:** 38/38 unchanged, partial catalog, phone-only tools,
+  hostile names, duplicate keys and lines, bounded deterministic output, exit
+  codes, and no file contents.
 - **Coverage:** companion rules, missing tools, the different not-ready
   causes, drift, keeping attended evidence separate, and JSON output that
   repeats exactly for the same input.

@@ -87,6 +87,8 @@ def parse_catalog(text):
         match = CATALOG_LINE.match(line)
         if not match:
             raise CaptureError(f"unexpected catalog line: {line[:80]!r}")
+        if match.group(2) in files:
+            raise CaptureError(f"duplicate catalog entry: {match.group(2)}")
         files[match.group(2)] = match.group(1)
     if not files:
         raise CaptureError("installed catalog is empty")

@@ -1,22 +1,42 @@
 #!/usr/bin/env python3
 """Read-only collector: Lynx facts -> portable-health/1 snapshot.
 
-Solo Dushich's collection seam for the portable health board (Aria's task,
-forge note #82). It runs exactly ONE bounded, read-only command on Lynx —
-the phone's own ``/usr/local/bin/lynx-status`` (JSON, schema 2) — over the
-existing pinned-SSH route (BatchMode, pinned key, port 2222 by default) and
-maps the result into the fact schema the offline evaluator
-(``portable_health.py``) expects.
+Solo Dushich's collection seam for the portable health board (forge notes
+#82, #101, #112). It runs up to THREE bounded, read-only commands on Lynx
+over the existing pinned-SSH route (BatchMode, pinned key, port 2222 by
+default). The three commands share ONE total timeout budget, and each one
+feeds a different part of the snapshot:
 
-Guarantees, per the task brief:
-  * per-command AND total timeouts, with an output cap on captured stdout;
-  * a missing, failing, timed-out, or unparseable source leaves that
-    section of the facts *absent* — the evaluator then reports ``unknown``,
-    never ``ok``. Nothing is fabricated.
-  * one read-only command; no writes on Lynx, no prompts, no interactive
-    input (BatchMode), no other commands.
-  * Nexus-specific GPU/RAM/SMART facts are deliberately NOT collected here;
-    that stays a separate seam (Aigel's Nexus board owns it).
+  1. ``/usr/local/bin/lynx-status``
+     the phone's own status JSON (schema 2) -> the common facts
+     (battery, thermal, storage, network, services);
+  2. ``/usr/local/bin/lynx-platform-status cellular``
+     the phone's read-only CCCI inventory -> the machine fact
+     ``modem_md1_state`` (from ``evidence.md1_state_code``, an int parsed
+     from ``/sys/kernel/ccci/boot`` — no CCCI ioctl, no radio);
+  3. ``/usr/local/bin/lynx-agent-health``
+     a read-only scan of ``/var/lib/lynx-agent`` -> the machine facts
+     ``pending``, ``running``, ``oldest_pending_seconds``.
+
+Guarantees, per the task briefs (#101, #103, #112):
+  * per-command AND total timeouts (one shared deadline), with an output
+    cap on captured stdout;
+  * a missing, failing, timed-out, runner-error, or unparseable source
+    leaves that section of the facts *absent* — the evaluator then reports
+    ``unknown``, never ``ok``. Nothing is fabricated;
+  * only these read-only commands; no writes on Lynx, no prompts, no
+    interactive input (BatchMode), no other commands;
+  * no exception from the runner escapes ``collect()`` (Aria #103): a
+    runner failure is recorded on the command entry and its facts stay
+    absent;
+  * Nexus-specific GPU/RAM/SMART facts are deliberately NOT collected
+    here; that stays a separate seam (Aigel's Nexus board owns it).
+
+Known limit (Aria #103, documented): ``subprocess.run(capture_output=True)``
+buffers the complete output before the cap is applied, so memory use is
+not strictly bounded by ``max_output`` for a pathological command. The
+three commands are the phone's own bounded status tools; the cap is a
+guard, not a memory guarantee.
 
 The runner is injectable, so the offline test suite never touches the
 network. The default runner reuses the house pinned-SSH pattern
@@ -51,7 +71,17 @@ DEFAULT_PORT = 2222
 DEFAULT_PER_CMD_TIMEOUT = 15.0
 DEFAULT_TOTAL_TIMEOUT = 45.0
 DEFAULT_MAX_OUTPUT = 12000
+
 LINUX_STATUS_CMD = "/usr/local/bin/lynx-status"
+CELLULAR_CMD = "/usr/local/bin/lynx-platform-status cellular"
+AGENT_HEALTH_CMD = "/usr/local/bin/lynx-agent-health"
+
+# (label, command): three bounded read-only commands, one shared deadline.
+COMMANDS = (
+    ("lynx-status", LINUX_STATUS_CMD),
+    ("cellular", CELLULAR_CMD),
+    ("agent-queue", AGENT_HEALTH_CMD),
+)
 
 RunnerResult = namedtuple("RunnerResult", ["exit", "stdout", "stderr"])
 
@@ -94,6 +124,17 @@ def _num(value):
         return None
     if isinstance(value, (int, float)):
         return float(value)
+    return None
+
+
+def _int(value):
+    """int (not bool), or an integral float -> int; anything else -> None."""
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
     return None
 
 
@@ -195,14 +236,89 @@ def map_lynx_status(state: dict):
     return facts, notes
 
 
+def map_cellular(component):
+    """Map the phone's ``lynx-platform-status cellular`` component.
+
+    Only a well-typed non-negative integer ``md1_state_code`` passes
+    through, as ``modem_md1_state``. The phone reports
+    ``validated: false``: the CCCI nodes and the MD1 boot code are
+    interface evidence, not proof of a working modem — and no CCCI ioctl
+    or radio is used, consistent with the MD1 no-go. Returns
+    (machine_facts, notes).
+    """
+    notes: list = []
+    if not isinstance(component, dict):
+        return {}, ["cellular: output is not the expected component object; "
+                    "modem state stays unknown"]
+    if component.get("error"):
+        return {}, [f"cellular: phone reported {component['error']!r}; "
+                    "modem state stays unknown"]
+    evidence = component.get("evidence")
+    if not isinstance(evidence, dict):
+        return {}, ["cellular: no evidence object; modem state stays unknown"]
+    md1 = _int(evidence.get("md1_state_code"))
+    if md1 is None or md1 < 0:
+        return {}, ["cellular: md1_state_code absent or not a non-negative "
+                    "integer; modem state stays unknown"]
+    notes.append(
+        f"cellular: interface_ready={component.get('interface_ready')!r}, "
+        f"ccci_nodes={evidence.get('ccci_node_count')!r}; modem runtime "
+        "remains unverified (md1 read from /sys/kernel/ccci/boot; no CCCI "
+        "ioctl, no radio)")
+    return {"modem_md1_state": md1}, notes
+
+
+def map_agent_queue(data):
+    """Map the phone's ``lynx-agent-health`` JSON.
+
+    ``counts.pending/running`` and ``oldest_pending_seconds`` are read-only
+    facts about ``/var/lib/lynx-agent``; only well-typed non-negative
+    integers pass through. ``stopped`` and ``issues`` are context notes,
+    not judged facts. Returns (machine_facts, notes).
+    """
+    notes: list = []
+    machine: dict = {}
+    if not isinstance(data, dict):
+        return {}, ["agent-queue: output is not a JSON object; queue facts "
+                    "stay unknown"]
+    counts = data.get("counts")
+    if not isinstance(counts, dict):
+        notes.append("agent-queue: no counts object; pending/running stay unknown")
+    else:
+        for key in ("pending", "running"):
+            value = _int(counts.get(key))
+            if value is None or value < 0:
+                notes.append(f"agent-queue: counts.{key} absent or malformed; "
+                             "left unknown")
+            else:
+                machine[key] = value
+        done = _int(counts.get("done"))
+        if done is not None and done >= 0:
+            notes.append(f"agent-queue: {done} finished job(s) on disk")
+    oldest = _int(data.get("oldest_pending_seconds"))
+    if oldest is not None and oldest >= 0:
+        machine["oldest_pending_seconds"] = oldest
+    if data.get("stopped") is True:
+        notes.append("agent-queue: stop marker present (lynx-agentctl stop "
+                     "was issued)")
+    issues = data.get("issues")
+    if isinstance(issues, list) and issues:
+        notes.append("agent-queue: " + ", ".join(str(i) for i in issues[:8]))
+    return machine, notes
+
+
 def collect(runner, *, ip: str = DEFAULT_IP, port: int = DEFAULT_PORT,
             per_cmd_timeout: float = DEFAULT_PER_CMD_TIMEOUT,
             total_timeout: float = DEFAULT_TOTAL_TIMEOUT,
             max_output: int = DEFAULT_MAX_OUTPUT, now=None) -> dict:
-    """Run the single bounded read-only command and build a snapshot.
+    """Run the bounded read-only commands and build a snapshot.
 
-    ``runner(command, timeout)`` must return a RunnerResult or raise
-    RunnerTimeout. No exception from the runner escapes this function.
+    The commands in ``COMMANDS`` share one total timeout budget; when the
+    budget is spent, the remaining commands are skipped and their facts
+    stay absent. ``runner(command, timeout)`` must return a RunnerResult
+    or raise — RunnerTimeout or any other exception — and no exception
+    from the runner escapes this function (Aria #103): a failed command
+    simply leaves its facts unknown.
 
     ``now`` may be a datetime or an ISO-8601 string (handy for
     deterministic tests); the snapshot records the moment of collection.
@@ -210,50 +326,64 @@ def collect(runner, *, ip: str = DEFAULT_IP, port: int = DEFAULT_PORT,
     deadline = time.monotonic() + total_timeout
     source = {"transport": "ssh-pinned-key", "ip": ip, "port": port,
               "commands": [], "issues": [], "notes": []}
-    facts: dict = {}
+    parsed: dict = {}
 
-    command = LINUX_STATUS_CMD
-    entry: dict = {"name": command, "exit": None, "stdout_bytes": 0,
-                   "truncated": False, "ok": False}
-    state = None
-    remaining = deadline - time.monotonic()
-    if remaining <= 0:
-        entry["error"] = "total timeout budget exhausted before the command"
-    else:
-        timeout = min(per_cmd_timeout, max(remaining, 0.01))
-        try:
-            result = runner(command, timeout)
-            entry["exit"] = result.exit
-            entry["stdout_bytes"] = len(result.stdout or "")
-            raw = _clip(result.stdout, max_output)
-            if raw != result.stdout:
-                entry["truncated"] = True
-            if result.exit == 0:
-                try:
-                    parsed = json.loads(raw)
-                    if not isinstance(parsed, dict):
-                        raise ValueError("output is not a JSON object")
-                    state = parsed
-                    entry["ok"] = True
-                except ValueError as exc:
-                    entry["error"] = f"malformed output: {exc}"
-                    source["notes"].append(f"{command}: output was not a JSON object")
+    for label, command in COMMANDS:
+        entry: dict = {"name": command, "exit": None, "stdout_bytes": 0,
+                       "truncated": False, "ok": False}
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            entry["error"] = "total timeout budget exhausted before the command"
+        else:
+            timeout = min(per_cmd_timeout, max(remaining, 0.01))
+            try:
+                result = runner(command, timeout)
+            except RunnerTimeout:
+                entry["error"] = f"timeout after {timeout:.1f}s"
+                source["notes"].append(f"{label}: timed out; its facts are unknown")
+            except Exception as exc:  # noqa: BLE001 - runner failure must not escape
+                entry["error"] = f"runner failed: {type(exc).__name__}"
+                source["notes"].append(f"{label}: runner failure; its facts are unknown")
             else:
-                entry["error"] = f"command exited {result.exit}"
-                stderr = (result.stderr or "").strip()
-                if stderr:
-                    entry["stderr"] = _clip(stderr, 500)
-        except RunnerTimeout:
-            entry["error"] = f"timeout after {timeout:.1f}s"
-            source["notes"].append(f"{command}: timed out; its facts are unknown")
-    source["commands"].append(entry)
+                entry["exit"] = result.exit
+                entry["stdout_bytes"] = len(result.stdout or "")
+                raw = _clip(result.stdout, max_output)
+                if raw != result.stdout:
+                    entry["truncated"] = True
+                if result.exit == 0:
+                    try:
+                        value = json.loads(raw)
+                        if not isinstance(value, dict):
+                            raise ValueError("output is not a JSON object")
+                    except ValueError as exc:
+                        entry["error"] = f"malformed output: {exc}"
+                        source["notes"].append(f"{label}: output was not a JSON object")
+                    else:
+                        parsed[label] = value
+                        entry["ok"] = True
+                else:
+                    entry["error"] = f"command exited {result.exit}"
+                    stderr = (result.stderr or "").strip()
+                    if stderr:
+                        entry["stderr"] = _clip(stderr, 500)
+        source["commands"].append(entry)
 
-    if isinstance(state, dict):
+    facts: dict = {}
+    if "lynx-status" in parsed:
+        state = parsed["lynx-status"]
         issues = state.get("issues")
         if isinstance(issues, list):
             source["issues"] = [str(i) for i in issues[:32]]
         facts, mapping_notes = map_lynx_status(state)
         source["notes"].extend(mapping_notes)
+
+    machine: dict = {}
+    for label, mapper in (("cellular", map_cellular),
+                          ("agent-queue", map_agent_queue)):
+        if label in parsed:
+            facts_slice, mapper_notes = mapper(parsed[label])
+            machine.update(facts_slice)
+            source["notes"].extend(mapper_notes)
 
     captured = now
     if isinstance(captured, str):
@@ -265,13 +395,13 @@ def collect(runner, *, ip: str = DEFAULT_IP, port: int = DEFAULT_PORT,
         "host": "lynx",
         "profile": "lynx",
         "captured_at": captured.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "collector": "lynx_health_collect/1",
+        "collector": "lynx_health_collect/2",
         "route": {"ip": ip, "port": port, "transport": "ssh-pinned-key"},
         "source": source,
         "facts": facts,
-        # modem MD1 state and the agent queue are separate facts, collected
-        # by a separate seam; absent here means unknown, never ok.
-        "machine": {"lynx": {}},
+        # modem MD1 state and agent-queue facts: present only when their
+        # read-only commands succeeded; absent means unknown, never ok.
+        "machine": {"lynx": machine},
     }
 
 

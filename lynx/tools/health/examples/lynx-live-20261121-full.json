@@ -1,0 +1,97 @@
+{
+  "captured_at": "2026-11-21T00:46:08Z",
+  "collector": "lynx_health_collect/2",
+  "facts": {
+    "battery": {
+      "capacity_percent": 100.0,
+      "current_ma": 0.0,
+      "gauge_read_errors": 0.0,
+      "temperature_mc": 28300.0
+    },
+    "network": {
+      "carrier": true,
+      "ipv4": "192.168.100.107/24",
+      "link_state": "wifi"
+    },
+    "services": {
+      "failed": [],
+      "required": [
+        "lynx-battery-reserve",
+        "lynx-dropbear",
+        "lynx-health",
+        "lynx-local-logs",
+        "lynx-maintenance",
+        "lynx-power-history",
+        "lynx-time-sync",
+        "lynx-wifi"
+      ],
+      "running": [
+        "lynx-battery-reserve",
+        "lynx-dropbear",
+        "lynx-health",
+        "lynx-local-logs",
+        "lynx-maintenance",
+        "lynx-power-history",
+        "lynx-time-sync",
+        "lynx-wifi"
+      ]
+    },
+    "storage": {
+      "free_mib": 214063.0,
+      "fs_errors": 0.0
+    },
+    "thermal": {
+      "max_c": 36.919
+    }
+  },
+  "host": "lynx",
+  "machine": {
+    "lynx": {
+      "modem_md1_state": 0,
+      "pending": 0,
+      "running": 0
+    }
+  },
+  "profile": "lynx",
+  "route": {
+    "ip": "192.168.100.107",
+    "port": 2222,
+    "transport": "ssh-pinned-key"
+  },
+  "schema": "portable-health/1",
+  "source": {
+    "commands": [
+      {
+        "exit": 0,
+        "name": "/usr/local/bin/lynx-status",
+        "ok": true,
+        "stdout_bytes": 1051,
+        "truncated": false
+      },
+      {
+        "exit": 0,
+        "name": "/usr/local/bin/lynx-platform-status cellular",
+        "ok": true,
+        "stdout_bytes": 254,
+        "truncated": false
+      },
+      {
+        "exit": 0,
+        "name": "/usr/local/bin/lynx-agent-health",
+        "ok": true,
+        "stdout_bytes": 104,
+        "truncated": false
+      }
+    ],
+    "ip": "192.168.100.107",
+    "issues": [],
+    "notes": [
+      "battery: charging state is not reported by lynx-status; the evaluator treats it as absent",
+      "storage: used_percent is not reported by lynx-status; the evaluator judges free space",
+      "cellular: interface_ready=True, ccci_nodes=53; modem runtime remains unverified (md1 read from /sys/kernel/ccci/boot; no CCCI ioctl, no radio)",
+      "agent-queue: 7 finished job(s) on disk"
+    ],
+    "port": 2222,
+    "transport": "ssh-pinned-key"
+  }
+}

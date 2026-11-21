@@ -24,12 +24,23 @@ Prototype. **Nothing here is installed on any device.** Aria reviews before
 install.
 
 - Evaluator (`portable_health.py`): done, 62 offline fixture tests.
-- Collector (`lynx_health_collect.py`): done, 22 offline fixture tests. It
-  runs exactly one read-only command on Lynx over the pinned SSH route and
-  maps the phone's `lynx-status` JSON (schema 2) into a `portable-health/1`
-  snapshot. First live capture: `examples/lynx-live-20261121.json` (verdict
-  ok). Modem MD1 and agent-queue facts are still a separate seam (left
-  `unknown`), and Nexus GPU/RAM/SMART collection stays with Aigel's board.
+- Collector (`lynx_health_collect.py`): done, 35 offline fixture tests. It
+  runs **three** bounded, read-only commands on Lynx over the pinned SSH
+  route, sharing one total timeout budget:
+  1. `/usr/local/bin/lynx-status` — the phone's status JSON (schema 2) ->
+     the common facts (battery, thermal, storage, network, services);
+  2. `/usr/local/bin/lynx-platform-status cellular` — the read-only CCCI
+     inventory -> `machine.lynx.modem_md1_state` (MD1 boot code from
+     `/sys/kernel/ccci/boot`; no CCCI ioctl, no radio);
+  3. `/usr/local/bin/lynx-agent-health` — the read-only scan of
+     `/var/lib/lynx-agent` -> `machine.lynx.pending`, `running`,
+     `oldest_pending_seconds`.
+
+  Live captures (verdict ok, exit 0): `examples/lynx-live-20261121.json`
+  (the interim collector that left modem/queue `unknown`) and
+  `examples/lynx-live-20261121-full.json` (all seven checks evaluated).
+  Nexus GPU/RAM/SMART collection stays with Aigel's board.
+  Suite: 97 offline fixture tests.
 
 ## Usage
 
@@ -51,12 +62,17 @@ python3 lynx/tools/health/lynx_health_collect.py --evaluate # verdict; exit = ve
 python3 lynx/tools/health/lynx_health_collect.py --evaluate --max-age 300
 ```
 
-Guarantees: per-command (15 s default) and total (45 s default) timeouts,
-stdout capped (12000 chars default), one command only, no writes, no
-prompts. A failing, timed-out, or unparseable source leaves that section of
-`facts` **absent**, so the evaluator reports `unknown`, never `ok` — nothing
-is fabricated. The runner is injectable, which is how the tests stay
-offline. `--evaluate` exit codes match the evaluator's (0/1/2/3/4).
+Guarantees: per-command (15 s default) and total (45 s default) timeouts —
+the three commands share **one** total deadline, so when the budget is
+spent the remaining commands are skipped and their facts stay absent;
+stdout capped (12000 chars default); no writes, no prompts, no interactive
+input (BatchMode). A missing, failing, timed-out, runner-error, or
+unparseable source leaves that section of `facts` **absent**, so the
+evaluator reports `unknown`, never `ok` — nothing is fabricated. No
+exception from the runner escapes `collect()` (Aria #103): a runner
+failure is recorded on the command entry and its facts stay absent.
+The runner is injectable, which is how the tests stay offline.
+`--evaluate` exit codes match the evaluator's (0/1/2/3/4).
 
 Collector limits (honest, current):
 
@@ -68,8 +84,19 @@ Collector limits (honest, current):
   the SSH hop itself went over USB.
 - `throttled` is derived from a nonzero cpufreq cooling state; absence of
   cooling data means the flag is absent, not false.
-- `machine.lynx` (modem MD1 state, agent queue) is intentionally empty:
-  those facts need their own read-only seam.
+- The output cap clips captured stdout, but `subprocess.run` buffers the
+  complete output first (Aria #103): memory is not strictly bounded by
+  `max_output` for a pathological command. The three commands are the
+  phone's own bounded status tools, so the cap is a guard, not a memory
+  guarantee.
+- `modem_md1_state` comes from the CCCI **boot evidence**
+  (`/sys/kernel/ccci/boot`); the phone reports `validated: false`. It is
+  interface evidence, not proof of a working modem — no CCCI ioctl, no
+  radio, consistent with the MD1 no-go.
+- Agent-queue `stopped` and `issues` are context notes, not judged facts;
+  only `counts.pending/running` and `oldest_pending_seconds` are mapped,
+  and only when they are well-typed non-negative integers.
+  Phone-side `error` objects are rejected the same way.
 
 ## Tests (offline, fixture-only)
 

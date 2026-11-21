@@ -1,0 +1,40 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "9f3d2c81-b5a6-4e7d-8c0b-1a2e4f6d8b05",
+  "wide": {
+    "device_tree": {
+      "node_present": true,
+      "node": "sensor3@1a",
+      "i2c_bus": 3,
+      "i2c_hz": 400000,
+      "i2c_addr": "0x1a",
+      "compatible": "mediatek,imgsensor",
+      "sensor_name": "imx415_mipi_raw_22823"
+    },
+    "gpios": { "mclk": 198, "rst": 201 },
+    "rails": { "avdd": "multi_reg_ldo4", "dvdd": "multi_reg_ldo2", "dovdd": "multi_reg_ldo7" },
+    "eeprom_addr": "0x51",
+    "seninf_port": 2
+  },
+  "macro": {
+    "device_tree": {
+      "node_present": true,
+      "node": "sensor3@3d",
+      "i2c_bus": 9,
+      "i2c_hz": 1000000,
+      "i2c_addr": "0x3d",
+      "compatible": "mediatek,imgsensor",
+      "sensor_name": "gc02m1_mipi_raw_22823"
+    },
+    "gpios": { "mclk": 197, "rst": 200 },
+    "rails": { "avdd": "multi_reg_ldo4", "dvdd": null, "dovdd": "multi_reg_ldo7" },
+    "eeprom_addr": "0x52",
+    "seninf_port": 1
+  },
+  "runtime": {
+    "wide": { "i2c_client_present": false, "driver_bound": false },
+    "macro": { "i2c_client_present": false, "driver_bound": false }
+  },
+  "video_entities": { "nodes": [], "names": [] },
+  "loaded_modules": []
+}

@@ -10,6 +10,8 @@ Enforces strict hardware and architectural boundaries across all four camera sen
 3. **Main (IMX890)**: 50MP Four-cell Quad Bayer via MIPI C-PHY on `seninf-3`. Untested hardware. Hard-refused by `lynx_camera_gate.py`.
 4. **Front (S5K3P9SP)**: 16MP Four-cell Tetracell via `seninf-0`. Untested hardware. Hard-refused by `lynx_camera_gate.py`.
 
+The aux-camera pair (IMX355 + GC02M1) has a dedicated bring-up preflight gate: `lynx_aux_camera_preflight.py` (Round 6, item D19).
+
 ## Usage
 
 ```bash
@@ -26,8 +28,15 @@ python3 lynx_s5k3p9sp_preflight.py fixtures/s5k3p9sp-preflight-unbound.json
 python3 lynx_imx890_preflight.py --live --allow-live
 python3 lynx_s5k3p9sp_preflight.py --live --allow-live
 
+# Run aux camera (IMX355 ultrawide + GC02M1 macro) preflight against offline fixture
+python3 lynx_aux_camera_preflight.py fixtures/aux-cameras-preflight-unbound.json
+
+# Perform read-only live query of aux camera DT & sysfs on Lynx (requires both flags)
+python3 lynx_aux_camera_preflight.py --live --allow-live
+
 # Run camera dependency & preflight unit tests
 python3 test_lynx_camera_dependency_map.py
 python3 test_lynx_imx890_preflight.py
 python3 test_lynx_s5k3p9sp_preflight.py
+python3 test_lynx_aux_camera_preflight.py
 ```

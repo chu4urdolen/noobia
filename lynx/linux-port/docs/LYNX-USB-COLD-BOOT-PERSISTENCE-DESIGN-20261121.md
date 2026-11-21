@@ -56,8 +56,10 @@ To prevent boot hangs and maintain unattended recovery safety:
 2. **Declare `after sshd` (Strict Non-Delay Invariant)**:
    - The service must **never** declare `before sshd`. SSH is Lynx's primary recovery route, so USB gadget startup must never precede or delay `sshd`.
    - By starting `after sshd`, remote SSH access on port 2222 is fully active and listening before USB gadget initialization begins.
-3. **Bounded Execution Timeouts**:
-   - Driver insertion (`modprobe mtu3` / `insmod`), ConfigFS mounting, and UDC binding/unbinding are wrapped with explicit bounds (`/bin/busybox timeout -t 5` for module load, `timeout -t 3` for mount and UDC operations). If the MTU3 controller, platform bus, or ConfigFS hangs, the operation aborts within seconds rather than locking PID 1.
+3. **Bounded Execution Timeouts (BusyBox 1.37 Positional Syntax)**:
+   - Driver insertion (`modprobe mtu3` / `insmod`), ConfigFS mounting, descriptor composition, and UDC binding/unbinding are wrapped with explicit bounds using BusyBox 1.37 positional syntax (`/bin/busybox timeout 5 modprobe mtu3`, `/bin/busybox timeout 3 mount -t configfs ...`, `timeout 3 sh -c "echo '$UDC_TARGET' > '$GADGET_DIR/UDC'"`).
+   - *BusyBox 1.37 Compatibility Evidence*: Live read-only verification on Lynx boot `0fe847d2` confirms `/bin/busybox` is v1.37.0 where usage is `timeout [-s SIG] [-k KILL_SECS] SECS PROG ARGS`. GNU-style `timeout -t` is rejected with `unrecognized option: t` (exit code 1), whereas positional syntax succeeds (`busybox timeout 1 true` returns 0).
+   - If the MTU3 controller, platform bus, or ConfigFS hangs, the operation aborts within seconds rather than locking PID 1.
 4. **Decoupled from Wi-Fi & Non-Fatal Failure Signaling**:
    - The service must **never** declare `need net` or `need lynx-wifi`. USB serial is a local hardware transport and must remain completely decoupled from Wi-Fi networking.
    - If `mtu3.ko` fails to load, `configfs` cannot be mounted, or UDC binding fails, the service emits warnings (`ewarn` / `eerror`) and signals failure (`return 1` or `eend $?`). Under OpenRC runlevel semantics, this marks `lynx-usb-gadget` as failed without halting PID 1, without aborting other runlevel services, and without delaying or disrupting SSH/Wi-Fi.
@@ -114,12 +116,13 @@ If an unattended reboot or hardware test indicates USB instability:
 - **Validator Tool**: [`lynx/tools/usb/lynx_usb_boot_persistence.py`](file:///noobia/lynx/tools/usb/lynx_usb_boot_persistence.py)
   - Audits OpenRC init scripts for shebang, dependency structure, ordering invariants (strictly rejecting `before sshd` and requiring `after sshd`), bounded execution timeouts, disable switch checks, and teardown commands.
   - Classifies system telemetry into `PERSISTENT_ENABLED`, `PERSISTENT_DISABLED_SWITCH`, `RUNTIME_ONLY`, `UNCONFIGURED`, and `INVALID_ORDERING`.
-- **Unit Test Suite**: [`lynx/tools/usb/test_lynx_usb_boot_persistence.py`](file:///noobia/lynx/tools/usb/test_lynx_usb_boot_persistence.py) (15 tests).
+- **Unit Test Suite**: [`lynx/tools/usb/test_lynx_usb_boot_persistence.py`](file:///noobia/lynx/tools/usb/test_lynx_usb_boot_persistence.py) (17 tests).
 - **Test Fixture Matrix**:
   - `boot-persistence-valid-enabled.json`: Service enabled, ordering valid (`after sshd`), UDC bound.
   - `boot-persistence-disabled-switch.json`: Service enabled in runlevel but inhibited by switch.
   - `boot-persistence-invalid-ordering.json`: Service ordering violates dependency safety.
+  - `boot-persistence-invalid-dash-t.json`: Service script violates BusyBox 1.37 timeout syntax with `-t`.
   - `boot-persistence-runtime-only.json`: Gadget active in runtime without runlevel installation.
   - `boot-persistence-unconfigured.json`: Quiescent baseline state.
 
-All 32 unit tests across the USB suite pass with 100% offline determinism.
+All 34 unit tests across the USB suite pass with 100% offline determinism.

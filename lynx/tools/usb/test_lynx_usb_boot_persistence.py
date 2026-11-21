@@ -32,7 +32,7 @@ class TestLynxUsbBootPersistence(unittest.TestCase):
         self.assertIn("missing_or_invalid_openrc_shebang", failures)
 
     def test_missing_depend_block(self):
-        script = "#!/sbin/openrc-run\n/etc/lynx/disable-usb-gadget\n11201000.usb0\necho \"\" > \"$GADGET_DIR/UDC\"\ntimeout -t 5\n"
+        script = "#!/sbin/openrc-run\n/etc/lynx/disable-usb-gadget\n11201000.usb0\necho \"\" > \"$GADGET_DIR/UDC\"\ntimeout 5 modprobe mtu3\n"
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
         self.assertIn("missing_depend_block", failures)
@@ -45,7 +45,7 @@ depend() {
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
-timeout -t 5
+timeout 5 modprobe mtu3
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
@@ -59,7 +59,7 @@ depend() {
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
-timeout -t 5
+timeout 5 modprobe mtu3
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
@@ -75,7 +75,7 @@ depend() {
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
-timeout -t 5
+timeout 5 modprobe mtu3
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
@@ -90,7 +90,7 @@ depend() {
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
-timeout -t 5
+timeout 5 modprobe mtu3
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
@@ -103,13 +103,13 @@ depend() {
 }
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
-timeout -t 5
+timeout 5 modprobe mtu3
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
         self.assertIn("missing_local_disable_switch_check", failures)
 
-    def test_missing_bounded_timeouts(self):
+    def test_missing_positional_timeouts(self):
         script = """#!/sbin/openrc-run
 depend() {
     after bootmisc modules sshd
@@ -120,7 +120,22 @@ echo "" > "$GADGET_DIR/UDC"
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
-        self.assertIn("missing_bounded_timeouts_in_start", failures)
+        self.assertIn("missing_positional_timeout_in_script", failures)
+
+    def test_reject_timeout_dash_t(self):
+        """Reject 'timeout -t' which BusyBox 1.37 fails with 'unrecognized option: t'."""
+        script = """#!/sbin/openrc-run
+depend() {
+    after bootmisc modules sshd
+}
+/etc/lynx/disable-usb-gadget
+11201000.usb0
+echo "" > "$GADGET_DIR/UDC"
+timeout -t 5 modprobe mtu3
+"""
+        ok, failures = validate_init_script(script)
+        self.assertFalse(ok)
+        self.assertIn("forbidden_timeout_dash_t", failures)
 
     def test_fixture_persistent_enabled(self):
         path = FIXTURES_DIR / "boot-persistence-valid-enabled.json"
@@ -149,6 +164,14 @@ echo "" > "$GADGET_DIR/UDC"
         self.assertEqual(verdict.status, "INVALID_ORDERING")
         self.assertFalse(verdict.is_valid)
         self.assertIn("invalid_runlevel_ordering_detected", verdict.failures)
+
+    def test_fixture_invalid_dash_t(self):
+        path = FIXTURES_DIR / "boot-persistence-invalid-dash-t.json"
+        data = json.loads(path.read_text())
+        verdict = evaluate_boot_persistence(data)
+        self.assertEqual(verdict.status, "MALFORMED_SCRIPT")
+        self.assertFalse(verdict.is_valid)
+        self.assertIn("forbidden_timeout_dash_t", verdict.failures)
 
     def test_fixture_runtime_only(self):
         path = FIXTURES_DIR / "boot-persistence-runtime-only.json"

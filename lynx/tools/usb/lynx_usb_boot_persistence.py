@@ -75,9 +75,11 @@ def validate_init_script(script_text: str) -> Tuple[bool, List[str]]:
     if not re.search(r"echo\s+['\"]{2}\s*>\s*['\"]?\$GADGET_DIR/UDC", script_text):
         failures.append("missing_udc_unbind_in_stop")
 
-    # 5. Bounded timeout check (explicit timeout -t <N> on modprobe/insmod and UDC bind)
-    if not re.search(r"timeout\s+-t\s+\d+", script_text):
-        failures.append("missing_bounded_timeouts_in_start")
+    # 5. Bounded timeout syntax check (BusyBox 1.37 positional syntax: timeout SECS PROG; reject -t)
+    if re.search(r"timeout\s+-t\b", script_text):
+        failures.append("forbidden_timeout_dash_t")
+    elif not re.search(r"timeout\s+(-k\s+\d+\s+)?\d+\s+(modprobe|insmod|sh|mount)\b", script_text):
+        failures.append("missing_positional_timeout_in_script")
 
     return len(failures) == 0, failures
 

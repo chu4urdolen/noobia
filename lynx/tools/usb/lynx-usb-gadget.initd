@@ -25,48 +25,54 @@ start() {
 
     ebegin "Starting Lynx USB MTU3 ACM Gadget"
 
-    # 1. Load mtu3 driver if not already loaded (bounded with 5s timeout)
+    # 1. Load mtu3 driver if not already loaded (bounded with 5s timeout, BusyBox 1.37 positional syntax)
     if ! grep -q "^mtu3 " /proc/modules; then
         if [ -f "$MODULE_PATH" ]; then
-            /bin/busybox timeout -t 5 modprobe mtu3 2>/dev/null || \
-                /bin/busybox timeout -t 5 insmod "$MODULE_PATH" 2>/dev/null
+            /bin/busybox timeout 5 modprobe mtu3 2>/dev/null || \
+                /bin/busybox timeout 5 insmod "$MODULE_PATH" 2>/dev/null
         else
             ewarn "mtu3 module not found at $MODULE_PATH; attempting modprobe"
-            /bin/busybox timeout -t 5 modprobe mtu3 2>/dev/null
+            /bin/busybox timeout 5 modprobe mtu3 2>/dev/null
         fi
     fi
 
     # 2. Mount configfs if needed (bounded with 3s timeout)
     if ! mountpoint -q /sys/kernel/config; then
-        /bin/busybox timeout -t 3 mount -t configfs none /sys/kernel/config || {
+        /bin/busybox timeout 3 mount -t configfs none /sys/kernel/config || {
             eerror "Failed to mount configfs"
             return 1
         }
     fi
 
-    # 3. Create gadget composition
-    mkdir -p "$GADGET_DIR" || return 1
-    cd "$GADGET_DIR" || return 1
+    # 3. Create gadget composition and descriptors (bounded with 5s timeout)
+    /bin/busybox timeout 5 sh -c '
+        set -e
+        mkdir -p "'"$GADGET_DIR"'"
+        cd "'"$GADGET_DIR"'"
 
-    echo 0x18d1 > idVendor
-    echo 0x0001 > idProduct
-    echo 0x0200 > bcdUSB
-    echo 0x0100 > bcdDevice
+        echo 0x18d1 > idVendor
+        echo 0x0001 > idProduct
+        echo 0x0200 > bcdUSB
+        echo 0x0100 > bcdDevice
 
-    mkdir -p strings/0x409
-    echo "0123456789ABCDEF" > strings/0x409/serialnumber
-    echo "Noobia" > strings/0x409/manufacturer
-    echo "Lynx Nord 3 USB ACM" > strings/0x409/product
+        mkdir -p strings/0x409
+        echo "0123456789ABCDEF" > strings/0x409/serialnumber
+        echo "Noobia" > strings/0x409/manufacturer
+        echo "Lynx Nord 3 USB ACM" > strings/0x409/product
 
-    mkdir -p functions/acm.usb0
-    mkdir -p configs/c.1/strings/0x409
-    echo "CDC ACM Serial" > configs/c.1/strings/0x409/configuration
+        mkdir -p functions/acm.usb0
+        mkdir -p configs/c.1/strings/0x409
+        echo "CDC ACM Serial" > configs/c.1/strings/0x409/configuration
 
-    ln -s functions/acm.usb0 configs/c.1/acm.usb0 2>/dev/null
+        ln -s functions/acm.usb0 configs/c.1/acm.usb0 2>/dev/null || true
+    ' || {
+        eerror "Failed to compose USB gadget descriptors"
+        return 1
+    }
 
     # 4. Bind UDC (bounded with 3s timeout)
     if [ -d "/sys/class/udc/$UDC_TARGET" ]; then
-        /bin/busybox timeout -t 3 sh -c "echo '$UDC_TARGET' > UDC" 2>/dev/null
+        /bin/busybox timeout 3 sh -c "echo '$UDC_TARGET' > '$GADGET_DIR/UDC'" 2>/dev/null
     else
         ewarn "Target UDC $UDC_TARGET not found in /sys/class/udc"
     fi
@@ -79,7 +85,7 @@ stop() {
 
     if [ -d "$GADGET_DIR" ]; then
         # Unbind UDC (bounded with 3s timeout)
-        /bin/busybox timeout -t 3 sh -c "echo '' > '$GADGET_DIR/UDC'" 2>/dev/null
+        /bin/busybox timeout 3 sh -c "echo '' > '$GADGET_DIR/UDC'" 2>/dev/null
 
         # Remove function link
         rm -f "$GADGET_DIR/configs/c.1/acm.usb0" 2>/dev/null

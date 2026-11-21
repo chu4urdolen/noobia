@@ -1,0 +1,19 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / 22823 'Vitamin')",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "runlevel_default_services": [
+    "bootmisc",
+    "hostname",
+    "networking",
+    "sshd",
+    "syslog",
+    "lynx-usb-gadget"
+  ],
+  "disable_switch_present": false,
+  "udc_bound": true,
+  "ttygs_present": true,
+  "modules": [
+    "mtu3"
+  ],
+  "init_script_content": "#!/sbin/openrc-run\ndepend() {\n    after bootmisc modules sshd\n    provide usb-gadget\n}\n/etc/lynx/disable-usb-gadget\n11201000.usb0\necho \"\" > \"$GADGET_DIR/UDC\"\ntimeout -t 5 modprobe mtu3\n"
+}

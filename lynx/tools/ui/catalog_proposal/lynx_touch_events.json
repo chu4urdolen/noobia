@@ -1,0 +1,11 @@
+{
+  "name": "lynx_touch_events",
+  "description": "Entity: Lynx. Read touch queue state (panel open, finger down, queued and dropped events) without consuming any event.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 5
+}

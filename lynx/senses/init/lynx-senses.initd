@@ -11,35 +11,36 @@
 # logger to -l 6 so notice lines are kept). Loop errors go to the
 # error log; sense lines never do (they are syslog, by design).
 
-name="Lynx senses (touch wifi power nexus)"
+name="lynx-senses"
 description="Sampled sense emitters for the Noobia autonomy harness"
+supervisor="supervise-daemon"
 
 command="/usr/bin/python3"
 command_args="/usr/local/lib/noobia/senses/common/lynx_senses_loop.py"
-command_background="yes"
 pidfile="/run/lynx/lynx-senses.pid"
 output_log="/var/log/lynx-senses.log"
 error_log="/var/log/lynx-senses.log"
+respawn_delay=2
+respawn_max=3
+respawn_period=600
 
 depend() {
-	needs net
 	after lynx-local-logs lynx-wifi
-}
-
-checkpath() {
-	# Honest preflight: the autonomy install must be in place.
-	eaccess x /usr/local/lib/noobia/senses/common/lynx_senses_loop.py
-	eaccess x /usr/local/lib/noobia/autonomy/sense.py
+	need lynx-local-logs
 }
 
 start_pre() {
-	checkpath || return 1
-	ebegin "Starting Lynx senses"
-	return 0
+	if [ ! -f "/usr/local/lib/noobia/senses/common/lynx_senses_loop.py" ]; then
+		eerror "senses loop missing"
+		return 1
+	fi
+	if [ ! -f "/usr/local/lib/noobia/autonomy/sense.py" ]; then
+		eerror "autonomy sense.py missing"
+		return 1
+	fi
+	mkdir -p /run/lynx /var/lib/noobia/senses
 }
 
 stop_pre() {
-	# The loop exits on SIGTERM; nothing else to clean up (state files
-	# are always consistent, written atomically).
 	true
 }

@@ -17,6 +17,7 @@ pattern: `python3 -m unittest discover -s lynx/tools/<dir> -p 'test_*.py'`
 | `fingerprint/` | Banshee | Under-display fingerprint read-only identity/secure-boundary inventory | offline | **no** | 7 OK |
 | `flashlight/` | Banshee | Second-light gate + running-DT collector (one lm3642 channel) | offline; live collector read-only | **no** | 9 OK |
 | `gnss/` | Banshee | **B12 landed** (`080594b`): GNSS fix-trial readiness checklist, gates, gated read-only live collector | offline; live gated (`--live --allow-live`) | **no** | 8 OK |
+| `haptics/` | Dushich | **D21**: haptics LRA preflight gate (`&odm` `vibrator@0`, `mediatek,vibrator`, vib_timer 25 / limit 9 / vol 9); ACTIVE_PULSE safety status; double-flag gated read-only live inspector | offline; live gated (`--live --allow-live`) | **no** | **31 OK** |
 | `headset/` | Banshee | Headset insertion evidence collector + **B13 landed** (`2185a79`): Type-C analog accessory detection trace + accessory classifier (11 tests) | offline; live read-only | **no** | 11 OK |
 | `health/` | Dushich | portable-health/1 board: evaluator + Lynx collector (SSH) + **Nexus local collector** (D11) + report diff (D10) | offline; both collectors read-only | **no** | **139 OK** |
 | `local_calls/` | Lynx | JSON-stdin wrappers for phone hardware (sensor, light, flashlight, motion) — the phone's own agent-call surface | on-phone | **yes** (phone rootfs) | via Gwyn ui manifest checks (113 OK) |

@@ -1,0 +1,22 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "5e2a1f8c-6b4d-4e7a-9c12-8f3d2a1b0c9d",
+  "device_tree": {
+    "vibrator_node_present": false,
+    "vibrator_node_path": null,
+    "node_name": null,
+    "label": null,
+    "parent_node": null,
+    "compatible": null,
+    "vib_timer": null,
+    "vib_limit": null,
+    "vib_vol": null
+  },
+  "runtime": {
+    "vibrator_class_present": false,
+    "vibrator_class_path": null,
+    "vibrator_driver_bound": false,
+    "vibrator_state": null
+  },
+  "loaded_modules": []
+}

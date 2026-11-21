@@ -173,3 +173,10 @@
 !/tools/touch/fixtures/
 /tools/touch/fixtures/*
 !/tools/touch/fixtures/*.json
+!/tools/haptics/
+/tools/haptics/*
+!/tools/haptics/*.py
+!/tools/haptics/README.md
+!/tools/haptics/fixtures/
+/tools/haptics/fixtures/*
+!/tools/haptics/fixtures/*.json

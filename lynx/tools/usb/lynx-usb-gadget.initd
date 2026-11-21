@@ -36,9 +36,9 @@ start() {
         fi
     fi
 
-    # 2. Mount configfs if needed
+    # 2. Mount configfs if needed (bounded with 3s timeout)
     if ! mountpoint -q /sys/kernel/config; then
-        mount -t configfs none /sys/kernel/config || {
+        /bin/busybox timeout -t 3 mount -t configfs none /sys/kernel/config || {
             eerror "Failed to mount configfs"
             return 1
         }

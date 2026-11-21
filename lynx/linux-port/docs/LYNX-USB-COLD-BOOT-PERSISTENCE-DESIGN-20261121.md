@@ -57,11 +57,11 @@ To prevent boot hangs and maintain unattended recovery safety:
    - The service must **never** declare `before sshd`. SSH is Lynx's primary recovery route, so USB gadget startup must never precede or delay `sshd`.
    - By starting `after sshd`, remote SSH access on port 2222 is fully active and listening before USB gadget initialization begins.
 3. **Bounded Execution Timeouts**:
-   - Both driver insertion (`modprobe mtu3` / `insmod`) and UDC binding are wrapped with explicit bounds (`/bin/busybox timeout -t 5` and `timeout -t 3`). If the MTU3 controller or ConfigFS hangs, the operation aborts within seconds rather than locking PID 1.
-4. **Decoupled from Wi-Fi**:
+   - Driver insertion (`modprobe mtu3` / `insmod`), ConfigFS mounting, and UDC binding/unbinding are wrapped with explicit bounds (`/bin/busybox timeout -t 5` for module load, `timeout -t 3` for mount and UDC operations). If the MTU3 controller, platform bus, or ConfigFS hangs, the operation aborts within seconds rather than locking PID 1.
+4. **Decoupled from Wi-Fi & Non-Fatal Failure Signaling**:
    - The service must **never** declare `need net` or `need lynx-wifi`. USB serial is a local hardware transport and must remain completely decoupled from Wi-Fi networking.
-   - If `mtu3.ko` fails to load, `configfs` cannot be mounted, or UDC binding fails, the service emits warnings (`ewarn`) and exits cleanly (`return 0` soft-fail). It must **never** fail with a blocking exit code that halts OpenRC runlevel execution.
-   - Wi-Fi SSH (`192.168.100.107:2222`) remains the primary, uncompromised recovery lifeline.
+   - If `mtu3.ko` fails to load, `configfs` cannot be mounted, or UDC binding fails, the service emits warnings (`ewarn` / `eerror`) and signals failure (`return 1` or `eend $?`). Under OpenRC runlevel semantics, this marks `lynx-usb-gadget` as failed without halting PID 1, without aborting other runlevel services, and without delaying or disrupting SSH/Wi-Fi.
+   - Wi-Fi SSH (`192.168.100.107:2222`) remains the authoritative, uncompromised recovery lifeline.
 
 ---
 

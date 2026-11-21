@@ -75,8 +75,8 @@ def validate_init_script(script_text: str) -> Tuple[bool, List[str]]:
     if not re.search(r"echo\s+['\"]{2}\s*>\s*['\"]?\$GADGET_DIR/UDC", script_text):
         failures.append("missing_udc_unbind_in_stop")
 
-    # 5. Bounded timeout check (explicit timeouts on module load / UDC bind)
-    if "timeout" not in script_text:
+    # 5. Bounded timeout check (explicit timeout -t <N> on modprobe/insmod and UDC bind)
+    if not re.search(r"timeout\s+-t\s+\d+", script_text):
         failures.append("missing_bounded_timeouts_in_start")
 
     return len(failures) == 0, failures

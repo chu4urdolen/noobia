@@ -32,7 +32,7 @@ class TestLynxUsbBootPersistence(unittest.TestCase):
         self.assertIn("missing_or_invalid_openrc_shebang", failures)
 
     def test_missing_depend_block(self):
-        script = "#!/sbin/openrc-run\n/etc/lynx/disable-usb-gadget\n11201000.usb0\necho \"\" > \"$GADGET_DIR/UDC\"\ntimeout\n"
+        script = "#!/sbin/openrc-run\n/etc/lynx/disable-usb-gadget\n11201000.usb0\necho \"\" > \"$GADGET_DIR/UDC\"\ntimeout -t 5\n"
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
         self.assertIn("missing_depend_block", failures)
@@ -45,7 +45,7 @@ depend() {
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
-timeout
+timeout -t 5
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
@@ -59,7 +59,7 @@ depend() {
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
-timeout
+timeout -t 5
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
@@ -75,7 +75,7 @@ depend() {
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
-timeout
+timeout -t 5
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
@@ -90,7 +90,7 @@ depend() {
 /etc/lynx/disable-usb-gadget
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
-timeout
+timeout -t 5
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)
@@ -103,7 +103,7 @@ depend() {
 }
 11201000.usb0
 echo "" > "$GADGET_DIR/UDC"
-timeout
+timeout -t 5
 """
         ok, failures = validate_init_script(script)
         self.assertFalse(ok)

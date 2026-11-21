@@ -1,0 +1,33 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "device_tree": {
+    "sensor_node_present": false,
+    "paths": [],
+    "sensor_names": []
+  },
+  "phy": {
+    "type": "MIPI_DPHY",
+    "lane_count": 4,
+    "mclk_mhz": 24,
+    "seninf_csi_port": 0
+  },
+  "vcm": {
+    "present": false
+  },
+  "power_sequence": [
+    {"step": 1, "id": "HW_ID_MCLK", "val": 24, "delay_ms": 0, "desc": "MCLK 24 MHz"},
+    {"step": 2, "id": "HW_ID_RST", "val": 0, "delay_ms": 1, "desc": "RST assert low"},
+    {"step": 3, "id": "HW_ID_DVDD", "val": 1104000, "delay_ms": 1, "desc": "DVDD 1.104V"},
+    {"step": 4, "id": "HW_ID_AVDD", "val": 2804000, "delay_ms": 1, "desc": "AVDD 2.804V"},
+    {"step": 5, "id": "HW_ID_DOVDD", "val": 1804000, "delay_ms": 3, "desc": "DOVDD 1.804V"},
+    {"step": 6, "id": "HW_ID_MCLK_DRIVING_CURRENT", "val": 6, "delay_ms": 0, "desc": "MCLK 6mA"},
+    {"step": 7, "id": "HW_ID_RST", "val": 1, "delay_ms": 2, "desc": "RST deassert high"}
+  ],
+  "sysfs_i2c": {
+    "sensor_client_present": false,
+    "sensor_driver_bound": false,
+    "eeprom_present": false
+  },
+  "loaded_modules": []
+}

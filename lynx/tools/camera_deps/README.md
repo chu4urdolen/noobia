@@ -19,10 +19,15 @@ python3 lynx_camera_dependency_map.py
 # Run IMX890 main camera bring-up preflight against offline fixture
 python3 lynx_imx890_preflight.py fixtures/imx890-preflight-unbound.json
 
+# Run S5K3P9SP front camera bring-up preflight against offline fixture
+python3 lynx_s5k3p9sp_preflight.py fixtures/s5k3p9sp-preflight-unbound.json
+
 # Perform read-only live query of running DT & sysfs on Lynx (requires both flags)
 python3 lynx_imx890_preflight.py --live --allow-live
+python3 lynx_s5k3p9sp_preflight.py --live --allow-live
 
 # Run camera dependency & preflight unit tests
 python3 test_lynx_camera_dependency_map.py
 python3 test_lynx_imx890_preflight.py
+python3 test_lynx_s5k3p9sp_preflight.py
 ```

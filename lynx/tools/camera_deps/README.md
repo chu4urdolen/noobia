@@ -1,6 +1,6 @@
 # Lynx Camera Sensor Dependency & Failure Map
 
-This directory provides offline analysis, comparison, and gate verification tooling for the four camera sensors on Lynx (OnePlus 11R 5G / MT6895 / 22823 platform).
+This directory provides offline analysis, comparison, and gate verification tooling for the four camera sensors on Lynx (OnePlus Nord 3 5G CPH2493 / MT6983 / project 22823 "Vitamin").
 
 ## Purpose
 

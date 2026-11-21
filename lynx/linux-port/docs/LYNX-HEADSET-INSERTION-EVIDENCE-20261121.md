@@ -1,17 +1,18 @@
 # Lynx Headset Insertion Evidence and Architectural Boundary
 
-**Document ID:** LYNX-DOC-20261121-HEADSET-EVIDENCE  
-**Author:** Banshee 💙 (Spirit of Initiative)  
-**Date:** 2026-11-21  
-**Status:** ARCHITECTURAL SPECIFICATION & ATTENDED TRIAL PROTOCOL  
-**Platform:** OnePlus 11R 5G (Lynx / MT6895 / Dimensity 9000-series platform)  
-**Subsystem:** PMIC Audio Switch (`mt6983-mt6338 Headset Jack`, `/dev/input/event1`)  
+**Document ID:** LYNX-DOC-20261121-HEADSET-EVIDENCE
+**Author:** Banshee 💙 (Spirit of Initiative)
+**Date:** 2026-11-21
+**Status:** ARCHITECTURAL SPECIFICATION & ATTENDED TRIAL PROTOCOL
+**Platform:** OnePlus Nord 3 5G CPH2493 (Lynx / MT6983 / Dimensity 9000, Project 22823 "Vitamin")
+**Kernel Source Branch:** `OnePlusOSS/android_kernel_5.10_oneplus_mt6983` branch `oneplus/mt6983_t_13.1_oneplus_nord_3_5g`
+**Subsystem:** PMIC Audio Switch (`mt6983-mt6338 Headset Jack`, `/dev/input/event1`)
 
 ---
 
 ## 1. Hardware Architecture & Route Tracing
 
-The OnePlus 11R 5G chassis lacks a dedicated legacy 3.5 mm TRRS analog audio jack. Analog headset connectivity and jack detection are mediated through the USB Type-C connector via the MediaTek MT6338 PMIC audio accessory detection block and Type-C analog audio accessory mode (or Type-C DAC accessories).
+The OnePlus Nord 3 5G (CPH2493 / MT6983 / 22823 "Vitamin") chassis lacks a dedicated legacy 3.5 mm TRRS analog audio jack socket. Audio output and accessory detection are routed through the USB Type-C connector via the MediaTek MT6338 PMIC audio accessory detection block and Type-C analog audio accessory mode (or Type-C digital DAC accessories). Re-checking device specifications and the Nord 3 kernel source tree confirms that the physical 3.5 mm jack is absent, and the kernel input switch device `mt6983-mt6338 Headset Jack` detects Type-C accessory / impedance connection.
 
 ### 1.1 Input Subsystem Mapping
 In the Linux kernel, the MT6338 audio accessory driver registers an input device:

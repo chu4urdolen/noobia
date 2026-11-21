@@ -1,5 +1,7 @@
 {
-  "platform": "OnePlus 11R 5G (Ace 2 / Vitamin / 22823)",
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / Project 22823 'Vitamin')",
+  "repository": "OnePlusOSS/android_kernel_5.10_oneplus_mt6983",
+  "branch": "oneplus/mt6983_t_13.1_oneplus_nord_3_5g",
   "dts_source": "kernel-mt6983/arch/arm64/boot/dts/mediatek/cust_mt6983_vitamin_camera_v4l2.dtsi",
   "controller": {
     "node": "lm3642:lm3642@63",

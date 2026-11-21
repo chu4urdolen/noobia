@@ -1,11 +1,12 @@
 # Lynx Second Rear Light Source Mapping and Architectural Analysis
 
-**Document ID:** LYNX-DOC-20261121-SECOND-LIGHT-ANALYSIS  
-**Author:** Banshee 💙 (Spirit of Initiative)  
-**Date:** 2026-11-21  
-**Status:** ARCHITECTURAL DETERMINATION & NO-WRITE GATE  
-**Platform:** OnePlus 11R 5G (Lynx / MT6895 / Dimensity 9000-series platform, Project `22823` / Vitamin)  
-**Subsystem:** Camera Flash & Torch Subsystem (`flashlight_core`, `lm3642_22823`)  
+**Document ID:** LYNX-DOC-20261121-SECOND-LIGHT-ANALYSIS
+**Author:** Banshee 💙 (Spirit of Initiative)
+**Date:** 2026-11-21
+**Status:** ARCHITECTURAL DETERMINATION & NO-WRITE GATE
+**Platform:** OnePlus Nord 3 5G CPH2493 (Lynx / MT6983 / Dimensity 9000, Project 22823 "Vitamin")
+**Kernel Source Branch:** `OnePlusOSS/android_kernel_5.10_oneplus_mt6983` branch `oneplus/mt6983_t_13.1_oneplus_nord_3_5g`
+**Subsystem:** Camera Flash & Torch Subsystem (`flashlight_core`, `lm3642_22823`)
 
 ---
 
@@ -13,11 +14,11 @@
 
 During earlier hardware trials, a single bounded 100 ms rear LED pulse verified that the primary torch channel (`0 0 0 1`) can be commanded via `flashlight_torch` to illuminate the rear LED. However, questions remained regarding whether a secondary rear light source (e.g., dual-tone LED, auxiliary fill LED, or independent emitter) exists and can be actuated independently.
 
-### Definitive Technical Determination
-> **An independent second rear light source control path DOES NOT EXIST on the OnePlus 11R 5G (`22823` / Vitamin platform).**  
-> **The hardware driver, controller IC, device tree binding, and kernel sysfs interface all strictly define a single, unitary channel `(type=0, ct=0, part=0)`.**
+### Technical Determination
+> **Source DT declares one lm3642 channel; live confirmation pending.**
+> **In the OnePlus Nord 3 5G (`22823` / Vitamin) kernel source tree, the device tree binding and driver strictly configure a single channel `(type=0, ct=0, part=0)` under the LM3642 driver.**
 
-If multiple physical emitter dies are visible within the rear camera module's flash window, they are electrically tied in series/parallel to the single output of the Texas Instruments LM3642 driver, or a secondary die is unpopulated. No independent software control path exists.
+A source device tree proves what the vendor intended for that configuration, but live running device-tree confirmation remains pending. Furthermore, a second light could sit on another controller, or the "second rear circle" in the chassis could correspond to the rear ambient-light sensor (ALS) window rather than an emitter. No independent second rear light control path is exposed by `lm3642_22823`.
 
 ---
 
@@ -64,7 +65,7 @@ Key observations:
 In sibling device trees utilizing dual flash channels (such as `cust_mt6983_aries_camera_v4l2.dtsi` and `cust_mt6983_qingting_camera_v4l2_EVB.dtsi`):
 - Both `flashlight_0` and `flashlight_1` endpoints are declared.
 - Two subnodes exist: `flash@0` (`part = <0>`) and `flash@1` (`part = <1>`).
-- On the OnePlus 11R (`22823`), `flashlight_1` and `flash@1` are completely omitted.
+- On the OnePlus Nord 3 5G CPH2493 (`22823` / Vitamin), `flashlight_1` and `flash@1` are completely omitted.
 
 ### 2.3 General-Purpose and Notification LEDs
 In `kernel-mt6983/arch/arm64/boot/dts/mediatek/oplus6983_22823.dts` (lines 39–85):

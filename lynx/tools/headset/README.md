@@ -1,6 +1,6 @@
 # Lynx Headset Collector & Validator
 
-This directory provides a passive, strictly bounded event collector and receipt validator for headset switch status on Lynx (OnePlus 11R 5G / MT6895 platform).
+This directory provides a passive, strictly bounded event collector and receipt validator for headset switch status on Lynx (OnePlus Nord 3 5G CPH2493 / MT6983 / project 22823 "Vitamin").
 
 ## Diagnostic Separation
 

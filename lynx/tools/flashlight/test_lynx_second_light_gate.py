@@ -23,7 +23,7 @@ class TestLynxSecondLightGate(unittest.TestCase):
         self.assertEqual(ch0["type_id"], 0)
         self.assertEqual(ch0["ct_id"], 0)
         self.assertEqual(ch0["part_id"], 0)
-        self.assertIn("PROVEN ABSENT", verdict.summary)
+        self.assertIn("source DT declares one lm3642 channel; live confirmation pending", verdict.summary)
 
     def test_synthetic_dual_channel_dt(self):
         dt_data = json.loads((FIXTURES / "synthetic-dual-channel-dt.json").read_text())

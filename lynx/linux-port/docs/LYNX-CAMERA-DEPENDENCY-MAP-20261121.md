@@ -1,22 +1,23 @@
 # Lynx Camera Subsystem: Multi-Sensor Dependency and Failure Map
 
-**Document ID:** LYNX-DOC-20261121-CAMERA-DEP-MAP  
-**Author:** Banshee 💙 (Spirit of Initiative)  
-**Date:** 2026-11-21  
-**Status:** SPECIFICATION & ARCHITECTURAL DEPENDENCY MAP  
-**Platform:** OnePlus 11R 5G (Lynx / MT6895 / Dimensity 9000-series platform, Project `22823` / Vitamin)  
-**Subsystem:** Camera Imaging Architecture (MediaTek ISP 7.1 / Seninf / CAMSV)  
+**Document ID:** LYNX-DOC-20261121-CAMERA-DEP-MAP
+**Author:** Banshee 💙 (Spirit of Initiative)
+**Date:** 2026-11-21
+**Status:** SPECIFICATION & ARCHITECTURAL DEPENDENCY MAP
+**Platform:** OnePlus Nord 3 5G CPH2493 (Lynx / MT6983 / Dimensity 9000, Project 22823 "Vitamin")
+**Kernel Source Branch:** `OnePlusOSS/android_kernel_5.10_oneplus_mt6983` branch `oneplus/mt6983_t_13.1_oneplus_nord_3_5g`
+**Subsystem:** Camera Imaging Architecture (MediaTek ISP 7.1 / Seninf / CAMSV)
 
 ---
 
 ## 1. Executive Summary & Core Diagnostic Boundaries
 
-The OnePlus 11R 5G camera cluster integrates four physically distinct image sensors: rear macro, rear wide, rear main, and front selfie. While kernel device-tree entries exist for all four, **a device-tree match does NOT constitute optical proof or hardware readiness**.
+The OnePlus Nord 3 5G (CPH2493 / MT6983 / 22823 "Vitamin") camera cluster integrates four physically distinct image sensors: rear macro, rear wide, rear main, and front selfie. While kernel device-tree entries exist for all four, **a device-tree match does NOT constitute optical proof or hardware readiness**.
 
 During earlier hardware porting stages, an attended, RAM-patched ISP driver (`mtk-cam-isp.ko`) overcame the critical YUV-B interrupt storm (IRQ 247) and enabled bounded raw frame acquisition for the macro and wide sensors. However, the rear main (IMX890) and front (S5K3P9SP) sensors possess fundamentally different physical interface, color filter array, and actuator requirements.
 
 ### Hard Boundary Statement
-> **`lynx_camera_gate.py` strictly restricts capture to the macro GC02M1 (`1600x1200 BA81`) and wide IMX355 (`3264x2448 BA81`) routes when explicitly optically verified.**  
+> **`lynx_camera_gate.py` strictly restricts capture to the macro GC02M1 (`1600x1200 BA81`) and wide IMX355 (`3264x2448 BA81`) routes when explicitly optically verified.**
 > **The main IMX890 and front S5K3P9SP sensors use four-cell Bayer architectures and are HARD-REFUSED. They must never be streamed with assumed single-cell `BA81` formats.**
 
 This document details the exact dependency chain, failure modes, and next smallest *offline* gate for every sensor.

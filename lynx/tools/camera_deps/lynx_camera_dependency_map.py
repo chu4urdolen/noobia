@@ -64,7 +64,8 @@ class SensorDependencySpec:
         }
 
 
-# Canonical sensor specifications derived from OnePlus 11R 22823 device tree,
+# Canonical sensor specifications derived from OnePlus Nord 3 5G CPH2493 / MT6983
+# (Project 22823 'Vitamin', branch oneplus/mt6983_t_13.1_oneplus_nord_3_5g),
 # vendor driver sources, and Lynx camera port history.
 SENSOR_MAP: Dict[str, SensorDependencySpec] = {
     "GC02M1": SensorDependencySpec(
@@ -182,12 +183,13 @@ SENSOR_MAP: Dict[str, SensorDependencySpec] = {
 def build_camera_dependency_map() -> Dict[str, Any]:
     """Return the complete camera dependency, failure map, and gate comparison."""
     return {
-        "platform": "OnePlus 11R 5G (Lynx / MT6895 / 22823)",
+        "platform": "OnePlus Nord 3 5G CPH2493 (Lynx / MT6983 / 22823 'Vitamin')",
         "isp_core": "MediaTek ISP 7.1 (MT6983)",
         "proven_isp_patch": "camera-yuv-irq-build (YUV-B IRQ gate + CAMSV s_power)",
         "sensors": {k: v.to_dict() for k, v in SENSOR_MAP.items()},
         "gate_alignment_verified": True,
         "source_citations": [
+            "OnePlusOSS/android_kernel_5.10_oneplus_mt6983 (branch oneplus/mt6983_t_13.1_oneplus_nord_3_5g)",
             "kernel-mt6983/arch/arm64/boot/dts/mediatek/cust_mt6983_vitamin_camera_v4l2.dtsi",
             "sources/oneplus-nord3-sensor-power/imgsensor_hw.c",
             "sources/oneplus-nord3-sensor-power/mtk_cam-camsv.c",

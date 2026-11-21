@@ -1,6 +1,6 @@
 # Lynx Second Rear Light Topology Gate
 
-This directory contains offline device-tree and kernel driver topology analysis tools for evaluating rear flashlight light sources on Lynx (OnePlus 11R 5G / MT6895 / 22823 platform).
+This directory contains offline device-tree and kernel driver topology analysis tools for evaluating rear flashlight light sources on Lynx (OnePlus Nord 3 5G CPH2493 / MT6983 / project 22823 "Vitamin").
 
 ## Purpose
 

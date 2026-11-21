@@ -3,7 +3,7 @@
 
 Strictly read-only and offline: does not actuate LED, bind modules, or write sysfs.
 Maps device-tree nodes and driver topology to verify whether an independent second
-rear LED channel or control path exists on Lynx (OnePlus 11R / 22823).
+rear LED channel or control path exists on Lynx (OnePlus Nord 3 5G CPH2493, MT6983, project 22823 'Vitamin').
 """
 
 from dataclasses import dataclass, field
@@ -102,6 +102,7 @@ def evaluate_flashlight_topology(
 ) -> FlashlightTopologyVerdict:
     """Evaluate device tree and driver data to determine flashlight channel availability."""
     citations = [
+        "OnePlusOSS/android_kernel_5.10_oneplus_mt6983 (branch oneplus/mt6983_t_13.1_oneplus_nord_3_5g)",
         "kernel-mt6983/arch/arm64/boot/dts/mediatek/cust_mt6983_vitamin_camera_v4l2.dtsi:312-334",
         "mt6983-nord3-flashlight/flashlights-lm3642.c",
         "mt6983-nord3-flashlight/flashlight-core.c",
@@ -160,7 +161,7 @@ def evaluate_flashlight_topology(
             summary=(
                 f"Verified single-channel rear flash on {compatible} ({chip_name}). "
                 f"Single registered channel {ch.name} (type={ch.type_id}, ct={ch.ct_id}, "
-                f"part={ch.part_id}). Independent second rear light control path is PROVEN ABSENT."
+                f"part={ch.part_id}). source DT declares one lm3642 channel; live confirmation pending."
             ),
             source_citations=citations,
             failures=[],

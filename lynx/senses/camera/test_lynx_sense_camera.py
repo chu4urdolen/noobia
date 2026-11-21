@@ -160,5 +160,74 @@ class TestCameraSense(unittest.TestCase):
         self.assertEqual(len(self.recorder.emits), 0)  # Dry run doesn't emit to syslog
 
 
+class TestDefaultCaptureSubprocess(unittest.TestCase):
+    """The installed H2 tool is a standalone executable; Lynx has no importable
+    lynx package, so default_capture must run it via a bounded subprocess and
+    fall back to an honest failure when it is missing or misbehaving."""
+
+    JPEG = b"\xff\xd8\xff\xd9"
+
+    def _tool(self, body):
+        tool = Path(self._tmp.name) / "lynx-camera-capture"
+        tool.write_text("#!/bin/sh\n" + body)
+        tool.chmod(0o755)
+        return tool
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory(prefix="lynx-cam-tool-")
+        self._orig_env = os.environ.get("NOOBIA_CAMERA_CAPTURE")
+        self._orig_import = cam_mod.import_sense
+        cam_mod.import_sense = lambda: RecordingSense(sense_mod)
+
+    def tearDown(self):
+        cam_mod.import_sense = self._orig_import
+        if self._orig_env is None:
+            os.environ.pop("NOOBIA_CAMERA_CAPTURE", None)
+        else:
+            os.environ["NOOBIA_CAMERA_CAPTURE"] = self._orig_env
+        self._tmp.cleanup()
+
+    def test_subprocess_capture_success(self):
+        tool = self._tool("printf '%s' 'x' # placeholder\n")
+        # write raw JPEG bytes with printf escapes
+        tool.write_text("#!/bin/sh\nprintf '\\377\\330\\377\\331'\n")
+        os.environ["NOOBIA_CAMERA_CAPTURE"] = str(tool)
+
+        ok, frame, msg = cam_mod.default_capture()
+        self.assertTrue(ok)
+        self.assertEqual(frame, self.JPEG)
+        self.assertIn("lynx-camera-capture", msg)
+
+    def test_subprocess_failure_is_honest(self):
+        tool = self._tool("echo 'camera stack not loaded' >&2\nexit 1\n")
+        os.environ["NOOBIA_CAMERA_CAPTURE"] = str(tool)
+
+        ok, frame, msg = cam_mod.default_capture()
+        self.assertFalse(ok)
+        self.assertEqual(frame, b"")
+        self.assertIn("camera stack not loaded", msg)
+
+    def test_subprocess_timeout_is_bounded(self):
+        import subprocess as sp
+        from unittest import mock
+        tool = self._tool("true\n")
+        os.environ["NOOBIA_CAMERA_CAPTURE"] = str(tool)
+        with mock.patch("subprocess.run",
+                        side_effect=sp.TimeoutExpired("lynx-camera-capture", 8)):
+            ok, frame, msg = cam_mod.default_capture()
+        self.assertFalse(ok)
+        self.assertIn("timed out", msg)
+
+    def test_missing_tool_falls_back_honestly(self):
+        os.environ["NOOBIA_CAMERA_CAPTURE"] = str(Path(self._tmp.name) / "absent-tool")
+
+        ok, frame, msg = cam_mod.default_capture()
+        self.assertFalse(ok)
+        self.assertEqual(frame, b"")
+        # repo checkouts reach the importable module (device absent there);
+        # Lynx without the tool gets the honest not-installed message.
+        self.assertIn("not present", msg)
+
+
 if __name__ == "__main__":
     unittest.main()

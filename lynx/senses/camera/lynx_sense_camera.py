@@ -50,6 +50,9 @@ NOOBIA_CAMERA_DISABLE = "/etc/noobia/camera.disable"
 SEEN_WINDOW_S = 300.0
 CAPTURE_TIMEOUT_S = 3.0
 DETECT_TIMEOUT_S = 5.0
+DEFAULT_CAPTURE_TOOL = "/usr/local/bin/lynx-camera-capture"
+CAPTURE_TOOL_TIMEOUT_S = 8.0
+MAX_FRAME_BYTES = 4 * 1024 * 1024
 
 
 def is_camera_disabled(switch: str | Path = DEFAULT_DISABLE_SWITCH) -> bool:
@@ -57,17 +60,47 @@ def is_camera_disabled(switch: str | Path = DEFAULT_DISABLE_SWITCH) -> bool:
 
 
 def default_capture(device: str = DEFAULT_DEVICE, timeout_s: float = CAPTURE_TIMEOUT_S) -> tuple[bool, bytes, str]:
-    """Capture one frame using the local camera capture tool or direct import."""
+    """Capture one frame via the installed H2 tool (lynx-camera-capture --stdout),
+    zero frame persistence; falls back to the repo module for dev on Nexus.
+
+    The H2 packet installs the tool as a standalone executable
+    (/usr/local/bin/lynx-camera-capture) - there is no importable lynx
+    package on Lynx - so the subprocess is the primary path there.
+    """
+    import subprocess
+
+    tool = os.environ.get("NOOBIA_CAMERA_CAPTURE", DEFAULT_CAPTURE_TOOL)
+    if Path(tool).is_file():
+        try:
+            proc = subprocess.run(
+                [tool, "--stdout", "--device", device, "--timeout", str(timeout_s)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=CAPTURE_TOOL_TIMEOUT_S,
+            )
+        except subprocess.TimeoutExpired:
+            return False, b"", f"capture tool timed out after {CAPTURE_TOOL_TIMEOUT_S}s"
+        except OSError as exc:
+            return False, b"", f"capture tool failed to start: {exc}"
+        if proc.returncode != 0:
+            detail = proc.stderr.decode("utf-8", "replace").strip()[:160]
+            return False, b"", detail or f"capture tool exited {proc.returncode}"
+        frame = proc.stdout[:MAX_FRAME_BYTES + 1]
+        if len(frame) > MAX_FRAME_BYTES:
+            return False, b"", "capture tool output exceeds the 4 MiB bound"
+        if not frame:
+            return False, b"", "capture tool produced no frame"
+        return True, frame, f"captured {len(frame)} bytes via {Path(tool).name}"
+
+    # Repo/dev fallback (Nexus checkout where the package is importable).
     try:
         from lynx.tools.camera.lynx_camera_capture import capture_one_frame
         return capture_one_frame(device=device, timeout_s=timeout_s)
     except ImportError:
         pass
 
-    # Fallback to checking device existence
     if not Path(device).exists():
-        return False, b"", f"device {device} not present"
-    return False, b"", "capture driver module not imported"
+        return False, b"", f"device {device} not present and capture tool not installed"
+    return False, b"", "capture tool not installed (H2) and module not importable"
 
 
 def default_detect(frame_bytes: bytes, detect_url: str = DEFAULT_DETECT_URL, timeout_s: float = DETECT_TIMEOUT_S) -> list[dict]:

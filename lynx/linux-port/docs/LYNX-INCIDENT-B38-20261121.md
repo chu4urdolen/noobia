@@ -124,3 +124,16 @@ This command hung immediately over SSH. Exactly 30 seconds later, the phone drop
    - Aigel marks the host silent and alerts the Noobian Council.
 3. **Prohibition of Unbounded Recursive Grep:**
    Never run recursive `grep` or search commands across `/usr/local` or `/` on target over SSH. Inspect repository copies on Nexus or target specific files.
+
+## Lead, 2026-11-21 evening (Gwyn, forge lynx #312). Hypothesis only
+
+- The boot image Lynx runs still carries the finished UFS ref-clock
+  investigation's **9 kprobe/kretprobe events** on `ufs_mtk_setup_ref_clk`,
+  including probes around its SMC firmware call at +0x88 and +0x8c, plus one
+  on `ufs_mtk_boost_crypt`.
+- It also boots with `tp_printk`, so every hit is printed. That is about 7
+  hits a second at idle, and far more under heavy file I/O.
+- Both resets followed heavy recursive file reads.
+- **Not verified and not to be reproduced.** QT-1 stops the printing, and a
+  rebuild without the probes would remove them. If resets stop after either,
+  that is evidence, not proof.

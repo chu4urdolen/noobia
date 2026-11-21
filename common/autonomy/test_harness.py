@@ -114,6 +114,36 @@ class HarnessTest(unittest.TestCase):
         self.assertEqual(h.step()["queued"], 0)
         self.assertEqual(len(self.aigel.chunks), 1)
 
+    def test_failures_back_off_exponentially_and_reset_on_success(self):
+        self.aigel.down = True
+        attempts = []
+        orig = self.aigel.send_chunk
+
+        def counting(chunk):
+            attempts.append(self.clock.t)
+            return orig(chunk)
+        self.aigel.send_chunk = counting
+        h = self.make()
+        self.inbox.append(DOG)
+        for t in range(0, 120):
+            self.clock.t = float(t)
+            h.step()
+        self.assertEqual(attempts, [0.0, 2.0, 6.0, 14.0, 30.0, 62.0])   # 2, 4, 8, 16, 32 s gaps
+        self.aigel.down = False
+        self.clock.t = 200.0
+        h.step()
+        self.assertEqual((h.failures, len(self.aigel.chunks)), (0, 1))
+
+    def test_backoff_is_capped(self):
+        self.aigel.down = True
+        h = self.make()
+        self.inbox.append(DOG)
+        for _ in range(30):
+            self.clock.t = h.retry_at
+            h.step()
+        self.assertEqual(h.failures, 30)
+        self.assertEqual(h.retry_at - self.clock.t, 300.0)   # capped at max_backoff_s
+
     def test_queue_bounded_drops_oldest(self):
         self.aigel.down = True
         h = self.make(queue_max=3)

@@ -92,5 +92,45 @@ class TestAigelClient(unittest.TestCase):
             client.send_chunk(chunk)
 
 
+
+class WireFormatTest(unittest.TestCase):
+    """Parsed chunk lines travel as their raw canonical strings (found in e2e with Aigel's intake)."""
+
+    def test_parsed_lines_are_sent_as_raw_strings(self):
+        import io
+        import json as _json
+        from unittest import mock
+        import sense
+        line = sense.format_line(1, "camera", "object.seen", {"label": "cat"}, "cat")
+        sent = {}
+
+        class Resp(io.BytesIO):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        def fake_urlopen(req, timeout=None):
+            sent["body"] = _json.loads(req.data.decode("utf-8"))
+            return Resp(b'{"decision": "quiet", "patterns": [], "note": ""}')
+
+        client = AigelClient(endpoint_url="http://127.0.0.1:1/api/v1/chunk", host_id="lynx")
+        with mock.patch(f"{AigelClient.__module__}.urlopen", fake_urlopen):
+            client.send_chunk({"reason": "priority", "lines": [sense.parse_line(line), line]})
+        self.assertEqual(sent["body"]["lines"], [line, line])
+        self.assertTrue(all(isinstance(x, str) for x in sent["body"]["lines"]))
+
+    def test_priority_rules_are_passed_through(self):
+        client = AigelClient(endpoint_url="http://127.0.0.1:1/api/v1/chunk", host_id="lynx")
+        rules = [{"id": "wifi-down"}]
+        out = client._validate_response({"decision": "quiet", "patterns": [], "note": "",
+                                         "priority_rules": rules})
+        self.assertEqual(out["priority_rules"], rules)
+        self.assertEqual(client._validate_response({"decision": "quiet"})["priority_rules"], [])
+        with self.assertRaises(AigelResponseError):
+            client._validate_response({"decision": "quiet", "priority_rules": "all"})
+
+
 if __name__ == "__main__":
     unittest.main()

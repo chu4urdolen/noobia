@@ -83,7 +83,9 @@ class AigelClient:
         payload = {
             "host": self.host_id,
             "chunk_reason": chunk.get("reason", "unknown"),
-            "lines": chunk["lines"],
+            # Wire format (ARCHITECTURE.md §5): raw canonical sense-line strings.
+            "lines": [l.get("raw", "") if isinstance(l, dict) else str(l)
+                      for l in chunk["lines"]],
         }
         body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
@@ -148,9 +150,16 @@ class AigelClient:
         if not isinstance(patterns, list):
             raise AigelResponseError("patterns must be a list")
 
+        priority_rules = data.get("priority_rules", [])
+        if not isinstance(priority_rules, list):
+            raise AigelResponseError("priority_rules must be a list")
+
+        # Patterns and priority rules are proposals: the host validates each one
+        # (ranker.validate_pattern / prioritizer.validate_rule) before use.
         return {
             "decision": decision,
             "message": data.get("message"),
             "patterns": patterns,
+            "priority_rules": priority_rules,
             "note": str(data.get("note", "")),
         }

@@ -62,6 +62,9 @@ class Harness:
         self.queue_max = queue_max
         self.dropped = 0
         self.sent_times = deque()
+        self.failures = 0              # consecutive send failures
+        self.retry_at = 0.0            # no send attempt before this time
+        self.max_backoff_s = 300.0
         start = clock()
         self.last_line_at = start
         self.last_heartbeat_at = None
@@ -137,13 +140,21 @@ class Harness:
 
     def _flush(self, now):
         delivered = 0
+        if now < self.retry_at:
+            return 0
         while self.queue and self._rate_ok(now):
             chunk = self.queue[0]
             try:
                 reply = self.client.send_chunk(chunk)
-            except Exception as exc:  # unreachable or bad reply: keep the chunk, try later
-                self.log(f"harness aigel send failed: {type(exc).__name__}: {str(exc)[:160]}")
+            except Exception as exc:  # unreachable, refused or bad reply: keep it, back off
+                self.failures += 1
+                wait = min(self.max_backoff_s, 2.0 ** min(self.failures, 16))
+                self.retry_at = now + wait
+                self.log(f"harness aigel send failed ({self.failures} in a row, retry in {wait:.0f} s): "
+                         f"{type(exc).__name__}: {str(exc)[:160]}")
                 break
+            self.failures = 0
+            self.retry_at = 0.0
             self.queue.popleft()
             self.sent_times.append(now)
             delivered += self._apply_reply(reply, chunk)

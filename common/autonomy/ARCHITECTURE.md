@@ -326,6 +326,24 @@ and stores any accepted patterns. If Nexus is unreachable, the chunk waits
 in a bounded local queue, and the `nexus unreachable` sense makes the
 outage visible.
 
+**Wire format of a chunk** (the host POSTs to `/api/v1/chunk`):
+
+```json
+{"host": "lynx", "chunk_reason": "priority" | "timeout" | "volume" | "silent",
+ "lines": ["NOOBIA P1 camera object.seen label=dog conf=0.88 | dog", "..."]}
+```
+
+- `lines` are the **raw canonical sense-line strings**, at most 512 bytes
+  each, never parsed objects.
+- Signed with `X-Noobia-Signature`: hex HMAC-SHA256 of the raw body, using
+  the host's secret, or a Bearer token.
+- The reply always carries `decision`, `message`, `patterns`,
+  `priority_rules` and `note`. `patterns` and `priority_rules` are
+  proposals, and the host validates each one before use.
+- `common/autonomy/test_integration_aigel.py` runs the real harness, client
+  and Aigel intake together over HTTP, so the two sides cannot drift apart
+  again.
+
 For each chunk she returns JSON:
 
 ```json

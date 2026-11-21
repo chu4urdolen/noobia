@@ -208,8 +208,11 @@ actions and Aigel's words can never set off a trigger.
   noobia-sense`. Lines also carry the fields `NOOBIA_P`, `NOOBIA_SENSE` and
   `NOOBIA_EVENT`.
 - **BusyBox syslogd** (Lynx): tail `/var/log/lynx/messages`, filtered by
-  tag. Sense lines are logged at level `notice`, so install I-2 must raise
-  Lynx's `syslogd -l 4` to `-l 6`, or they are dropped.
+  tag. Sense lines are logged at level `notice` (5). BusyBox `-l N` keeps
+  only messages **more urgent than N**, so Lynx's current `-l 4` drops
+  warnings and notices. Install I-2 raises it to `-l 6`, which keeps notice
+  and drops info
+  (`lynx/linux-port/docs/LYNX-INSTALL-PACKET-I2-SYSLOG-20261121.md`).
 - A fallback like `aigel_dmesg_scout.py`'s `journalctl`/`dmesg` pair.
 
 ## 4. Pattern store and ranker (regex done carefully)

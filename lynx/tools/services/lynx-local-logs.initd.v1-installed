@@ -1,0 +1,73 @@
+#!/sbin/openrc-run
+# Bounded on-device logs. No network forwarding or credentials are included.
+description="Lynx local persistent kernel and service logs"
+log_dir=/var/log/lynx
+run_dir=/run/lynx
+
+depend() {
+    need lynx-health
+}
+
+worker() {
+    pidfile=$1 applet=$2
+    [ -r "$pidfile" ] || return 1
+    pid=$(cat "$pidfile") || return 1
+    case "$pid" in ''|*[!0-9]*) return 1;; esac
+    kill -0 "$pid" 2>/dev/null || return 1
+    tr '\000' '\n' < "/proc/$pid/cmdline" | grep -Fxq "$applet"
+}
+
+start() {
+    ebegin "Starting Lynx local logs"
+    install -d -m 0700 "$log_dir" || { eend 1 "log directory failed"; return 1; }
+    [ ! -e "$run_dir/lynx-syslogd.pid" ] && [ ! -e "$run_dir/lynx-klogd.pid" ] || {
+        eend 1 "existing logger pidfile"; return 1;
+    }
+    /sbin/start-stop-daemon --start --background --make-pidfile \
+        --pidfile "$run_dir/lynx-syslogd.pid" --exec /bin/busybox -- \
+        syslogd -n -O "$log_dir/messages" -s 512 -b 5 -l 4 || {
+        eend 1 "syslogd failed"; return 1;
+    }
+    /sbin/start-stop-daemon --start --background --make-pidfile \
+        --pidfile "$run_dir/lynx-klogd.pid" --exec /bin/busybox -- \
+        klogd -n -c 4 || {
+        eend 1 "klogd failed"; return 1;
+    }
+    worker "$run_dir/lynx-syslogd.pid" syslogd &&
+        worker "$run_dir/lynx-klogd.pid" klogd || {
+            eend 1 "logger process proof failed"; return 1;
+        }
+    boot_id=$(cat /proc/sys/kernel/random/boot_id) || return 1
+    case "$boot_id" in ''|*[!0-9a-f-]*) eend 1 "boot ID invalid"; return 1;; esac
+    if [ -r /run/lynx/boot.log ]; then
+        umask 077
+        head -c 262144 /run/lynx/boot.log > "$log_dir/boot-$boot_id.log"
+    fi
+    umask 077
+    prior_boot_id=$(cat "$log_dir/kernel-boot.id" 2>/dev/null || true)
+    if [ -e "$log_dir/kernel-boot.log" ] && [ "$prior_boot_id" != "$boot_id" ]; then
+        mv "$log_dir/kernel-boot.log" "$log_dir/kernel-boot.previous.log"
+    fi
+    dmesg | tail -c 524288 > "$log_dir/kernel-boot.log" || true
+    printf '%s\n' "$boot_id" > "$log_dir/kernel-boot.id.new"
+    mv "$log_dir/kernel-boot.id.new" "$log_dir/kernel-boot.id"
+    /bin/busybox logger -t lynx-local-logs "started boot_id=$boot_id"
+    sleep 1
+    [ -s "$log_dir/messages" ] || { eend 1 "no persistent log output"; return 1; }
+    eend 0
+}
+
+status() {
+    worker "$run_dir/lynx-syslogd.pid" syslogd &&
+        worker "$run_dir/lynx-klogd.pid" klogd &&
+        [ -s "$log_dir/messages" ]
+}
+
+stop() {
+    ebegin "Stopping Lynx local logs"
+    /bin/busybox logger -t lynx-local-logs "stopping" || true
+    /sbin/start-stop-daemon --stop --pidfile "$run_dir/lynx-klogd.pid" --exec /bin/busybox || true
+    /sbin/start-stop-daemon --stop --pidfile "$run_dir/lynx-syslogd.pid" --exec /bin/busybox || true
+    rm -f "$run_dir/lynx-klogd.pid" "$run_dir/lynx-syslogd.pid"
+    eend 0
+}

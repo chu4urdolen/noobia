@@ -62,6 +62,9 @@ class ViewReader:
         self._file_offset: int = 0
         self._file_inode: int | None = None
         self._journal_cursor: str | None = None
+        self._tagged_file_offset: int = 0
+        self._tagged_file_inode: int | None = None
+        self._tagged_journal_cursor: str | None = None
 
         if self.state_file and self.state_file.exists():
             self.load_state()
@@ -71,11 +74,17 @@ class ViewReader:
                     st = self.log_file.stat()
                     self._file_offset = st.st_size
                     self._file_inode = st.st_ino
+                    self._tagged_file_offset = st.st_size
+                    self._tagged_file_inode = st.st_ino
                 except OSError:
                     self._file_offset = 0
                     self._file_inode = None
+                    self._tagged_file_offset = 0
+                    self._tagged_file_inode = None
             elif self.backend == "journald":
-                self._journal_cursor = self._get_journal_tail_cursor()
+                tail_cursor = self._get_journal_tail_cursor()
+                self._journal_cursor = tail_cursor
+                self._tagged_journal_cursor = tail_cursor
 
     def read_recent(self, lines: int = 100) -> list[str]:
         """Read up to `lines` recent entries for this view."""
@@ -97,6 +106,23 @@ class ViewReader:
             lines = self._read_new_file()
         else:
             lines = self._read_new_fallback()
+
+        if self.state_file:
+            self.save_state()
+        return lines
+
+    def read_new_tagged(self, sources: list[str] | set[str]) -> list[tuple[str, str]]:
+        """Read only newly arrived lines matching any tag in `sources` (V2)."""
+        src_set = set(sources)
+        if not src_set:
+            return []
+
+        if self.backend == "journald":
+            lines = self._read_new_tagged_journald(src_set)
+        elif self.backend == "file":
+            lines = self._read_new_tagged_file(src_set)
+        else:
+            lines = self._read_new_tagged_fallback(src_set)
 
         if self.state_file:
             self.save_state()
@@ -149,6 +175,9 @@ class ViewReader:
             self._file_offset = int(data.get("file_offset", 0))
             self._file_inode = data.get("file_inode")
             self._journal_cursor = data.get("journal_cursor")
+            self._tagged_file_offset = int(data.get("tagged_file_offset", self._file_offset))
+            self._tagged_file_inode = data.get("tagged_file_inode", self._file_inode)
+            self._tagged_journal_cursor = data.get("tagged_journal_cursor", self._journal_cursor)
         except Exception:
             pass
 
@@ -162,6 +191,9 @@ class ViewReader:
                 "file_offset": self._file_offset,
                 "file_inode": self._file_inode,
                 "journal_cursor": self._journal_cursor,
+                "tagged_file_offset": self._tagged_file_offset,
+                "tagged_file_inode": self._tagged_file_inode,
+                "tagged_journal_cursor": self._tagged_journal_cursor,
             }
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(payload, f)
@@ -273,6 +305,102 @@ class ViewReader:
         if self.log_file and self.log_file.exists():
             return self._read_new_file()
         return []
+
+    def _read_new_tagged_file(self, src_set: set[str]) -> list[tuple[str, str]]:
+        if not self.log_file.exists():
+            return []
+        try:
+            st = self.log_file.stat()
+            size = st.st_size
+            inode = st.st_ino
+
+            if self._tagged_file_inode is not None and inode != self._tagged_file_inode:
+                self._tagged_file_offset = 0
+            elif size < self._tagged_file_offset:
+                self._tagged_file_offset = 0
+            self._tagged_file_inode = inode
+
+            with open(self.log_file, "rb") as f:
+                f.seek(self._tagged_file_offset)
+                chunk = f.read()
+
+            if not chunk:
+                return []
+
+            last_nl = chunk.rfind(b"\n")
+            if last_nl == -1:
+                return []
+
+            consumed = chunk[:last_nl + 1]
+            self._tagged_file_offset += len(consumed)
+
+            text = consumed.decode("utf-8", errors="replace")
+            new_lines = text.splitlines()
+        except OSError:
+            return []
+
+        matched = []
+        for raw in new_lines:
+            res = self.parse_tagged_line(raw, src_set)
+            if res is not None:
+                matched.append(res)
+        return matched
+
+    def _read_new_tagged_journald(self, src_set: set[str]) -> list[tuple[str, str]]:
+        if not self._tagged_journal_cursor:
+            tail_cur = self._get_journal_tail_cursor()
+            if tail_cur:
+                self._tagged_journal_cursor = tail_cur
+                return []
+
+        cmd = ["journalctl", "-o", "json", "--no-pager"]
+        for s in sorted(src_set):
+            cmd.extend(["-t", s])
+        if self._tagged_journal_cursor:
+            cmd.extend(["--after-cursor", self._tagged_journal_cursor])
+        else:
+            cmd.extend(["-n", "0"])
+
+        try:
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5.0)
+            if res.returncode != 0:
+                return []
+            lines = []
+            for raw_line in res.stdout.splitlines():
+                if not raw_line.strip():
+                    continue
+                try:
+                    entry = json.loads(raw_line)
+                    cursor = entry.get("__CURSOR")
+                    if cursor:
+                        self._tagged_journal_cursor = cursor
+                    ident = entry.get("SYSLOG_IDENTIFIER") or entry.get("_COMM")
+                    msg = entry.get("MESSAGE", "").strip()
+                    if ident and ident in src_set and msg:
+                        lines.append((ident, msg))
+                except Exception:
+                    pass
+            return lines
+        except Exception:
+            return []
+
+    def _read_new_tagged_fallback(self, src_set: set[str]) -> list[tuple[str, str]]:
+        if self.log_file and self.log_file.exists():
+            return self._read_new_tagged_file(src_set)
+        return []
+
+    @staticmethod
+    def parse_tagged_line(line: str, sources: set[str]) -> tuple[str, str] | None:
+        """Extract (ident, text) if line matches any source in `sources`."""
+        pattern = re.compile(
+            r"^(?:(?:[A-Za-z]{3}\s+\d+\s+\d{2}:\d{2}:\d{2}|\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)(?:\s+([^\s:]+))?\s+)?([A-Za-z0-9_.-]+)(?:\[\d+\])?:\s*(.*)$"
+        )
+        m = pattern.match(line.strip())
+        if m:
+            ident, text = m.group(2), m.group(3).strip()
+            if ident in sources:
+                return (ident, text)
+        return None
 
     def parse_syslog_line(self, line: str) -> str | None:
         """Extract view message payload from a raw syslog line if it matches this view."""

@@ -207,6 +207,48 @@ class TestViews(unittest.TestCase):
         self.assertEqual(lines, [])
         self.assertEqual(vr._journal_cursor, "mock-tail-cursor-999")
 
+    def test_read_new_tagged_file_filtering(self):
+        """V2: read_new_tagged parses source and text for matching tags."""
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", delete=False) as tf:
+            tf.write("Nov 21 15:00:01 lynx wpa_supplicant[123]: wlan0: key negotiated\n")
+            tf.write("Nov 21 15:00:02 lynx kernel: [12.34] usb link reset\n")
+            tf.write("Nov 21 15:00:03 lynx noobia-sense[456]: 2026-11-21T15:00:03Z lynx wifi link up\n")
+            tf.write("Nov 21 15:00:04 lynx lynx-bluetoothd: link connected\n")
+            tf.flush()
+            path = tf.name
+
+        try:
+            vr = ViewReader("noobia-sense", backend="file", log_file=path)
+            tagged = vr.read_new_tagged(["wpa_supplicant", "kernel"])
+            self.assertEqual(tagged, [
+                ("wpa_supplicant", "wlan0: key negotiated"),
+                ("kernel", "[12.34] usb link reset"),
+            ])
+            # Next call returns empty
+            self.assertEqual(vr.read_new_tagged(["wpa_supplicant", "kernel"]), [])
+        finally:
+            Path(path).unlink(missing_ok=True)
+
+    def test_read_new_and_read_new_tagged_independent(self):
+        """V2: read_new and read_new_tagged advance independent offsets."""
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", delete=False) as tf:
+            tf.write("Nov 21 15:00:01 lynx wpa_supplicant[123]: auth ok\n")
+            tf.write("Nov 21 15:00:02 lynx noobia-sense: sense line 1\n")
+            tf.flush()
+            path = tf.name
+
+        try:
+            vr = ViewReader("noobia-sense", backend="file", log_file=path)
+            # read_new_tagged only consumes wpa_supplicant
+            tagged = vr.read_new_tagged(["wpa_supplicant"])
+            self.assertEqual(tagged, [("wpa_supplicant", "auth ok")])
+
+            # read_new still sees sense line 1
+            sense_lines = vr.read_new()
+            self.assertEqual(sense_lines, ["sense line 1"])
+        finally:
+            Path(path).unlink(missing_ok=True)
+
 
 if __name__ == "__main__":
     unittest.main()

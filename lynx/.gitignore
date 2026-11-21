@@ -138,3 +138,10 @@
 !/tools/lpm/fixtures/
 /tools/lpm/fixtures/*
 !/tools/lpm/fixtures/*.json
+!/tools/display/
+/tools/display/*
+!/tools/display/*.py
+!/tools/display/README.md
+!/tools/display/fixtures/
+/tools/display/fixtures/*
+!/tools/display/fixtures/*.json

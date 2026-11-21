@@ -1,0 +1,45 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "5e2a1f8c-6b4d-4e7a-9c12-8f3d2a1b0c9d",
+  "device_tree": {
+    "dsi_host_present": true,
+    "panel_paths": [
+      "/sys/firmware/devicetree/base/dsimipi@17ac0000/panel5@0",
+      "/sys/firmware/devicetree/base/dsimipi@17ac0000/panel2@0"
+    ],
+    "panel_compatible": "oplus22823,tm,nt37705,cmd oplus22021_boe_nt37701a_fhd_dsi_cmd"
+  },
+  "backlight": {
+    "present": true,
+    "label": "lcd-backlight",
+    "max_brightness": 10239,
+    "led_bits": 13,
+    "pwm_channel": 1
+  },
+  "rails": {
+    "p1v8_supply": "mt6373_vrf18_aif",
+    "p3v0_supply": "mt6373_vmc",
+    "aod_gpio": "mt6373_pio3",
+    "panel_channel_adc": "mt6373_adc AUXADC_VIN1 100K"
+  },
+  "gpios": {
+    "reset": 86,
+    "vddr_enable": 148,
+    "te_switch": 36,
+    "te_out": 24
+  },
+  "expected_modules": [
+    "oplus22823_tm_nt37705_fhd_dsi_cmd",
+    "oplus22021_boe_nt37701a_fhd_dsi_cmd"
+  ],
+  "runtime": {
+    "backlight_class_present": true,
+    "backlight_max_brightness_sysfs": 10239,
+    "drm_device_present": true,
+    "framebuffer_present": true,
+    "panel_driver_bound": true
+  },
+  "loaded_modules": [
+    "oplus22823_tm_nt37705_fhd_dsi_cmd"
+  ]
+}

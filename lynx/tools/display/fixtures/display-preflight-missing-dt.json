@@ -1,0 +1,40 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / project 22823 'Vitamin')",
+  "boot_id": "77aa0c1e-9d2b-4f6e-8b31-5c4d6e7f8a9b",
+  "device_tree": {
+    "dsi_host_present": false,
+    "panel_paths": [],
+    "panel_compatible": ""
+  },
+  "backlight": {
+    "present": false,
+    "label": null,
+    "max_brightness": null,
+    "led_bits": 13,
+    "pwm_channel": 1
+  },
+  "rails": {
+    "p1v8_supply": "mt6373_vrf18_aif",
+    "p3v0_supply": "mt6373_vmc",
+    "aod_gpio": "mt6373_pio3",
+    "panel_channel_adc": "mt6373_adc AUXADC_VIN1 100K"
+  },
+  "gpios": {
+    "reset": 86,
+    "vddr_enable": 148,
+    "te_switch": 36,
+    "te_out": 24
+  },
+  "expected_modules": [
+    "oplus22823_tm_nt37705_fhd_dsi_cmd",
+    "oplus22021_boe_nt37701a_fhd_dsi_cmd"
+  ],
+  "runtime": {
+    "backlight_class_present": false,
+    "backlight_max_brightness_sysfs": null,
+    "drm_device_present": false,
+    "framebuffer_present": false,
+    "panel_driver_bound": false
+  },
+  "loaded_modules": []
+}

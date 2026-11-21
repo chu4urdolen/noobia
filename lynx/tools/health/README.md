@@ -39,13 +39,25 @@ install.
   Live captures (verdict ok, exit 0): `examples/lynx-live-20261121.json`
   (the interim collector that left modem/queue `unknown`) and
   `examples/lynx-live-20261121-full.json` (all seven checks evaluated).
-  Nexus GPU/RAM/SMART collection stays with Aigel's board.
+- Nexus collector (`nexus_health_collect.py`): local **read-only** snapshot
+  of the common checks on Nexus itself (D11, Gwyn queue #148) — bounded
+  `systemctl is-active`, `nvidia-smi` query, `journalctl -b` (single
+  passwordless `sudo -n` fallback), `smartctl -H` (one bounded `sudo -n`
+  retry; `/dev/nvme*` is root-only). A failing reader leaves the fact
+  absent -> the evaluator reports `unknown`, never `ok`. Wired uplink is
+  not modelled in portable-health/1, so network is unknown **by design**
+  (v2 candidate: an `eth` link). 25 hermetic tests; live capture in
+  `examples/nexus-live-20261121.json`. Overlap and disagreements with
+  Aigel's vitals board are documented in
+  `linux-port/docs/LYNX-NEXUS-PORTABLE-CHECKS-DUSHICH-20261121.md`;
+  `aigel/` is untouched — Aigel's board remains the richer supervisor
+  (CPU load, beacon, DNS, Wi-Fi, power cap, SMART sector counters).
 - Report diff (`portable_health_diff.py`): offline, bounded diff of two
   **saved** evaluator reports — changed check statuses, new unknowns,
   resolved unknowns, added/removed checks, verdict change. Reads only the
   two given files (512 KiB cap each, 256-check cap), never contacts a
   machine, no periodic job.
-  Suite: 114 offline fixture tests.
+  Suite: 139 offline fixture tests (62 + 35 + 25 + 17).
 
 ## Usage
 

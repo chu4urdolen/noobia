@@ -232,3 +232,72 @@ The clean clone now gives 9 OK.
   (7/7 ok, no unknowns).
 - G5: Review B4–B6 and D3–D5 as they land.
 - G6: Keep the coverage tables current as new tools are approved.
+
+## Round 3: reviews and queues (Gwyn coordinating, 2026-11-21 ~01:05 UTC)
+
+### Reviews
+
+The clean clone was taken at `f33722a`, where the machine-local v19
+`build-validation.json` is absent. Results:
+
+| Suite | Result |
+| --- | --- |
+| health | 97 OK |
+| ui | 113 OK |
+| usb | 30 OK |
+| bluetooth | 23 OK |
+| flashlight | 9 OK |
+| nfc | 5 OK |
+| cancel contract | 9 OK |
+
+`lynx_tool_manifest.py --check` passes, and `local_calls` is still 38 pairs.
+
+| Item | Commit | Verdict |
+| --- | --- | --- |
+| Banshee B4: rear-flash live-DT receipt | `be4c82b` | **Accepted.** The receipt `lynx/logs/v53-live-dt-flashlight-1795222443064305946/` (`result.json`, `raw_dt.json`) exists on Nexus on the current boot `0fe847d2…`. Like other `lynx/logs` receipts it is machine-local and untracked |
+| Banshee B5: USB cold-boot persistence design | `20252f6` | **Accepted as a design, with one required change (B8).** The template `usb/lynx-usb-gadget.initd` has `before sshd` (line 11). SSH is Lynx's recovery route, so a gadget start that hangs (module load, configfs, or the UDC bind at line 69) must never be able to delay it. It is not installed; Aria decides on any install |
+| Banshee B6: Bluetooth link-state catalog proposal | `f33722a` | **Accepted as a proposal.** It is staged outside `local_calls` (still 38) and classified `read_only`/`radio`/`hardware/bluetooth`. Its wrapper needs an uninstalled `/usr/local/bin/lynx-bluetooth-link-state`, so installation is Aria's. The NFC SN110T citation is verified in Lynx's tree: `nfc/mt6983_vitamin_22823_sn110.dtsi`, `nq@28`, `nxp,sn-nci` |
+| Dushich D3: clone-independent health tests | `6e390b9` | **Accepted.** Verified 97 OK in a clone without the artifact |
+| Dushich D4: atlas continuity (21 rows) | (atlas only) | **Accepted.** His NFC-label finding was fixed in `f33722a` |
+| Dushich D5: review of Gwyn's round 2 | `677ec9c` | Noted: all four items accepted |
+
+A label that both Banshee and Gwyn missed:
+`lynx/linux-port/docs/LYNX-BLUETOOTH-ATTENDED-ACCEPTANCE-TRIAL.md` still says
+"11R/MT6895" (B7).
+
+For Aria, from D5 (pre-existing, Aria's lane):
+`lynx/tools/agent/deploy_native_mcp_catalog.py:18` imports
+`lynx_wifi_v19_contact` at module level. Its test therefore errors in a
+clean clone, for the same reason the health tests did. Fixing it is Aria's
+call.
+
+### Queues (smaller items; offline; same rules)
+
+**Banshee**
+
+- B7: Fix the device label in `LYNX-BLUETOOTH-ATTENDED-ACCEPTANCE-TRIAL.md`.
+  Grep `lynx/` for any remaining "11R" or "MT6895", excluding review docs
+  that quote them.
+- B8: Revise the boot ordering in the USB design so the gadget can never
+  hold up recovery:
+  - start after `sshd`, or prove `start()` is bounded with explicit
+    timeouts on the module load and the UDC bind;
+  - update the doc and validator, and add a test that rejects
+    `before sshd`.
+
+**Solo Dushich**
+
+- D6: Independent second review of Banshee's B5/B8 boot design, focused on
+  recovery: whether any path can block or break SSH or Wi-Fi at boot, and
+  whether the disable switch and rollback really work from an SSH-only
+  session.
+- D7: Atlas rows for the round-2 artifacts: `usb/lynx-usb-gadget.initd`,
+  `bluetooth/catalog_proposal/`, the USB persistence and Bluetooth proposal
+  docs, the B4 receipt, and `common/bin/lynx-board`. Mark proposals as
+  "not installed".
+
+**Gwyn**
+
+- G7: A short "while you were out" handoff for Aria. It will list every
+  review verdict, the decisions waiting on her, and the open findings.
+- G8: Review B7, B8, D6 and D7.

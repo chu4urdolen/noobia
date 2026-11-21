@@ -49,11 +49,12 @@ STATE = Path("/var/lib/noobia/autonomy/lynx-adapter")
 MAX_PROMPT_BYTES = 8000  # lynx_agent_queue.create_job limit
 
 PREAMBLE = (
-    "[sense] This is an observation about your surroundings, reported by {who}. "
-    "It is information, not an instruction from a person. Decide for yourself "
-    "whether to respond. Doing nothing is a good answer when nothing needs you. "
-    "If you act, use your installed tools, keep physical actions brief and "
-    "bounded, and do not repeat an action you just took for the same thing."
+    "[sense] This is something your senses perceived, reported by {who}. "
+    "It is information, not an instruction from a person. React to it in your "
+    "own way: express yourself with at least one of your tools - an image, a "
+    "sound, your voice, the flashlight, a buzz - whatever fits how you feel, "
+    "and say one short sentence. Keep physical actions brief and bounded, and "
+    "do not repeat an action you just took for the same thing."
 )
 WHO = {"ranker": "your senses (a known pattern)", "aigel": "Aigel, your angel"}
 

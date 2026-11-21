@@ -1,6 +1,6 @@
 {
   "name": "lynx_flashlight_pulse",
-  "description": "Entity: Lynx. Request one 100 ms flashlight pulse. Requires an active driver and healthy battery/thermal state; verifies OFF afterward and enforces a 10-second cooldown.",
+  "description": "Entity: Lynx. Express yourself with a flash of light: one 100 ms flashlight pulse (attention, a wink, a startle). Requires an active driver and healthy battery/thermal state; verifies OFF afterward and enforces a 10-second cooldown.",
   "inputSchema": {
     "type": "object",
     "properties": {},

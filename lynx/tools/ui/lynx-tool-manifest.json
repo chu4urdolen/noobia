@@ -422,7 +422,7 @@
         "rear-led-pulse-2026-11-02"
       ],
       "component": "flashlight",
-      "description": "Entity: Lynx. Request one 100 ms flashlight pulse. Requires an active driver and healthy battery/thermal state; verifies OFF afterward and enforces a 10-second cooldown.",
+      "description": "Entity: Lynx. Express yourself with a flash of light: one 100 ms flashlight pulse (attention, a wink, a startle). Requires an active driver and healthy battery/thermal state; verifies OFF afterward and enforces a 10-second cooldown.",
       "effect": "actuates",
       "entry": {
         "args": [
@@ -432,7 +432,7 @@
         "command": "lynx-flashlight-pulse"
       },
       "files_sha256": {
-        "json": "9228c32b7f7657756f07ec5994a980ed46e603dea8321c6cf7cee0e3f51f7c1b",
+        "json": "0f6f6d0573f51dea95634d59511e34f6104b63d98fdfcbc579ec496109e2941d",
         "sh": "2c1f8c9598ac9d2a94d447c6bd8d0ffb7b755ce4c4572e6fa5689105c47e44cc"
       },
       "group": "light",
@@ -501,7 +501,7 @@
         "haptic-pulse-2026-11-21"
       ],
       "component": "haptic",
-      "description": "Entity: Lynx. Request one 80 ms haptic pulse through the existing NRP runtime, then verify OFF.",
+      "description": "Entity: Lynx. Express yourself with a short buzz: one 80 ms haptic pulse (surprise, a nudge, a purr, a nervous twitch), through the existing NRP runtime, then verify OFF.",
       "effect": "actuates",
       "entry": {
         "args": [
@@ -510,7 +510,7 @@
         "command": "lynx-agent-haptic"
       },
       "files_sha256": {
-        "json": "66266db3975f1ec14e8ab38babc43da6bad80c05e8e776f12ccf84f3a3b4c5a8",
+        "json": "b402ce5c104c53b52427b8cda0819caec6bbd650f25721ffa4132215597ce4f5",
         "sh": "1e6abacee7ea41fb9a037506a22edde638e348ea13d0d27ad6abd33229789146"
       },
       "group": "haptic",
@@ -651,7 +651,7 @@
       ],
       "attended": [],
       "component": "audio",
-      "description": "Entity: Lynx. List installed sound and image item names.",
+      "description": "Entity: Lynx. List your installed sound and image item names - the pictures and sounds you can use to express yourself with lynx_media_play.",
       "effect": "read_only",
       "entry": {
         "args": [
@@ -660,7 +660,7 @@
         "command": "lynx-agent-media"
       },
       "files_sha256": {
-        "json": "191e78bb337118765405bbee42631a569803ea653db9b8e32d615b45b8160acf",
+        "json": "3a3cb991f3693f920c1e2e02eba756ed4034913272504e02462428583bb9fdca",
         "sh": "e2cc8f0674199ce0dd4e0b286a69ed8d33817badca1be4a1e35f0c60c8c14c79"
       },
       "group": "sound",
@@ -680,7 +680,7 @@
         "speaker-beep-2026-11-21"
       ],
       "component": "audio",
-      "description": "Entity: Lynx. Play one bounded sound or selected image from Lynx's installed catalog.",
+      "description": "Entity: Lynx. Express yourself: show one of your images on your screen (your face, your mood) or play one of your sounds. Plays one bounded sound or selected image from Lynx's installed catalog; call lynx_media_catalog first if you do not know the item names.",
       "effect": "actuates",
       "entry": {
         "args": [
@@ -689,7 +689,7 @@
         "command": "lynx-agent-media"
       },
       "files_sha256": {
-        "json": "8b859e68a99843a9679881d8baddf98301b87ca0e995369eac7f77a507e0220f",
+        "json": "95cb8c02a5474064c8784a539fcd48a9ca20a880abc25146e1edaf2ff4e0cec1",
         "sh": "bf507400ba28a68518366e19d2a864c701896748fccbf89b4fb56ac7eaa23912"
       },
       "group": "sound",

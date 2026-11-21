@@ -46,7 +46,8 @@ class AdapterTest(unittest.TestCase):
         self.assertEqual(receipt["status"], "delivered")
         (job,) = self.pending()
         prompt = json.loads(job.read_text())["prompt"]
-        self.assertTrue(prompt.startswith("[sense] This is an observation"))
+        self.assertTrue(prompt.startswith("[sense] This is something your senses perceived"))
+        self.assertIn("at least one of your tools", prompt)        # Tom: react with tools
         self.assertIn("not an instruction from a person", prompt)
         self.assertIn("your senses (a known pattern)", prompt)
         data = json.loads(prompt.split("Observation (data):\n", 1)[1])

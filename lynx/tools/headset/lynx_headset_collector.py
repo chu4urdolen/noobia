@@ -4,6 +4,10 @@
 Strictly passive: does not write to audio routing kcontrols, sysfs, or input devices.
 Enforces architectural separation between mechanical/impedance switch detection and
 actual ALSA/DSP routed audio.
+
+On OnePlus Nord 3 (CPH2493, MediaTek MT6983 Dimensity 9000), analog headset
+connectivity is routed over USB Type-C via an FSA4480 / DIO4480 analog switch (I2C6 @ 0x42)
+cooperating with MT6375 TCPC and MT6338 PMIC ACCDET (Accessory Detection).
 """
 
 from dataclasses import dataclass, field
@@ -34,6 +38,25 @@ SWITCH_BIT_MAP = {
     "physical": SW_JACK_PHYSICAL_INSERT,
 }
 
+# Decoded accessory classifications
+ACCESSORY_UNPLUGGED = "UNPLUGGED"
+ACCESSORY_HEADSET_4POLE = "HEADSET_4POLE"
+ACCESSORY_HEADPHONES_3POLE = "HEADPHONES_3POLE"
+ACCESSORY_LINEOUT = "LINEOUT"
+ACCESSORY_INVALID = "INVALID_SWITCH_STATE"
+
+# Hardware parameters for OnePlus Nord 3 / MT6983 / MT6338 ACCDET
+HARDWARE_CONFIG = {
+    "soc": "MediaTek MT6983 (Dimensity 9000)",
+    "pmic_accdet": "MT6338 ACCDET",
+    "typec_switch": "FSA4480 / DIO4480 (I2C6 @ 0x42)",
+    "hs_det_gpio": 98,
+    "auxadc_channel": "AUXADC_ACCDET",
+    "three_key_thresholds_mv": [0, 82, 170, 306],
+    "three_key_thresholds_cdd_mv": [0, 121, 192, 600],
+    "four_key_thresholds_mv": [0, 58, 121, 192, 400],
+}
+
 # 64-bit struct input_event: timeval (16 bytes: 2x 64-bit longs), type (uint16), code (uint16), value (int32) -> 24 bytes
 INPUT_EVENT_STRUCT_64 = "qqHHi"
 INPUT_EVENT_SIZE_64 = struct.calcsize(INPUT_EVENT_STRUCT_64)
@@ -44,6 +67,7 @@ class HeadsetEvaluationVerdict:
     status: str  # "PASS_DETECTED", "PASS_UNPLUGGED", "FAILED", "ABSENT"
     is_valid: bool
     jack_detected: bool
+    accessory_type: str
     routed_audio_validated: bool
     summary: str
     details: Dict[str, Any] = field(default_factory=dict)
@@ -54,6 +78,7 @@ class HeadsetEvaluationVerdict:
             "status": self.status,
             "is_valid": self.is_valid,
             "jack_detected": self.jack_detected,
+            "accessory_type": self.accessory_type,
             "routed_audio_validated": self.routed_audio_validated,
             "summary": self.summary,
             "details": self.details,
@@ -64,6 +89,42 @@ class HeadsetEvaluationVerdict:
 def parse_switch_bits(bits: int) -> Dict[str, bool]:
     """Convert bitmask from EVIOCGSW into named boolean switch states."""
     return {name: bool(bits & (1 << bit)) for name, bit in SWITCH_BIT_MAP.items()}
+
+
+def decode_accessory_type(switches: Dict[str, bool]) -> str:
+    """Decode input switch states into high-level accessory classification.
+
+    On Nord 3 / MT6338:
+    - UNPLUGGED: physical=False, all false.
+    - HEADSET_4POLE: physical=True, headphone=True, microphone=True, lineout=False.
+    - HEADPHONES_3POLE: physical=True, headphone=True, microphone=False, lineout=False.
+    - LINEOUT: physical=True, lineout=True, headphone=False, microphone=False.
+    - INVALID: Any illegal permutation (e.g. physical=False but active pins, or simultaneous headphone+lineout).
+    """
+    phys = switches.get("physical", False)
+    hp = switches.get("headphone", False)
+    mic = switches.get("microphone", False)
+    line = switches.get("lineout", False)
+
+    if not phys:
+        if hp or mic or line:
+            return ACCESSORY_INVALID
+        return ACCESSORY_UNPLUGGED
+
+    # Physical insertion asserted:
+    if hp and line:
+        return ACCESSORY_INVALID
+
+    if hp and mic and not line:
+        return ACCESSORY_HEADSET_4POLE
+
+    if hp and not mic and not line:
+        return ACCESSORY_HEADPHONES_3POLE
+
+    if line and not hp and not mic:
+        return ACCESSORY_LINEOUT
+
+    return ACCESSORY_INVALID
 
 
 def find_headset_input_device(sysfs_input: Path = Path("/sys/class/input")) -> Optional[str]:
@@ -200,6 +261,7 @@ def evaluate_headset_receipt(receipt: Optional[Dict[str, Any]]) -> HeadsetEvalua
             status="ABSENT",
             is_valid=False,
             jack_detected=False,
+            accessory_type=ACCESSORY_UNPLUGGED,
             routed_audio_validated=False,
             summary="Receipt data is missing or empty",
             failures=["missing_receipt"],
@@ -212,8 +274,10 @@ def evaluate_headset_receipt(receipt: Optional[Dict[str, Any]]) -> HeadsetEvalua
     switches = None
     if "switches" in receipt:
         switches = receipt["switches"]
-    elif "initial_switches" in receipt:
-        switches = receipt.get("final_switches") or receipt.get("initial_switches")
+    elif "final_switches" in receipt and receipt["final_switches"] is not None:
+        switches = receipt["final_switches"]
+    elif "initial_switches" in receipt and receipt["initial_switches"] is not None:
+        switches = receipt["initial_switches"]
     elif "evidence" in receipt and "switches" in receipt["evidence"]:
         switches = receipt["evidence"]["switches"]
 
@@ -231,11 +295,14 @@ def evaluate_headset_receipt(receipt: Optional[Dict[str, Any]]) -> HeadsetEvalua
         failures.append(f"receipt_reported_error: {receipt['error']}")
 
     jack_inserted = False
+    accessory_type = ACCESSORY_UNPLUGGED
     if switches and isinstance(switches, dict):
-        jack_inserted = bool(
+        accessory_type = decode_accessory_type(switches)
+        if accessory_type == ACCESSORY_INVALID:
+            failures.append("invalid_switch_combination")
+        jack_inserted = switches.get("physical", False) or bool(
             switches.get("headphone")
             or switches.get("microphone")
-            or switches.get("physical")
             or switches.get("lineout")
         )
 
@@ -247,12 +314,18 @@ def evaluate_headset_receipt(receipt: Optional[Dict[str, Any]]) -> HeadsetEvalua
     )
     details["switches"] = switches
     details["jack_detected"] = jack_inserted
+    details["accessory_type"] = accessory_type
+    details["hardware_config"] = HARDWARE_CONFIG
+
+    if "typec_mux" in receipt:
+        details["typec_mux"] = receipt["typec_mux"]
 
     if failures:
         return HeadsetEvaluationVerdict(
             status="FAILED",
             is_valid=False,
             jack_detected=jack_inserted,
+            accessory_type=accessory_type,
             routed_audio_validated=False,
             summary=f"Headset evaluation failed with {len(failures)} error(s)",
             details=details,
@@ -261,7 +334,7 @@ def evaluate_headset_receipt(receipt: Optional[Dict[str, Any]]) -> HeadsetEvalua
 
     status_str = "PASS_DETECTED" if jack_inserted else "PASS_UNPLUGGED"
     summary_str = (
-        f"Headset jack switch state valid: {'INSERTED' if jack_inserted else 'UNPLUGGED'} "
+        f"Headset jack switch state valid: {accessory_type} "
         f"(routed audio correctly unvalidated)"
     )
 
@@ -269,6 +342,7 @@ def evaluate_headset_receipt(receipt: Optional[Dict[str, Any]]) -> HeadsetEvalua
         status=status_str,
         is_valid=True,
         jack_detected=jack_inserted,
+        accessory_type=accessory_type,
         routed_audio_validated=False,
         summary=summary_str,
         details=details,

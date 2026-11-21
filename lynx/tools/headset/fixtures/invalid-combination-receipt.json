@@ -1,0 +1,19 @@
+{
+  "device_node": "/dev/input/event1",
+  "device_name": "mt6983-mt6338 Headset Jack",
+  "timeout_seconds": 5.0,
+  "initial_switches": {
+    "headphone": false,
+    "lineout": false,
+    "microphone": false,
+    "physical": false
+  },
+  "final_switches": {
+    "headphone": true,
+    "lineout": false,
+    "microphone": false,
+    "physical": false
+  },
+  "collection_completed": true,
+  "error": null
+}

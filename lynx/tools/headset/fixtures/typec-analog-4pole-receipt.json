@@ -1,0 +1,53 @@
+{
+  "device_node": "/dev/input/event1",
+  "device_name": "mt6983-mt6338 Headset Jack",
+  "typec_mux": {
+    "switch_ic": "FSA4480",
+    "i2c_bus": 6,
+    "i2c_addr": "0x42",
+    "hs_det_gpio": 98,
+    "tcpc_device": "mt6375_typec",
+    "mode": "TYPEC_ATTACHED_AUDIO"
+  },
+  "timeout_seconds": 5.0,
+  "events_captured": [
+    {
+      "sec": 1732155030,
+      "usec": 100000,
+      "type": "EV_SW",
+      "code": 7,
+      "switch": "physical",
+      "value": 1
+    },
+    {
+      "sec": 1732155030,
+      "usec": 115000,
+      "type": "EV_SW",
+      "code": 2,
+      "switch": "headphone",
+      "value": 1
+    },
+    {
+      "sec": 1732155030,
+      "usec": 130000,
+      "type": "EV_SW",
+      "code": 4,
+      "switch": "microphone",
+      "value": 1
+    }
+  ],
+  "initial_switches": {
+    "headphone": false,
+    "lineout": false,
+    "microphone": false,
+    "physical": false
+  },
+  "final_switches": {
+    "headphone": true,
+    "lineout": false,
+    "microphone": true,
+    "physical": true
+  },
+  "collection_completed": true,
+  "error": null
+}

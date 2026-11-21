@@ -57,7 +57,14 @@ def load_senses():
     wifi = load_module("lynx_sense_wifi", "wifi/lynx_sense_wifi.py")
     power = load_module("lynx_sense_power", "power/lynx_sense_power.py")
     nexus = load_module("lynx_sense_nexus", "nexus/lynx_sense_nexus.py")
-    return touch, wifi, power, nexus
+    camera = None
+    if (SENSES_ROOT / "camera" / "lynx_sense_camera.py").exists():
+        try:
+            camera = load_module("lynx_sense_camera", "camera/lynx_sense_camera.py")
+        except Exception as exc:
+            print(f"optional sense camera: {type(exc).__name__}: {str(exc)[:160]}",
+                  file=sys.stderr)
+    return touch, wifi, power, nexus, camera
 
 
 def call(name: str, fn) -> dict:
@@ -75,16 +82,19 @@ def call(name: str, fn) -> dict:
                 "error": type(exc).__name__}
 
 
-def one_cycle(touch, wifi, power, nexus) -> dict:
-    return {
+def one_cycle(touch, wifi, power, nexus, camera=None) -> dict:
+    results = {
         "touch": call("touch", touch.run),
         "wifi": call("wifi", wifi.run),
         "power": call("power", power.run),
         "nexus": call("nexus", nexus.run),
     }
+    if camera is not None:
+        results["camera"] = call("camera", camera.run)
+    return results
 
 
-def run_loop(touch, wifi, power, nexus) -> int:
+def run_loop(touch, wifi, power, nexus, camera=None) -> int:
     signal.signal(signal.SIGTERM, _on_term)
     last_touch = 0.0
     last_sample = 0.0
@@ -97,6 +107,8 @@ def run_loop(touch, wifi, power, nexus) -> int:
             call("wifi", wifi.run)
             call("power", power.run)
             call("nexus", nexus.run)
+            if camera is not None:
+                call("camera", camera.run)
             last_sample = now
         time.sleep(0.5)
     return 0
@@ -105,13 +117,13 @@ def run_loop(touch, wifi, power, nexus) -> int:
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if "--once" in argv:
-        touch, wifi, power, nexus = load_senses()
-        summary = one_cycle(touch, wifi, power, nexus)
+        touch, wifi, power, nexus, camera = load_senses()
+        summary = one_cycle(touch, wifi, power, nexus, camera=camera)
         print(json.dumps({"ok": all(r.get("ok") for r in summary.values()),
                           "results": summary}, sort_keys=True))
         return 0
-    touch, wifi, power, nexus = load_senses()
-    return run_loop(touch, wifi, power, nexus)
+    touch, wifi, power, nexus, camera = load_senses()
+    return run_loop(touch, wifi, power, nexus, camera=camera)
 
 
 if __name__ == "__main__":

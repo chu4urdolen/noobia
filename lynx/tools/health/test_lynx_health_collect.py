@@ -447,6 +447,51 @@ class CliTests(unittest.TestCase):
 
 
 class DefaultRunnerTests(unittest.TestCase):
+    """Default SSH runner behavior, with ``ssh_command`` stubbed (D3).
+
+    The real ``lynx_wifi_v19_contact`` module reads the machine-local
+    v19 build artifact (``linux-port/artifacts/.../build-validation.json``,
+    gitignored) at import time, so it cannot be imported at all in a
+    clean clone. To keep this suite clone-independent (Gwyn review
+    round 2, D3) the stub below carries the house-pinned argv contract
+    of the real ``ssh_command`` (BatchMode, IdentitiesOnly, pinned
+    ``nexus_lynx_ed25519`` key, ``root@`` host). What the tests still
+    genuinely verify is the collector's own wrapping logic: the ``-p``
+    port splice lands before the command, the command stays last, and
+    timeout/exit/stdout pass through intact. The v19 module's own
+    pinning contract is that module's responsibility.
+    """
+
+    STUB_KEY = "/noobia/lynx/secrets/nexus_lynx_ed25519"
+
+    @classmethod
+    def _stub_ssh_command(cls):
+        import types
+        module = types.ModuleType("lynx_wifi_v19_contact")
+
+        def ssh_command(ip, command):
+            return ["ssh",
+                    "-o", "BatchMode=yes",
+                    "-o", "IdentitiesOnly=yes",
+                    "-o", "StrictHostKeyChecking=yes",
+                    "-o", "ConnectTimeout=5",
+                    "-i", cls.STUB_KEY,
+                    "root@" + ip,
+                    command]
+
+        module.ssh_command = ssh_command
+        return module
+
+    def setUp(self):
+        self._original = sys.modules.get("lynx_wifi_v19_contact")
+        sys.modules["lynx_wifi_v19_contact"] = self._stub_ssh_command()
+
+    def tearDown(self):
+        if self._original is None:
+            sys.modules.pop("lynx_wifi_v19_contact", None)
+        else:
+            sys.modules["lynx_wifi_v19_contact"] = self._original
+
     def test_argv_uses_pinned_key_port_and_batchmode(self):
         calls = []
 
@@ -464,8 +509,9 @@ class DefaultRunnerTests(unittest.TestCase):
         self.assertEqual(result.exit, 0)
         argv, kwargs = calls[0]
         self.assertIn("BatchMode=yes", argv)
+        self.assertIn("root@192.168.100.107", argv)
         self.assertIn("-i", argv)
-        self.assertTrue(argv[argv.index("-i") + 1].endswith("nexus_lynx_ed25519"))
+        self.assertEqual(argv[argv.index("-i") + 1], self.STUB_KEY)
         self.assertIn("-p", argv)
         self.assertEqual(argv[argv.index("-p") + 1], "2222")
         self.assertEqual(argv[-1], "cmd")

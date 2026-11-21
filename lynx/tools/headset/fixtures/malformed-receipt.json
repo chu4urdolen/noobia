@@ -1,0 +1,4 @@
+{
+  "device_node": "/dev/input/event1",
+  "error": "device_node_not_found"
+}

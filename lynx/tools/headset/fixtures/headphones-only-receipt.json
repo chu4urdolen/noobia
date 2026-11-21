@@ -1,0 +1,37 @@
+{
+  "device_node": "/dev/input/event1",
+  "device_name": "mt6983-mt6338 Headset Jack",
+  "timeout_seconds": 5.0,
+  "events_captured": [
+    {
+      "sec": 1732155010,
+      "usec": 200000,
+      "type": "EV_SW",
+      "code": 7,
+      "switch": "physical",
+      "value": 1
+    },
+    {
+      "sec": 1732155010,
+      "usec": 210000,
+      "type": "EV_SW",
+      "code": 2,
+      "switch": "headphone",
+      "value": 1
+    }
+  ],
+  "initial_switches": {
+    "headphone": false,
+    "lineout": false,
+    "microphone": false,
+    "physical": false
+  },
+  "final_switches": {
+    "headphone": true,
+    "lineout": false,
+    "microphone": false,
+    "physical": true
+  },
+  "collection_completed": true,
+  "error": null
+}

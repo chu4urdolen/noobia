@@ -1,0 +1,15 @@
+{
+  "interface_ready": true,
+  "validated": false,
+  "evidence": {
+    "input_event": "event1",
+    "switch_read_error": null,
+    "switches": {
+      "headphone": false,
+      "lineout": false,
+      "microphone": false,
+      "physical": false
+    }
+  },
+  "next": "physical insertion and removal trial needed to validate detection"
+}

@@ -1,0 +1,96 @@
+#!/sbin/openrc-run
+description="Lynx USB MTU3 ACM Gadget persistence service"
+
+DISABLE_SWITCH="/etc/lynx/disable-usb-gadget"
+GADGET_DIR="/sys/kernel/config/usb_gadget/lynx"
+UDC_TARGET="11201000.usb0"
+MODULE_PATH="/lib/modules/$(uname -r)/kernel/drivers/usb/mtu3/mtu3.ko"
+
+depend() {
+    after bootmisc modules
+    before sshd
+    provide usb-gadget
+}
+
+start_pre() {
+    if [ -f "$DISABLE_SWITCH" ]; then
+        ewarn "USB gadget startup disabled via $DISABLE_SWITCH"
+        return 0
+    fi
+}
+
+start() {
+    if [ -f "$DISABLE_SWITCH" ]; then
+        return 0
+    fi
+
+    ebegin "Starting Lynx USB MTU3 ACM Gadget"
+
+    # 1. Load mtu3 driver if not already loaded
+    if ! grep -q "^mtu3 " /proc/modules; then
+        if [ -f "$MODULE_PATH" ]; then
+            modprobe mtu3 2>/dev/null || insmod "$MODULE_PATH" 2>/dev/null
+        else
+            ewarn "mtu3 module not found at $MODULE_PATH; attempting modprobe"
+            modprobe mtu3 2>/dev/null
+        fi
+    fi
+
+    # 2. Mount configfs if needed
+    if ! mountpoint -q /sys/kernel/config; then
+        mount -t configfs none /sys/kernel/config || {
+            eerror "Failed to mount configfs"
+            return 1
+        }
+    fi
+
+    # 3. Create gadget composition
+    mkdir -p "$GADGET_DIR" || return 1
+    cd "$GADGET_DIR" || return 1
+
+    echo 0x18d1 > idVendor
+    echo 0x0001 > idProduct
+    echo 0x0200 > bcdUSB
+    echo 0x0100 > bcdDevice
+
+    mkdir -p strings/0x409
+    echo "0123456789ABCDEF" > strings/0x409/serialnumber
+    echo "Noobia" > strings/0x409/manufacturer
+    echo "Lynx Nord 3 USB ACM" > strings/0x409/product
+
+    mkdir -p functions/acm.usb0
+    mkdir -p configs/c.1/strings/0x409
+    echo "CDC ACM Serial" > configs/c.1/strings/0x409/configuration
+
+    ln -s functions/acm.usb0 configs/c.1/acm.usb0 2>/dev/null
+
+    # 4. Bind UDC
+    if [ -d "/sys/class/udc/$UDC_TARGET" ]; then
+        echo "$UDC_TARGET" > UDC
+    else
+        ewarn "Target UDC $UDC_TARGET not found in /sys/class/udc"
+    fi
+
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping Lynx USB MTU3 ACM Gadget"
+
+    if [ -d "$GADGET_DIR" ]; then
+        # Unbind UDC
+        echo "" > "$GADGET_DIR/UDC" 2>/dev/null
+
+        # Remove function link
+        rm -f "$GADGET_DIR/configs/c.1/acm.usb0" 2>/dev/null
+
+        # Clean configs and strings
+        rmdir "$GADGET_DIR/configs/c.1/strings/0x409" 2>/dev/null
+        rmdir "$GADGET_DIR/configs/c.1" 2>/dev/null
+        rmdir "$GADGET_DIR/functions/acm.usb0" 2>/dev/null
+        rmdir "$GADGET_DIR/strings/0x409" 2>/dev/null
+        rmdir "$GADGET_DIR" 2>/dev/null
+    fi
+
+    eend 0
+}

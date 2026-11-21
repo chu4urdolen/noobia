@@ -41,6 +41,7 @@
 !/tools/usb/
 /tools/usb/*
 !/tools/usb/*.py
+!/tools/usb/*.initd
 !/tools/usb/README.md
 !/tools/usb/fixtures/
 /tools/usb/fixtures/*

@@ -1,0 +1,18 @@
+{
+  "platform": "OnePlus Nord 3 5G CPH2493 (MT6983 / 22823 'Vitamin')",
+  "boot_id": "0fe847d2-44d6-4ac1-9000-2c99df1a51d8",
+  "runlevel_default_services": [
+    "bootmisc",
+    "hostname",
+    "lynx-usb-gadget",
+    "networking",
+    "sshd",
+    "syslog"
+  ],
+  "disable_switch_present": true,
+  "udc_bound": false,
+  "ttygs_present": false,
+  "modules": [
+    "wlan_drv_gen4m_6983"
+  ]
+}

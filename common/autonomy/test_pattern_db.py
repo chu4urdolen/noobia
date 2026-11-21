@@ -11,7 +11,7 @@ class TestPatternDB(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.db_path = Path(self.tmp.name) / "patterns.db"
-        self.db = PatternDB(self.db_path)
+        self.db = PatternDB(self.db_path, seed_defaults=False)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -71,6 +71,30 @@ class TestPatternDB(unittest.TestCase):
         self.db.upsert_pattern(pat, host="nexus")
         self.assertEqual(self.db.count_patterns("lynx"), 0)
         self.assertEqual(self.db.count_patterns("nexus"), 1)
+
+    def test_ignore_pattern_and_matching(self):
+        pat = {
+            "id": "ignore-empty-frame",
+            "match": {"sense": "camera", "event": "frame.analyzed", "fields": {"objects": "0"}},
+            "message": "Empty frame ignored",
+            "ignore": True,
+            "must": ["NOOBIA P0 camera frame.analyzed objects=0"],
+            "must_not": ["NOOBIA P1 camera object.seen label=laptop"],
+        }
+        self.assertTrue(self.db.upsert_pattern(pat, host="lynx"))
+        top = self.db.get_top_ranker_patterns("lynx", limit=10)
+        self.assertEqual(len(top), 1)
+        self.assertTrue(top[0].get("ignore"))
+
+        # Test is_ignored matching
+        empty_line = {"sense": "camera", "event": "frame.analyzed", "fields": {"objects": "0"}}
+        self.assertTrue(self.db.is_ignored(empty_line, host="lynx"))
+
+        # Non-ignored line (objects=1 or different event)
+        object_line = {"sense": "camera", "event": "frame.analyzed", "fields": {"objects": "1"}}
+        self.assertFalse(self.db.is_ignored(object_line, host="lynx"))
+        seen_line = {"sense": "camera", "event": "object.seen", "fields": {"label": "cup"}}
+        self.assertFalse(self.db.is_ignored(seen_line, host="lynx"))
 
 
 if __name__ == "__main__":

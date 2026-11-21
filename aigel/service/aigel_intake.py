@@ -126,6 +126,7 @@ class AigelIntake:
         self.state_file = Path(state_file) if state_file else None
         self.default_silence_s = int(default_silence_s)
         self.now_fn = now_fn
+        self.hearing_enabled: bool = False
         self._lock = threading.Lock()
         self._state: dict = self._load_state()
         db_path = pattern_db_path or (Path(DEFAULT_PATTERN_DB) if PatternDB else None)
@@ -341,6 +342,7 @@ class AigelIntake:
         body["recent"] = self.recent_chunks()
         body["agent_replies"] = self.recent_agent_replies()
         body["patterns_count"] = self.pattern_db.count_patterns("lynx") if self.pattern_db else 0
+        body["hearing_enabled"] = self.hearing_enabled
         return body
 
 
@@ -371,6 +373,10 @@ def make_handler(intake: AigelIntake, web: AigelWeb | None = None):
 
         def do_POST(self):  # noqa: N802
             path = self.path.split("?")[0]
+            if path == "/api/v1/hearing/toggle":
+                intake.hearing_enabled = not intake.hearing_enabled
+                self._send(200, {"enabled": intake.hearing_enabled})
+                return
             if path not in ("/api/v1/chunk", "/api/v1/chat", "/api/v1/agent_response"):
                 self._send(404, {"error": "not found"})
                 return
@@ -415,6 +421,9 @@ def make_handler(intake: AigelIntake, web: AigelWeb | None = None):
             path = self.path.split("?")[0]
             if path == "/api/v1/status":
                 self._send(200, intake.status_body())
+                return
+            if path == "/api/v1/hearing":
+                self._send(200, {"enabled": intake.hearing_enabled})
                 return
             if path == "/api/v1/patterns":
                 host = "lynx"

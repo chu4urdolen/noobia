@@ -235,6 +235,13 @@ class Ranker:
             corpus=corpus,
         )
 
+    def is_ignored(self, line: dict) -> bool:
+        """Return True if line matches any active ignore pattern."""
+        for pat in self.active:
+            if (pat.get("ignore") or pat.get("is_ignore")) and _pattern_matches(pat, line):
+                return True
+        return False
+
     def process(self, lines: list[dict], now: float) -> dict[str, Any]:
         """Match lines against active patterns."""
         explained = []
@@ -251,14 +258,15 @@ class Ranker:
                     pat["hits"] = pat.get("hits", 0) + 1
                     pat["last_hit"] = now
 
-                    if pat.get("to_noob"):
-                        cooldown = float(pat.get("cooldown_s", 0))
-                        last_deliv = self._last_delivery.get(pid)
-                        if pid not in delivered_this_batch:
-                            if last_deliv is None or (now - last_deliv >= cooldown):
-                                messages.append(pat["message"])
-                                self._last_delivery[pid] = now
-                                delivered_this_batch.add(pid)
+                    if not pat.get("ignore", False) and not pat.get("is_ignore", False):
+                        if pat.get("to_noob"):
+                            cooldown = float(pat.get("cooldown_s", 0))
+                            last_deliv = self._last_delivery.get(pid)
+                            if pid not in delivered_this_batch:
+                                if last_deliv is None or (now - last_deliv >= cooldown):
+                                    messages.append(pat["message"])
+                                    self._last_delivery[pid] = now
+                                    delivered_this_batch.add(pid)
                     break
 
             if matched_pid is not None:

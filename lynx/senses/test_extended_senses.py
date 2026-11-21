@@ -132,13 +132,19 @@ class ExtendedSensesCase(unittest.TestCase):
         self.assertEqual(self.recorder.emits[1][1]["fields"]["ip"], "192.168.100.1")
 
     def test_hearing_sound_detected(self):
-        # Sample 1: Baseline silence
-        res, code = hearing.run(reader=lambda: {"captured": True, "late_rms": 3.0, "late_peak": 10})
+        # Sample 0: Disabled by default
+        res, code = hearing.run(reader=lambda: {"captured": True, "late_rms": 3.0, "late_peak": 10}, enabled=False)
+        self.assertEqual(code, 0)
+        self.assertFalse(res.get("enabled"))
+        self.assertEqual(len(self.recorder.emits), 0)
+
+        # Sample 1: Baseline silence (enabled)
+        res, code = hearing.run(reader=lambda: {"captured": True, "late_rms": 3.0, "late_peak": 10}, enabled=True)
         self.assertEqual(code, 0)
         self.assertEqual(len(self.recorder.emits), 0)
 
         # Sample 2: Sound heard (peak 150)
-        res, code = hearing.run(reader=lambda: {"captured": True, "late_rms": 35.0, "late_peak": 150})
+        res, code = hearing.run(reader=lambda: {"captured": True, "late_rms": 35.0, "late_peak": 150}, enabled=True)
         self.assertEqual(code, 0)
         self.assertEqual(len(self.recorder.emits), 1)
         self.assertEqual(self.recorder.emits[0][0][1], "hearing")

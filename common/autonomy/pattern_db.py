@@ -25,9 +25,10 @@ def _utc_now_iso() -> str:
 class PatternDB:
     """SQLite pattern database with host and output_message indexes."""
 
-    def __init__(self, db_path: str | Path | None = None):
+    def __init__(self, db_path: str | Path | None = None, seed_defaults: bool = True):
         self.db_path = Path(db_path) if db_path else DEFAULT_DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.seed_defaults = seed_defaults
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
@@ -57,12 +58,75 @@ class PatternDB:
                     must_not_examples TEXT,
                     origin TEXT DEFAULT 'aigel',
                     created_at TEXT NOT NULL,
-                    last_hit_at TEXT
+                    last_hit_at TEXT,
+                    is_ignore INTEGER DEFAULT 0
                 )
             """)
+            # Migration: add is_ignore if column does not exist
+            try:
+                conn.execute("ALTER TABLE patterns ADD COLUMN is_ignore INTEGER DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass  # already exists
             conn.execute("CREATE INDEX IF NOT EXISTS idx_patterns_host ON patterns(host)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_patterns_message ON patterns(output_message)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_patterns_host_count ON patterns(host, count DESC, id DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_patterns_host_ignore ON patterns(host, is_ignore)")
+
+            # Seed default ignore patterns for null perceptions if not present
+            if self.seed_defaults:
+                self._seed_default_ignores(conn)
+
+    def _seed_default_ignores(self, conn: sqlite3.Connection) -> None:
+        defaults = [
+            {
+                "id": "ignore-camera-empty-frame",
+                "host": "lynx",
+                "sense": "camera",
+                "event": "frame.analyzed",
+                "fields": {"objects": "0"},
+                "message": "Empty frame ignored",
+                "ignore": True,
+                "must": ["NOOBIA P0 camera frame.analyzed objects=0 | frame analyzed, no objects recognized"],
+                "must_not": ["NOOBIA P1 camera object.seen label=laptop"],
+            },
+            {
+                "id": "ignore-hearing-status-sample",
+                "host": "lynx",
+                "sense": "hearing",
+                "event": "status.sample",
+                "fields": None,
+                "message": "Hearing sample ignored",
+                "ignore": True,
+                "must": ["NOOBIA P0 hearing status.sample peak=10 rms=3.2"],
+                "must_not": ["NOOBIA P3 hearing sound.heard peak=150 rms=35.0"],
+            },
+            {
+                "id": "ignore-camera-status-sample",
+                "host": "lynx",
+                "sense": "camera",
+                "event": "status.sample",
+                "fields": None,
+                "message": "Camera sample ignored",
+                "ignore": True,
+                "must": ["NOOBIA P0 camera status.sample"],
+                "must_not": ["NOOBIA P1 camera object.seen label=book"],
+            },
+        ]
+        now = _utc_now_iso()
+        for d in defaults:
+            fields_json = json.dumps(d["fields"]) if d["fields"] else None
+            must_ex = json.dumps(d["must"])
+            must_not_ex = json.dumps(d["must_not"])
+            conn.execute("""
+                INSERT OR IGNORE INTO patterns (
+                    pattern_id, host, sense, event, fields_json, text_contains, regex,
+                    output_message, to_noob, p, cooldown_s, count, must_examples,
+                    must_not_examples, origin, created_at, last_hit_at, is_ignore
+                ) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, 0, 0, 0, 1, ?, ?, 'default', ?, NULL, 1)
+            """, (
+                d["id"], d["host"], d["sense"], d["event"], fields_json,
+                d["message"], must_ex, must_not_ex, now
+            ))
 
     def upsert_pattern(self, pattern: dict[str, Any], host: str = "lynx", initial_count: int = 1) -> bool:
         """Insert or update a structured pattern from Aigel or operator."""
@@ -85,6 +149,7 @@ class PatternDB:
         cooldown_s = int(pattern.get("cooldown_s", 300))
         origin = pattern.get("origin", "aigel")
         count_init = max(1, int(initial_count))
+        is_ignore = 1 if pattern.get("ignore") or pattern.get("is_ignore") else 0
 
         examples = pattern.get("examples", {})
         must_ex = json.dumps(examples.get("must", []))
@@ -96,8 +161,8 @@ class PatternDB:
                 INSERT INTO patterns (
                     pattern_id, host, sense, event, fields_json, text_contains, regex,
                     output_message, to_noob, p, cooldown_s, count, must_examples,
-                    must_not_examples, origin, created_at, last_hit_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+                    must_not_examples, origin, created_at, last_hit_at, is_ignore
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
                 ON CONFLICT(pattern_id) DO UPDATE SET
                     host = excluded.host,
                     sense = excluded.sense,
@@ -112,10 +177,11 @@ class PatternDB:
                     count = patterns.count + 1,
                     must_examples = excluded.must_examples,
                     must_not_examples = excluded.must_not_examples,
-                    origin = excluded.origin
+                    origin = excluded.origin,
+                    is_ignore = excluded.is_ignore
             """, (
                 pattern_id, host, sense, event, fields_json, text_contains, regex,
-                output_message, to_noob, p, cooldown_s, count_init, must_ex, must_not_ex, origin, now
+                output_message, to_noob, p, cooldown_s, count_init, must_ex, must_not_ex, origin, now, is_ignore
             ))
         return True
 
@@ -164,6 +230,7 @@ class PatternDB:
                 "last_hit": r["last_hit_at"],
                 "origin": r["origin"],
                 "added_at": r["created_at"],
+                "ignore": bool(r["is_ignore"]) if "is_ignore" in r.keys() else False,
             }
             if r["regex"]:
                 pat["regex"] = r["regex"]
@@ -182,6 +249,41 @@ class PatternDB:
                 pat["examples"] = examples
             out.append(pat)
         return out
+
+    def is_ignored(self, parsed_line: dict, host: str = "lynx") -> bool:
+        """Check if parsed_line matches any active ignore pattern for host."""
+        if not parsed_line or not isinstance(parsed_line, dict):
+            return False
+        sense = parsed_line.get("sense")
+        event = parsed_line.get("event")
+        if not sense or not event:
+            return False
+
+        with self._connect() as conn:
+            cur = conn.execute("""
+                SELECT * FROM patterns
+                WHERE host = ? AND is_ignore = 1 AND sense = ? AND event = ?
+            """, (host, sense, event))
+            rows = cur.fetchall()
+
+        for r in rows:
+            if r["fields_json"]:
+                try:
+                    exp_fields = json.loads(r["fields_json"])
+                    line_fields = parsed_line.get("fields") or {}
+                    match = True
+                    for k, v in exp_fields.items():
+                        if str(line_fields.get(k)) != str(v):
+                            match = False
+                            break
+                    if match:
+                        return True
+                except ValueError:
+                    continue
+            else:
+                # No fields restriction, matches sense + event
+                return True
+        return False
 
     def count_patterns(self, host: str) -> int:
         with self._connect() as conn:

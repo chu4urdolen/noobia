@@ -48,7 +48,7 @@ MAX_CHAT_BODY_BYTES = 8_192
 DEFAULT_MIN_GAP_S = 2.0
 CHAT_HOURLY_CAP = 60  # turns per rolling hour: protect the shared Qwen queue
 
-PAGE = b"""<!doctype html>
+PAGE = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -92,7 +92,13 @@ she never commands it.</p>
 <tr><th>host</th><th>last seen</th><th>chunks</th><th>last decision</th><th></th></tr>
 </table>
 
-<h2>Lynx's Voice &amp; Reactions <small class="meta">- conscious replies</small></h2>
+<h2>Hearing &amp; Listening Control</h2>
+<div style="display:flex; align-items:center; gap:1rem; margin:.6rem 0 1.2rem 0; padding:.6rem .8rem; background:rgba(127,127,127,.12); border-radius:.4rem;">
+  <button id="hearing-toggle" style="background:#555; color:#fff; border:none; border-radius:.3rem; font-weight:600; padding:.5rem 1rem;">👂 Enable Hearing: OFF</button>
+  <span id="hearing-status" class="meta">Listening is disabled by default.</span>
+</div>
+
+<h2>Lynx's Voice &amp; Reactions <small class="meta">- conscious log of thoughts</small></h2>
 <ul id="replies"></ul>
 
 <h2>Recent chunks &amp; decisions</h2>
@@ -174,9 +180,31 @@ async function load() {
         repliesUl.append(li);
       }
     }
+    const btn = $('hearing-toggle');
+    const hstatus = $('hearing-status');
+    if (btn && typeof d.hearing_enabled === 'boolean') {
+      if (d.hearing_enabled) {
+        btn.textContent = '👂 Hearing: ON (Listening)';
+        btn.style.background = '#2a8a5f';
+        if (hstatus) hstatus.textContent = 'Acoustic listening active on Lynx.';
+      } else {
+        btn.textContent = '👂 Enable Hearing: OFF';
+        btn.style.background = '#555';
+        if (hstatus) hstatus.textContent = 'Listening is disabled by default.';
+      }
+    }
   } catch (e) { $('error').textContent = 'status: ' + e; }
 }
 $('refresh').addEventListener('click', load);
+$('hearing-toggle').addEventListener('click', async () => {
+  try {
+    const r = await fetch('/api/v1/hearing/toggle', { method: 'POST' });
+    const d = await r.json();
+    load();
+  } catch (e) {
+    $('error').textContent = 'hearing toggle error: ' + e;
+  }
+});
 $('chat').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const msg = $('msg').value.trim();
@@ -200,7 +228,7 @@ setInterval(load, 10000);
 </script>
 </body>
 </html>
-"""
+""".encode("utf-8")
 
 
 class AigelWeb:

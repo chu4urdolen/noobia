@@ -35,9 +35,37 @@ from lynx_senses_lib import (  # noqa: E402
 )
 
 DEFAULT_MIC_BIN = "/usr/local/share/lynx/agent-tools/lynx_microphone_level.sh"
+DEFAULT_ENABLED_FILE = "/var/lib/noobia/senses/hearing/enabled"
+NEXUS_HEARING_URL = "http://192.168.100.106:112/api/v1/hearing"
 HEARING_PEAK_THRESHOLD = 80
 HEARING_RMS_THRESHOLD = 25.0
 HEARING_SAMPLE_EVERY = 15
+
+
+def is_hearing_enabled(enabled_file: str | Path = DEFAULT_ENABLED_FILE,
+                       nexus_url: str = NEXUS_HEARING_URL) -> bool:
+    # 1. Local file override if present
+    p = Path(enabled_file)
+    if p.exists():
+        try:
+            val = p.read_text().strip().lower()
+            return val in ("1", "true", "on", "yes")
+        except OSError:
+            pass
+
+    # 2. Check Nexus toggle over LAN
+    try:
+        import urllib.request
+        req = urllib.request.Request(nexus_url, headers={"User-Agent": "LynxSense/1.0"})
+        with urllib.request.urlopen(req, timeout=1.0) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                return bool(data.get("enabled", False))
+    except Exception:
+        pass
+
+    # 3. Disabled by default
+    return False
 
 
 def read_microphone_level(bin_path: str = DEFAULT_MIC_BIN) -> dict:
@@ -47,8 +75,14 @@ def read_microphone_level(bin_path: str = DEFAULT_MIC_BIN) -> dict:
 
 
 def run(dry_run: bool = False, state_file: str | None = None,
-        reader=None, now: int | None = None) -> tuple[dict, int]:
+        reader=None, now: int | None = None,
+        enabled: bool | None = None) -> tuple[dict, int]:
     t = int(now if now is not None else now_ts())
+    # Disabled by default
+    is_on = is_hearing_enabled() if enabled is None else enabled
+    if not is_on:
+        return base_result("hearing", enabled=False, emitted=[], dry_run=dry_run), 0
+
     try:
         sense = import_sense()
     except SenseUnavailable as exc:

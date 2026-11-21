@@ -97,8 +97,17 @@ class Harness:
             self.last_line_at = now
             self.silence_reported = False
             parsed = sense.parse_line(line)
-            if parsed and parsed["sense"] == "autonomy" and parsed["event"] == "heartbeat":
-                continue  # liveness only: a heartbeat must never wake Aigel by itself
+            if parsed:
+                if parsed["sense"] == "autonomy" and parsed["event"] == "heartbeat":
+                    continue  # liveness only: a heartbeat must never wake Aigel by itself
+                # Stripped from log if matches an ignore pattern in the ranker
+                if self.ranker and hasattr(self.ranker, "is_ignored") and self.ranker.is_ignored(parsed):
+                    continue
+                # Built-in null perception stripping: "see nothing" / "hear nothing"
+                if parsed.get("sense") == "camera" and parsed.get("event") == "frame.analyzed" and (parsed.get("fields") or {}).get("objects") == "0":
+                    continue
+                if parsed.get("sense") == "hearing" and parsed.get("event") == "status.sample":
+                    continue
             closed += self.chunker.feed(line, now)
         closed += self.chunker.tick(now)
         delivered = 0

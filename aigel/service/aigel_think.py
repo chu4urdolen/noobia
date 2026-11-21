@@ -217,6 +217,7 @@ def validate_pattern(pat, fallback_lines: list | None = None) -> dict | None:
         "examples": {"must": must, "must_not": must_not},
         "hits": int(pat.get("hits", 0)),
         "origin": "aigel",
+        "ignore": bool(pat.get("ignore") or pat.get("is_ignore")),
     }
     if fields:
         out["match"]["fields"] = fields
@@ -416,6 +417,48 @@ def apply_perception_floor(lines: list, decision: dict) -> dict:
             clean_pat = validate_pattern(pat, fallback_lines=lines)
             if clean_pat:
                 patterns.append(clean_pat)
+        decision_out["patterns"] = patterns
+
+    if not patterns and not found:
+        for line in lines:
+            parsed = _sense.parse_line(line) if isinstance(line, str) else None
+            if not parsed:
+                continue
+            sense_name = parsed.get("sense")
+            event_name = parsed.get("event")
+            fields = parsed.get("fields") or {}
+            if sense_name == "camera" and event_name == "frame.analyzed" and fields.get("objects") == "0":
+                pat = {
+                    "id": "ignore-camera-empty-frame",
+                    "match": {"sense": "camera", "event": "frame.analyzed", "fields": {"objects": "0"}},
+                    "message": "Empty frame ignored",
+                    "to_noob": False,
+                    "ignore": True,
+                    "cooldown_s": 600,
+                    "hits": 1,
+                    "origin": "aigel",
+                    "examples": {"must": [line], "must_not": ["NOOBIA P1 camera object.seen label=laptop"]},
+                }
+                clean_pat = validate_pattern(pat)
+                if clean_pat:
+                    patterns.append(clean_pat)
+                    break
+            elif sense_name == "hearing" and (event_name == "status.sample" or (event_name == "sound.heard" and float(fields.get("peak", 0)) < 30)):
+                pat = {
+                    "id": "ignore-hearing-silence",
+                    "match": {"sense": "hearing", "event": event_name},
+                    "message": "Hearing silence ignored",
+                    "to_noob": False,
+                    "ignore": True,
+                    "cooldown_s": 600,
+                    "hits": 1,
+                    "origin": "aigel",
+                    "examples": {"must": [line], "must_not": ["NOOBIA P3 hearing sound.heard peak=150"]},
+                }
+                clean_pat = validate_pattern(pat)
+                if clean_pat:
+                    patterns.append(clean_pat)
+                    break
         decision_out["patterns"] = patterns
 
     return decision_out

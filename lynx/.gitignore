@@ -290,6 +290,7 @@
 !/tools/agent/test_lynx_agent_worker.py
 !/tools/agent/lynx_agent_health.py
 !/tools/agent/lynx_agent_queue.py
+!/tools/agent/lynx_chat_send.py
 !/tools/agent/lynx_codex_tool.py
 !/tools/agent/test_agent_cancel_contract.py
 !/tools/agent/deploy_native_mcp_catalog.py

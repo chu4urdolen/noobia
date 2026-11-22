@@ -99,6 +99,24 @@ class AdapterTest(unittest.TestCase):
         self.assertEqual(self.adapter.deliver(cat())["status"], "disabled")
         self.assertEqual(self.pending(), [])
 
+    def test_drops_input_if_redundant_with_running_job(self):
+        # Create a mock running job
+        self.jobs.mkdir(parents=True, exist_ok=True)
+        running_job = self.jobs / "testjob123.running"
+        running_job.write_text(json.dumps({
+            "prompt": "Observation (data):\n" + json.dumps({
+                "kind": "observation",
+                "text": "A cat appeared in front of you",
+                "evidence": ["NOOBIA P1 camera object.seen label=cat conf=0.91"]
+            })
+        }), encoding="utf-8")
+
+        # Deliver a message with the exact same text / evidence
+        receipt = self.adapter.deliver(cat())
+        self.assertEqual(receipt["status"], "delivered")
+        # Should NOT have created a pending job!
+        self.assertEqual(self.pending(), [])
+
     def test_largest_valid_message_fits_the_queue(self):
         m = la.agent_link.make_message("lynx", "aigel", "speech", "ж" * 300,
                                        ["NOOBIA P1 mic speech.heard | " + "ж" * 100] * 3, now=NOW)

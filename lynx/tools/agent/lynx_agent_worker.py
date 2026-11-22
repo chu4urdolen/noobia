@@ -112,7 +112,14 @@ def run_job(queue, job_id, prompt):
         if ok and text:
             clean_text = text.strip()
             try:
-                Path('/var/lib/noobia/lynx_thought.txt').write_text(clean_text, encoding='utf-8')
+                thought_path = Path('/var/lib/noobia/lynx_thought.txt')
+                existing = thought_path.read_text(encoding='utf-8', errors='replace') if thought_path.is_file() else ''
+                existing_stripped = existing.strip()
+                if not existing_stripped.endswith(clean_text):
+                    with thought_path.open('a', encoding='utf-8') as f:
+                        if existing and not existing.endswith('\n'):
+                            f.write('\n')
+                        f.write(clean_text + '\n')
             except Exception:
                 pass
             try:

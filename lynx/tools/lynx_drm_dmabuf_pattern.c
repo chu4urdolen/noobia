@@ -1127,14 +1127,8 @@ static int chat_send(void)
 	if (!chat_input_length)
 		return 0;
 
-	/* 1. Append message to lynx_thought.txt */
-	FILE *f = fopen(THOUGHT_FILE, "a");
-	if (f) {
-		fprintf(f, "Noob: %s\n", chat_input);
-		fclose(f);
-	}
-
-	/* 2. Emit high-priority P1 sense event to autonomy loop */
+	/* Dispatch to lynx-chat-send which appends to thought log, */
+	/* queues direct agent job, and emits sense line. */
 	pid_t pid = fork();
 	if (pid == 0) {
 		int devnull = open("/dev/null", O_RDWR);
@@ -1145,9 +1139,8 @@ static int chat_send(void)
 			close(devnull);
 		}
 		execl("/usr/bin/python3", "python3",
-		      "/usr/local/lib/noobia/autonomy/sense.py",
-		      "1", "chat", "message", "author=Noob",
-		      "-t", chat_input, (char *)NULL);
+		      "/usr/local/bin/lynx-chat-send",
+		      chat_input, (char *)NULL);
 		_exit(0);
 	}
 

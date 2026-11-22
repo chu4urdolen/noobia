@@ -80,9 +80,37 @@ class LynxAdapter(agent_link.Adapter):
         self.jobs, self.stop, self.max_pending = Path(jobs), Path(stop), max_pending
         super().__init__(state_dir, **kwargs)
 
+    def _is_redundant_with_running(self, message):
+        """Check if message matches what is currently executing in *.running."""
+        if not self.jobs.is_dir():
+            return False
+        running_files = list(self.jobs.glob("*.running"))
+        if not running_files:
+            return False
+        incoming_kind = str(message.get("kind", "")).strip()
+        incoming_text = str(message.get("text", "")).strip()
+        incoming_evidence = set(message.get("evidence", []))
+        for rf in running_files:
+            try:
+                content = rf.read_text(encoding="utf-8", errors="replace")
+                if incoming_text and incoming_text in content:
+                    return True
+                if incoming_kind and f'"kind": "{incoming_kind}"' in content:
+                    if any(k in incoming_kind for k in ("touch", "camera", "light", "proximity", "wifi", "power")):
+                        return True
+                for ev in incoming_evidence:
+                    if ev and ev in content:
+                        return True
+            except OSError:
+                continue
+        return False
+
     def _send(self, message):
         if self.stop.exists():
             raise AgentBusy(f"agent worker stopped ({self.stop})")
+        if self._is_redundant_with_running(message):
+            self.last_job_id = None
+            return
         pending = sum(1 for _ in self.jobs.glob("*.pending")) if self.jobs.is_dir() else 0
         running = sum(1 for _ in self.jobs.glob("*.running")) if self.jobs.is_dir() else 0
         if pending >= self.max_pending or (running > 0 and pending > 0):

@@ -141,7 +141,25 @@ def state_path(sense: str, override: str | None = None) -> Path:
     return root / sense / "state.json"
 
 
+# Gwyn 2026-11-22: the senses loop samples motion every second and touch every
+# 2 s; writing every sample's state to flash cost hundreds of MB a day. The
+# loop is one long-lived process, so the newest state lives in memory and the
+# file is rewritten only when a meaningful field changed or once a minute.
+# Fields that change on every sample and matter only as counters:
+VOLATILE_STATE_KEYS = frozenset({"samples", "t", "last_ts", "last_raw", "queued", "dropped",
+                                 "last_cap", "last_soc_mC", "temp_check_t"})
+STATE_FLUSH_S = 60.0
+_STATE_CACHE: dict = {}   # str(path) -> (data, last disk write monotonic, written stable view)
+
+
+def _stable(data: dict) -> dict:
+    return {k: v for k, v in data.items() if k not in VOLATILE_STATE_KEYS}
+
+
 def load_state(path: Path) -> dict:
+    cached = _STATE_CACHE.get(str(path))
+    if cached is not None:
+        return json.loads(json.dumps(cached[0]))  # a private copy
     try:
         with open(path, encoding="utf-8") as fh:
             data = json.load(fh)
@@ -151,6 +169,18 @@ def load_state(path: Path) -> dict:
 
 
 def save_state(path: Path, data: dict) -> None:
+    key, now = str(path), time.monotonic()
+    snapshot = json.loads(json.dumps(data))
+    stable = _stable(snapshot)
+    cached = _STATE_CACHE.get(key)
+    if cached is not None and cached[2] == stable and now - cached[1] < STATE_FLUSH_S:
+        _STATE_CACHE[key] = (snapshot, cached[1], cached[2])
+        return
+    _write_state(path, data)
+    _STATE_CACHE[key] = (snapshot, now, stable)
+
+
+def _write_state(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     with open(tmp, "w", encoding="utf-8") as fh:

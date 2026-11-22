@@ -49,6 +49,9 @@ INSTRUCTIONS = (
     'only, because the speech synthesizer reads emojis aloud and the display font cannot render them.'
 )
 SENSE_PREFIX = '[sense]'
+# Tools a perception (a reflex) never gets: heavy, slow, or not an expression.
+# lynx_codex runs a coding task for up to 130 s (Gwyn review, 2026-11-22).
+SENSE_EXCLUDED_TOOLS = frozenset({'lynx_codex'})
 
 
 def key_from(path):
@@ -102,12 +105,14 @@ class Catalog:
             entries[name] = (script, meta)
         return entries
 
-    def definitions(self):
+    def definitions(self, exclude=frozenset()):
         return [dict(type='function', name=name, description=meta.get('description', ''),
                      parameters=meta.get('inputSchema') or meta.get('parameters', {}), strict=True)
-                for name, (_, meta) in self.entries().items()]
+                for name, (_, meta) in self.entries().items() if name not in exclude]
 
-    def run(self, name, arguments):
+    def run(self, name, arguments, exclude=frozenset()):
+        if name in exclude:
+            return {'ok': False, 'error': 'Tool not available for this kind of job'}
         entry = self.entries().get(name)
         if entry is None:
             return {'ok': False, 'error': 'Unknown tool'}
@@ -165,10 +170,11 @@ def respond(prompt, catalog=None, choose=backend, send=request, record=None):
         kind = 'nexus' if '192.168.100.106' in base or base == LOCAL else ('cloud' if 'api.openai.com' in base or base == CLOUD else 'local')
         record({'event': 'backend', 'kind': kind, 'model': model})
     turn = [{'role': 'user', 'content': prompt}]
+    exclude = SENSE_EXCLUDED_TOOLS if prompt.startswith(SENSE_PREFIX) else frozenset()
     first_round = True
     for _ in range(6):
         payload = {'model': model, 'instructions': INSTRUCTIONS,
-            'input': turn, 'tools': catalog.definitions(), 'parallel_tool_calls': False,
+            'input': turn, 'tools': catalog.definitions(exclude), 'parallel_tool_calls': False,
             'store': False, 'max_output_tokens': 1200}
         if first_round and prompt.startswith(SENSE_PREFIX) and payload['tools']:
             # A perception always gets a reaction: the first step must use a tool (Tom).
@@ -185,7 +191,7 @@ def respond(prompt, catalog=None, choose=backend, send=request, record=None):
                 except (ValueError, TypeError):
                     answer = {'ok': False, 'error': 'Invalid JSON arguments'}
                 else:
-                    answer = catalog.run(call['name'], args)
+                    answer = catalog.run(call['name'], args, exclude)
                 if record:
                     record({'event': 'tool', 'name': call['name'], 'ok': answer.get('ok', False)})
                 turn.append({'type': 'function_call_output', 'call_id': call['call_id'],

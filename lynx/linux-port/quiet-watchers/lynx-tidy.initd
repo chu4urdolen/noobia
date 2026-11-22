@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+# Keep Lynx's logs and finished agent jobs bounded (Gwyn, 2026-11-22).
+# Source: /noobia/lynx/linux-port/lynx-tidy.sh. Disable: touch /etc/lynx/tidy.disable
+description="Trim Lynx logs in place and drop old finished agent jobs, hourly"
+supervisor="supervise-daemon"
+command="/bin/busybox"
+command_args="sh /usr/libexec/lynx/lynx-tidy.sh --watch"
+output_log="/var/log/lynx-tidy.log"
+error_log="/var/log/lynx-tidy.log"
+respawn_delay=60
+respawn_max=3
+respawn_period=3600
+
+depend() {
+    after lynx-local-logs
+}

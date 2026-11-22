@@ -137,6 +137,27 @@ class AdapterTest(unittest.TestCase):
         self.assertEqual(receipt2["status"], "delivered")
         self.assertEqual(self.pending(), [])
 
+    def test_touch_cooldown_applies_to_templated_sentences(self):
+        """'Someone tapped your screen.' has no word 'touch'; the pattern id does."""
+        m1 = la.agent_link.make_message("lynx", "ranker", "observation",
+                                        "Someone tapped your screen.",
+                                        ["NOOBIA P1 touch tap dur_ms=100 | a tap"], "touch-tap", NOW)
+        self.assertEqual(self.adapter.deliver(m1)["status"], "delivered")
+        self.assertEqual(len(self.pending()), 1)
+        for f in self.pending():
+            f.unlink()
+        m2 = la.agent_link.make_message("lynx", "ranker", "observation",
+                                        "Someone pressed and held your screen for 2100 ms.",
+                                        ["NOOBIA P1 touch hold dur_ms=2100 | a hold"], "touch-hold", NOW)
+        self.assertEqual(self.adapter.deliver(m2)["status"], "delivered")
+        self.assertEqual(self.pending(), [])
+        # A non-touch perception right after is still queued.
+        m3 = la.agent_link.make_message("lynx", "ranker", "observation", "You see a cat.",
+                                        ["NOOBIA P1 camera object.seen label=cat conf=0.9 | a cat"],
+                                        "camera-object", NOW)
+        self.assertEqual(self.adapter.deliver(m3)["status"], "delivered")
+        self.assertEqual(len(self.pending()), 1)
+
     def test_largest_valid_message_fits_the_queue(self):
         m = la.agent_link.make_message("lynx", "aigel", "speech", "ж" * 300,
                                        ["NOOBIA P1 mic speech.heard | " + "ж" * 100] * 3, now=NOW)

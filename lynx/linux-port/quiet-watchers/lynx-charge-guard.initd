@@ -1,0 +1,21 @@
+#!/sbin/openrc-run
+# Cool Lynx's battery by stepping the charger's input current down (Gwyn, 2026-11-22).
+# Never powers off. Source: /noobia/lynx/linux-port/lynx-charge-guard.sh
+# Disable: touch /etc/lynx/charge-guard.disable (original limits restored).
+description="Lynx charge guard: lower charge current as the battery warms"
+supervisor="supervise-daemon"
+command="/bin/busybox"
+command_args="sh /usr/libexec/lynx/lynx-charge-guard.sh --watch"
+output_log="/var/log/lynx-charge-guard.log"
+error_log="/var/log/lynx-charge-guard.log"
+respawn_delay=30
+respawn_max=3
+respawn_period=600
+
+depend() {
+    after lynx-charging-stack
+}
+
+stop_post() {
+    /bin/busybox sh /usr/libexec/lynx/lynx-charge-guard.sh --restore
+}

@@ -118,7 +118,11 @@ class LynxAdapter(agent_link.Adapter):
         now = time.time()
         incoming_kind = str(message.get("kind", "")).lower()
         incoming_text = str(message.get("text", "")).lower()
-        is_touch = "touch" in incoming_kind or "touch" in incoming_text
+        # Ranker messages are kind "observation" with templated text ("Someone
+        # tapped your screen."), so recognise touch by its pattern id too.
+        pattern_id = str(message.get("pattern_id") or "").lower()
+        is_touch = ("touch" in incoming_kind or "touch" in incoming_text
+                    or pattern_id.startswith("touch"))
         if is_touch:
             last_touch_file = self.state_dir / "last_touch_time"
             try:

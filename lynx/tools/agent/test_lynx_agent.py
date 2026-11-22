@@ -67,6 +67,38 @@ class AgentTest(unittest.TestCase):
         self.assertEqual(payloads[0].get('tool_choice'), 'required')
         self.assertNotIn('tool_choice', payloads[1])     # only the first step is forced
 
+    def test_sense_job_never_gets_codex(self):
+        payloads = []
+
+        def send(base, key, payload):
+            payloads.append(payload)
+            if len(payloads) == 1:  # a model that calls codex anyway is refused
+                return {'status': 'completed', 'output': [{
+                    'type': 'function_call', 'name': 'lynx_codex',
+                    'arguments': '{"prompt": "x"}', 'call_id': 'c1'}]}
+            return {'status': 'completed', 'output': [{
+                'type': 'message', 'content': [{'type': 'output_text', 'text': 'Purr.'}]}]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = self._catalog(root)
+            (root / 'lynx_codex.json').write_text(json.dumps({
+                'description': 'code', 'parameters': {'type': 'object', 'properties': {
+                    'prompt': {'type': 'string'}}, 'required': ['prompt'],
+                    'additionalProperties': False}}))
+            (root / 'lynx_codex.sh').write_text('#!/bin/sh\necho RAN > ' + str(root / 'ran') + '\n')
+            respond('[sense] something seen', catalog=catalog,
+                    choose=lambda: ('http://local', 'model', 'secret'), send=send)
+            self.assertNotIn('lynx_codex', [t['name'] for t in payloads[0]['tools']])
+            self.assertIn('lynx_status', [t['name'] for t in payloads[0]['tools']])
+            outs = [i['output'] for i in payloads[1]['input'] if i.get('type') == 'function_call_output']
+            self.assertTrue(outs and 'not available' in outs[0])
+            self.assertFalse((root / 'ran').exists())
+            # An ordinary question still has codex.
+            payloads.clear()
+            respond('Please write me a script', catalog=catalog,
+                    choose=lambda: ('http://local', 'model', 'secret'), send=send)
+            self.assertIn('lynx_codex', [t['name'] for t in payloads[0]['tools']])
+
     def test_ordinary_question_is_not_forced(self):
         payloads = self._run('How is Lynx?')
         self.assertNotIn('tool_choice', payloads[0])

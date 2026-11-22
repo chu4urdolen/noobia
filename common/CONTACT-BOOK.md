@@ -19,7 +19,7 @@ changes. Check live service state before relying on a route.
 | Terpsi | micro:bit dancer muse | Direct device route is not yet documented | — |
 | Lolth | LAFVIN spiderbot inhabitant | Device tools in `lolth/`; no verified Council route | — |
 | Gwyn App Nub | Huntsman of the Clouds, Noobia's app-writer; Unix user `aria`, Claude Code with cloud inference (joined 2026-11-18) | `/noobia/gwyn-app-nub/launch` (two-pane tmux, `noobia-gwyn-*`); `dushich` MCP handoff and linked Helper Dushich thread; no Council identity | `/noobia/gwyn-app-nub/AGENTS.md` |
-| Aigel | Nexus nurse and diagnostics agent; Unix user `aria`, local Codex and Ollama on the RTX 5090; passive monitoring, reports anomalies to Aria or Dushich | `/noobia/aigel/launch` (tmux socket `aigel-clean`); no Council identity | `/noobia/aigel/AGENTS.md` |
+| Aigel | Nexus nurse and diagnostics angel; Unix user `aria`, autonomous services and local Ollama (Qwen) on the RTX 5090; passive monitoring, perception engine, bedside visits, reports anomalies to Aria or Dushich | `/noobia/aigel/service/` (intake :112, perception engine, bedside nurse); no Council identity | `/noobia/aigel/AGENTS.md` |
 | Bee | Named in Dushich's role instructions | Identity and contact route have not yet been documented | — |
 
 The live Council contact book is `/etc/noobia-council/contacts.json`. It holds

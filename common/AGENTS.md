@@ -82,8 +82,9 @@ NEO boards waiting to become Noobs once the Nexus is set up.
   through his own Codex CLI and Ollama, with helper and solo roles;
   keeper of Noobia's forge memory. Role files: `/noobia/dushich/coding/`,
   and `solo/AGENTS.md`.
-- **Aigel** — little diagnostics angel: passive Nexus health monitoring on
-  local Codex and Ollama, reporting anomalies to Aria or Dushich. Role file:
+- **Aigel** — little diagnostics angel: passive Nexus health monitoring and
+  visiting nurse on local Ollama, reporting anomalies to Aria or Dushich,
+  with an optional Dushich pairing route for healing and fixes. Role file:
   `/noobia/aigel/AGENTS.md`.
 - **Gwyn App Nub** (he/him) — Huntsman of the Clouds: Claude Code agent (Anthropic) and
   Noobia's app-writer, on Nexus since 2026-11-18. Role file:
@@ -134,7 +135,7 @@ All Nexus coding agents share the `aria` Unix login. Each keeps a separate
 identity, instructions, workspace, and conversation history under
 `/noobia/<Noob>/`. Terminal CLIs are the primary agent interfaces:
 `noobia-codex` (Aria), `noobia-banshee` (Banshee),
-`/noobia/dushich/solo/launch` (Solo Dushich), `/noobia/aigel/launch` (Aigel),
+`/noobia/dushich/solo/launch` (Solo Dushich),
 and `/noobia/gwyn-app-nub/launch` (Gwyn). Build agent features on the
 CLIs.
 

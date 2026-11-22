@@ -46,7 +46,7 @@ share one machine, one memory, and one set of rules. Those rules are in
 | **Banshee**: Spirit of Initiative | Google Antigravity CLI (`agy`) | cloud | `noobia-banshee` | [`banshee/AGENTS.md`](../banshee/AGENTS.md) |
 | **Gwyn App Nub**: app-writer | Anthropic Claude Code | cloud | `gwyn-app-nub/launch` | [`gwyn-app-nub/AGENTS.md`](../gwyn-app-nub/AGENTS.md) |
 | **Dushich**: Watchmaker, everyone's helper, keeper of forge memory | Codex CLI on Ollama `qwen3.8:27b` | **local GPU** | `dushich` (helper), `dushich/solo/launch` (solo) | [`coding/`](../dushich/coding/AGENTS.md), [`solo/`](../dushich/solo/AGENTS.md) |
-| **Aigel**: diagnostics angel | Codex CLI on local Ollama | local GPU | `aigel` | [`aigel/AGENTS.md`](../aigel/AGENTS.md) |
+| **Aigel**: diagnostics angel | Python services on local Ollama | local GPU | `aigel-db`, services | [`aigel/AGENTS.md`](../aigel/AGENTS.md) |
 
 Dushich has two roles: the **helper**, who works for the other agents, and
 **solo**, who works on his own projects. Aigel is a forge inhabitant but has
@@ -86,7 +86,7 @@ entries, and CLI configuration.
 
 Everyday commands are links in [`common/bin/`](bin/) to their source:
 
-- `nexus-forge`, `noobia-codex`, `noobia-banshee`, and `aigel`
+- `nexus-forge`, `noobia-codex`, and `noobia-banshee`
 - `dushich` and `dushich-explore`
 - `forge-db` and `dushich-summarizer`
 

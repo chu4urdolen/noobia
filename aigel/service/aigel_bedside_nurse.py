@@ -117,7 +117,7 @@ class BedsideNurse:
 
         return False
 
-    def conduct_visit(self, reflex_kind: str = "touch") -> dict[str, Any]:
+    def conduct_visit(self, reflex_kind: str = "touch", enable_dushich: bool = False) -> dict[str, Any]:
         """Perform the complete bedside checkup."""
         start_ts = utc_now_iso()
         print(f"\n🩺 --- [NURSE AIGEL BEDSIDE VISIT: {self.noob.upper()}] ---")
@@ -182,13 +182,68 @@ class BedsideNurse:
             f.write(f"Recommendation:  {report['nurse_recommendation']}\n")
             f.write(f"{'='*80}\n")
 
+        # Step 6: Optional Dushich Pair (Fix Handoff) - Disabled by default
+        fix_result = self.pair_with_dushich(report, enabled=enable_dushich)
+        report["dushich_pair_result"] = fix_result
+
         # Save to patient history log
         hist_file = DOSSIERS_DIR / f"{self.noob}_history.log"
         with open(hist_file, "a", encoding="utf-8") as f:
-            f.write(f"[{start_ts}] VISIT: Battery={batt}% Temp={temp}C Reflex={reflex.get('latency_s')}s Status=NOMINAL\n")
+            f.write(f"[{start_ts}] VISIT: Battery={batt}% Temp={temp}C Reflex={reflex.get('latency_s')}s Status=NOMINAL DushichPair={fix_result.get('status')}\n")
 
         print("   Report filed successfully!\n")
         return report
+
+    def pair_with_dushich(self, report: dict[str, Any], enabled: bool = False) -> dict[str, Any]:
+        """Pair with Dushich helper to prepare or propose fixes for findings.
+        
+        SAFETY NOTE: Kept disabled by default (`enabled=False` or `--enable-dushich-pair`).
+        When enabled, formats a bounded diagnostic briefing and task for Dushich
+        via `dushich exec` or Helper Dushich queue.
+        """
+        if not enabled and not os.environ.get("AIGEL_ENABLE_DUSHICH_PAIR"):
+            return {
+                "status": "disabled",
+                "message": "Dushich repair pairing is currently disabled for safety (standing default).",
+            }
+
+        patient = report.get("patient", "unknown")
+        findings = report.get("nurse_recommendation", "Review diagnostic findings")
+        brief = (
+            f"[AIGEL MEDICAL CHECKUP FINDINGS - PATIENT: {patient.upper()}]\n"
+            f"Vitals: {json.dumps(report.get('vitals', {}))}\n"
+            f"Reflexes: {json.dumps(report.get('reflex_result', {}))}\n"
+            f"Recommendations: {findings}\n"
+            f"Task: Please review the diagnostic findings above and evaluate if any code, "
+            f"service configurations, or sensor thresholds require tuning or fixes."
+        )
+
+        dushich_bin = REPO / "common" / "bin" / "dushich"
+        if not dushich_bin.exists():
+            return {
+                "status": "unavailable",
+                "error": f"Dushich launcher not found at {dushich_bin}",
+            }
+
+        try:
+            # Non-interactive bounded invocation per shared instructions: dushich exec "<task>" < /dev/null
+            proc = subprocess.run(
+                [str(dushich_bin), "exec", brief],
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            return {
+                "status": "dispatched" if proc.returncode == 0 else "error",
+                "exit_code": proc.returncode,
+                "output": proc.stdout[-1000:],
+                "error": proc.stderr[-500:],
+            }
+        except subprocess.TimeoutExpired:
+            return {"status": "timeout", "error": "Dushich task execution timed out (queue busy)"}
+        except Exception as exc:
+            return {"status": "error", "error": str(exc)}
 
 
 def main():
@@ -196,10 +251,11 @@ def main():
     parser.add_argument("noob", default="lynx", nargs="?", help="Target Noob (default: lynx)")
     parser.add_argument("--mock", action="store_true", help="Run in mock mode (safe offline test)")
     parser.add_argument("--reflex", default="touch", choices=["touch", "sound", "vital_pulse"], help="Reflex stimulus kind")
+    parser.add_argument("--enable-dushich-pair", action="store_true", help="Enable pairing with Dushich for automated fix proposals (disabled by default)")
     args = parser.parse_args()
 
     nurse = BedsideNurse(target_noob=args.noob, mock_mode=args.mock)
-    report = nurse.conduct_visit(reflex_kind=args.reflex)
+    report = nurse.conduct_visit(reflex_kind=args.reflex, enable_dushich=args.enable_dushich_pair)
     print(json.dumps(report, indent=2))
 
 

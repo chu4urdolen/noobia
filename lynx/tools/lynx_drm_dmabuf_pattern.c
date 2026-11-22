@@ -1405,11 +1405,53 @@ static void get_running_job_snippet(char *buf, size_t sz)
 	snprintf(buf, sz, "COGNITIVE TURN IN PROGRESS");
 }
 
+static unsigned int inputs_scroll_offset = 0;
+static unsigned int inputs_line_count = 0;
+static unsigned int outputs_scroll_offset = 0;
+static unsigned int outputs_line_count = 0;
+
+struct text_row {
+	char text[64];
+	uint32_t color;
+	bool is_header;
+};
+
+static void add_scroll_row(struct text_row *rows, unsigned int *count, unsigned int max_rows,
+			   const char *text, uint32_t color, bool is_header)
+{
+	if (*count >= max_rows)
+		return;
+	const int max_chars = 44;
+	const char *p = text;
+	size_t rem = strlen(p);
+	bool first = true;
+	while (rem > 0 && *count < max_rows) {
+		while (*p == ' ') { p++; rem--; }
+		if (rem == 0) break;
+		int split = (int)rem <= max_chars ? (int)rem : max_chars;
+		if (split < (int)rem) {
+			int s = split;
+			while (s > 0 && p[s] != ' ') s--;
+			if (s > 0) split = s;
+		}
+		unsigned int slot = *count;
+		rows[slot].color = color;
+		rows[slot].is_header = is_header && first;
+		if (!first)
+			snprintf(rows[slot].text, sizeof(rows[slot].text), "  %.*s", split > 42 ? 42 : split, p);
+		else
+			snprintf(rows[slot].text, sizeof(rows[slot].text), "%.*s", split, p);
+		first = false;
+		(*count)++;
+		p += split;
+		rem -= (size_t)split;
+	}
+}
+
 static void paint_inputs(uint32_t *pixels)
 {
 	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa, teal = 0x0009dcc4;
-	const uint32_t amber = 0x00edb961, green = 0x002aa860;
-	const uint32_t card_bg = 0x001a2735, card_border = 0x00334e5b;
+	const uint32_t amber = 0x00edb961, green = 0x002aa860, gray = 0x007d94a5;
 
 	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
 		pixels[i] = dark;
@@ -1419,96 +1461,128 @@ static void paint_inputs(uint32_t *pixels)
 	rectangle(pixels, 75, 300, 1090, 5, teal);
 	draw_text(pixels, "LIVE INCOMING SIGNALS & AIGEL STIMULI", 85, 325, 4, teal);
 
-	/* Card 1: Perceptual Senses */
-	rectangle(pixels, 55, 360, 1130, 680, card_bg);
-	rectangle(pixels, 55, 360, 1130, 3, card_border);
-	rectangle(pixels, 55, 1037, 1130, 3, card_border);
-	rectangle(pixels, 55, 360, 3, 680, card_border);
-	rectangle(pixels, 1182, 360, 3, 680, card_border);
-	draw_text(pixels, "LIVE SENSORS (HARDWARE TELEMETRY)", 75, 385, 4, teal);
+	struct text_row rows[256];
+	unsigned int count = 0;
+
+	/* Section 1: Hardware Telemetry */
+	add_scroll_row(rows, &count, 256, "--- LIVE SENSORS (HARDWARE TELEMETRY) ---", teal, true);
+	add_scroll_row(rows, &count, 256, "TOUCH:   NOVATEK NT36672C (EVENT0/2 P1 ACTIVE)", green, false);
+	add_scroll_row(rows, &count, 256, "VISION:  CAMSV SENSOR 4/2 (YOLO OBJECT DETECTION)", white, false);
+	add_scroll_row(rows, &count, 256, "PROX:    TCS3701 OPTICAL PROXIMITY (P1 NEAR / P0 FAR)", white, false);
+	add_scroll_row(rows, &count, 256, "LIGHT:   TCS3408 AMBIENT SENSOR (P3 BRIGHT/DARK)", white, false);
+
+	int hearing_on = read_hearing_enabled();
+	char buf[256];
+	snprintf(buf, sizeof(buf), "HEARING: DUAL MIC / MTK AFE [%s]", hearing_on ? "LISTENING (ON)" : "MUTED (OFF)");
+	add_scroll_row(rows, &count, 256, buf, hearing_on ? green : amber, false);
 
 	int cap, temp, cur, volt;
 	battery_snapshot(&cap, &temp, &cur, &volt);
-	char buf[128];
-
-	draw_text(pixels, "TOUCH:   NOVATEK NT36672C (EVENT2 INSTANT P1 ACTIVE)", 75, 445, 4, green);
-	draw_text(pixels, "VISION:  CAMSV SENSOR 4/2 (YOLO OBJECT DETECTION)", 75, 515, 4, white);
-	draw_text(pixels, "PROX:    TCS3701 OPTICAL PROXIMITY (P1 NEAR / P0 FAR)", 75, 585, 4, white);
-	draw_text(pixels, "LIGHT:   TCS3408 AMBIENT SENSOR (P3 BRIGHT/DARK)", 75, 655, 4, white);
-	int hearing_on = read_hearing_enabled();
-	snprintf(buf, sizeof(buf), "HEARING: DUAL MIC / MTK AFE [%s]", hearing_on ? "LISTENING (ON)" : "MUTED (OFF)");
-	draw_text(pixels, buf, 75, 725, 4, hearing_on ? green : amber);
 	snprintf(buf, sizeof(buf), "POWER:   %d%% BATT | %d.%dC | %dMA | %dMV", cap, temp/1000, (temp%1000)/100, cur, volt);
-	draw_text(pixels, buf, 75, 795, 4, white);
+	add_scroll_row(rows, &count, 256, buf, white, false);
+
 	char wifi_ip[32] = {0};
 	wifi_address(wifi_ip, sizeof(wifi_ip));
 	snprintf(buf, sizeof(buf), "WIFI:    IP %s (NEXUS 192.168.100.106:112)", wifi_ip[0] ? wifi_ip : "LINKING");
-	draw_text(pixels, buf, 75, 865, 4, white);
+	add_scroll_row(rows, &count, 256, buf, white, false);
 
-	/* Card 2: Aigel Perception & Jobs */
-	rectangle(pixels, 55, 1070, 1130, 540, card_bg);
-	rectangle(pixels, 55, 1070, 1130, 3, card_border);
-	rectangle(pixels, 55, 1607, 1130, 3, card_border);
-	rectangle(pixels, 55, 1070, 3, 540, card_border);
-	rectangle(pixels, 1182, 1070, 3, 540, card_border);
-	draw_text(pixels, "AIGEL COGNITIVE INTAKE & JOB QUEUE", 75, 1095, 4, teal);
+	add_scroll_row(rows, &count, 256, "", white, false);
 
+	/* Section 2: Aigel Cognitive Intake & Queue */
+	add_scroll_row(rows, &count, 256, "--- AIGEL COGNITIVE INTAKE & JOB QUEUE ---", teal, true);
 	int pending = count_jobs(".pending");
 	int running = count_jobs(".running");
 	int done = count_jobs(".done");
 	snprintf(buf, sizeof(buf), "QUEUE:   %d PENDING | %d RUNNING | %d COMPLETED", pending, running, done);
-	draw_text(pixels, buf, 75, 1155, 4, running ? amber : green);
+	add_scroll_row(rows, &count, 256, buf, running ? amber : green, false);
 
-	char job_snippet[128] = {0};
+	char job_snippet[256] = {0};
 	get_running_job_snippet(job_snippet, sizeof(job_snippet));
-	draw_text(pixels, "ACTIVE: ", 75, 1225, 4, teal);
-	char snippet_line1[46] = {0}, snippet_line2[46] = {0};
-	snprintf(snippet_line1, sizeof(snippet_line1), "%.*s", 44, job_snippet);
-	draw_text(pixels, snippet_line1, 75, 1295, 4, white);
-	if (strlen(job_snippet) > 44) {
-		snprintf(snippet_line2, sizeof(snippet_line2), "%.*s", 44, job_snippet + 44);
-		draw_text(pixels, snippet_line2, 75, 1365, 4, white);
-	}
-	draw_text(pixels, "INTAKE:  PORT 112 (HMAC SIGNED CHUNK STREAM)", 75, 1445, 4, white);
+	snprintf(buf, sizeof(buf), "ACTIVE:  %s", job_snippet);
+	add_scroll_row(rows, &count, 256, buf, white, false);
+	add_scroll_row(rows, &count, 256, "INTAKE:  PORT 112 (HMAC SIGNED CHUNK STREAM)", white, false);
 
-	/* Card 3: Live Sense Stream */
-	rectangle(pixels, 55, 1640, 1130, 850, card_bg);
-	rectangle(pixels, 55, 1640, 1130, 3, card_border);
-	rectangle(pixels, 55, 2487, 1130, 3, card_border);
-	rectangle(pixels, 55, 1640, 3, 850, card_border);
-	rectangle(pixels, 1182, 1640, 3, 850, card_border);
-	draw_text(pixels, "RECENT SENSE LOG (NOOBIA-SENSE)", 75, 1665, 4, teal);
+	add_scroll_row(rows, &count, 256, "", white, false);
 
-	FILE *sf = fopen("/var/log/lynx-senses.log", "r");
-	if (sf) {
-		char slines[10][101];
-		int scnt = 0;
-		char sline[256];
-		while (fgets(sline, sizeof(sline), sf)) {
-			sline[strcspn(sline, "\r\n")] = 0;
-			int slot = scnt < 10 ? scnt : 9;
-			if (scnt >= 10)
-				memmove(slines, slines + 1, sizeof(slines[0]) * 9);
-			snprintf(slines[slot], sizeof(slines[slot]), "%s", sline);
-			scnt++;
+	/* Section 3: Live Sense Stream from /var/log/lynx/messages */
+	add_scroll_row(rows, &count, 256, "--- LIVE RECENT SENSE STREAM (NOOBIA-SENSE) ---", teal, true);
+
+	FILE *mf = fopen("/var/log/lynx/messages", "r");
+	if (mf) {
+		if (fseek(mf, 0, SEEK_END) == 0) {
+			long sz = ftell(mf);
+			long off = sz > 16384 ? sz - 16384 : 0;
+			fseek(mf, off, SEEK_SET);
+			if (off > 0) {
+				char dummy[512];
+				if (!fgets(dummy, sizeof(dummy), mf)) {}
+			}
 		}
-		fclose(sf);
-		int num = scnt < 10 ? scnt : 10;
+		char mline[512];
+		char collected[50][256];
+		int ccnt = 0;
+		while (fgets(mline, sizeof(mline), mf)) {
+			char *p = strstr(mline, "NOOBIA");
+			if (!p) continue;
+			p[strcspn(p, "\r\n")] = 0;
+			int slot = ccnt < 50 ? ccnt : 49;
+			if (ccnt >= 50)
+				memmove(collected, collected + 1, sizeof(collected[0]) * 49);
+			snprintf(collected[slot], sizeof(collected[slot]), "%s", p);
+			ccnt++;
+		}
+		fclose(mf);
+
+		int num = ccnt < 50 ? ccnt : 50;
 		for (int i = 0; i < num; i++) {
-			char tr[46] = {0};
-			snprintf(tr, sizeof(tr), "%.*s", 44, slines[i]);
-			draw_text(pixels, tr, 75, 1735 + i * 65, 4, 0x00c8d5e0);
+			uint32_t scol = white;
+			if (strstr(collected[i], "P1 touch"))
+				scol = green;
+			else if (strstr(collected[i], "P1 chat"))
+				scol = teal;
+			else if (strstr(collected[i], "P0 camera"))
+				scol = amber;
+			else if (strstr(collected[i], "status.sample"))
+				scol = 0x00c8d5e0;
+			add_scroll_row(rows, &count, 256, collected[i], scol, false);
 		}
 	} else {
-		draw_text(pixels, "SENSES STREAM ACTIVE", 75, 1735, 4, white);
+		add_scroll_row(rows, &count, 256, "(NO LIVE SENSES STREAM FOUND)", gray, false);
 	}
+
+	const unsigned int line_h = 50;
+	const unsigned int visible_lines = 38;
+	inputs_line_count = count;
+	unsigned int maximum = count > visible_lines ? count - visible_lines : 0;
+	if (inputs_scroll_offset > maximum)
+		inputs_scroll_offset = maximum;
+
+	unsigned int first = inputs_scroll_offset;
+	unsigned int show_n = count - first < visible_lines ? count - first : visible_lines;
+	for (unsigned int i = 0; i < show_n; i++) {
+		unsigned int idx = first + i;
+		if (rows[idx].is_header) {
+			rectangle(pixels, 55, 360 + i * line_h, 1115, 42, 0x001a2735);
+			rectangle(pixels, 55, 360 + i * line_h, 1115, 2, teal);
+			draw_text(pixels, rows[idx].text, 65, 360 + i * line_h + 8, 4, rows[idx].color);
+		} else {
+			draw_text(pixels, rows[idx].text, 65, 360 + i * line_h + 8, 4, rows[idx].color);
+		}
+	}
+
+	/* Scrollbar on right: x=1180, y=360, w=45, h=2160 */
+	const unsigned int sb_x = 1180, sb_y = 360, sb_h = 2160;
+	unsigned int thumb = count > visible_lines ? sb_h * visible_lines / count : sb_h;
+	if (thumb < 120) thumb = 120;
+	unsigned int pos = maximum ? (sb_h - thumb) * inputs_scroll_offset / maximum : 0;
+	rectangle(pixels, sb_x, sb_y, 45, sb_h, 0x00223644);
+	rectangle(pixels, sb_x, sb_y + pos, 45, thumb, teal);
 }
 
 static void paint_outputs(uint32_t *pixels)
 {
 	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa, teal = 0x0009dcc4;
 	const uint32_t green = 0x002aa860, amber = 0x00edb961;
-	const uint32_t card_bg = 0x001a2735, card_border = 0x00334e5b;
 
 	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
 		pixels[i] = dark;
@@ -1518,28 +1592,23 @@ static void paint_outputs(uint32_t *pixels)
 	rectangle(pixels, 75, 300, 1090, 5, teal);
 	draw_text(pixels, "AVAILABLE EFFECTORS & RUNTIME STATE", 85, 325, 4, teal);
 
-	/* Card 1: Voice (Speech) */
-	rectangle(pixels, 55, 360, 1130, 480, card_bg);
-	rectangle(pixels, 55, 360, 1130, 3, card_border);
-	rectangle(pixels, 55, 837, 1130, 3, card_border);
-	rectangle(pixels, 55, 360, 3, 480, card_border);
-	rectangle(pixels, 1182, 360, 3, 480, card_border);
-	draw_text(pixels, "VOICE (DISTRIBUTED PIPER TTS)", 75, 385, 4, teal);
-	draw_text(pixels, "ENGINE:  NEXUS PIPER (:115) EN_US-KRISTIN", 75, 455, 4, white);
-	draw_text(pixels, "PITCH:   +500 CENTS (RUBBERBAND 1.33484)", 75, 535, 4, white);
-	draw_text(pixels, "VOLUME:  0.08 DIGITAL GAIN (TFA98XX PROTECT)", 75, 615, 4, white);
-	bool speaking = file_contains("/proc/asound/card0/pcm0p/sub0/status", "RUNNING");
-	draw_text(pixels, speaking ? "STATE:   SPEAKING (AUDIO PLAYING)" : "STATE:   AVAILABLE (READY)",
-		  75, 695, 4, speaking ? amber : green);
+	struct text_row rows[256];
+	unsigned int count = 0;
 
-	/* Card 2: Display & Pose */
-	rectangle(pixels, 55, 860, 1130, 480, card_bg);
-	rectangle(pixels, 55, 860, 1130, 3, card_border);
-	rectangle(pixels, 55, 1337, 1130, 3, card_border);
-	rectangle(pixels, 55, 860, 3, 480, card_border);
-	rectangle(pixels, 1182, 860, 3, 480, card_border);
-	draw_text(pixels, "DISPLAY & POSE (DRM SCANOUT)", 75, 885, 4, teal);
-	draw_text(pixels, "SCANOUT: 1240X2772 @ 120HZ DMA-BUF", 75, 955, 4, white);
+	/* Section 1: Voice */
+	add_scroll_row(rows, &count, 256, "--- VOICE (DISTRIBUTED PIPER TTS) ---", teal, true);
+	add_scroll_row(rows, &count, 256, "ENGINE:  NEXUS PIPER (:115) EN_US-KRISTIN", white, false);
+	add_scroll_row(rows, &count, 256, "PITCH:   +500 CENTS (RUBBERBAND 1.33484)", white, false);
+	add_scroll_row(rows, &count, 256, "VOLUME:  0.08 DIGITAL GAIN (TFA98XX PROTECT)", white, false);
+	bool speaking = file_contains("/proc/asound/card0/pcm0p/sub0/status", "RUNNING");
+	add_scroll_row(rows, &count, 256, speaking ? "STATE:   SPEAKING (AUDIO PLAYING)" : "STATE:   AVAILABLE (READY)",
+		       speaking ? amber : green, false);
+
+	add_scroll_row(rows, &count, 256, "", white, false);
+
+	/* Section 2: Display & Pose */
+	add_scroll_row(rows, &count, 256, "--- DISPLAY & POSE (DRM SCANOUT) ---", teal, true);
+	add_scroll_row(rows, &count, 256, "SCANOUT: 1240X2772 @ 120HZ DMA-BUF DIRECT", white, false);
 	char pose_buf[64] = "01_standing_smile";
 	FILE *pf = fopen(SELECTION_FILE, "r");
 	if (pf) {
@@ -1549,38 +1618,117 @@ static void paint_outputs(uint32_t *pixels)
 	}
 	char ptxt[96];
 	snprintf(ptxt, sizeof(ptxt), "POSE:    %s", pose_buf);
-	draw_text(pixels, ptxt, 75, 1035, 4, white);
-	draw_text(pixels, "THOUGHT: SCROLLING WINDOW (15S AUTO-WAKE)", 75, 1115, 4, white);
-	draw_text(pixels, "STATE:   ACTIVE (120HZ SCANOUT RUNNING)", 75, 1195, 4, green);
+	add_scroll_row(rows, &count, 256, ptxt, white, false);
+	add_scroll_row(rows, &count, 256, "THOUGHT: SCROLLING WINDOW (15S AUTO-WAKE)", white, false);
+	add_scroll_row(rows, &count, 256, "STATE:   ACTIVE (120HZ SCANOUT RUNNING)", green, false);
 
-	/* Card 3: Actuators */
-	rectangle(pixels, 55, 1360, 1130, 480, card_bg);
-	rectangle(pixels, 55, 1360, 1130, 3, card_border);
-	rectangle(pixels, 55, 1837, 1130, 3, card_border);
-	rectangle(pixels, 55, 1360, 3, 480, card_border);
-	rectangle(pixels, 1182, 1360, 3, 480, card_border);
-	draw_text(pixels, "TACTILE & LIGHT ACTUATORS", 75, 1385, 4, teal);
-	draw_text(pixels, "HAPTIC:  OPLUS LRA VIBRATOR (AVAILABLE)", 75, 1455, 4, green);
-	draw_text(pixels, "TORCH:   LM3642 DUAL LED FLASHLIGHT (AVAILABLE)", 75, 1535, 4, green);
-	draw_text(pixels, "MEDIA:   ALSA HW:0,0 SOUND PLAYER (AVAILABLE)", 75, 1615, 4, green);
-	draw_text(pixels, "STATE:   EFFECTORS IDLE & READY", 75, 1695, 4, green);
+	add_scroll_row(rows, &count, 256, "", white, false);
 
-	/* Card 4: Agent Worker (Mind) */
-	rectangle(pixels, 55, 1860, 1130, 620, card_bg);
-	rectangle(pixels, 55, 1860, 1130, 3, card_border);
-	rectangle(pixels, 55, 2477, 1130, 3, card_border);
-	rectangle(pixels, 55, 1860, 3, 620, card_border);
-	rectangle(pixels, 1182, 1860, 3, 620, card_border);
-	draw_text(pixels, "CONSCIOUS AGENT WORKER (MIND)", 75, 1885, 4, teal);
-	draw_text(pixels, "MODEL:   QWEN 27B ON NEXUS RTX 5090", 75, 1955, 4, white);
-	draw_text(pixels, "DAEMON:  LYNX-AGENT-WORKER", 75, 2035, 4, white);
+	/* Section 3: Actuators */
+	add_scroll_row(rows, &count, 256, "--- TACTILE & LIGHT ACTUATORS ---", teal, true);
+	add_scroll_row(rows, &count, 256, "HAPTIC:  OPLUS LRA VIBRATOR (AVAILABLE)", green, false);
+	add_scroll_row(rows, &count, 256, "TORCH:   LM3642 DUAL LED FLASHLIGHT (AVAILABLE)", green, false);
+	add_scroll_row(rows, &count, 256, "MEDIA:   ALSA HW:0,0 SOUND PLAYER (AVAILABLE)", green, false);
+	add_scroll_row(rows, &count, 256, "STATE:   EFFECTORS IDLE & READY", green, false);
+
+	add_scroll_row(rows, &count, 256, "", white, false);
+
+	/* Section 4: Agent Worker */
+	add_scroll_row(rows, &count, 256, "--- CONSCIOUS AGENT WORKER (MIND) ---", teal, true);
+	add_scroll_row(rows, &count, 256, "MODEL:   QWEN 27B ON NEXUS RTX 5090", white, false);
+	add_scroll_row(rows, &count, 256, "DAEMON:  LYNX-AGENT-WORKER (SUPERVISED)", white, false);
 	int is_running = count_jobs(".running");
 	if (is_running) {
-		draw_text(pixels, "STATE:   THINKING / ACTING NOW (JOB RUNNING)", 75, 2115, 4, amber);
+		add_scroll_row(rows, &count, 256, "STATE:   THINKING / ACTING NOW (JOB RUNNING)", amber, false);
 	} else {
-		draw_text(pixels, "STATE:   IDLE (LISTENING FOR SENSES)", 75, 2115, 4, green);
+		add_scroll_row(rows, &count, 256, "STATE:   IDLE (LISTENING FOR SENSES)", green, false);
 	}
-	draw_text(pixels, "ACTIONS: SPEECH, POSE, HAPTIC, TORCH, MEDIA", 75, 2195, 4, white);
+	add_scroll_row(rows, &count, 256, "ACTIONS: SPEECH, POSE, HAPTIC, TORCH, MEDIA", white, false);
+
+	add_scroll_row(rows, &count, 256, "", white, false);
+
+	/* Section 5: Recent Effector Audit Log */
+	add_scroll_row(rows, &count, 256, "--- RECENT EFFECTOR AUDIT LOG ---", teal, true);
+	FILE *af = fopen("/var/log/lynx-agent.jsonl", "r");
+	if (af) {
+		if (fseek(af, 0, SEEK_END) == 0) {
+			long sz = ftell(af);
+			long off = sz > 4096 ? sz - 4096 : 0;
+			fseek(af, off, SEEK_SET);
+			if (off > 0) {
+				char dummy[256];
+				if (!fgets(dummy, sizeof(dummy), af)) {}
+			}
+		}
+		char aline[256];
+		char collected_audit[25][128];
+		int acnt = 0;
+		while (fgets(aline, sizeof(aline), af)) {
+			aline[strcspn(aline, "\r\n")] = 0;
+			if (!aline[0]) continue;
+			int slot = acnt < 25 ? acnt : 24;
+			if (acnt >= 25)
+				memmove(collected_audit, collected_audit + 1, sizeof(collected_audit[0]) * 24);
+			snprintf(collected_audit[slot], sizeof(collected_audit[slot]), "%s", aline);
+			acnt++;
+		}
+		fclose(af);
+
+		int num = acnt < 25 ? acnt : 25;
+		for (int i = 0; i < num; i++) {
+			char desc[128] = {0};
+			char *evt = strstr(collected_audit[i], "\"event\":");
+			char *name = strstr(collected_audit[i], "\"name\":");
+			char *ok = strstr(collected_audit[i], "\"ok\":");
+			char *backend = strstr(collected_audit[i], "\"backend\":");
+			if (name) {
+				char tname[32] = {0}, tok[8] = {0};
+				sscanf(name, "\"name\":\"%31[^\"]\"", tname);
+				if (ok) sscanf(ok, "\"ok\":%7[^,}]", tok);
+				snprintf(desc, sizeof(desc), "CALL: %s (ok=%s)", tname, tok);
+				add_scroll_row(rows, &count, 256, desc, !strcmp(tok, "true") ? green : amber, false);
+			} else if (backend) {
+				char tmodel[32] = {0};
+				char *m = strstr(collected_audit[i], "\"model\":");
+				if (m) sscanf(m, "\"model\":\"%31[^\"]\"", tmodel);
+				snprintf(desc, sizeof(desc), "INFERENCE: %s", tmodel);
+				add_scroll_row(rows, &count, 256, desc, teal, false);
+			} else if (evt) {
+				snprintf(desc, sizeof(desc), "EVENT: %.*s", 40, collected_audit[i]);
+				add_scroll_row(rows, &count, 256, desc, white, false);
+			}
+		}
+	} else {
+		add_scroll_row(rows, &count, 256, "(NO AUDIT LOG ENTRIES)", white, false);
+	}
+
+	const unsigned int line_h = 50;
+	const unsigned int visible_lines = 38;
+	outputs_line_count = count;
+	unsigned int maximum = count > visible_lines ? count - visible_lines : 0;
+	if (outputs_scroll_offset > maximum)
+		outputs_scroll_offset = maximum;
+
+	unsigned int first = outputs_scroll_offset;
+	unsigned int show_n = count - first < visible_lines ? count - first : visible_lines;
+	for (unsigned int i = 0; i < show_n; i++) {
+		unsigned int idx = first + i;
+		if (rows[idx].is_header) {
+			rectangle(pixels, 55, 360 + i * line_h, 1115, 42, 0x001a2735);
+			rectangle(pixels, 55, 360 + i * line_h, 1115, 2, teal);
+			draw_text(pixels, rows[idx].text, 65, 360 + i * line_h + 8, 4, rows[idx].color);
+		} else {
+			draw_text(pixels, rows[idx].text, 65, 360 + i * line_h + 8, 4, rows[idx].color);
+		}
+	}
+
+	/* Scrollbar on right: x=1180, y=360, w=45, h=2160 */
+	const unsigned int sb_x = 1180, sb_y = 360, sb_h = 2160;
+	unsigned int thumb = count > visible_lines ? sb_h * visible_lines / count : sb_h;
+	if (thumb < 120) thumb = 120;
+	unsigned int pos = maximum ? (sb_h - thumb) * outputs_scroll_offset / maximum : 0;
+	rectangle(pixels, sb_x, sb_y, 45, sb_h, 0x00223644);
+	rectangle(pixels, sb_x, sb_y + pos, 45, thumb, teal);
 }
 
 static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
@@ -2355,6 +2503,34 @@ static int run(const char *action, unsigned int seconds)
 						} else if (page == PAGE_CONSOLE &&
 							   y >= 450 && y < 2450) {
 							console_key((unsigned int)x, (unsigned int)y);
+							page_changed = true;
+						} else if (page == PAGE_INPUTS &&
+							   y >= 360 && y < 2530) {
+							if (x >= 1150) {
+								unsigned int max_s = inputs_line_count > 38 ? inputs_line_count - 38 : 0;
+								inputs_scroll_offset = max_s ? (y - 360) * max_s / 2159U : 0;
+							} else if (y < 1400) {
+								if (inputs_scroll_offset >= 5) inputs_scroll_offset -= 5;
+								else inputs_scroll_offset = 0;
+							} else {
+								unsigned int max_s = inputs_line_count > 38 ? inputs_line_count - 38 : 0;
+								inputs_scroll_offset += 5;
+								if (inputs_scroll_offset > max_s) inputs_scroll_offset = max_s;
+							}
+							page_changed = true;
+						} else if (page == PAGE_OUTPUTS &&
+							   y >= 360 && y < 2530) {
+							if (x >= 1150) {
+								unsigned int max_s = outputs_line_count > 38 ? outputs_line_count - 38 : 0;
+								outputs_scroll_offset = max_s ? (y - 360) * max_s / 2159U : 0;
+							} else if (y < 1400) {
+								if (outputs_scroll_offset >= 5) outputs_scroll_offset -= 5;
+								else outputs_scroll_offset = 0;
+							} else {
+								unsigned int max_s = outputs_line_count > 38 ? outputs_line_count - 38 : 0;
+								outputs_scroll_offset += 5;
+								if (outputs_scroll_offset > max_s) outputs_scroll_offset = max_s;
+							}
 							page_changed = true;
 						}
 						if (target != page) {

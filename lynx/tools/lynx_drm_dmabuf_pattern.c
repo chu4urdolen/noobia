@@ -2484,15 +2484,20 @@ static int run(const char *action, unsigned int seconds)
 								target = PAGE_CHAT;
 							}
 						} else if (page == PAGE_HOME && y < 2360) {
-							/* Tapped on portrait: trigger tactile tick and emit instant P1 sense */
+							/* Tapped on portrait: trigger tactile tick and emit instant P1 sense (throttled to >= 5s) */
 							haptic_tick(25);
-							pid_t pid = fork();
-							if (pid == 0) {
-								execl("/usr/bin/python3", "python3",
-								      "/usr/local/lib/noobia/autonomy/sense.py",
-								      "1", "touch", "tap", "dur_ms=100",
-								      "-t", "screen tapped on portrait", (char *)NULL);
-								_exit(0);
+							static uint64_t last_portrait_touch_ms = 0;
+							uint64_t now_touch_ms = monotonic_milliseconds();
+							if (now_touch_ms - last_portrait_touch_ms >= 5000U) {
+								last_portrait_touch_ms = now_touch_ms;
+								pid_t pid = fork();
+								if (pid == 0) {
+									execl("/usr/bin/python3", "python3",
+									      "/usr/local/lib/noobia/autonomy/sense.py",
+									      "1", "touch", "tap", "dur_ms=100",
+									      "-t", "screen tapped on portrait", (char *)NULL);
+									_exit(0);
+								}
 							}
 							printf("portrait_tapped x=%d y=%d\n", x, y);
 							fflush(stdout);

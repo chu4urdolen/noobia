@@ -7,13 +7,29 @@ from pathlib import Path
 import signal
 import subprocess
 import time
+import unicodedata
 import urllib.error
 import urllib.request
 
 from lynx_agent_queue import JobQueue, QueueError
 
+
+def sanitize_text(text: str) -> str:
+    """Sanitize text: remove emojis and replace em-dashes/en-dashes with comma."""
+    import re
+    text = text.replace("—", ",").replace("–", ",")
+    text = re.sub(r'\s*,\s*', ', ', text)
+    out = []
+    for ch in text:
+        cat = unicodedata.category(ch)
+        if cat.startswith("S") or cat in ("So", "Sk", "Sm", "Sc"):
+            continue
+        out.append(ch)
+    return "".join(out).strip()
+
 ROOT = Path('/var/lib/lynx-agent/jobs')
 STOP = Path('/var/lib/lynx-agent/stop')
+THOUGHT_PATH = Path('/var/lib/noobia/lynx_thought.txt')
 AGENT = '/usr/local/bin/lynx-agent'
 LOCAL = 'http://192.168.100.106:8080'
 LOCAL_KEY = Path('/etc/lynx/nexus-inference.key')
@@ -98,6 +114,9 @@ def run_job(queue, job_id, prompt):
                 os.killpg(current.pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
+        thought_path = THOUGHT_PATH
+        thought_mtime_before = thought_path.stat().st_mtime_ns if thought_path.is_file() else 0
+        thought_size_before = thought_path.stat().st_size if thought_path.is_file() else 0
         try:
             output, errors = current.communicate(input=prompt.encode('utf-8'), timeout=180)
         except subprocess.TimeoutExpired:
@@ -107,23 +126,32 @@ def run_job(queue, job_id, prompt):
             print(json.dumps({'event': 'job_finished', 'job_id': job_id,
                               'ok': False, 'reason': 'timeout'}), flush=True)
             return
+        thought_mtime_after = thought_path.stat().st_mtime_ns if thought_path.is_file() else 0
+        thought_size_after = thought_path.stat().st_size if thought_path.is_file() else 0
+        thought_written_by_tool = (thought_mtime_after > thought_mtime_before or
+                                  thought_size_after > thought_size_before)
         ok = current.returncode == 0 and not stopping
         text = (output if ok else errors or output).decode(errors='replace')[-8000:]
         queue.finish(job_id, ok, text or ('Agent stopped' if stopping else 'No response'))
         print(json.dumps({'event': 'job_finished', 'job_id': job_id, 'ok': ok}), flush=True)
         if ok and text:
             clean_text = text.strip()
-            try:
-                thought_path = Path('/var/lib/noobia/lynx_thought.txt')
-                existing = thought_path.read_text(encoding='utf-8', errors='replace') if thought_path.is_file() else ''
-                existing_stripped = existing.strip()
-                if not existing_stripped.endswith(clean_text):
-                    with thought_path.open('a', encoding='utf-8') as f:
-                        if existing and not existing.endswith('\n'):
-                            f.write('\n')
-                        f.write(clean_text + '\n')
-            except Exception:
-                pass
+            # If a tool (like lynx_speech) already recorded Lynx's spoken thought during this
+            # turn, do not append clean_text (which is just the final assistant summary/duplicate).
+            # Only append if no tool wrote to thought_path (i.e. silent thought).
+            if not thought_written_by_tool and clean_text:
+                clean_thought = sanitize_text(clean_text)
+                if clean_thought:
+                    try:
+                        existing = thought_path.read_text(encoding='utf-8', errors='replace') if thought_path.is_file() else ''
+                        existing_stripped = existing.strip()
+                        if not existing_stripped.endswith(clean_thought):
+                            with thought_path.open('a', encoding='utf-8') as f:
+                                if existing and not existing.endswith('\n'):
+                                    f.write('\n')
+                                f.write(clean_thought + '\n')
+                    except Exception:
+                        pass
             try:
                 payload = json.dumps({
                     "host": "lynx",

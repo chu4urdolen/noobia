@@ -21,6 +21,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 
 HERE = Path(__file__).resolve().parent
 
@@ -81,6 +82,7 @@ class LynxAdapter(agent_link.Adapter):
     def __init__(self, state_dir=STATE, *, jobs=JOBS, stop=STOP, max_pending=1, **kwargs):
         self.jobs, self.stop, self.max_pending = Path(jobs), Path(stop), max_pending
         super().__init__(state_dir, **kwargs)
+        self.state_dir = self.state
 
     def _is_redundant_with_running(self, message):
         """Check if message matches what is currently executing in *.running."""
@@ -113,12 +115,32 @@ class LynxAdapter(agent_link.Adapter):
         if self._is_redundant_with_running(message):
             self.last_job_id = None
             return
+        now = time.time()
+        incoming_kind = str(message.get("kind", "")).lower()
+        incoming_text = str(message.get("text", "")).lower()
+        is_touch = "touch" in incoming_kind or "touch" in incoming_text
+        if is_touch:
+            last_touch_file = self.state_dir / "last_touch_time"
+            try:
+                if last_touch_file.is_file():
+                    last_t = float(last_touch_file.read_text(encoding="utf-8").strip())
+                    if now - last_t < 5.0:
+                        self.last_job_id = None
+                        return
+            except Exception:
+                pass
         pending = sum(1 for _ in self.jobs.glob("*.pending")) if self.jobs.is_dir() else 0
         running = sum(1 for _ in self.jobs.glob("*.running")) if self.jobs.is_dir() else 0
         if pending >= self.max_pending or (running > 0 and pending > 0):
             raise AgentBusy(f"{pending} jobs already pending ({running} running)")
         job_id = JobQueue(self.jobs).create_job(build_prompt(message))
         self.last_job_id = job_id
+        if is_touch:
+            try:
+                self.state_dir.mkdir(parents=True, exist_ok=True)
+                (self.state_dir / "last_touch_time").write_text(str(now), encoding="utf-8")
+            except Exception:
+                pass
 
 
 def main(argv=None):

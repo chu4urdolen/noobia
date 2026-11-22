@@ -117,6 +117,26 @@ class AdapterTest(unittest.TestCase):
         # Should NOT have created a pending job!
         self.assertEqual(self.pending(), [])
 
+    def test_touch_cooldown_throttles_rapid_touches(self):
+        m1 = la.agent_link.make_message("lynx", "ranker", "observation", "touch tap",
+                                        ["NOOBIA P1 touch tap dur_ms=100"],
+                                        "touch-tap-1", NOW)
+        receipt1 = self.adapter.deliver(m1)
+        self.assertEqual(receipt1["status"], "delivered")
+        self.assertEqual(len(self.pending()), 1)
+        # Clear pending job so queue is not full
+        for f in self.pending():
+            f.unlink()
+
+        # Immediate second touch within 5s with different message ID
+        m2 = la.agent_link.make_message("lynx", "ranker", "observation", "touch tap again",
+                                        ["NOOBIA P1 touch tap dur_ms=120"],
+                                        "touch-tap-2", NOW)
+        receipt2 = self.adapter.deliver(m2)
+        # Delivery completes at transport level but no job is queued because < 5s
+        self.assertEqual(receipt2["status"], "delivered")
+        self.assertEqual(self.pending(), [])
+
     def test_largest_valid_message_fits_the_queue(self):
         m = la.agent_link.make_message("lynx", "aigel", "speech", "ж" * 300,
                                        ["NOOBIA P1 mic speech.heard | " + "ж" * 100] * 3, now=NOW)

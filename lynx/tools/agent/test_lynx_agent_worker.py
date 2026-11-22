@@ -99,5 +99,41 @@ class WorkerTest(unittest.TestCase):
                     process.join(2)
 
 
+    def test_thought_not_duplicated_when_tool_already_wrote_thought(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            thought_file = root / 'thought.txt'
+            thought_file.write_text("Existing thought\n")
+            agent = root / 'tool_agent.py'
+            agent.write_text(f'import pathlib\n'
+                             f'pathlib.Path({str(thought_file)!r}).open("a").write("Spoken aloud\\n")\n'
+                             f'print("Assistant final summary")\n')
+            queue = JobQueue(root / 'jobs')
+            job_id = queue.create_job('test prompt')
+            with patch.object(worker, 'AGENT', str(agent)), \
+                 patch.object(worker, 'THOUGHT_PATH', thought_file), \
+                 patch.object(worker.urllib.request, 'urlopen'):
+                worker.run_job(queue, *queue.claim_next())
+            # Thought file should have "Spoken aloud" and NOT "Assistant final summary"
+            content = thought_file.read_text()
+            self.assertIn("Spoken aloud", content)
+            self.assertNotIn("Assistant final summary", content)
+
+    def test_silent_thought_appended_and_sanitized(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            thought_file = root / 'thought.txt'
+            agent = root / 'silent_agent.py'
+            agent.write_text('print("Silent thought — feeling good! 💙")\n')
+            queue = JobQueue(root / 'jobs')
+            job_id = queue.create_job('test prompt')
+            with patch.object(worker, 'AGENT', str(agent)), \
+                 patch.object(worker, 'THOUGHT_PATH', thought_file), \
+                 patch.object(worker.urllib.request, 'urlopen'):
+                worker.run_job(queue, *queue.claim_next())
+            content = thought_file.read_text().strip()
+            self.assertEqual(content, "Silent thought, feeling good!")
+
+
 if __name__ == '__main__':
     unittest.main()

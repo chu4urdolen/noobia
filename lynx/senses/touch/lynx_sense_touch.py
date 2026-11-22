@@ -107,16 +107,19 @@ def run(dry_run: bool = False, state_file: str | None = None,
             if since is not None:
                 dur_ms = max(0, (t - int(since)) * 1000)
                 event = "tap" if dur_ms <= hold_ms else "hold"
-                line = emit_line(
-                    sense, 5, "touch", event,
-                    fields={"dur_ms": dur_ms,
-                            "queued": sampled["queued"],
-                            "dropped": sampled["dropped"]},
-                    text=("a tap on the panel" if event == "tap"
-                          else "a long hold on the panel"),
-                    dry_run=dry_run)
-                emitted.append(line)
-                state["last_event"] = event
+                last_emitted = state.get("last_emitted_ts", 0)
+                if t - last_emitted >= 5:
+                    line = emit_line(
+                        sense, 5, "touch", event,
+                        fields={"dur_ms": dur_ms,
+                                "queued": sampled["queued"],
+                                "dropped": sampled["dropped"]},
+                        text=("a tap on the panel" if event == "tap"
+                              else "a long hold on the panel"),
+                        dry_run=dry_run)
+                    emitted.append(line)
+                    state["last_event"] = event
+                    state["last_emitted_ts"] = t
             state["down_since"] = None
         state["down"] = down_now
         state["queued"] = int(sampled["queued"])

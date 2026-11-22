@@ -24,8 +24,8 @@ class KeeperTest(unittest.TestCase):
         self.p.stop()
         self.tmp.cleanup()
 
-    def lynx_says(self, boot="b1", uptime=600, prepared="NOT_PREPARED", healthy="HEALTHY"):
-        return lambda cmd: f"{boot}\n{uptime}\n{prepared}\n{healthy}\n"
+    def lynx_says(self, boot="b1", uptime=600, prepared="NOT_PREPARED", healthy="HEALTHY", safe="SAFE_WATCHERS"):
+        return lambda cmd: f"{boot}\n{uptime}\n{prepared}\n{healthy}\n{safe}\n"
 
     def prep(self, state="prepared_no_stream"):
         def f():
@@ -63,6 +63,11 @@ class KeeperTest(unittest.TestCase):
         # A person clears it: delete the interrupted boot's marker -> the next boot prepares.
         (k.STATE / "b1.started").unlink()
         self.assertEqual(k.decide(self.lynx_says(boot="b3"), self.prep()), "prepared")
+
+    def test_never_prepares_while_original_watchers_run(self):
+        self.assertEqual(k.decide(self.lynx_says(safe="UNSAFE_WATCHERS"), self.prep()), "waiting-for-safe-watchers")
+        self.assertEqual(self.prepared, [])
+        self.assertEqual(k.decide(self.lynx_says(), self.prep()), "prepared")
 
     def test_already_prepared_by_hand(self):
         self.assertEqual(k.decide(self.lynx_says(prepared="PREPARED"), self.prep()), "already-prepared")

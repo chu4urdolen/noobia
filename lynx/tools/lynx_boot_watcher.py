@@ -87,9 +87,10 @@ def check_and_prepare_camera(last_boot_id: str | None) -> str | None:
         # still-warm Lynx past the boot image's thermal guards. Camera
         # preparation is off while this switch exists (shared with
         # lynx-camera-keeper). Boot confirmation above is unaffected.
-        if (ROOT / "state" / "camera-keeper" / "disable").exists():
-            logger.info("Camera auto-prepare disabled by lynx/state/camera-keeper/disable")
-            return boot_id
+        # 2026-11-23: one camera preparer only - noobia-lynx-camera-keeper, which
+        # waits for settle, health and the never-poweroff watchers.
+        logger.info("Camera preparation is done by noobia-lynx-camera-keeper, not here")
+        return boot_id
         # Check camera status
         status_script = ROOT / "tools" / "prepare_camera_camsv.py"
         res = subprocess.run([sys.executable, str(status_script), "--status"], capture_output=True, text=True, timeout=15, cwd=str(TOOLS))

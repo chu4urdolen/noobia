@@ -83,13 +83,17 @@ def decide(read=lynx, prepare=None) -> str:
         return "disabled"
     out = read("cat /proc/sys/kernel/random/boot_id; cut -d. -f1 /proc/uptime; "
                "test -e /dev/video145 && echo PREPARED || echo NOT_PREPARED; "
-               "/usr/local/bin/lynx-status --assert-ready >/dev/null 2>&1 && echo HEALTHY || echo UNHEALTHY")
+               "/usr/local/bin/lynx-status --assert-ready >/dev/null 2>&1 && echo HEALTHY || echo UNHEALTHY; "
+               "grep -q 'failures\" -ge 10' /run/lynx/lynx-health-supervisor.sh && "
+               "! grep -q -E 'poweroff|reboot' /run/lynx/thermal-watch.sh /run/lynx/battery-watch.sh "
+               "&& echo SAFE_WATCHERS || echo UNSAFE_WATCHERS")
     if out is None:
         return "unreachable"
     lines = out.split()
-    if len(lines) < 4:
+    if len(lines) < 5:
         return "unreadable"
     boot, uptime, prepared, healthy = lines[0], int(lines[1]) if lines[1].isdigit() else 0, lines[2], lines[3]
+    safe = lines[4] == "SAFE_WATCHERS"
     for kind in ("done", "failed", "skipped"):
         if marker(boot, kind).exists():
             return f"already-{kind}"
@@ -110,6 +114,11 @@ def decide(read=lynx, prepare=None) -> str:
         return "settling"
     if healthy != "HEALTHY":
         return "waiting-for-health"
+    if not safe:
+        # 2026-11-23: camera heat + the boot image's original watchers (poweroff
+        # on one 60 C reading or 3 health flickers) switched Lynx off. Never
+        # prepare until lynx-watchers-swap has replaced them on this boot.
+        return "waiting-for-safe-watchers"
     marker(boot, "started").write_text(json.dumps({"boot": boot, "t": time.time()}))
     os.sync()   # the STARTED marker must be on disk before anything can go wrong
     log(f"boot {boot[:8]}: preparing camera")

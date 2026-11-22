@@ -17,5 +17,8 @@ depend() {
 }
 
 stop_post() {
-    /bin/busybox sh /usr/libexec/lynx/lynx-charge-guard.sh --restore
+    if ! /bin/busybox sh /usr/libexec/lynx/lynx-charge-guard.sh --restore; then
+        eerror "charge guard could not restore the original charger limit; check /var/log/lynx-charge-guard.log"
+        return 1
+    fi
 }

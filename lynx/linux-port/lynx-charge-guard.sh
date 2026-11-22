@@ -54,35 +54,61 @@ battery_mC() {
 threshold() { case "$1" in 1) echo $WARM_mC ;; 2) echo $HOT_mC ;; 3) echo $MAX_mC ;; *) echo 0 ;; esac; }
 limit_for() { case "$1" in 1) echo $LEVEL1_INPUT_mA ;; 2) echo $LEVEL2_INPUT_mA ;; 3) echo $LEVEL3_INPUT_mA ;; esac; }
 
+boot_id() { "$BB" cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo unknown; }
+
+# The original limit is remembered together with the boot it was read in.
+# The charger driver sets its own limit fresh at every boot, so a baseline
+# from an earlier boot is stale and is discarded (Dushich review: a stale
+# low baseline must never cap the charger forever).
 save_original() {
     "$BB" mkdir -p "$STATE"
-    [ -s "$STATE/original_input_mA" ] && return 0
+    if [ -s "$STATE/original_input_mA" ]; then
+        [ "$("$BB" cat "$STATE/original_boot" 2>/dev/null)" = "$(boot_id)" ] && return 0
+        log "STALE_BASELINE discarded from an earlier boot: $("$BB" cat "$STATE/original_input_mA")"
+        "$BB" rm -f "$STATE/original_input_mA" "$STATE/original_boot" "$STATE/level"
+    fi
     v=$("$BB" cat "$CHG/input_current_limit" 2>/dev/null) || return 1
     case "$v" in ''|*[!0-9]*) return 1 ;; esac
     echo "$v" > "$STATE/original_input_mA"
+    boot_id > "$STATE/original_boot"
 }
 
 apply_level() {
-    lvl=$1
-    if [ "$lvl" = 0 ]; then
+    target=$1
+    if [ "$target" = 0 ]; then
         want=$("$BB" cat "$STATE/original_input_mA" 2>/dev/null) || return 1
     else
-        want=$(limit_for "$lvl")
+        want=$(limit_for "$target")
     fi
     orig=$("$BB" cat "$STATE/original_input_mA" 2>/dev/null || echo 0)
     # Never raise the limit above what the system had chosen itself.
-    [ "$lvl" != 0 ] && [ "$want" -gt "$orig" ] && want=$orig
-    echo "$want" > "$CHG/input_current_limit" 2>/dev/null || { log "WRITE_FAILED level=$lvl want=$want"; return 1; }
+    [ "$target" != 0 ] && [ "$want" -gt "$orig" ] && want=$orig
+    echo "$want" > "$CHG/input_current_limit" 2>/dev/null || { log "WRITE_FAILED level=$target want=$want"; return 1; }
     got=$("$BB" cat "$CHG/input_current_limit" 2>/dev/null)
-    echo "$lvl" > "$STATE/level"
-    log "LEVEL level=$lvl input_limit_mA=$got (wanted $want)"
+    [ "$got" = "$want" ] || { log "READBACK_MISMATCH level=$target want=$want got=$got"; return 1; }
+    echo "$target" > "$STATE/level"
+    log "LEVEL level=$target input_limit_mA=$got"
 }
 
 restore() {
-    if [ -s "$STATE/original_input_mA" ]; then
-        apply_level 0 && "$BB" rm -f "$STATE/original_input_mA" "$STATE/level"
-    fi
+    [ -s "$STATE/original_input_mA" ] || return 0   # nothing of ours to undo
+    apply_level 0 || return 1
+    "$BB" rm -f "$STATE/original_input_mA" "$STATE/original_boot" "$STATE/level"
 }
+
+LOCK=$STATE/lock
+take_lock() {
+    "$BB" mkdir -p "$STATE"
+    if ! "$BB" mkdir "$LOCK" 2>/dev/null; then
+        old=$("$BB" cat "$LOCK/pid" 2>/dev/null)
+        if [ -n "$old" ] && kill -0 "$old" 2>/dev/null; then
+            log "ALREADY_RUNNING pid=$old"; return 1
+        fi
+        "$BB" rm -rf "$LOCK" && "$BB" mkdir "$LOCK" || return 1
+    fi
+    echo $$ > "$LOCK/pid"
+}
+drop_lock() { "$BB" rm -rf "$LOCK"; }
 
 # Pure decision: level temp up_count down_count -> "level up_count down_count"
 decide() {
@@ -101,7 +127,8 @@ decide() {
 }
 
 watch() {
-    trap 'restore; exit 0' TERM INT
+    take_lock || exit 1
+    trap 'restore; rc=$?; drop_lock; exit $rc' TERM INT
     lvl=0 up=0 down=0
     save_original || log "NO_CHARGER_CONTROL $CHG"
     while :; do
@@ -110,14 +137,19 @@ watch() {
             up=0 down=0
         elif t=$(battery_mC); then
             set -- $(decide "$lvl" "$t" "$up" "$down")
-            if [ "$1" != "$lvl" ]; then
-                save_original && apply_level "$1" && log "STEP from=$lvl to=$1 battery_mC=$t"
+            new=$1 nup=$2 ndown=$3
+            if [ "$new" != "$lvl" ]; then
+                if save_original && apply_level "$new"; then
+                    log "STEP from=$lvl to=$new battery_mC=$t"
+                    lvl=$new
+                fi
             fi
-            lvl=$1 up=$2 down=$3
+            up=$nup down=$ndown
         else
             up=0 down=0   # an invalid reading never acts
         fi
-        "$BB" sleep "$INTERVAL"
+        # Sleep in the background so a TERM is handled at once, not after it.
+        "$BB" sleep "$INTERVAL" & wait $!
     done
 }
 
@@ -127,7 +159,8 @@ case "${1:-}" in
         echo "LYNX_CHARGE_GUARD_ONCE battery_mC=$t input_limit_mA=$("$BB" cat "$CHG/input_current_limit" 2>/dev/null) level=$("$BB" cat "$STATE/level" 2>/dev/null || echo 0)"
         ;;
     --watch) watch ;;
-    --restore) restore; echo "LYNX_CHARGE_GUARD_RESTORED" ;;
+    --restore)
+        if restore; then echo "LYNX_CHARGE_GUARD_RESTORED"; else echo "LYNX_CHARGE_GUARD_RESTORE_FAILED"; exit 1; fi ;;
     --decide) shift; decide "$@" ;;   # for tests
     *) echo 'Usage: lynx-charge-guard.sh --once|--watch|--restore' >&2; exit 2 ;;
 esac

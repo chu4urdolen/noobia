@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <glob.h>
 #include <ifaddrs.h>
@@ -469,12 +470,25 @@ static int paint_lynx_portrait(uint32_t *pixels, const char *name, int capacity)
 	return 0;
 }
 
-enum lynx_page { PAGE_HOME, PAGE_CONSOLE, PAGE_STATUS };
+enum lynx_page {
+	PAGE_HOME,
+	PAGE_CHAT,
+	PAGE_INPUTS,
+	PAGE_OUTPUTS,
+	PAGE_STATUS,
+	PAGE_CONSOLE
+};
 static char console_input[161];
 static size_t console_input_length;
 static bool console_uppercase, console_symbols, console_send_failed;
 static unsigned int console_output_offset, console_input_offset;
 static unsigned int console_history_count, console_history_offset;
+
+static char chat_input[161];
+static size_t chat_input_length;
+static bool chat_uppercase, chat_symbols;
+static unsigned int chat_input_offset;
+static unsigned int chat_history_count, chat_history_offset;
 
 static const char *console_letter_rows[] = {
 	"1234567890", "qwertyuiop", "asdfghjkl-", "zxcvbnm./_"
@@ -867,14 +881,37 @@ static void wifi_address(char *output, size_t size)
 static void nav_buttons(uint32_t *pixels, enum lynx_page page)
 {
 	const uint32_t dark = 0x00121c29, teal = 0x0009dcc4;
-	const uint32_t white = 0x00f5f8fa, muted = 0x00546572;
+	const uint32_t white = 0x00f5f8fa, muted = 0x002c3844;
+	const uint32_t border = 0x00455566;
 	rectangle(pixels, 0, 2510, WIDTH, 262, dark);
-	rectangle(pixels, 50, 2550, 545, 160,
-		  page == PAGE_CONSOLE ? teal : muted);
-	rectangle(pixels, 645, 2550, 545, 160,
-		  page == PAGE_STATUS ? teal : muted);
-	draw_text(pixels, "CONSOLE", 123, 2601, 7, white);
-	draw_text(pixels, "STATUS", 790, 2601, 7, white);
+
+	struct {
+		enum lynx_page p;
+		unsigned int x;
+		unsigned int w;
+		const char *label;
+		unsigned int lx;
+		unsigned int scale;
+	} btns[] = {
+		{ PAGE_HOME,    40,  216, "HOME",    88,   5 },
+		{ PAGE_CHAT,    276, 216, "CHAT",    324,  5 },
+		{ PAGE_INPUTS,  512, 216, "INPUTS",  530,  5 },
+		{ PAGE_OUTPUTS, 748, 216, "OUTPUTS", 772,  4 },
+		{ PAGE_STATUS,  984, 216, "STATUS",  1002, 5 },
+	};
+
+	for (size_t i = 0; i < sizeof(btns)/sizeof(btns[0]); i++) {
+		bool active = (page == btns[i].p);
+		uint32_t bg = active ? teal : muted;
+		uint32_t tc = active ? 0x000b141d : white;
+		uint32_t bc = active ? teal : border;
+		rectangle(pixels, btns[i].x, 2550, btns[i].w, 160, bg);
+		rectangle(pixels, btns[i].x, 2550, btns[i].w, 3, bc);
+		rectangle(pixels, btns[i].x, 2707, btns[i].w, 3, bc);
+		rectangle(pixels, btns[i].x, 2550, 3, 160, bc);
+		rectangle(pixels, btns[i].x + btns[i].w - 3, 2550, 3, 160, bc);
+		draw_text(pixels, btns[i].label, btns[i].lx, 2612, btns[i].scale, tc);
+	}
 }
 
 static void status_item(uint32_t *pixels, unsigned int column,
@@ -1053,25 +1090,479 @@ static void paint_thoughts(uint32_t *pixels)
 	}
 }
 
-static void paint_hearing_button(uint32_t *pixels)
+static void paint_compact_buttons(uint32_t *pixels)
 {
 	int on = read_hearing_enabled();
-	const uint32_t bg = on ? 0x001a7042 : 0x002c3844;
-	const uint32_t border = on ? 0x002aa860 : 0x00455566;
+	const uint32_t h_bg = on ? 0x001a7042 : 0x002c3844;
+	const uint32_t h_border = on ? 0x002aa860 : 0x00455566;
+	const uint32_t c_bg = 0x00183b54;
+	const uint32_t c_border = 0x0009dcc4;
 	const uint32_t white = 0x00f5f8fa;
 
-	/* Button area: x=50..1190, y=2360..2490 (height 130) */
-	rectangle(pixels, 50, 2360, 1140, 130, bg);
-	rectangle(pixels, 50, 2360, 1140, 4, border);
-	rectangle(pixels, 50, 2486, 1140, 4, border);
-	rectangle(pixels, 50, 2360, 4, 130, border);
-	rectangle(pixels, 1186, 2360, 4, 130, border);
+	/* Hearing button: x=50..605, y=2360..2490 (width 555, height 130) */
+	rectangle(pixels, 50, 2360, 555, 130, h_bg);
+	rectangle(pixels, 50, 2360, 555, 4, h_border);
+	rectangle(pixels, 50, 2486, 555, 4, h_border);
+	rectangle(pixels, 50, 2360, 4, 130, h_border);
+	rectangle(pixels, 601, 2360, 4, 130, h_border);
 
 	if (on) {
-		draw_text(pixels, "HEARING: ON (LISTENING)", 206, 2405, 6, white);
+		draw_text(pixels, "HEARING: ON", 162, 2407, 5, white);
 	} else {
-		draw_text(pixels, "HEARING: OFF (TAP TO LISTEN)", 116, 2405, 6, white);
+		draw_text(pixels, "HEARING: OFF", 147, 2407, 5, white);
 	}
+
+	/* Chat button: x=635..1190, y=2360..2490 (width 555, height 130) */
+	rectangle(pixels, 635, 2360, 555, 130, c_bg);
+	rectangle(pixels, 635, 2360, 555, 4, c_border);
+	rectangle(pixels, 635, 2486, 555, 4, c_border);
+	rectangle(pixels, 635, 2360, 4, 130, c_border);
+	rectangle(pixels, 1186, 2360, 4, 130, c_border);
+
+	draw_text(pixels, "CHAT WITH LYNX", 702, 2407, 5, white);
+}
+
+static int chat_send(void)
+{
+	if (!chat_input_length)
+		return 0;
+
+	/* 1. Append message to lynx_thought.txt */
+	FILE *f = fopen(THOUGHT_FILE, "a");
+	if (f) {
+		fprintf(f, "Noob: %s\n", chat_input);
+		fclose(f);
+	}
+
+	/* 2. Emit high-priority P1 sense event to autonomy loop */
+	pid_t pid = fork();
+	if (pid == 0) {
+		int devnull = open("/dev/null", O_RDWR);
+		if (devnull >= 0) {
+			dup2(devnull, STDIN_FILENO);
+			dup2(devnull, STDOUT_FILENO);
+			dup2(devnull, STDERR_FILENO);
+			close(devnull);
+		}
+		execl("/usr/bin/python3", "python3",
+		      "/usr/local/lib/noobia/autonomy/sense.py",
+		      "1", "chat", "message", "author=Noob",
+		      "-t", chat_input, (char *)NULL);
+		_exit(0);
+	}
+
+	haptic_tick(50);
+	chat_input_length = 0;
+	chat_input[0] = 0;
+	chat_input_offset = 0;
+	chat_history_offset = 0;
+	return 0;
+}
+
+static void chat_key(unsigned int x, unsigned int y)
+{
+	if (x >= 1185 && x < 1235 && y >= 390 && y < 1370) {
+		unsigned int maximum = chat_history_count > 14 ?
+			chat_history_count - 14 : 0;
+		chat_history_offset = maximum - (y - 390) * maximum / 979U;
+		return;
+	}
+	if (x >= 55 && x < 1185 && y >= 1380 && y < 1520) {
+		unsigned int maximum = chat_input_length > 40 ?
+			(unsigned int)chat_input_length - 40U : 0;
+		chat_input_offset = (x - 55) * maximum / 1129U;
+		return;
+	}
+	bool edited = false;
+	if (y >= 1550 && y < 2100 && x >= 55) {
+		unsigned int row = (y - 1550) / 140;
+		unsigned int offset = (y - 1550) % 140;
+		unsigned int column = (x - 55) / 113;
+		if (row < 4 && offset < 130 && column < 10 &&
+		    (x - 55) % 113 < 105 && chat_input_length < 160) {
+			char ch = (chat_symbols ? console_symbol_rows[row] :
+				console_letter_rows[row])[column];
+			if (chat_uppercase && !chat_symbols)
+				ch = (char)toupper((unsigned char)ch);
+			chat_input[chat_input_length++] = ch;
+			chat_input[chat_input_length] = 0;
+			edited = true;
+		}
+	} else if (y >= 2110 && y < 2270) {
+		if (x >= 55 && x < 185)
+			chat_uppercase = !chat_uppercase;
+		else if (x >= 195 && x < 325)
+			chat_symbols = !chat_symbols;
+		else if (x >= 335 && x < 755 && chat_input_length < 160) {
+			chat_input[chat_input_length++] = ' ';
+			chat_input[chat_input_length] = 0;
+			edited = true;
+		} else if (x >= 765 && x < 945 && chat_input_length) {
+			chat_input[--chat_input_length] = 0;
+			edited = true;
+		} else if (x >= 955 && x < 1185) {
+			chat_send();
+			edited = true;
+		}
+	}
+	if (edited)
+		chat_input_offset = chat_input_length > 40 ?
+			(unsigned int)chat_input_length - 40U : 0;
+}
+
+static int self_test_chat_keys(void)
+{
+	chat_input_length = 0;
+	chat_uppercase = false;
+	chat_symbols = false;
+	chat_input[0] = 0;
+	chat_key(55, 1690);  /* q */
+	chat_key(55, 2120);  /* shift */
+	chat_key(168, 1690); /* W */
+	chat_key(195, 2120); /* symbols */
+	chat_key(959, 1830); /* ~ */
+	chat_key(335, 2120); /* space */
+	chat_key(765, 2120); /* backspace */
+	int good = !strcmp(chat_input, "qW~") && chat_input_length == 3 &&
+		chat_uppercase && chat_symbols;
+	printf("chat keys %s\n", good ? "PASS" : "FAIL");
+	return good ? 0 : 1;
+}
+
+static void paint_chat(uint32_t *pixels)
+{
+	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa, teal = 0x0009dcc4;
+	const uint32_t amber = 0x00edb961;
+
+	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
+		pixels[i] = dark;
+
+	rectangle(pixels, 0, 0, WIDTH, 28, teal);
+	draw_text(pixels, "CHAT", 85, 155, 13, white);
+	rectangle(pixels, 75, 300, 1090, 5, teal);
+	draw_text(pixels, "HER THOUGHTS & YOUR WORDS", 85, 325, 4, teal);
+
+	struct { char text[101]; uint32_t color; } rows[128];
+	unsigned int count = 0;
+	FILE *stream = fopen(THOUGHT_FILE, "r");
+	if (stream) {
+		char line[256];
+		while (fgets(line, sizeof(line), stream)) {
+			char *msg = line;
+			while (*msg == ' ' || *msg == '\t') msg++;
+			if (!*msg || *msg == '\n' || *msg == '\r')
+				continue;
+			msg[strcspn(msg, "\r\n")] = 0;
+			unsigned int slot = count < 128 ? count : 127;
+			if (count >= 128)
+				memmove(rows, rows + 1, sizeof(rows[0]) * 127);
+			uint32_t col = white;
+			if (!strncmp(msg, "Noob:", 5) || !strncmp(msg, "User:", 5))
+				col = teal;
+			else if (!strncmp(msg, "*", 1))
+				col = amber;
+			rows[slot].color = col;
+			snprintf(rows[slot].text, sizeof(rows[slot].text), "%s", msg);
+			count++;
+		}
+		fclose(stream);
+	}
+	if (!count) {
+		snprintf(rows[0].text, sizeof(rows[0].text), "NO THOUGHTS YET. TYPE BELOW TO SPEAK.");
+		rows[0].color = teal;
+		count = 1;
+	}
+	if (count > 128)
+		count = 128;
+	chat_history_count = count;
+
+	unsigned int visible = count > 14 ? 14 : count;
+	unsigned int maximum = count - visible;
+	if (chat_history_offset > maximum)
+		chat_history_offset = maximum;
+	unsigned int first = maximum - chat_history_offset;
+	for (unsigned int i = 0; i < visible; i++) {
+		unsigned int row = first + i;
+		char text[46] = { 0 };
+		snprintf(text, sizeof(text), "%.*s", 45, rows[row].text);
+		draw_text(pixels, text, 75, 390 + i * 62, 4, rows[row].color);
+	}
+
+	/* Vertical scrollbar on right: x=1185, y=390, h=960 */
+	const unsigned int sb_x = 1185, sb_y = 390, sb_h = 960;
+	unsigned int thumb = count > 14 ? sb_h * 14 / count : sb_h;
+	if (thumb < 80) thumb = 80;
+	unsigned int pos = maximum ? (sb_h - thumb) * (maximum - chat_history_offset) / maximum : 0;
+	rectangle(pixels, sb_x, sb_y, 50, sb_h, 0x00334e5b);
+	rectangle(pixels, sb_x, sb_y + pos, 50, thumb, teal);
+
+	/* Input box at y=1380..1520 */
+	rectangle(pixels, 55, 1380, 1130, 140, 0x00253b49);
+	rectangle(pixels, 55, 1380, 1130, 3, teal);
+	rectangle(pixels, 55, 1517, 1130, 3, teal);
+	rectangle(pixels, 55, 1380, 3, 140, teal);
+	rectangle(pixels, 1182, 1380, 3, 140, teal);
+	draw_text(pixels, "SPEAK TO HER THOUGHTS:", 75, 1395, 4, teal);
+	char shown[42] = { 0 };
+	snprintf(shown, sizeof(shown), "%.*s_", 40, chat_input + chat_input_offset);
+	draw_text(pixels, shown, 75, 1445, 5, white);
+
+	/* Keyboard at y=1550..2270 */
+	for (unsigned int row = 0; row < 4; row++) {
+		for (unsigned int col = 0; col < 10; col++) {
+			char lbl[] = { (chat_symbols ? console_symbol_rows[row] :
+				console_letter_rows[row])[col], 0 };
+			if (!chat_symbols)
+				lbl[0] = (char)toupper((unsigned char)lbl[0]);
+			console_button(pixels, 55 + col * 113,
+				       1550 + row * 140, 105, lbl);
+		}
+	}
+	console_button(pixels, 55, 2110, 130,
+		       chat_uppercase ? "UPPER" : "LOWER");
+	console_button(pixels, 195, 2110, 130,
+		       chat_symbols ? "ABC" : "SYM");
+	console_button(pixels, 335, 2110, 420, "SPACE");
+	console_button(pixels, 765, 2110, 180, "BACK");
+	rectangle(pixels, 955, 2110, 230, 145, teal);
+	draw_text(pixels, "SEND", 1000, 2153, 6, 0x000b141d);
+}
+
+static int count_jobs(const char *suffix)
+{
+	DIR *d = opendir("/var/lib/lynx-agent/jobs");
+	if (!d)
+		return 0;
+	int count = 0;
+	size_t slen = strlen(suffix);
+	struct dirent *de;
+	while ((de = readdir(d)) != NULL) {
+		size_t nlen = strlen(de->d_name);
+		if (nlen > slen && !strcmp(de->d_name + nlen - slen, suffix))
+			count++;
+	}
+	closedir(d);
+	return count;
+}
+
+static void get_running_job_snippet(char *buf, size_t sz)
+{
+	DIR *d = opendir("/var/lib/lynx-agent/jobs");
+	if (!d) {
+		snprintf(buf, sz, "IDLE (NO RUNNING JOB)");
+		return;
+	}
+	struct dirent *de;
+	char found[256] = {0};
+	while ((de = readdir(d)) != NULL) {
+		size_t nlen = strlen(de->d_name);
+		if (nlen > 8 && !strcmp(de->d_name + nlen - 8, ".running")) {
+			snprintf(found, sizeof(found), "/var/lib/lynx-agent/jobs/%s", de->d_name);
+			break;
+		}
+	}
+	closedir(d);
+	if (!found[0]) {
+		snprintf(buf, sz, "IDLE (WAITING FOR STIMULUS)");
+		return;
+	}
+	FILE *f = fopen(found, "r");
+	if (!f) {
+		snprintf(buf, sz, "JOB ACTIVE");
+		return;
+	}
+	char line[512] = {0};
+	char *obs = NULL;
+	while (fgets(line, sizeof(line), f)) {
+		if ((obs = strstr(line, "\"text\": \"")) != NULL) {
+			obs += 9;
+			char *end = strchr(obs, '"');
+			if (end) *end = 0;
+			snprintf(buf, sz, "AIGEL: %s", obs);
+			fclose(f);
+			return;
+		}
+	}
+	fclose(f);
+	snprintf(buf, sz, "COGNITIVE TURN IN PROGRESS");
+}
+
+static void paint_inputs(uint32_t *pixels)
+{
+	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa, teal = 0x0009dcc4;
+	const uint32_t amber = 0x00edb961, green = 0x002aa860;
+	const uint32_t card_bg = 0x001a2735, card_border = 0x00334e5b;
+
+	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
+		pixels[i] = dark;
+
+	rectangle(pixels, 0, 0, WIDTH, 28, teal);
+	draw_text(pixels, "INPUTS", 85, 155, 13, white);
+	rectangle(pixels, 75, 300, 1090, 5, teal);
+	draw_text(pixels, "LIVE INCOMING SIGNALS & AIGEL STIMULI", 85, 325, 4, teal);
+
+	/* Card 1: Perceptual Senses */
+	rectangle(pixels, 55, 360, 1130, 680, card_bg);
+	rectangle(pixels, 55, 360, 1130, 3, card_border);
+	rectangle(pixels, 55, 1037, 1130, 3, card_border);
+	rectangle(pixels, 55, 360, 3, 680, card_border);
+	rectangle(pixels, 1182, 360, 3, 680, card_border);
+	draw_text(pixels, "LIVE SENSORS (HARDWARE TELEMETRY)", 75, 385, 4, teal);
+
+	int cap, temp, cur, volt;
+	battery_snapshot(&cap, &temp, &cur, &volt);
+	char buf[128];
+
+	draw_text(pixels, "TOUCH:   NOVATEK NT36672C (EVENT2 INSTANT P1 ACTIVE)", 75, 445, 4, green);
+	draw_text(pixels, "VISION:  CAMSV SENSOR 4/2 (YOLO OBJECT DETECTION)", 75, 515, 4, white);
+	draw_text(pixels, "PROX:    TCS3701 OPTICAL PROXIMITY (P1 NEAR / P0 FAR)", 75, 585, 4, white);
+	draw_text(pixels, "LIGHT:   TCS3408 AMBIENT SENSOR (P3 BRIGHT/DARK)", 75, 655, 4, white);
+	int hearing_on = read_hearing_enabled();
+	snprintf(buf, sizeof(buf), "HEARING: DUAL MIC / MTK AFE [%s]", hearing_on ? "LISTENING (ON)" : "MUTED (OFF)");
+	draw_text(pixels, buf, 75, 725, 4, hearing_on ? green : amber);
+	snprintf(buf, sizeof(buf), "POWER:   %d%% BATT | %d.%dC | %dMA | %dMV", cap, temp/1000, (temp%1000)/100, cur, volt);
+	draw_text(pixels, buf, 75, 795, 4, white);
+	char wifi_ip[32] = {0};
+	wifi_address(wifi_ip, sizeof(wifi_ip));
+	snprintf(buf, sizeof(buf), "WIFI:    IP %s (NEXUS 192.168.100.106:112)", wifi_ip[0] ? wifi_ip : "LINKING");
+	draw_text(pixels, buf, 75, 865, 4, white);
+
+	/* Card 2: Aigel Perception & Jobs */
+	rectangle(pixels, 55, 1070, 1130, 540, card_bg);
+	rectangle(pixels, 55, 1070, 1130, 3, card_border);
+	rectangle(pixels, 55, 1607, 1130, 3, card_border);
+	rectangle(pixels, 55, 1070, 3, 540, card_border);
+	rectangle(pixels, 1182, 1070, 3, 540, card_border);
+	draw_text(pixels, "AIGEL COGNITIVE INTAKE & JOB QUEUE", 75, 1095, 4, teal);
+
+	int pending = count_jobs(".pending");
+	int running = count_jobs(".running");
+	int done = count_jobs(".done");
+	snprintf(buf, sizeof(buf), "QUEUE:   %d PENDING | %d RUNNING | %d COMPLETED", pending, running, done);
+	draw_text(pixels, buf, 75, 1155, 4, running ? amber : green);
+
+	char job_snippet[128] = {0};
+	get_running_job_snippet(job_snippet, sizeof(job_snippet));
+	draw_text(pixels, "ACTIVE: ", 75, 1225, 4, teal);
+	char snippet_line1[46] = {0}, snippet_line2[46] = {0};
+	snprintf(snippet_line1, sizeof(snippet_line1), "%.*s", 44, job_snippet);
+	draw_text(pixels, snippet_line1, 75, 1295, 4, white);
+	if (strlen(job_snippet) > 44) {
+		snprintf(snippet_line2, sizeof(snippet_line2), "%.*s", 44, job_snippet + 44);
+		draw_text(pixels, snippet_line2, 75, 1365, 4, white);
+	}
+	draw_text(pixels, "INTAKE:  PORT 112 (HMAC SIGNED CHUNK STREAM)", 75, 1445, 4, white);
+
+	/* Card 3: Live Sense Stream */
+	rectangle(pixels, 55, 1640, 1130, 850, card_bg);
+	rectangle(pixels, 55, 1640, 1130, 3, card_border);
+	rectangle(pixels, 55, 2487, 1130, 3, card_border);
+	rectangle(pixels, 55, 1640, 3, 850, card_border);
+	rectangle(pixels, 1182, 1640, 3, 850, card_border);
+	draw_text(pixels, "RECENT SENSE LOG (NOOBIA-SENSE)", 75, 1665, 4, teal);
+
+	FILE *sf = fopen("/var/log/lynx-senses.log", "r");
+	if (sf) {
+		char slines[10][101];
+		int scnt = 0;
+		char sline[256];
+		while (fgets(sline, sizeof(sline), sf)) {
+			sline[strcspn(sline, "\r\n")] = 0;
+			int slot = scnt < 10 ? scnt : 9;
+			if (scnt >= 10)
+				memmove(slines, slines + 1, sizeof(slines[0]) * 9);
+			snprintf(slines[slot], sizeof(slines[slot]), "%s", sline);
+			scnt++;
+		}
+		fclose(sf);
+		int num = scnt < 10 ? scnt : 10;
+		for (int i = 0; i < num; i++) {
+			char tr[46] = {0};
+			snprintf(tr, sizeof(tr), "%.*s", 44, slines[i]);
+			draw_text(pixels, tr, 75, 1735 + i * 65, 4, 0x00c8d5e0);
+		}
+	} else {
+		draw_text(pixels, "SENSES STREAM ACTIVE", 75, 1735, 4, white);
+	}
+}
+
+static void paint_outputs(uint32_t *pixels)
+{
+	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa, teal = 0x0009dcc4;
+	const uint32_t green = 0x002aa860, amber = 0x00edb961;
+	const uint32_t card_bg = 0x001a2735, card_border = 0x00334e5b;
+
+	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
+		pixels[i] = dark;
+
+	rectangle(pixels, 0, 0, WIDTH, 28, teal);
+	draw_text(pixels, "OUTPUTS", 85, 155, 13, white);
+	rectangle(pixels, 75, 300, 1090, 5, teal);
+	draw_text(pixels, "AVAILABLE EFFECTORS & RUNTIME STATE", 85, 325, 4, teal);
+
+	/* Card 1: Voice (Speech) */
+	rectangle(pixels, 55, 360, 1130, 480, card_bg);
+	rectangle(pixels, 55, 360, 1130, 3, card_border);
+	rectangle(pixels, 55, 837, 1130, 3, card_border);
+	rectangle(pixels, 55, 360, 3, 480, card_border);
+	rectangle(pixels, 1182, 360, 3, 480, card_border);
+	draw_text(pixels, "VOICE (DISTRIBUTED PIPER TTS)", 75, 385, 4, teal);
+	draw_text(pixels, "ENGINE:  NEXUS PIPER (:115) EN_US-KRISTIN", 75, 455, 4, white);
+	draw_text(pixels, "PITCH:   +500 CENTS (RUBBERBAND 1.33484)", 75, 535, 4, white);
+	draw_text(pixels, "VOLUME:  0.08 DIGITAL GAIN (TFA98XX PROTECT)", 75, 615, 4, white);
+	bool speaking = file_contains("/proc/asound/card0/pcm0p/sub0/status", "RUNNING");
+	draw_text(pixels, speaking ? "STATE:   SPEAKING (AUDIO PLAYING)" : "STATE:   AVAILABLE (READY)",
+		  75, 695, 4, speaking ? amber : green);
+
+	/* Card 2: Display & Pose */
+	rectangle(pixels, 55, 860, 1130, 480, card_bg);
+	rectangle(pixels, 55, 860, 1130, 3, card_border);
+	rectangle(pixels, 55, 1337, 1130, 3, card_border);
+	rectangle(pixels, 55, 860, 3, 480, card_border);
+	rectangle(pixels, 1182, 860, 3, 480, card_border);
+	draw_text(pixels, "DISPLAY & POSE (DRM SCANOUT)", 75, 885, 4, teal);
+	draw_text(pixels, "SCANOUT: 1240X2772 @ 120HZ DMA-BUF", 75, 955, 4, white);
+	char pose_buf[64] = "01_standing_smile";
+	FILE *pf = fopen(SELECTION_FILE, "r");
+	if (pf) {
+		if (fgets(pose_buf, sizeof(pose_buf), pf))
+			pose_buf[strcspn(pose_buf, "\r\n")] = 0;
+		fclose(pf);
+	}
+	char ptxt[96];
+	snprintf(ptxt, sizeof(ptxt), "POSE:    %s", pose_buf);
+	draw_text(pixels, ptxt, 75, 1035, 4, white);
+	draw_text(pixels, "THOUGHT: SCROLLING WINDOW (15S AUTO-WAKE)", 75, 1115, 4, white);
+	draw_text(pixels, "STATE:   ACTIVE (120HZ SCANOUT RUNNING)", 75, 1195, 4, green);
+
+	/* Card 3: Actuators */
+	rectangle(pixels, 55, 1360, 1130, 480, card_bg);
+	rectangle(pixels, 55, 1360, 1130, 3, card_border);
+	rectangle(pixels, 55, 1837, 1130, 3, card_border);
+	rectangle(pixels, 55, 1360, 3, 480, card_border);
+	rectangle(pixels, 1182, 1360, 3, 480, card_border);
+	draw_text(pixels, "TACTILE & LIGHT ACTUATORS", 75, 1385, 4, teal);
+	draw_text(pixels, "HAPTIC:  OPLUS LRA VIBRATOR (AVAILABLE)", 75, 1455, 4, green);
+	draw_text(pixels, "TORCH:   LM3642 DUAL LED FLASHLIGHT (AVAILABLE)", 75, 1535, 4, green);
+	draw_text(pixels, "MEDIA:   ALSA HW:0,0 SOUND PLAYER (AVAILABLE)", 75, 1615, 4, green);
+	draw_text(pixels, "STATE:   EFFECTORS IDLE & READY", 75, 1695, 4, green);
+
+	/* Card 4: Agent Worker (Mind) */
+	rectangle(pixels, 55, 1860, 1130, 620, card_bg);
+	rectangle(pixels, 55, 1860, 1130, 3, card_border);
+	rectangle(pixels, 55, 2477, 1130, 3, card_border);
+	rectangle(pixels, 55, 1860, 3, 620, card_border);
+	rectangle(pixels, 1182, 1860, 3, 620, card_border);
+	draw_text(pixels, "CONSCIOUS AGENT WORKER (MIND)", 75, 1885, 4, teal);
+	draw_text(pixels, "MODEL:   QWEN 27B ON NEXUS RTX 5090", 75, 1955, 4, white);
+	draw_text(pixels, "DAEMON:  LYNX-AGENT-WORKER", 75, 2035, 4, white);
+	int is_running = count_jobs(".running");
+	if (is_running) {
+		draw_text(pixels, "STATE:   THINKING / ACTING NOW (JOB RUNNING)", 75, 2115, 4, amber);
+	} else {
+		draw_text(pixels, "STATE:   IDLE (LISTENING FOR SENSES)", 75, 2115, 4, green);
+	}
+	draw_text(pixels, "ACTIONS: SPEECH, POSE, HAPTIC, TORCH, MEDIA", 75, 2195, 4, white);
 }
 
 static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
@@ -1084,21 +1575,41 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 		if (paint_lynx_portrait(pixels, pose, capacity) < 0)
 			return -1;
 		paint_thoughts(pixels);
-		paint_hearing_button(pixels);
+		paint_compact_buttons(pixels);
 		nav_buttons(pixels, page);
 		return 0;
 	}
-	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
-		pixels[i] = dark;
-	rectangle(pixels, 0, 0, WIDTH, 28, teal);
-	draw_text(pixels, page == PAGE_CONSOLE ? "CONSOLE" : "STATUS",
-		  85, 155, 13, white);
-	rectangle(pixels, 75, 340, 1090, 5, teal);
+	if (page == PAGE_CHAT) {
+		paint_chat(pixels);
+		nav_buttons(pixels, page);
+		return 0;
+	}
+	if (page == PAGE_INPUTS) {
+		paint_inputs(pixels);
+		nav_buttons(pixels, page);
+		return 0;
+	}
+	if (page == PAGE_OUTPUTS) {
+		paint_outputs(pixels);
+		nav_buttons(pixels, page);
+		return 0;
+	}
 	if (page == PAGE_CONSOLE) {
+		for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
+			pixels[i] = dark;
+		rectangle(pixels, 0, 0, WIDTH, 28, teal);
+		draw_text(pixels, "CONSOLE", 85, 155, 13, white);
+		rectangle(pixels, 75, 340, 1090, 5, teal);
 		paint_console(pixels);
 		nav_buttons(pixels, page);
 		return 0;
 	}
+	/* PAGE_STATUS */
+	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
+		pixels[i] = dark;
+	rectangle(pixels, 0, 0, WIDTH, 28, teal);
+	draw_text(pixels, "STATUS", 85, 155, 13, white);
+	rectangle(pixels, 75, 340, 1090, 5, teal);
 	int pack_capacity, pack_temp, pack_current, pack_voltage;
 	battery_snapshot(&pack_capacity, &pack_temp, &pack_current, &pack_voltage);
 	if (pack_capacity >= 0)
@@ -1786,19 +2297,26 @@ static int run(const char *action, unsigned int seconds)
 						int y = tap_y * (int)HEIGHT / 27720;
 						enum lynx_page target = page;
 						if (y >= 2550 && y < 2710) {
-							if (x >= 50 && x < 595)
-								target = page == PAGE_CONSOLE ?
-									 PAGE_HOME : PAGE_CONSOLE;
-							else if (x >= 645 && x < 1190)
-								target = page == PAGE_STATUS ?
-									 PAGE_HOME : PAGE_STATUS;
+							if (x >= 40 && x < 256)
+								target = PAGE_HOME;
+							else if (x >= 276 && x < 492)
+								target = PAGE_CHAT;
+							else if (x >= 512 && x < 728)
+								target = PAGE_INPUTS;
+							else if (x >= 748 && x < 964)
+								target = PAGE_OUTPUTS;
+							else if (x >= 984 && x < 1200)
+								target = PAGE_STATUS;
 						} else if (page == PAGE_HOME &&
-							   y >= 2360 && y < 2490 &&
-							   x >= 50 && x < 1190) {
-							toggle_hearing();
-							page_changed = true;
-							printf("hearing_toggled\n");
-							fflush(stdout);
+							   y >= 2360 && y < 2490) {
+							if (x >= 50 && x < 605) {
+								toggle_hearing();
+								page_changed = true;
+								printf("hearing_toggled\n");
+								fflush(stdout);
+							} else if (x >= 635 && x < 1190) {
+								target = PAGE_CHAT;
+							}
 						} else if (page == PAGE_HOME && y < 2360) {
 							/* Tapped on portrait: trigger tactile tick and emit instant P1 sense */
 							haptic_tick(25);
@@ -1812,6 +2330,10 @@ static int run(const char *action, unsigned int seconds)
 							}
 							printf("portrait_tapped x=%d y=%d\n", x, y);
 							fflush(stdout);
+						} else if (page == PAGE_CHAT &&
+							   y >= 390 && y < 2400) {
+							chat_key((unsigned int)x, (unsigned int)y);
+							page_changed = true;
 						} else if (page == PAGE_CONSOLE &&
 							   y >= 450 && y < 2450) {
 							console_key((unsigned int)x, (unsigned int)y);
@@ -1821,7 +2343,10 @@ static int run(const char *action, unsigned int seconds)
 							page = target;
 							page_changed = true;
 							printf("page=%s\n", page == PAGE_HOME ?
-							       "home" : page == PAGE_CONSOLE ?
+							       "home" : page == PAGE_CHAT ?
+							       "chat" : page == PAGE_INPUTS ?
+							       "inputs" : page == PAGE_OUTPUTS ?
+							       "outputs" : page == PAGE_CONSOLE ?
 							       "console" : "status");
 							fflush(stdout);
 						}
@@ -1867,8 +2392,8 @@ static int run(const char *action, unsigned int seconds)
 					next_frame = ((now_ms - scene_started) / 500U) %
 						     scene.count;
 			}
-			bool status_refresh = portrait && page == PAGE_STATUS && lit &&
-				now_ms - last_page_refresh >= 5000U;
+			bool status_refresh = portrait && (page == PAGE_STATUS || page == PAGE_INPUTS || page == PAGE_OUTPUTS) && lit &&
+				now_ms - last_page_refresh >= 1000U;
 			unsigned int console_seq = page == PAGE_CONSOLE ?
 				console_sequence() : 0;
 			bool console_refresh = portrait && page == PAGE_CONSOLE && lit &&
@@ -1925,7 +2450,7 @@ static int run(const char *action, unsigned int seconds)
 			shown_thought_mtime = thought_mtime;
 			shown_hearing_on = hearing_on;
 			page_changed = false;
-			if (page == PAGE_STATUS)
+			if (page == PAGE_STATUS || page == PAGE_INPUTS || page == PAGE_OUTPUTS)
 				last_page_refresh = now_ms;
 			if (page == PAGE_CONSOLE)
 				shown_console_sequence = console_seq;
@@ -2010,9 +2535,17 @@ int main(int argc, char **argv)
 		return self_test_touch();
 	if (argc == 2 && !strcmp(argv[1], "--self-test-console-keys"))
 		return self_test_console_keys();
+	if (argc == 2 && !strcmp(argv[1], "--self-test-chat-keys"))
+		return self_test_chat_keys();
 	if (argc == 4 && !strcmp(argv[1], "--preview-page")) {
 		if (!strcmp(argv[2], "home"))
 			return render_preview("01_standing_smile", argv[3], PAGE_HOME);
+		if (!strcmp(argv[2], "chat"))
+			return render_preview("", argv[3], PAGE_CHAT);
+		if (!strcmp(argv[2], "inputs"))
+			return render_preview("", argv[3], PAGE_INPUTS);
+		if (!strcmp(argv[2], "outputs"))
+			return render_preview("", argv[3], PAGE_OUTPUTS);
 		if (!strcmp(argv[2], "console"))
 			return render_preview("", argv[3], PAGE_CONSOLE);
 		if (!strcmp(argv[2], "status"))

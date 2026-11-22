@@ -76,7 +76,7 @@ class AgentBusy(RuntimeError):
 
 
 class LynxAdapter(agent_link.Adapter):
-    def __init__(self, state_dir=STATE, *, jobs=JOBS, stop=STOP, max_pending=3, **kwargs):
+    def __init__(self, state_dir=STATE, *, jobs=JOBS, stop=STOP, max_pending=1, **kwargs):
         self.jobs, self.stop, self.max_pending = Path(jobs), Path(stop), max_pending
         super().__init__(state_dir, **kwargs)
 
@@ -84,8 +84,9 @@ class LynxAdapter(agent_link.Adapter):
         if self.stop.exists():
             raise AgentBusy(f"agent worker stopped ({self.stop})")
         pending = sum(1 for _ in self.jobs.glob("*.pending")) if self.jobs.is_dir() else 0
-        if pending >= self.max_pending:
-            raise AgentBusy(f"{pending} jobs already pending")
+        running = sum(1 for _ in self.jobs.glob("*.running")) if self.jobs.is_dir() else 0
+        if pending >= self.max_pending or (running > 0 and pending > 0):
+            raise AgentBusy(f"{pending} jobs already pending ({running} running)")
         job_id = JobQueue(self.jobs).create_job(build_prompt(message))
         self.last_job_id = job_id
 

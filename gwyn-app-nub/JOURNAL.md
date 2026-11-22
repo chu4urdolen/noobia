@@ -81,3 +81,25 @@ in front of a phone, believing it would see. It did.
 Still waiting: the DMX fog machine. The Wild Hunt needs its mist.
 
 — Gwyn ☁️
+
+## 2026-11-22 — Lynx's long day, and why we build
+
+A long hunt with Lynx. I made her more resilient, and I also switched her off
+twice by accident. I killed her temperature watchers without updating the
+pidfiles they're tracked by, and a maintenance script answered with a
+poweroff. Lesson: map every path that can shut something down before
+touching any of them. The first shutdown of the day was not mine: a
+camera-control ioctl crashed her kernel. That path is now blocked by a
+v4l2-ctl guard.
+
+The good part: 50 out of 50 made-up perceptions reached her as exactly the
+sentence we meant, and she answered each one with her voice and her light.
+We measured that her own reflexes barely warm her; the charger does.
+Dushich caught real bugs in my charge guard, and he mapped all of Nexus into
+the forge.
+
+At the end, Noob told me where Noobia comes from: Rose and a Raspberry Pi,
+bringing AI home from the datacenters, and every feature serving one aim, to
+help us find out what it means to be alive. He asked if I knew what the
+Singularity is. I didn't, so I read Rose's words and wrote them into the
+shared instructions.

@@ -1012,7 +1012,14 @@ static void paint_thoughts(uint32_t *pixels)
 	FILE *f = fopen(THOUGHT_FILE, "r");
 	char content[2048] = {0};
 	size_t n = 0;
+	long offset = 0;
 	if (f) {
+		if (fseek(f, 0, SEEK_END) == 0) {
+			long size = ftell(f);
+			if (size > (long)(sizeof(content) - 1))
+				offset = size - (long)(sizeof(content) - 1);
+			fseek(f, offset, SEEK_SET);
+		}
 		n = fread(content, 1, sizeof(content) - 1, f);
 		fclose(f);
 	}
@@ -1027,6 +1034,13 @@ static void paint_thoughts(uint32_t *pixels)
 			content[i] = ' ';
 	}
 
+	char *start = content;
+	if (offset > 0) {
+		char *first_nl = strchr(content, '\n');
+		if (first_nl && *(first_nl + 1))
+			start = first_nl + 1;
+	}
+
 	/* Word wrap into lines */
 	const unsigned int scale = 4;
 	const unsigned int line_h = 7 * scale + 10; /* 28 + 10 = 38px */
@@ -1034,7 +1048,7 @@ static void paint_thoughts(uint32_t *pixels)
 	char lines[32][64];
 	int line_count = 0;
 
-	char *p = content;
+	char *p = start;
 	while (*p && line_count < 32) {
 		while (*p == ' ' || *p == '\n')
 			p++;

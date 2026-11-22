@@ -89,6 +89,22 @@ class TestCameraCapture(unittest.TestCase):
         finally:
             Path(switch_path).unlink(missing_ok=True)
 
+    def test_non_jpeg_frame_fails_loudly_never_a_placeholder(self):
+        """Raw Bayer bytes must be an honest failure, not a fake 'empty' image."""
+        with tempfile.TemporaryDirectory() as d:
+            dev = Path(d) / "video145"
+            dev.write_bytes(b"\x10\x20" * 5000)   # Bayer-like, not JPEG
+            ok, frame, msg = capture_one_frame(device=str(dev), timeout_s=1.0,
+                                               disable_switch=Path(d) / "off")
+            self.assertFalse(ok)
+            self.assertEqual(frame, b"")
+            self.assertIn("not a JPEG", msg)
+            dev.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 64)   # a real JPEG start
+            ok, frame, msg = capture_one_frame(device=str(dev), timeout_s=1.0,
+                                               disable_switch=Path(d) / "off")
+            self.assertTrue(ok)
+            self.assertTrue(frame.startswith(b"\xff\xd8"))
+
 
 if __name__ == "__main__":
     unittest.main()

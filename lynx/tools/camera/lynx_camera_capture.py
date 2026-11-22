@@ -85,12 +85,15 @@ def capture_one_frame(
         if not raw:
             return False, b"", "empty frame read"
 
-        # Check if raw data is already JPEG or Bayer
-        if raw.startswith(b"\xff\xd8"):
-            jpeg_bytes = raw
-        else:
-            # Wrap raw frame or convert
-            jpeg_bytes = MINIMAL_JPEG_BYTES
+        # Only a real JPEG is a frame we can hand on. Anything else (raw
+        # Bayer, partial data) must fail loudly: substituting a placeholder
+        # image made a dead camera look like "frame analyzed, 0 objects"
+        # (Gwyn, 2026-11-22). Real CAMSV frames need the streaming capture
+        # (lynx_camsv_dmabuf_capture.py) and Bayer decoding on Nexus.
+        if not raw.startswith(b"\xff\xd8"):
+            return False, b"", (f"{device} returned {len(raw)} bytes that are not a JPEG frame "
+                                "(raw Bayer needs the CAMSV streaming capture); no frame")
+        jpeg_bytes = raw
 
         elapsed = time.monotonic() - start_time
         return True, jpeg_bytes, f"captured {len(jpeg_bytes)} bytes in {elapsed:.3f}s"

@@ -1,7 +1,8 @@
 #!/bin/sh
 # RAM-only backstop for the three existing on-device power watchers.
-# --once is read-only. --watch requests power-off after three consecutive
-# invalid observations; the cooling watcher separately applies CPU limits.
+# --once is read-only. --watch never powers off (Principle 10): after 10
+# consecutive invalid observations it applies CPU cooling limits (quiesce),
+# and it does nothing while /etc/lynx/power-thermal-guard.disable exists.
 set -eu
 BB=/bin/busybox
 RUN=/run/lynx

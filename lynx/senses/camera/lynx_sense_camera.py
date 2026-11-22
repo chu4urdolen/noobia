@@ -67,14 +67,22 @@ def run(dry_run: bool = False, state_file: str | None = None, look=None,
     state = load_state(path)
     boot = boot if boot is not None else boot_id()
     if state.get("boot") != boot:          # a new boot gets a fresh chance
-        state = {"boot": boot, "last_seen": {}, "failures": 0, "off": False}
+        state = {"boot": boot, "last_seen": {}, "failures": 0, "off": False, "turn": 0,
+                 "dropped": [], "cam_failures": {}}
     emitted: list[str] = []
 
     if state.get("off"):
         return (base_result("camera", available=False, emitted=[],
                             detail="camera sense paused for this boot after repeated failures"), 0)
 
-    result = (look or frame.look)(wait_s=0.0)
+    # Alternate Lynx's two proven rear cameras, one look a minute each in turn
+    # (Tom 2026-11-22: both cameras permanently on). A camera that keeps
+    # failing is dropped for the boot; the other one goes on.
+    cams = [c for c in frame.CAMERAS if c not in state.get("dropped", [])] or list(frame.CAMERAS)
+    turn = int(state.get("turn", 0))
+    camera = cams[turn % len(cams)]
+    state["turn"] = turn + 1
+    result = (look or frame.look)(wait_s=0.0, camera=camera)
     if not result.get("ok"):
         if result.get("busy"):                        # Lynx is using it herself
             return (base_result("camera", available=True, emitted=[], detail="camera busy"), 0)
@@ -84,9 +92,21 @@ def run(dry_run: bool = False, state_file: str | None = None, look=None,
             # A known state, not a malfunction: the stack is prepared per boot
             # (lynx-camera-keeper on Nexus). Wait quietly; no failure count.
             return (base_result("camera", available=False, emitted=[], detail=result.get("error")), 0)
-        state["failures"] = int(state.get("failures", 0)) + 1
-        detail = result.get("error", "unknown")
-        if state["failures"] >= MAX_FAILURES:
+        fails = state.setdefault("cam_failures", {})
+        fails[camera] = int(fails.get(camera, 0)) + 1
+        state["failures"] = fails[camera]
+        detail = f"{camera}: {result.get('error', 'unknown')}"
+        if fails[camera] >= MAX_FAILURES and len(cams) > 1:
+            state.setdefault("dropped", []).append(camera)
+            emitted.append(emit_line(sense, 3, "camera", "unavailable",
+                                     fields={"cam": camera, "failures": fails[camera]},
+                                     text=f"{camera} camera paused for this boot: {detail}"[:200],
+                                     dry_run=dry_run))
+            if not dry_run:
+                save_state(path, state)
+            return (base_result("camera", available=False, emitted=emitted, detail=detail,
+                                failures=fails[camera]), 0)
+        if fails[camera] >= MAX_FAILURES:
             state["off"] = True
             emitted.append(emit_line(sense, 3, "camera", "unavailable",
                                      fields={"failures": state["failures"]},
@@ -98,6 +118,7 @@ def run(dry_run: bool = False, state_file: str | None = None, look=None,
                             failures=state["failures"]), 0)
 
     state["failures"] = 0
+    state.setdefault("cam_failures", {})[camera] = 0
     last_seen: dict[str, float] = state.get("last_seen", {})
     objects, labels = result["objects"], result["labels"]
     if not objects:

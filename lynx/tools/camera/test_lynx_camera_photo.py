@@ -17,7 +17,7 @@ import lynx_camera_photo as photo  # noqa: E402
 class PhotoTest(unittest.TestCase):
     def run_main(self, look_result):
         lines = []
-        with mock.patch.object(photo.frame, "look", lambda wait_s: look_result), \
+        with mock.patch.object(photo.frame, "look", lambda wait_s, camera="back": look_result), \
                 mock.patch("lynx_senses_lib.emit_line",
                            lambda s, p, sn, ev, fields=None, text="", dry_run=False:
                            lines.append((p, sn, ev, dict(fields or {}), text)) or "line"), \

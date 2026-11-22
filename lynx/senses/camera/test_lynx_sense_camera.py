@@ -61,7 +61,8 @@ class FrameTest(unittest.TestCase):
         self.fwpath = d / "fwpath"
         self.fwpath.write_text("/vendor/firmware")
         frame._FW_OK = None
-        self.patches = [mock.patch.object(frame, "DEVICE", self.dev),
+        self.patches = [mock.patch.object(frame, "MEDIA_CTL", "/usr/bin/media-ctl"),
+                        mock.patch.object(frame, "DEVICE", self.dev),
                         mock.patch.object(frame, "FW_DIR", fw),
                         mock.patch.object(frame, "FW_FILES", fw_files),
                         mock.patch.object(frame, "FW_PATH", self.fwpath),
@@ -169,6 +170,8 @@ class FrameTest(unittest.TestCase):
         release = threading.Event()
 
         def slow_run(argv, **kw):
+            if "--output" not in argv:
+                return Proc(0)
             held.set()
             release.wait(5)
             Path(argv[argv.index("--output") + 1]).write_bytes(RAW)
@@ -181,6 +184,58 @@ class FrameTest(unittest.TestCase):
         t.join(5)
         self.assertFalse(r["ok"])
         self.assertTrue(r["busy"])
+
+    def graph_run(self, start="back", fail_link=False):
+        """Fake media-ctl that tracks the route, plus capture and format."""
+        route = {"now": start}
+        calls = []
+        def graph():
+            def blk(n, sensor, on):
+                st = "ENABLED,DYNAMIC" if on else "DYNAMIC"
+                return (f'- entity {n}: seninf-x\n  <- "sensor{sensor}":0 [{st}]\n'
+                        f'  -> "mtk-cam camsv-0":0 [{st}]\n')
+            return blk(27, 4, route["now"] == "back") + blk(53, 2, route["now"] == "wide")
+        def run(argv, **kw):
+            calls.append(argv)
+            if argv[0].endswith("media-ctl"):
+                if "-p" in argv:
+                    return Proc(0, None) if False else type("P", (), {"returncode": 0, "stdout": graph(), "stderr": ""})()
+                spec = argv[-1]
+                if fail_link:
+                    return type("P", (), {"returncode": 1, "stdout": "", "stderr": "EINVAL"})()
+                if spec.startswith("71:0->53:0[5]"):
+                    route["now"] = "wide"
+                if spec.startswith("45:0->27:0[5]"):
+                    route["now"] = "back"
+                return type("P", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+            if "--output" not in argv:
+                return Proc(0)
+            sensor = argv[argv.index("--sensor") + 1]
+            size = 3264 * 2448 if sensor == "2" else 1600 * 1200
+            run.route_during = route["now"]
+            Path(argv[argv.index("--output") + 1]).write_bytes(b"\x10" * size)
+            return Proc()
+        return run, route, calls
+
+    def test_wide_look_switches_route_and_always_back(self):
+        run, route, calls = self.graph_run()
+        op = opener_for({"objects": [{"label": "tv", "confidence": 0.7}]})
+        r = frame.look(run=run, opener=op, camera="wide")
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["camera"], "wide")
+        self.assertEqual(run.route_during, "wide")
+        self.assertEqual(route["now"], "back", "resting route restored")
+        self.assertIn("w=3264&h=2448", op.seen.full_url)
+        self.assertEqual(len(op.seen.data), 3264 * 2448)
+        fmts = [c for c in calls if c[0].endswith("v4l2-ctl")]
+        self.assertIn("width=1600,height=1200", fmts[-1][-1], "macro format restored last")
+
+    def test_wide_route_failure_is_honest_and_back_stays(self):
+        run, route, calls = self.graph_run(fail_link=True)
+        r = frame.look(run=run, opener=opener_for({}), camera="wide")
+        self.assertFalse(r["ok"])
+        self.assertIn("route link", r["error"])
+        self.assertEqual(route["now"], "back")
 
     def test_disable_switch(self):
         frame.DISABLE[0].write_text("")
@@ -208,7 +263,7 @@ class SenseTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def step(self, result, t, boot="b1"):
-        res, code = cam.run(state_file=self.state, look=lambda wait_s: result, now=t, boot=boot)
+        res, code = cam.run(state_file=self.state, look=lambda wait_s, camera="back": result, now=t, boot=boot)
         self.assertEqual(code, 0)
         return res["emitted"]
 
@@ -234,18 +289,37 @@ class SenseTest(unittest.TestCase):
     def test_busy_skips_quietly(self):
         self.assertEqual(self.step({"ok": False, "busy": True, "error": "camera is in use"}, 1000), [])
 
-    def test_pauses_after_three_failures_and_says_so_once(self):
+    def test_alternates_back_and_wide(self):
+        used = []
+        for t in range(4):
+            cam.run(state_file=self.state, now=1000 + 60 * t, boot="b1",
+                    look=lambda wait_s, camera="back": used.append(camera) or self.seen(("cat", 0.9)))
+        self.assertEqual(used, ["back", "wide", "back", "wide"])
+
+    def test_a_failing_camera_is_dropped_the_other_goes_on_then_pause(self):
         bad = {"ok": False, "busy": False, "error": "capture failed: no frame within 9 seconds"}
-        self.assertEqual(self.step(bad, 1000), [])
-        self.assertEqual(self.step(bad, 1060), [])
-        lines = self.step(bad, 1120)
-        self.assertEqual(len(lines), 1)
-        self.assertTrue(lines[0].startswith("NOOBIA P3 camera unavailable failures=3"))
-        called = []
-        cam.run(state_file=self.state, look=lambda wait_s: called.append(1) or bad, now=1180, boot="b1")
-        self.assertEqual(called, [], "a paused camera is not touched again this boot")
-        # A new boot gets a fresh chance.
-        self.assertTrue(self.step(self.seen(("cat", 0.9)), 2000, boot="b2")[0].startswith("NOOBIA P1"))
+        used, lines = [], []
+        def look(wait_s, camera="back"):
+            used.append(camera)
+            return bad if camera == "wide" else self.seen(("cat", 0.9))
+        for t in range(8):
+            r, _ = cam.run(state_file=self.state, look=look, now=1000 + 60 * t, boot="b1")
+            lines += r["emitted"]
+        self.assertEqual(used[:6], ["back", "wide", "back", "wide", "back", "wide"])
+        self.assertEqual(used[6:], ["back", "back"], "wide dropped after 3 failures, back goes on")
+        self.assertEqual(len([l for l in lines if "unavailable cam=wide" in l]), 1)
+        # Both failing: back too is paused after 3, then nothing is touched this boot.
+        def all_bad(wait_s, camera="back"):
+            used.append(camera)
+            return bad
+        for t in range(8, 12):
+            r, _ = cam.run(state_file=self.state, look=all_bad, now=1000 + 60 * t, boot="b1")
+            lines += r["emitted"]
+        self.assertTrue(any(l.startswith("NOOBIA P3 camera unavailable") for l in lines))
+        n = len(used)
+        cam.run(state_file=self.state, look=all_bad, now=2000, boot="b1")
+        self.assertEqual(len(used), n, "a fully paused camera is not touched again this boot")
+        self.assertTrue(self.step(self.seen(("cat", 0.9)), 3000, boot="b2")[0].startswith("NOOBIA P1"))
 
     def test_not_prepared_is_not_a_failure(self):
         absent = {"ok": False, "busy": False, "error": "/dev/video145 absent: camera stack not prepared for this boot"}

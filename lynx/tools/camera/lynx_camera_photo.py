@@ -42,10 +42,14 @@ def log_self_look(result) -> str | None:
 
 def main() -> int:
     try:
-        sys.stdin.read(4096)
-    except OSError:
-        pass
-    result = frame.look(wait_s=10.0)
+        args = json.loads(sys.stdin.read(4096) or "{}")
+    except (OSError, ValueError):
+        args = {}
+    camera = args.get("camera", "back") if isinstance(args, dict) else "back"
+    if camera not in frame.CAMERAS:
+        print(json.dumps({"ok": False, "error": f"unknown camera {camera!r}; use back or wide"}))
+        return 1
+    result = frame.look(wait_s=10.0, camera=camera)
     if not result.get("ok"):
         print(json.dumps({"ok": False, "error": result.get("error", "camera unavailable")}))
         return 1

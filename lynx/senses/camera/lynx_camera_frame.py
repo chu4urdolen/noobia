@@ -55,6 +55,60 @@ CAPTURE_TIMEOUT_S = 20.0            # helper waits at most 9 s for the frame
 DETECT_TIMEOUT_S = 20.0
 CAMERA = "back"
 
+# Both rear cameras Aria proved on 2026-11-21 (forge note on lynx): the macro
+# GC02M1 (sensor4) and the wide IMX355 (sensor2). They share CAMSV-0; the
+# route (two media links each, pinned IDs from camera_route_plan.py) decides
+# which sensor feeds it. The macro route is the resting state: a wide look
+# switches to sensor2 and ALWAYS switches back, verified, afterwards.
+CAMERAS = {
+    "back": {"sensor": 4, "w": 1600, "h": 1200, "links": ((45, 0, 27, 0), (27, 1, 615, 0)), "seninf": 27},
+    "wide": {"sensor": 2, "w": 3264, "h": 2448, "links": ((71, 0, 53, 0), (53, 1, 615, 0)), "seninf": 53},
+}
+MEDIA = os.environ.get("LYNX_CAMERA_MEDIA", "/dev/media1")
+MEDIA_CTL = os.environ.get("LYNX_MEDIA_CTL", "/usr/bin/media-ctl")
+
+
+def _link(link, enabled: bool) -> str:
+    src, sp, sink, kp = link
+    return f"{src}:{sp}->{sink}:{kp}[{5 if enabled else 4}]"   # DYNAMIC bit required
+
+
+def current_route(run=subprocess.run) -> str | None:
+    """'back', 'wide' or None (unknown/partial) from the live media graph."""
+    try:
+        g = run([MEDIA_CTL, "-d", MEDIA, "-p"], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    def active(name):
+        cam = CAMERAS[name]
+        block = g.split(f"entity {cam['seninf']}: seninf-", 1)
+        if len(block) < 2:
+            return False
+        block = block[1].split("\n- entity ", 1)[0]
+        return (f'"sensor{cam["sensor"]}":0 [ENABLED,DYNAMIC]' in block and
+                '"mtk-cam camsv-0":0 [ENABLED,DYNAMIC]' in block)
+    back, wide = active("back"), active("wide")
+    return "back" if back and not wide else "wide" if wide and not back else None
+
+
+def select_route(target: str, run=subprocess.run) -> str | None:
+    """Switch CAMSV-0 to `target`; None on success, else the reason."""
+    now = current_route(run)
+    if now == target:
+        return None
+    if now is None:
+        return "camera route unknown or partial; refusing to switch"
+    links = ([_link(l, False) for l in reversed(CAMERAS[now]["links"])] +
+             [_link(l, True) for l in CAMERAS[target]["links"]])
+    for spec in links:
+        try:
+            r = run([MEDIA_CTL, "-d", MEDIA, "-l", spec], capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.SubprocessError) as exc:
+            return f"route link {spec} failed: {type(exc).__name__}"
+        if r.returncode != 0:
+            return f"route link {spec} failed: {(r.stderr or '')[-100:]}"
+    return None if current_route(run) == target else f"route to {target} not verified"
+
 
 class CameraBusy(RuntimeError):
     pass
@@ -122,8 +176,35 @@ def firmware_ready() -> str | None:
     return None
 
 
-def capture(run=subprocess.run) -> tuple[bytes | None, str]:
-    """One raw frame, or (None, honest reason). The frame file never outlives this call."""
+def capture(run=subprocess.run, camera: str = "back") -> tuple[bytes | None, str]:
+    """One raw frame, or (None, honest reason). The frame file never outlives this call.
+    A wide look switches the route to the IMX355 and always switches back."""
+    if camera == "back":
+        return _capture(run, CAMERAS["back"])
+    why = select_route(camera, run)
+    if why:
+        select_route("back", run)
+        return None, why
+    try:
+        return _capture(run, CAMERAS[camera])
+    finally:
+        back_why = select_route("back", run)
+        _set_format(run, CAMERAS["back"])
+        if back_why:
+            print(f"lynx-camera: WARNING route not restored to back: {back_why}", flush=True)
+
+
+def _set_format(run, cam) -> str | None:
+    try:
+        fmt = run([V4L2_CTL, "-d", str(DEVICE),
+                   f"--set-fmt-video=width={cam['w']},height={cam['h']},pixelformat=BA81"],
+                  capture_output=True, text=True, timeout=10)
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return f"capture format step failed: {type(exc).__name__}"
+    return None if fmt.returncode == 0 else f"capture format not applied: {(fmt.stderr or '')[-120:]}"
+
+
+def _capture(run, cam) -> tuple[bytes | None, str]:
     if not DEVICE.exists():
         return None, f"{DEVICE} absent: camera stack not prepared for this boot"
     if not Path(CAPTURE).is_file():
@@ -137,19 +218,14 @@ def capture(run=subprocess.run) -> tuple[bytes | None, str]:
         return None, f"firmware path unreadable: {exc}"
     if before != FW_DEFAULT:
         return None, f"unexpected firmware path {before!r}; refusing to capture"
-    try:
-        fmt = run([V4L2_CTL, "-d", str(DEVICE),
-                   f"--set-fmt-video=width={WIDTH},height={HEIGHT},pixelformat=BA81"],
-                  capture_output=True, text=True, timeout=10)
-    except (subprocess.TimeoutExpired, OSError) as exc:
-        return None, f"capture format step failed: {type(exc).__name__}"
-    if fmt.returncode != 0:
-        return None, f"capture format not applied: {(fmt.stderr or '')[-120:]}"
+    why = _set_format(run, cam)
+    if why:
+        return None, why
     FRAME.unlink(missing_ok=True)
     try:
         FW_PATH.write_text(str(FW_DIR))
         try:
-            proc = run(["/usr/bin/python3", CAPTURE, "--sensor", "4", "--settle-ms", str(SETTLE_MS),
+            proc = run(["/usr/bin/python3", CAPTURE, "--sensor", str(cam["sensor"]), "--settle-ms", str(SETTLE_MS),
                         "--output", str(FRAME)],
                        capture_output=True, text=True, timeout=CAPTURE_TIMEOUT_S)
         except subprocess.TimeoutExpired:
@@ -172,13 +248,13 @@ def capture(run=subprocess.run) -> tuple[bytes | None, str]:
         return None, f"frame unreadable: {exc}"
     finally:
         FRAME.unlink(missing_ok=True)
-    if len(raw) != WIDTH * HEIGHT:
-        return None, f"frame has {len(raw)} bytes, expected {WIDTH * HEIGHT}"
+    if len(raw) != cam["w"] * cam["h"]:
+        return None, f"frame has {len(raw)} bytes, expected {cam['w'] * cam['h']}"
     return raw, "captured"
 
 
-def detect(raw: bytes, opener=urllib.request.urlopen) -> tuple[list[dict] | None, str]:
-    req = urllib.request.Request(f"{DETECT_URL}?w={WIDTH}&h={HEIGHT}", data=raw, method="POST",
+def detect(raw: bytes, opener=urllib.request.urlopen, w: int = WIDTH, h: int = HEIGHT) -> tuple[list[dict] | None, str]:
+    req = urllib.request.Request(f"{DETECT_URL}?w={w}&h={h}", data=raw, method="POST",
                                  headers={"Content-Type": "application/octet-stream"})
     try:
         with opener(req, timeout=DETECT_TIMEOUT_S) as resp:
@@ -193,7 +269,8 @@ def detect(raw: bytes, opener=urllib.request.urlopen) -> tuple[list[dict] | None
     return sorted(objects, key=lambda o: -float(o.get("confidence", 0))), "detected"
 
 
-def look(wait_s: float = 0.0, run=subprocess.run, opener=urllib.request.urlopen) -> dict:
+def look(wait_s: float = 0.0, run=subprocess.run, opener=urllib.request.urlopen,
+         camera: str = "back") -> dict:
     """One look. {"ok": bool, "objects": [...], "items": "a(0.9)/b(0.5)", "error": str}."""
     reason = disabled()
     if reason:
@@ -201,14 +278,16 @@ def look(wait_s: float = 0.0, run=subprocess.run, opener=urllib.request.urlopen)
     t0 = time.monotonic()
     try:
         with _Lock(wait_s):
-            raw, why = capture(run=run)
+            if camera not in CAMERAS:
+                return {"ok": False, "error": f"unknown camera {camera!r}", "busy": False}
+            raw, why = capture(run=run, camera=camera)
     except CameraBusy as exc:
         return {"ok": False, "error": str(exc), "busy": True}
     if raw is None:
         return {"ok": False, "error": why, "busy": False}
-    objects, why = detect(raw, opener=opener)
+    objects, why = detect(raw, opener=opener, w=CAMERAS[camera]["w"], h=CAMERAS[camera]["h"])
     if objects is None:
         return {"ok": False, "error": why, "busy": False}
-    return {"ok": True, "camera": CAMERA, "objects": objects, "items": items_text(objects),
+    return {"ok": True, "camera": camera, "objects": objects, "items": items_text(objects),
             "labels": [clean_label(o.get("label")) for o in objects],
             "elapsed_s": round(time.monotonic() - t0, 2)}

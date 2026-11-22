@@ -39,7 +39,10 @@ class FakeDetector:
 class DetectBayerTest(unittest.TestCase):
     def setUp(self):
         self.fake = FakeDetector()
+        self._orig_detector = service.DetectRequestHandler.detector
         service.DetectRequestHandler.detector = self.fake
+        self._orig_vision = service.VISION_URL
+        service.VISION_URL = "http://127.0.0.1:9/none"   # strong models absent in unit tests
         self.server = service.make_server("127.0.0.1", 0)
         self.port = self.server.server_address[1]
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
@@ -47,6 +50,8 @@ class DetectBayerTest(unittest.TestCase):
     def tearDown(self):
         self.server.shutdown()
         self.server.server_close()
+        service.DetectRequestHandler.detector = self._orig_detector
+        service.VISION_URL = self._orig_vision
 
     def post(self, path, body):
         req = urllib.request.Request(f"http://127.0.0.1:{self.port}{path}", data=body, method="POST")
@@ -64,6 +69,28 @@ class DetectBayerTest(unittest.TestCase):
         self.assertEqual(body["variants"], 3)
         self.assertTrue(body["model_loaded"])
         self.assertEqual(sorted(set(self.fake.calls)), [(1200, 1600), (1600, 1200)])
+
+    def test_strong_models_merge_and_caption(self):
+        def fake_strong(image, timeout=90.0):
+            return ({"objects": [{"label": "cat", "confidence": 0.95, "source": "yolo11x"},
+                                 {"label": "keyboard", "confidence": 0.5, "source": "florence2"}],
+                     "caption": "A cat lying on a laptop keyboard.", "ms": {"yolo": 900}}, "ok")
+        orig = service._strong
+        service._strong = fake_strong
+        try:
+            code, body = self.post("/detect_bayer", bytes(range(256)) * 7500)
+        finally:
+            service._strong = orig
+        self.assertEqual(code, 200)
+        self.assertEqual(body["objects"][0], {"label": "cat", "confidence": 0.95})
+        self.assertIn({"label": "keyboard", "confidence": 0.5}, body["objects"])
+        self.assertEqual(body["caption"], "A cat lying on a laptop keyboard.")
+
+    def test_strong_models_down_falls_back(self):
+        code, body = self.post("/detect_bayer", bytes(range(256)) * 7500)
+        self.assertEqual(code, 200)
+        self.assertTrue(body["strong_models"].startswith("unavailable"))
+        self.assertEqual(body["objects"][0]["label"], "cat")
 
     def test_wrong_size_is_rejected_with_the_sizes(self):
         code, body = self.post("/detect_bayer", b"\x00" * 1000)

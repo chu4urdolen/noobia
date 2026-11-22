@@ -4,3 +4,5 @@
 /web-venv/
 /models/
 /playwright/
+/vision-venv/
+/.uv-cache/

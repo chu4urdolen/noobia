@@ -60,12 +60,24 @@ web() {
     PLAYWRIGHT_BROWSERS_PATH="$R/playwright" "$R/web-venv/bin/python" -m playwright install chromium
 }
 
+vision() {  # Python 3.12: CPU PyTorch wheels; the 5090 stays reserved for Qwen
+    step "vision-venv (pinned in vision-requirements.txt)"
+    "$UV" venv --quiet --allow-existing --python 3.12 "$R/vision-venv"
+    "$UV" pip install --quiet --python "$R/vision-venv/bin/python" -r "$R/vision-requirements.txt" \
+        --index-strategy unsafe-best-match
+    step "YOLO11x weights and Florence-2-large (into models/)"
+    (cd "$R/models" && "$R/vision-venv/bin/python" -c "from ultralytics import YOLO; YOLO('yolo11x.pt')")
+    HF_HOME="$R/models/hf" "$R/vision-venv/bin/python" -c \
+        "from huggingface_hub import snapshot_download; snapshot_download('microsoft/Florence-2-large')"
+}
+
 case "${1:-all}" in
     codex) codex ;;
     forge) forge ;;
     detect) detect ;;
     web) web ;;
-    all) codex; forge; detect; web ;;
-    *) echo "usage: install.sh [all|codex|forge|detect|web]" >&2; exit 2 ;;
+    vision) vision ;;
+    all) codex; forge; detect; web; vision ;;
+    *) echo "usage: install.sh [all|codex|forge|detect|web|vision]" >&2; exit 2 ;;
 esac
 step done

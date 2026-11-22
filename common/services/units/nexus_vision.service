@@ -1,0 +1,25 @@
+[Unit]
+Description=Nexus Vision Service: YOLO11x + Florence-2 on CPU for nexus_detect (port 5051, localhost)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+SyslogIdentifier=nexus-vision
+Type=simple
+User=aria
+Group=aria
+WorkingDirectory=/noobia/common/autonomy/services/vision
+ExecStart=/noobia/common/services/nexus_vision.sh
+Restart=on-failure
+RestartSec=20
+StandardOutput=journal
+StandardError=journal
+# Never starve Qwen's host process or the desktop: at most 6 of 12 CPU threads, 12 GB RAM.
+CPUQuota=600%
+MemoryHigh=10G
+MemoryMax=12G
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

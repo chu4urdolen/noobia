@@ -37,6 +37,21 @@ def _c1():
     return _C1
 
 
+VISION_URL = "http://127.0.0.1:5051/analyze"
+
+
+def _strong(image: bytes, timeout: float = 90.0) -> tuple[dict | None, str]:
+    """(result, note) from nexus_vision; (None, why) if it is down or slow."""
+    import urllib.request
+    try:
+        req = urllib.request.Request(VISION_URL, data=image, method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            body = json.loads(r.read())
+        return body, "ok " + json.dumps(body.get("ms", {}))
+    except Exception as exc:  # noqa: BLE001 - fall back to YOLOv8n alone
+        return None, f"unavailable: {type(exc).__name__}"
+
+
 def detect_bayer(detector, raw: bytes, width: int, height: int) -> tuple[int, dict]:
     """(HTTP status, body) for one raw RGGB frame. Never an empty success on failure."""
     import time
@@ -52,6 +67,12 @@ def detect_bayer(detector, raw: bytes, width: int, height: int) -> tuple[int, di
     except Exception as exc:  # undecodable: say so
         return 422, {"error": f"Bayer decode failed: {type(exc).__name__}: {exc}"}
     t1 = time.monotonic()
+    # Strong models (YOLO11x + Florence-2, nexus_vision :5051) on the upright,
+    # white-balanced frame, in parallel with the fast YOLOv8n variants below.
+    import concurrent.futures
+    upright = next((b for n, b in variants if n == "upright_wb"), png)
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    strong_future = pool.submit(_strong, upright)
     best: dict[str, float] = {}
     for _name, image in variants:
         for obj in detector.detect_raw(image) or []:
@@ -59,10 +80,21 @@ def detect_bayer(detector, raw: bytes, width: int, height: int) -> tuple[int, di
             conf = float(obj.get("confidence", 0.0))
             if conf > best.get(label, -1.0):
                 best[label] = conf
+    strong, strong_note = strong_future.result()
+    pool.shutdown(wait=False)
+    caption = ""
+    if strong:
+        for obj in strong.get("objects", []):
+            lb = c1.normalize_coco_label(str(obj.get("label", "unknown")))
+            conf = float(obj.get("confidence", 0.0))
+            if conf > best.get(lb, -1.0):
+                best[lb] = conf
+        caption = str(strong.get("caption", ""))[:300]
     t2 = time.monotonic()
     objects = [{"label": k, "confidence": round(v, 4)}
                for k, v in sorted(best.items(), key=lambda kv: -kv[1])]
-    return 200, {"objects": objects, "variants": len(variants),
+    return 200, {"objects": objects, "variants": len(variants), "caption": caption,
+                 "strong_models": strong_note,
                  "model_loaded": bool(getattr(detector, "model_loaded", False)),
                  "decode_ms": int((t1 - t0) * 1000), "detect_ms": int((t2 - t1) * 1000)}
 

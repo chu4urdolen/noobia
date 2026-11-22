@@ -210,45 +210,103 @@ class PatternDB:
 
         out = []
         for r in rows:
-            match = {"sense": r["sense"], "event": r["event"]}
-            if r["fields_json"]:
-                try:
-                    match["fields"] = json.loads(r["fields_json"])
-                except ValueError:
-                    pass
-            if r["text_contains"]:
-                match["text_contains"] = r["text_contains"]
-
-            pat: dict[str, Any] = {
-                "id": r["pattern_id"],
-                "match": match,
-                "message": r["output_message"],
-                "to_noob": bool(r["to_noob"]),
-                "p": r["p"],
-                "cooldown_s": r["cooldown_s"],
-                "hits": r["count"],
-                "last_hit": r["last_hit_at"],
-                "origin": r["origin"],
-                "added_at": r["created_at"],
-                "ignore": bool(r["is_ignore"]) if "is_ignore" in r.keys() else False,
-            }
-            if r["regex"]:
-                pat["regex"] = r["regex"]
-            examples = {}
-            if r["must_examples"]:
-                try:
-                    examples["must"] = json.loads(r["must_examples"])
-                except ValueError:
-                    pass
-            if r["must_not_examples"]:
-                try:
-                    examples["must_not"] = json.loads(r["must_not_examples"])
-                except ValueError:
-                    pass
-            if examples:
-                pat["examples"] = examples
-            out.append(pat)
+            out.append(self._row_to_dict(r))
         return out
+
+    def _row_to_dict(self, r: sqlite3.Row) -> dict[str, Any]:
+        match = {"sense": r["sense"], "event": r["event"]}
+        if r["fields_json"]:
+            try:
+                match["fields"] = json.loads(r["fields_json"])
+            except ValueError:
+                pass
+        if r["text_contains"]:
+            match["text_contains"] = r["text_contains"]
+
+        pat: dict[str, Any] = {
+            "id": r["pattern_id"],
+            "host": r["host"],
+            "match": match,
+            "message": r["output_message"],
+            "to_noob": bool(r["to_noob"]),
+            "p": r["p"],
+            "cooldown_s": r["cooldown_s"],
+            "hits": r["count"],
+            "last_hit": r["last_hit_at"],
+            "origin": r["origin"],
+            "added_at": r["created_at"],
+            "ignore": bool(r["is_ignore"]) if "is_ignore" in r.keys() else False,
+        }
+        if r["regex"]:
+            pat["regex"] = r["regex"]
+        examples = {}
+        if r["must_examples"]:
+            try:
+                examples["must"] = json.loads(r["must_examples"])
+            except ValueError:
+                pass
+        if r["must_not_examples"]:
+            try:
+                examples["must_not"] = json.loads(r["must_not_examples"])
+            except ValueError:
+                pass
+        if examples:
+            pat["examples"] = examples
+        return pat
+
+    def get_pattern(self, pattern_id: str) -> dict[str, Any] | None:
+        """Fetch a single pattern by pattern_id."""
+        with self._connect() as conn:
+            cur = conn.execute("SELECT * FROM patterns WHERE pattern_id = ?", (pattern_id,))
+            row = cur.fetchone()
+        if not row:
+            return None
+        return self._row_to_dict(row)
+
+    def edit_pattern(self, pattern_id: str, **updates: Any) -> bool:
+        """Edit specific fields of an existing pattern."""
+        if not updates:
+            return False
+        allowed_cols = {
+            "message": "output_message",
+            "output_message": "output_message",
+            "regex": "regex",
+            "ignore": "is_ignore",
+            "is_ignore": "is_ignore",
+            "to_noob": "to_noob",
+            "p": "p",
+            "cooldown_s": "cooldown_s",
+            "sense": "sense",
+            "event": "event",
+            "host": "host",
+            "text_contains": "text_contains",
+        }
+        set_clauses = []
+        params = []
+        for k, v in updates.items():
+            if k not in allowed_cols:
+                continue
+            col = allowed_cols[k]
+            if col in ("is_ignore", "to_noob"):
+                val = 1 if v else 0
+            elif col in ("p", "cooldown_s"):
+                val = int(v)
+            else:
+                val = str(v) if v is not None else None
+            set_clauses.append(f"{col} = ?")
+            params.append(val)
+        if not set_clauses:
+            return False
+        params.append(pattern_id)
+        with self._connect() as conn:
+            cur = conn.execute(f"UPDATE patterns SET {', '.join(set_clauses)} WHERE pattern_id = ?", params)
+            return cur.rowcount > 0
+
+    def delete_pattern(self, pattern_id: str) -> bool:
+        """Delete a pattern by pattern_id."""
+        with self._connect() as conn:
+            cur = conn.execute("DELETE FROM patterns WHERE pattern_id = ?", (pattern_id,))
+            return cur.rowcount > 0
 
     def is_ignored(self, parsed_line: dict, host: str = "lynx") -> bool:
         """Check if parsed_line matches any active ignore pattern for host."""

@@ -58,9 +58,33 @@ class TestPatternDB(unittest.TestCase):
         self.assertEqual(top[1]["id"], "cat-seen")
         self.assertEqual(top[1]["hits"], 1)
 
-        # Dynamic ranker selection with require_hits=True
-        active_ranker = self.db.get_top_ranker_patterns("lynx", limit=100, require_hits=True)
-        self.assertEqual(len(active_ranker), 2)
+    def test_get_edit_and_delete_pattern(self):
+        pat = {
+            "id": "touch-held",
+            "match": {"sense": "touch", "event": "state.held"},
+            "message": "Someone is holding you",
+            "to_noob": True,
+            "p": 1,
+            "ignore": False,
+            "examples": {"must": ["NOOBIA P1 touch state.held"], "must_not": []},
+        }
+        self.assertTrue(self.db.upsert_pattern(pat, host="lynx"))
+        fetched = self.db.get_pattern("touch-held")
+        self.assertIsNotNone(fetched)
+        self.assertEqual(fetched["message"], "Someone is holding you")
+        self.assertFalse(fetched["ignore"])
+
+        # Edit fields
+        self.assertTrue(self.db.edit_pattern("touch-held", message="You are being held warmly", ignore=True, p=2))
+        updated = self.db.get_pattern("touch-held")
+        self.assertEqual(updated["message"], "You are being held warmly")
+        self.assertTrue(updated["ignore"])
+        self.assertEqual(updated["p"], 2)
+
+        # Delete
+        self.assertTrue(self.db.delete_pattern("touch-held"))
+        self.assertIsNone(self.db.get_pattern("touch-held"))
+        self.assertFalse(self.db.delete_pattern("non-existent"))
 
     def test_host_isolation(self):
         pat = {

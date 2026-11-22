@@ -1800,20 +1800,8 @@ static int run(const char *action, unsigned int seconds)
 							printf("hearing_toggled\n");
 							fflush(stdout);
 						} else if (page == PAGE_HOME && y < 2360) {
-							/* Tapped on portrait! */
-							haptic_tick(45);
-							FILE *sf = fopen("/var/log/noobia/sense.log", "a");
-							if (sf) {
-								fprintf(sf, "{\"source\":\"touch\",\"type\":\"tap\",\"x\":%d,\"y\":%d,\"t\":%ld}\n",
-									x, y, (long)time(NULL));
-								fclose(sf);
-							}
-							FILE *tf = fopen(THOUGHT_FILE, "w");
-							if (tf) {
-								fprintf(tf, "*(giggles)* You touched my screen! 💙\n");
-								fclose(tf);
-							}
-							page_changed = true;
+							/* Tapped on portrait: purely sensory and tactile */
+							haptic_tick(25);
 							printf("portrait_tapped x=%d y=%d\n", x, y);
 							fflush(stdout);
 						} else if (page == PAGE_CONSOLE &&

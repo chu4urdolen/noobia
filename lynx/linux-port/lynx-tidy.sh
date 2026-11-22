@@ -18,7 +18,7 @@ DONE_DAYS=${TIDY_DONE_DAYS:-2}                # finished agent jobs kept 2 days
 JOBS=/var/lib/lynx-agent/jobs
 LOGS="/var/log/lynx-agent.jsonl /var/log/lynx-agent-worker.log /var/log/lynx-senses.log
       /var/log/lynx-bluetoothd.log /var/lib/noobia/lynx_thought.txt
-      /var/log/lynx-tidy.log /var/log/lynx-charge-guard.log"
+      /var/log/lynx-tidy.log /var/log/lynx-charge-guard.log /var/log/lynx-camera-sense.log"
 
 # Files whose writers open them anew for every append: replaced atomically
 # (a reader such as the display never sees a half-written file). All other

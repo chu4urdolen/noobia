@@ -77,7 +77,7 @@ def load_senses():
         "network": load_optional("lynx_sense_network", "network/lynx_sense_network.py"),
         "hearing": load_optional("lynx_sense_hearing", "hearing/lynx_sense_hearing.py"),
         "motion": load_optional("lynx_sense_motion", "motion/lynx_sense_motion.py"),
-        "camera": load_optional("lynx_sense_camera", "camera/lynx_sense_camera.py"),
+        # camera: separate service lynx-camera-sense (see lynx_sense_camera.py --loop)
     }
     return senses
 
@@ -147,10 +147,8 @@ def run_loop(*args, **kwargs) -> int:
                 if senses.get(name):
                     call(name, senses[name].run)
             last_sample = now
-        if now - last_camera >= CAMERA_EVERY_S:
-            if senses.get("camera"):
-                call("camera", senses["camera"].run)
-            last_camera = now
+        # The camera runs in its own process (OpenRC lynx-camera-sense) so a
+        # 6 s look never blocks touch, hearing or motion (Gwyn 2026-11-22).
         time.sleep(0.5)
     return 0
 

@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+# Lynx camera sense v2 in its own process (Gwyn, 2026-11-22): one look a
+# minute without blocking touch/hearing/motion in lynx-senses.
+# Disable: touch /etc/lynx/disable-camera-capture (or /etc/noobia/camera.disable).
+description="Lynx camera sense: one real look a minute"
+supervisor="supervise-daemon"
+command="/usr/bin/python3"
+command_args="/usr/local/lib/noobia/senses/camera/lynx_sense_camera.py --loop --every 60"
+output_log="/var/log/lynx-camera-sense.log"
+error_log="/var/log/lynx-camera-sense.log"
+respawn_delay=30
+respawn_max=3
+respawn_period=900
+
+depend() {
+    after lynx-senses noobia-autonomyd
+}

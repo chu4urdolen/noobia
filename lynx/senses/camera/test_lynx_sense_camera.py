@@ -247,6 +247,13 @@ class SenseTest(unittest.TestCase):
         # A new boot gets a fresh chance.
         self.assertTrue(self.step(self.seen(("cat", 0.9)), 2000, boot="b2")[0].startswith("NOOBIA P1"))
 
+    def test_not_prepared_is_not_a_failure(self):
+        absent = {"ok": False, "busy": False, "error": "/dev/video145 absent: camera stack not prepared for this boot"}
+        for t in range(1000, 1600, 60):
+            self.assertEqual(self.step(absent, t), [])
+        # Once prepared, the very next look works: no pause was ever taken.
+        self.assertTrue(self.step(self.seen(("cat", 0.9)), 1700)[0].startswith("NOOBIA P1"))
+
     def test_success_resets_the_failure_count(self):
         bad = {"ok": False, "busy": False, "error": "x"}
         self.step(bad, 1000)

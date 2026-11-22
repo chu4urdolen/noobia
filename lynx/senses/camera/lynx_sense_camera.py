@@ -24,6 +24,7 @@ with her rear camera and reports it as ONE line per frame:
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import sys
 
@@ -79,6 +80,10 @@ def run(dry_run: bool = False, state_file: str | None = None, look=None,
             return (base_result("camera", available=True, emitted=[], detail="camera busy"), 0)
         if frame.disabled():
             return (base_result("camera", disabled=True, emitted=[], detail=result.get("error")), 0)
+        if "not prepared" in str(result.get("error", "")):
+            # A known state, not a malfunction: the stack is prepared per boot
+            # (lynx-camera-keeper on Nexus). Wait quietly; no failure count.
+            return (base_result("camera", available=False, emitted=[], detail=result.get("error")), 0)
         state["failures"] = int(state.get("failures", 0)) + 1
         detail = result.get("error", "unknown")
         if state["failures"] >= MAX_FAILURES:
@@ -115,13 +120,38 @@ def run(dry_run: bool = False, state_file: str | None = None, look=None,
                         emitted=emitted), 0)
 
 
+def loop(every_s: float = 60.0) -> int:
+    """Its own process (OpenRC lynx-camera-sense), so a 6 s look never blocks
+    the touch, hearing or motion senses. Stops cleanly on SIGTERM."""
+    import signal
+    import time
+    stop = []
+    signal.signal(signal.SIGTERM, lambda *a: stop.append(1))
+    nxt = time.monotonic()
+    while not stop:
+        if time.monotonic() >= nxt:
+            try:
+                result, _ = run()
+                if not result.get("ok", True) or result.get("detail"):
+                    print(json.dumps(result, sort_keys=True)[:300], file=sys.stderr, flush=True)
+            except Exception as exc:   # one bad look never ends the sense
+                print(f"camera look error: {type(exc).__name__}: {str(exc)[:160]}", file=sys.stderr, flush=True)
+            nxt = time.monotonic() + every_s
+        time.sleep(1.0)
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dry-run", action="store_true",
                         help="take one real look but print the would-be line; write nothing")
+    parser.add_argument("--loop", action="store_true", help="look every --every seconds until SIGTERM")
+    parser.add_argument("--every", type=float, default=60.0)
     parser.add_argument("--state-file", default=None)
     args = parser.parse_args(argv)
+    if args.loop:
+        return loop(max(10.0, args.every))
     try:
         result, code = run(dry_run=args.dry_run, state_file=args.state_file)
     except (OSError, LookupError, ValueError) as exc:

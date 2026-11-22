@@ -1,0 +1,22 @@
+[Unit]
+Description=Lynx camera keeper: prepare Lynx's CAMSV camera after every Lynx boot (boot-loop safe)
+After=network-online.target nexus_detect.service
+Wants=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=3
+
+[Service]
+SyslogIdentifier=lynx-camera-keeper
+Type=simple
+User=aria
+Group=aria
+Environment=NOOBIA=/noobia
+WorkingDirectory=/noobia/lynx/tools
+ExecStart=/noobia/common/services/noobia_lynx_camera_keeper.sh
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

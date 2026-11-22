@@ -22,3 +22,4 @@
 !/quiet-watchers/
 /quiet-watchers/*
 !/quiet-watchers/*.initd
+!/quiet-watchers/*.sh

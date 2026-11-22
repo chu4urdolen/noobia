@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+# Swap the boot image's RAM watchers (poweroff at one 60 C reading, or after
+# 3 health flickers) for the glitch-proof, never-poweroff versions, at every
+# boot (Gwyn for Tom, 2026-11-23). Touches no hash-pinned boot file.
+# Script: /usr/libexec/lynx/lynx-watchers-swap.sh. Rollback: rc-update del lynx-watchers-swap.
+description="Glitch-proof Lynx battery/thermal/health watchers (never power off)"
+
+depend() {
+    after lynx-health lynx-maintenance
+}
+
+start() {
+    ebegin "Swapping in glitch-proof watchers"
+    /bin/busybox sh /usr/libexec/lynx/lynx-watchers-swap.sh
+    eend $?
+}

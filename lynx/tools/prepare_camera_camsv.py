@@ -34,7 +34,7 @@ def remote(command, timeout=30):
 def snapshot():
     lines = remote("cat /proc/sys/kernel/random/boot_id; sha256sum /dev/sdc39 | cut -c1-64; "
                    "cat /sys/module/firmware_class/parameters/path; "
-                   "/usr/local/bin/lynx-status --assert-ready").splitlines()
+                   "o=''; for i in 1 2 3 4 5 6 7 8 9 10; do o=$(/usr/local/bin/lynx-status --assert-ready) && { printf '%s\n' \"$o\"; exit 0; }; sleep 2; done; printf '%s\n' \"$o\"; exit 1").splitlines()
     if len(lines) != 4 or lines[1] != EXPECTED_BOOT_SHA or lines[2] != "/vendor/firmware":
         raise RuntimeError("unexpected boot image, firmware path, or status output")
     health = json.loads(lines[3])

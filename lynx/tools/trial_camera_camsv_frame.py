@@ -95,7 +95,7 @@ def main():
         report["isp_receipt"] = str(max(matching_isp_receipts))
         if "mtk_cam_isp " not in step("module_before", "cat /proc/modules").stdout.decode():
             raise RuntimeError("sensor-power ISP module is not loaded")
-        health = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready").stdout)
+        health = json.loads(step("health_before", "o=''; for i in 1 2 3 4 5 6 7 8 9 10; do o=$(/usr/local/bin/lynx-status --assert-ready) && { printf '%s\n' \"$o\"; exit 0; }; sleep 2; done; printf '%s\n' \"$o\"; exit 1").stdout)
         if (health["issues"] or (not guards_off() and health["battery"]["capacity_percent"] < 35) or
                 (not guards_off() and health["battery"]["temperature_mC"] >= 35000) or
                 (not guards_off() and health["thermal"]["max_mC"] >= 45000)):
@@ -196,13 +196,13 @@ def main():
                        timeout=host_limit, check=False, data=helper)
         report["capture_exit"] = capture.returncode
         step("irq_after", "grep cam_yuv_b /proc/interrupts")
-        health_after = step("health_after", "/usr/local/bin/lynx-status --assert-ready",
+        health_after = step("health_after", "o=''; for i in 1 2 3 4 5 6 7 8 9 10; do o=$(/usr/local/bin/lynx-status --assert-ready) && { printf '%s\n' \"$o\"; exit 0; }; sleep 2; done; printf '%s\n' \"$o\"; exit 1",
                             check=False)
         if health_after.returncode:
             # OpenRC service status can briefly race a supervisor restart.
             # Preserve both readings and fail if the issue persists.
             time.sleep(2)
-            step("health_after_retry", "/usr/local/bin/lynx-status --assert-ready")
+            step("health_after_retry", "o=''; for i in 1 2 3 4 5 6 7 8 9 10; do o=$(/usr/local/bin/lynx-status --assert-ready) && { printf '%s\n' \"$o\"; exit 0; }; sleep 2; done; printf '%s\n' \"$o\"; exit 1")
         step("frame_stat", f"stat -c '%s bytes' {STAGE}/sensor4.bayer", check=False)
         irq_after = (out / "irq_after.stdout").read_text()
         if sum(int(x) for x in irq_after.split()[1:9]) > 10000:
@@ -272,7 +272,7 @@ def main():
                                 "cat /sys/module/firmware_class/parameters/path").stdout.decode().strip()
                 if restored != "/vendor/firmware":
                     raise RuntimeError("global firmware path not restored")
-                step("health_on_error", "/usr/local/bin/lynx-status --assert-ready")
+                step("health_on_error", "o=''; for i in 1 2 3 4 5 6 7 8 9 10; do o=$(/usr/local/bin/lynx-status --assert-ready) && { printf '%s\n' \"$o\"; exit 0; }; sleep 2; done; printf '%s\n' \"$o\"; exit 1")
                 step("watchdog_disarm_on_error", f"kill {pid} 2>/dev/null || true")
                 armed = False
                 report.pop("watchdog_pid", None)

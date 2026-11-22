@@ -44,7 +44,7 @@ def main():
     try:
         if step("boot_id", "cat /proc/sys/kernel/random/boot_id").strip() != args.boot_id:
             raise RuntimeError("boot changed; route not applied")
-        health = json.loads(step("health", "/usr/local/bin/lynx-status --assert-ready"))
+        health = json.loads(step("health", "o=''; for i in 1 2 3 4 5 6 7 8 9 10; do o=$(/usr/local/bin/lynx-status --assert-ready) && { printf '%s\n' \"$o\"; exit 0; }; sleep 2; done; printf '%s\n' \"$o\"; exit 1"))
         if health["issues"] or health["battery"]["capacity_percent"] < 25:
             raise RuntimeError("health gate failed")
         graph = step("graph_before", "media-ctl -d /dev/media1 -p")

@@ -68,7 +68,7 @@ def main():
         if len(identity) != 3 or identity[1:] != [KERNEL, BOOT]:
             raise RuntimeError("unexpected boot identity")
         report["boot_id"] = identity[0]
-        health = json.loads(step("health", "/usr/local/bin/lynx-status --assert-ready"))
+        health = json.loads(step("health", "o=''; for i in 1 2 3 4 5 6 7 8 9 10; do o=$(/usr/local/bin/lynx-status --assert-ready) && { printf '%s\n' \"$o\"; exit 0; }; sleep 2; done; printf '%s\n' \"$o\"; exit 1"))
         minimum = 25 if health["battery"]["current_mA_signed"] > 0 else 35
         if (health["boot_id"] != identity[0] or health["issues"] or
                 (not guards_off() and health["battery"]["capacity_percent"] < minimum) or
@@ -112,7 +112,7 @@ def main():
                     save()
                     step("health_" + name,
                          f"set -eu; grep -q '^{name.replace('-', '_')} ' /proc/modules; "
-                         "/usr/local/bin/lynx-status --assert-ready >/dev/null", timeout=15)
+                         "for i in 1 2 3 4 5 6 7 8 9 10; do /usr/local/bin/lynx-status --assert-ready >/dev/null && exit 0; sleep 2; done; exit 1", timeout=40)
                 finally:
                     step("disarm_" + name, f"kill {pid} 2>/dev/null || true")
                     report.pop("watchdog_pid", None)

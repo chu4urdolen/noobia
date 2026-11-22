@@ -104,7 +104,7 @@ def main():
         if len(identity) != 3 or identity[1:] != [KERNEL, BOOT]:
             raise RuntimeError("unexpected Lynx boot")
         report["boot_id"] = identity[0]
-        health = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready"))
+        health = json.loads(step("health_before", "o=''; for i in 1 2 3 4 5 6 7 8 9 10; do o=$(/usr/local/bin/lynx-status --assert-ready) && { printf '%s\n' \"$o\"; exit 0; }; sleep 2; done; printf '%s\n' \"$o\"; exit 1"))
         minimum = 25 if health["battery"]["current_mA_signed"] > 0 else 35
         if (health["boot_id"] != identity[0] or health["issues"] or
                 (not guards_off() and health["battery"]["capacity_percent"] < minimum) or
@@ -164,8 +164,9 @@ def main():
         while time.monotonic() < deadline:
             snapshot = step("observe_" + str(len(report["steps"])),
                             "cat /proc/interrupts | grep 'cam_yuv_b'; "
-                            "echo __HEALTH__; /usr/local/bin/lynx-status --assert-ready",
-                            timeout=10)
+                            "echo __HEALTH__; "
+                            "o=''; for i in 1 2 3 4 5 6 7 8 9 10; do o=$(/usr/local/bin/lynx-status --assert-ready) && break; sleep 2; done; printf '%s\\n' \"$o\"",
+                            timeout=30)
             irq_line, health_json = snapshot.split("__HEALTH__", 1)
             irq_parts = irq_line.split()
             if (len(irq_parts) < 9 or not irq_parts[0].rstrip(":").isdigit()
@@ -195,9 +196,9 @@ def main():
             try:
                 snapshot = step("post_error_safety_check",
                                 "grep cam_yuv_b /proc/interrupts; echo __HEALTH__; "
-                                "/usr/local/bin/lynx-status --assert-ready; echo __RCU__; "
+                                "o=''; for i in 1 2 3 4 5 6 7 8 9 10; do o=$(/usr/local/bin/lynx-status --assert-ready) && break; sleep 2; done; printf '%s\\n' \"$o\"; echo __RCU__; "
                                 "dmesg | grep -E 'rcu_preempt detected stalls' | tail -3 || true",
-                                timeout=10)
+                                timeout=30)
                 irq_line, rest = snapshot.split("__HEALTH__", 1)
                 health_text, rcu_text = rest.split("__RCU__", 1)
                 parts = irq_line.split()

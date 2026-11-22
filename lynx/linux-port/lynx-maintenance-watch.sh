@@ -123,12 +123,14 @@ recover_logs() {
 }
 
 shutdown_safely() {
+    # Tom 2026-11-23: nothing may power Lynx off or reboot her (Principle 10).
+    # A persistent safety failure only throttles the CPUs and is logged.
     reason=$1
-    event "SAFE_POWEROFF reason=$reason"
-    printf '<2>LYNX_MAINTENANCE_SAFE_POWEROFF reason=%s\n' "$reason" > /dev/kmsg || true
-    /sbin/openrc-shutdown --poweroff now || true
-    $BB sleep 15
-    $BB poweroff -f
+    event "SAFETY_QUIESCE reason=$reason (no poweroff)"
+    printf '<4>LYNX_MAINTENANCE_QUIESCE reason=%s\n' "$reason" > /dev/kmsg || true
+    for dev in /sys/class/thermal/cooling_device*; do
+        [ -f "$dev/cur_state" ] && echo 1 > "$dev/cur_state" 2>/dev/null || true
+    done
 }
 
 check_once() {

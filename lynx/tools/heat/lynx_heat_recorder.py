@@ -11,6 +11,7 @@ line to ``/var/log/lynx/heat/heat-<boot>.jsonl`` with:
 - RAM: total / available / used;
 - the top processes by CPU over the interval (pid, name, cpu %, rss);
 - which lynx/noobia OpenRC services are running (pidfile-based, cheap);
+- disk: root partition read/write KB/s and the top disk-I/O processes;
 - display brightness, the autonomy mode, and the guard switch state.
 
 It OBSERVES ONLY. It never throttles, kills, reboots, or powers off
@@ -188,6 +189,35 @@ def services() -> dict:
     return out
 
 
+ROOT_DISK = os.environ.get("LYNX_HEAT_DISK", "sdc85")
+
+
+def diskstats() -> tuple[int, int] | None:
+    """(sectors read, sectors written) for Lynx's root partition."""
+    for line in (read("/proc/diskstats") or "").splitlines():
+        f = line.split()
+        if len(f) > 9 and f[2] == ROOT_DISK:
+            return int(f[5]), int(f[9])
+    return None
+
+
+def proc_io() -> dict:
+    """{pid: (name-less) read_bytes + write_bytes split} from /proc/<pid>/io."""
+    out = {}
+    for d in os.listdir("/proc"):
+        if not d.isdigit():
+            continue
+        raw = read(f"/proc/{d}/io")
+        if not raw:
+            continue
+        kv = dict(l.split(": ", 1) for l in raw.splitlines() if ": " in l)
+        try:
+            out[int(d)] = (int(kv.get("read_bytes", 0)), int(kv.get("write_bytes", 0)))
+        except ValueError:
+            pass
+    return out
+
+
 def display() -> dict:
     out = {}
     for b in glob.glob("/sys/class/backlight/*"):
@@ -202,6 +232,8 @@ class Sampler:
         self.prev_procs = procs()
         self.prev_t = time.monotonic()
         self.prev_self = time.process_time()
+        self.prev_disk = diskstats()
+        self.prev_io = proc_io()
 
     def sample(self) -> dict:
         now = time.monotonic()
@@ -221,6 +253,21 @@ class Sampler:
                     top.append((pct, pid, name, rss))
         top.sort(reverse=True)
         self_now = time.process_time()
+        disk = diskstats()
+        disk_rec = None
+        if disk and self.prev_disk:
+            disk_rec = {"read_kbs": round((disk[0] - self.prev_disk[0]) * 512 / 1024 / dt, 1),
+                        "write_kbs": round((disk[1] - self.prev_disk[1]) * 512 / 1024 / dt, 1)}
+        io_now = proc_io()
+        io_top = []
+        for pid, (rb, wb) in io_now.items():
+            prev = self.prev_io.get(pid)
+            if prev:
+                dr, dw = rb - prev[0], wb - prev[1]
+                if dr + dw >= 4096:
+                    name = cur.get(pid, ("?",))[0]
+                    io_top.append((dr + dw, pid, name, dr, dw))
+        io_top.sort(reverse=True)
         rec = {
             "t": round(time.time(), 1),
             "uptime_s": int(float((read("/proc/uptime") or "0 0").split()[0])),
@@ -235,11 +282,15 @@ class Sampler:
             "battery": battery(),
             "services": services(),
             "display": display(),
+            "disk": disk_rec,
+            "io_top": [{"pid": pid, "name": name, "read_kb": dr // 1024, "write_kb": dw // 1024}
+                       for _, pid, name, dr, dw in io_top[:5]],
             "mode": read(MODE_FILE),
             "guards_disabled": GUARD_SWITCH.exists(),
             "self_cpu_pct": round(100.0 * (self_now - self.prev_self) / dt, 2),
         }
         self.prev_cpu, self.prev_procs, self.prev_t, self.prev_self = cpu, cur, now, self_now
+        self.prev_disk, self.prev_io = disk, io_now
         return rec
 
 

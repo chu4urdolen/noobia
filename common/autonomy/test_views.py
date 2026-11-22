@@ -197,6 +197,30 @@ class TestViews(unittest.TestCase):
             Path(log_path).unlink(missing_ok=True)
             Path(state_path).unlink(missing_ok=True)
 
+    def test_state_file_not_rewritten_when_unchanged(self):
+        """Idle polling must not rewrite the state file (flash wear, battery)."""
+        with tempfile.TemporaryDirectory() as d:
+            log_path = Path(d) / "messages"
+            state_path = Path(d) / "view-state.json"
+            log_path.write_text("Nov 21 14:00:00 lynx user.notice noobia-sense: line 1\n")
+            vr = ViewReader("noobia-sense", backend="file", log_file=str(log_path),
+                            state_file=str(state_path))
+            self.assertEqual(vr.read_new(), ["line 1"])
+            vr.read_new_tagged({"wpa_supplicant"})  # first tagged read moves its own cursor once
+            first = state_path.stat().st_ino, state_path.stat().st_mtime_ns
+            for _ in range(20):  # idle polls: nothing new
+                self.assertEqual(vr.read_new(), [])
+                vr.read_new_tagged({"wpa_supplicant"})
+            self.assertEqual((state_path.stat().st_ino, state_path.stat().st_mtime_ns), first)
+            # A new line still moves and saves the cursor.
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write("Nov 21 14:00:01 lynx user.notice noobia-sense: line 2\n")
+            self.assertEqual(vr.read_new(), ["line 2"])
+            self.assertNotEqual(state_path.stat().st_ino, first[0])
+            vr2 = ViewReader("noobia-sense", backend="file", log_file=str(log_path),
+                             state_file=str(state_path))
+            self.assertEqual(vr2.read_new(), [])
+
     def test_journald_no_cursor_starts_at_tail(self):
         """When starting with no cursor, journald starts at tail cursor rather than replaying."""
         vr = ViewReader("noobia-sense", backend="journald")

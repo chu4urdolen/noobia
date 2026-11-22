@@ -195,9 +195,15 @@ class ViewReader:
                 "tagged_file_inode": self._tagged_file_inode,
                 "tagged_journal_cursor": self._tagged_journal_cursor,
             }
+            # Gwyn 2026-11-22: the daemon calls this twice a second; writing
+            # an unchanged cursor cost Lynx ~170k flash writes a day. Only
+            # write when the position actually moved.
+            if payload == getattr(self, "_last_saved_state", None):
+                return
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(payload, f)
             tmp.replace(self.state_file)
+            self._last_saved_state = payload
         except OSError:
             if tmp.exists():
                 tmp.unlink(missing_ok=True)

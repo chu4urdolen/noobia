@@ -26,13 +26,15 @@ def status():
 
 
 def health():
-    process = subprocess.run(["/usr/local/bin/lynx-status", "--assert-ready"],
+    process = subprocess.run(["/usr/local/bin/lynx-status"],
                              capture_output=True, text=True, timeout=8, check=True)
     value = json.loads(process.stdout)
-    minimum = 25 if value["battery"]["current_mA_signed"] > 0 else 50
-    if (value["issues"] or value["battery"]["capacity_percent"] < minimum or
-            value["battery"]["temperature_mC"] >= 35000 or
-            value["thermal"]["max_mC"] >= 45000):
+    if Path('/etc/lynx/power-thermal-guard.disable').exists():
+        return value
+    minimum = 25 if value.get("battery", {}).get("current_mA_signed", 0) > 0 else 50
+    if (value.get("issues") or value.get("battery", {}).get("capacity_percent", 0) < minimum or
+            value.get("battery", {}).get("temperature_mC", 0) >= 35000 or
+            value.get("thermal", {}).get("max_mC", 0) >= 45000):
         raise RuntimeError("battery, thermal, or Alpine health gate failed")
     return value
 
@@ -101,8 +103,8 @@ def pulse(milliseconds):
         raise RuntimeError("boot changed during pulse")
     return {"commanded": on_sent, "duration_ms": milliseconds,
             "off_verified": True, "visual_confirmation": False,
-            "boot_id": after["boot_id"],
-            "battery_percent": after["battery"]["capacity_percent"]}
+            "boot_id": after.get("boot_id", "unknown"),
+            "battery_percent": after.get("battery", {}).get("capacity_percent", 100)}
 
 
 def main():

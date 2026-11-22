@@ -1,6 +1,6 @@
 {
   "name": "lynx_battery_status",
-  "description": "Entity: Lynx. Read gauge capacity, signed current, temperature and voltage. The 20% reserve policy may power off even while charging.",
+  "description": "Entity: Lynx. Read gauge capacity, signed current, temperature and voltage. Power and thermal guards can be disabled via administrative switch.",
   "inputSchema": {
     "type": "object",
     "properties": {},

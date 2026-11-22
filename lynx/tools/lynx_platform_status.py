@@ -71,18 +71,26 @@ def inventory(root=Path("/"), health=None):
     ccci_nodes = names("/dev", "ccci*")
     md1_state = modem_state()
 
+    guard_disabled = path("/etc/lynx/power-thermal-guard.disable").exists()
+    battery_next = ("power and thermal guards are disabled via administrative switch (/etc/lynx/power-thermal-guard.disable)"
+                    if guard_disabled else "20% reserve policy may power off even while charging")
+    thermal_next = ("power and thermal guards are disabled via administrative switch (/etc/lynx/power-thermal-guard.disable)"
+                    if guard_disabled else "keep thermal guards active")
+
     result = {
         "battery": {"interface_ready": power_ok, "validated": power_ok,
+                    "guard_disabled": guard_disabled,
                     "evidence": {"capacity_percent": battery.get("capacity_percent"),
                                  "current_mA_signed": battery.get("current_mA_signed"),
                                  "temperature_mC": battery.get("temperature_mC"),
                                  "voltage_mV": battery.get("voltage_mV"),
                                  "gauge_read_errors": power_errors},
-                    "next": "20% reserve policy may power off even while charging"},
+                    "next": battery_next},
         "thermal": {"interface_ready": thermal_ok, "validated": thermal_ok,
+                    "guard_disabled": guard_disabled,
                     "evidence": {"max_mC": thermal.get("max_mC"),
                                  "cooling_states": thermal.get("cooling_states", {})},
-                    "next": "keep thermal guards active"},
+                    "next": thermal_next},
         "storage": {"interface_ready": storage_ok, "validated": storage_ok,
                     "evidence": {"root_type": storage.get("type"),
                                  "root_source": storage.get("source"),

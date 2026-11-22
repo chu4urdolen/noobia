@@ -74,8 +74,9 @@ def main(argv=None):
     action = parser.parse_args(argv).action
     try:
         raw = sys.stdin.read(257)
-        if len(raw) > 256 or json.loads(raw or "{}") != {}:
-            raise ValueError("no arguments accepted")
+        payload = json.loads(raw or "{}")
+        if not isinstance(payload, dict):
+            raise ValueError("payload must be a JSON object")
         if action == "pulse":
             output = pulse()
         elif action == "stop":

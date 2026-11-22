@@ -78,7 +78,10 @@ def capture_one_frame(
             return False, b"", f"timeout after {timeout}s waiting for frame"
 
         # Read available bytes (bounded to 4MB max)
-        raw = os.read(fd, 4 * 1024 * 1024)
+        try:
+            raw = os.read(fd, 4 * 1024 * 1024)
+        except OSError as read_err:
+            return False, b"", f"streaming I/O setup needed for {device}: {read_err}"
         if not raw:
             return False, b"", "empty frame read"
 

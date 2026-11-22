@@ -1,0 +1,11 @@
+{
+  "name": "lynx_camera_photo",
+  "description": "Entity: Lynx. Look with your rear camera: take one picture and learn what objects you see (detected on Nexus). Takes a few seconds. Use it when you want to see something for yourself; your camera sense also looks once a minute on its own.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 45
+}

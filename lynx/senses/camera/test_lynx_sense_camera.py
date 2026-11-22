@@ -1,232 +1,222 @@
-"""Offline unit tests for Lynx S1 camera sense (lynx_sense_camera.py).
-
-Verifies:
-- Hardware disable switch inhibition.
-- Capture unavailability handling (honest reporting, no loop failure).
-- Detection service error handling.
-- P1 emission on new object labels.
-- P0 emission on repeated object labels within window (300s).
-- P1 emission after window expiration (hysteresis).
-- State persistence and dry-run isolation.
-"""
-
-from __future__ import annotations
-
-import importlib.util
+#!/usr/bin/env python3
+"""Camera sense v2 and the shared camera look (lock, capture, Nexus detection)."""
+import io
+import json
 import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
+import threading
 import unittest
+from unittest import mock
+import urllib.error
 
 HERE = Path(__file__).resolve().parent
-SENSES_DIR = HERE.parent
-AUTONOMY_DIR = HERE.parents[2] / "common" / "autonomy"
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent / "common"))
+os.environ.setdefault("NOOBIA_AUTONOMY_DIR", str(HERE.parents[2] / "common" / "autonomy"))
 
-# Load sense.py
-spec = importlib.util.spec_from_file_location("sense", AUTONOMY_DIR / "sense.py")
-sense_mod = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(sense_mod)
+import lynx_camera_frame as frame  # noqa: E402
+import lynx_sense_camera as cam  # noqa: E402
 
-# Load camera sense
-import sys
-sys.path.insert(0, str(SENSES_DIR / "common"))
-spec_cam = importlib.util.spec_from_file_location("lynx_sense_camera", HERE / "lynx_sense_camera.py")
-cam_mod = importlib.util.module_from_spec(spec_cam)
-spec_cam.loader.exec_module(cam_mod)
+RAW = b"\x10" * (1600 * 1200)
 
 
-class RecordingSense:
-    def __init__(self, real):
-        self._real = real
-        self.emits = []
-
-    def format_line(self, *a, **k):
-        return self._real.format_line(*a, **k)
-
-    def emit(self, *a, **k):
-        self.emits.append((a, k))
-        return self._real.format_line(*a, **k)
+class Proc:
+    def __init__(self, rc=0, report=None, stderr=""):
+        self.returncode, self.stderr = rc, stderr
+        self.stdout = json.dumps(report or {"state": "frame_captured"}) + "\n"
 
 
-class TestCameraSense(unittest.TestCase):
+class Resp(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def opener_for(body):
+    def opener(req, timeout):
+        opener.seen = req
+        return Resp(json.dumps(body).encode())
+    return opener
+
+
+class FrameTest(unittest.TestCase):
     def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory(prefix="lynx-cam-test-")
-        self.state_file = Path(self._tmp.name) / "state.json"
-        self.recorder = RecordingSense(sense_mod)
-        self._orig_import = cam_mod.import_sense
-        cam_mod.import_sense = lambda: self.recorder
+        self.tmp = tempfile.TemporaryDirectory()
+        d = Path(self.tmp.name)
+        self.dev, self.helper = d / "video145", d / "capture.py"
+        self.dev.write_text("")
+        self.helper.write_text("")
+        self.patches = [mock.patch.object(frame, "DEVICE", self.dev),
+                        mock.patch.object(frame, "CAPTURE", str(self.helper)),
+                        mock.patch.object(frame, "FRAME", d / "look.bayer"),
+                        mock.patch.object(frame, "LOCK", d / "camera.lock"),
+                        mock.patch.object(frame, "DISABLE", (d / "off1", d / "off2"))]
+        for p in self.patches:
+            p.start()
 
     def tearDown(self):
-        cam_mod.import_sense = self._orig_import
-        self._tmp.cleanup()
+        for p in self.patches:
+            p.stop()
+        self.tmp.cleanup()
 
-    def test_camera_disabled(self):
-        switch = Path(self._tmp.name) / "disable-switch"
-        switch.touch()
-        orig_check = cam_mod.is_camera_disabled
-        cam_mod.is_camera_disabled = lambda: True
-        try:
-            res, code = cam_mod.run(state_file=str(self.state_file))
-            self.assertEqual(code, 0)
-            self.assertTrue(res.get("disabled"))
-            self.assertEqual(len(res.get("emitted", [])), 0)
-        finally:
-            cam_mod.is_camera_disabled = orig_check
+    def writing_run(self, data=RAW, rc=0, report=None):
+        def run(argv, **kw):
+            run.argv = argv
+            Path(argv[argv.index("--output") + 1]).write_bytes(data)
+            return Proc(rc, report)
+        return run
 
-    def test_capture_unavailable(self):
-        def mock_capture():
-            return False, b"", "device /dev/video145 not present"
+    def test_good_look_sends_raw_frame_and_deletes_it(self):
+        op = opener_for({"objects": [{"label": "cell phone", "confidence": 0.61},
+                                     {"label": "cat", "confidence": 0.9}], "model_loaded": True})
+        r = frame.look(run=self.writing_run(), opener=op)
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["items"], "cat(0.90)/cell_phone(0.61)")
+        self.assertEqual(r["labels"], ["cat", "cell_phone"])
+        self.assertEqual(len(op.seen.data), 1600 * 1200)
+        self.assertIn("w=1600&h=1200", op.seen.full_url)
+        self.assertFalse(frame.FRAME.exists(), "raw frame must not outlive the look")
 
-        res, code = cam_mod.run(state_file=str(self.state_file), capture_fn=mock_capture)
-        self.assertEqual(code, 0)
-        self.assertFalse(res.get("available"))
-        self.assertEqual(len(res.get("emitted", [])), 0)
+    def test_no_camera_control_ioctls_requested(self):
+        run = self.writing_run()
+        frame.look(run=run, opener=opener_for({"objects": []}))
+        self.assertNotIn("--request-exposure-lines", run.argv)
 
-    def test_detect_failure(self):
-        def mock_capture():
-            return True, b"\xff\xd8\xff\xd9", "captured"
+    def test_missing_stack_is_honest(self):
+        self.dev.unlink()
+        r = frame.look(run=self.writing_run(), opener=opener_for({}))
+        self.assertFalse(r["ok"])
+        self.assertIn("not prepared", r["error"])
 
-        def mock_detect(frame):
-            raise ConnectionError("Nexus detect port unreachable")
+    def test_capture_failure_and_wrong_size_and_timeout(self):
+        r = frame.look(run=self.writing_run(rc=1, report={"state": "failed", "error": "no frame"}),
+                       opener=opener_for({}))
+        self.assertFalse(r["ok"])
+        self.assertIn("no frame", r["error"])
+        r = frame.look(run=self.writing_run(data=b"\x00" * 10), opener=opener_for({}))
+        self.assertIn("expected 1920000", r["error"])
 
-        res, code = cam_mod.run(
-            state_file=str(self.state_file),
-            capture_fn=mock_capture,
-            detect_fn=mock_detect,
-        )
-        self.assertEqual(code, 1)
-        self.assertFalse(res.get("ok"))
-        self.assertIn("ConnectionError", res.get("error", ""))
+        def slow(argv, **kw):
+            raise subprocess.TimeoutExpired(argv, 20)
+        r = frame.look(run=slow, opener=opener_for({}))
+        self.assertIn("timed out", r["error"])
 
-    def test_detect_new_and_repeated_labels(self):
-        def mock_capture():
-            return True, b"\xff\xd8\xff\xd9", "captured"
+    def test_detector_problems_are_never_an_empty_success(self):
+        r = frame.look(run=self.writing_run(), opener=opener_for({"objects": [], "model_loaded": False}))
+        self.assertFalse(r["ok"])
+        self.assertIn("no model", r["error"])
 
-        def mock_detect(frame):
-            return [{"label": "person", "confidence": 0.88}]
+        def down(req, timeout):
+            raise urllib.error.URLError("refused")
+        r = frame.look(run=self.writing_run(), opener=down)
+        self.assertFalse(r["ok"])
+        self.assertIn("unreachable", r["error"])
 
-        # Step 1: First sighting at t=1000 -> expect P1
-        res1, code1 = cam_mod.run(
-            state_file=str(self.state_file),
-            capture_fn=mock_capture,
-            detect_fn=mock_detect,
-            now=1000.0,
-        )
-        self.assertEqual(code1, 0)
-        self.assertEqual(len(res1["emitted"]), 1)
-        self.assertIn("NOOBIA P1 camera object.seen", res1["emitted"][0])
-        self.assertIn("label=person", res1["emitted"][0])
-        self.assertIn("conf=0.88", res1["emitted"][0])
+    def test_lock_makes_a_second_look_busy(self):
+        held = threading.Event()
+        release = threading.Event()
 
-        # Step 2: Repeated sighting at t=1050 (50s later < 300s window) -> expect P0
-        res2, code2 = cam_mod.run(
-            state_file=str(self.state_file),
-            capture_fn=mock_capture,
-            detect_fn=mock_detect,
-            now=1050.0,
-        )
-        self.assertEqual(code2, 0)
-        self.assertEqual(len(res2["emitted"]), 1)
-        self.assertIn("NOOBIA P0 camera object.seen", res2["emitted"][0])
+        def slow_run(argv, **kw):
+            held.set()
+            release.wait(5)
+            Path(argv[argv.index("--output") + 1]).write_bytes(RAW)
+            return Proc()
+        t = threading.Thread(target=frame.look, kwargs={"run": slow_run, "opener": opener_for({"objects": []})})
+        t.start()
+        held.wait(5)
+        r = frame.look(wait_s=0.0, run=self.writing_run(), opener=opener_for({"objects": []}))
+        release.set()
+        t.join(5)
+        self.assertFalse(r["ok"])
+        self.assertTrue(r["busy"])
 
-        # Step 3: Sighting at t=1400 (350s later >= 300s window) -> expect P1 again
-        res3, code3 = cam_mod.run(
-            state_file=str(self.state_file),
-            capture_fn=mock_capture,
-            detect_fn=mock_detect,
-            now=1400.0,
-        )
-        self.assertEqual(code3, 0)
-        self.assertEqual(len(res3["emitted"]), 1)
-        self.assertIn("NOOBIA P1 camera object.seen", res3["emitted"][0])
-
-    def test_dry_run_does_not_save_state(self):
-        def mock_capture():
-            return True, b"\xff\xd8\xff\xd9", "captured"
-
-        def mock_detect(frame):
-            return [{"label": "cat", "confidence": 0.95}]
-
-        res, code = cam_mod.run(
-            dry_run=True,
-            state_file=str(self.state_file),
-            capture_fn=mock_capture,
-            detect_fn=mock_detect,
-            now=2000.0,
-        )
-        self.assertEqual(code, 0)
-        self.assertEqual(len(res["emitted"]), 1)
-        self.assertFalse(self.state_file.exists())
-        self.assertEqual(len(self.recorder.emits), 0)  # Dry run doesn't emit to syslog
+    def test_disable_switch(self):
+        frame.DISABLE[0].write_text("")
+        r = frame.look(run=self.writing_run(), opener=opener_for({}))
+        self.assertFalse(r["ok"])
+        self.assertIn("disabled", r["error"])
 
 
-class TestDefaultCaptureSubprocess(unittest.TestCase):
-    """The installed H2 tool is a standalone executable; Lynx has no importable
-    lynx package, so default_capture must run it via a bounded subprocess and
-    fall back to an honest failure when it is missing or misbehaving."""
-
-    JPEG = b"\xff\xd8\xff\xd9"
-
-    def _tool(self, body):
-        tool = Path(self._tmp.name) / "lynx-camera-capture"
-        tool.write_text("#!/bin/sh\n" + body)
-        tool.chmod(0o755)
-        return tool
-
+class SenseTest(unittest.TestCase):
     def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory(prefix="lynx-cam-tool-")
-        self._orig_env = os.environ.get("NOOBIA_CAMERA_CAPTURE")
-        self._orig_import = cam_mod.import_sense
-        cam_mod.import_sense = lambda: RecordingSense(sense_mod)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.state = str(Path(self.tmp.name) / "state.json")
+        import lynx_senses_lib as lib
+        lib._STATE_CACHE.clear()
+        self.emit = mock.patch.object(cam, "emit_line", lambda s, p, sn, ev, fields=None, text="", dry_run=False:
+                                      f"NOOBIA P{p} {sn} {ev} " + " ".join(f"{k}={v}" for k, v in (fields or {}).items())
+                                      + (f" | {text}" if text else ""))
+        self.emit.start()
+        self.nodis = mock.patch.object(cam.frame, "disabled", lambda: None)
+        self.nodis.start()
 
     def tearDown(self):
-        cam_mod.import_sense = self._orig_import
-        if self._orig_env is None:
-            os.environ.pop("NOOBIA_CAMERA_CAPTURE", None)
-        else:
-            os.environ["NOOBIA_CAMERA_CAPTURE"] = self._orig_env
-        self._tmp.cleanup()
+        self.emit.stop()
+        self.nodis.stop()
+        self.tmp.cleanup()
 
-    def test_subprocess_capture_success(self):
-        tool = self._tool("printf '%s' 'x' # placeholder\n")
-        # write raw JPEG bytes with printf escapes
-        tool.write_text("#!/bin/sh\nprintf '\\377\\330\\377\\331'\n")
-        os.environ["NOOBIA_CAMERA_CAPTURE"] = str(tool)
+    def step(self, result, t, boot="b1"):
+        res, code = cam.run(state_file=self.state, look=lambda wait_s: result, now=t, boot=boot)
+        self.assertEqual(code, 0)
+        return res["emitted"]
 
-        ok, frame, msg = cam_mod.default_capture()
-        self.assertTrue(ok)
-        self.assertEqual(frame, self.JPEG)
-        self.assertIn("lynx-camera-capture", msg)
+    def seen(self, *pairs):
+        objs = [{"label": l, "confidence": c} for l, c in pairs]
+        return {"ok": True, "camera": "back", "objects": objs,
+                "items": frame.items_text(objs), "labels": [frame.clean_label(l) for l, _ in pairs]}
 
-    def test_subprocess_failure_is_honest(self):
-        tool = self._tool("echo 'camera stack not loaded' >&2\nexit 1\n")
-        os.environ["NOOBIA_CAMERA_CAPTURE"] = str(tool)
+    def test_one_line_per_frame_p1_when_new(self):
+        lines = self.step(self.seen(("laptop", 0.75), ("person", 0.87), ("cat", 0.45)), 1000)
+        self.assertEqual(lines, ["NOOBIA P1 camera objects.seen cam=back n=3 | laptop(0.75)/person(0.87)/cat(0.45)"])
 
-        ok, frame, msg = cam_mod.default_capture()
-        self.assertFalse(ok)
-        self.assertEqual(frame, b"")
-        self.assertIn("camera stack not loaded", msg)
+    def test_repeat_is_p0_and_a_new_label_is_p1_again(self):
+        self.step(self.seen(("laptop", 0.75)), 1000)
+        self.assertTrue(self.step(self.seen(("laptop", 0.74)), 1060)[0].startswith("NOOBIA P0 camera objects.seen"))
+        self.assertTrue(self.step(self.seen(("laptop", 0.74), ("cat", 0.6)), 1120)[0].startswith("NOOBIA P1"))
+        self.assertTrue(self.step(self.seen(("laptop", 0.74)), 1120 + 301)[0].startswith("NOOBIA P1"))
 
-    def test_subprocess_timeout_is_bounded(self):
-        import subprocess as sp
-        from unittest import mock
-        tool = self._tool("true\n")
-        os.environ["NOOBIA_CAMERA_CAPTURE"] = str(tool)
-        with mock.patch("subprocess.run",
-                        side_effect=sp.TimeoutExpired("lynx-camera-capture", 8)):
-            ok, frame, msg = cam_mod.default_capture()
-        self.assertFalse(ok)
-        self.assertIn("timed out", msg)
+    def test_empty_frame(self):
+        lines = self.step(self.seen(), 1000)
+        self.assertEqual(lines, ["NOOBIA P0 camera frame.analyzed objects=0 cam=back | frame analyzed, no objects recognized"])
 
-    def test_missing_tool_falls_back_honestly(self):
-        os.environ["NOOBIA_CAMERA_CAPTURE"] = str(Path(self._tmp.name) / "absent-tool")
+    def test_busy_skips_quietly(self):
+        self.assertEqual(self.step({"ok": False, "busy": True, "error": "camera is in use"}, 1000), [])
 
-        ok, frame, msg = cam_mod.default_capture()
-        self.assertFalse(ok)
-        self.assertEqual(frame, b"")
-        # repo checkouts reach the importable module (device absent there);
-        # Lynx without the tool gets the honest not-installed message.
-        self.assertIn("not present", msg)
+    def test_pauses_after_three_failures_and_says_so_once(self):
+        bad = {"ok": False, "busy": False, "error": "capture failed: no frame within 9 seconds"}
+        self.assertEqual(self.step(bad, 1000), [])
+        self.assertEqual(self.step(bad, 1060), [])
+        lines = self.step(bad, 1120)
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(lines[0].startswith("NOOBIA P3 camera unavailable failures=3"))
+        called = []
+        cam.run(state_file=self.state, look=lambda wait_s: called.append(1) or bad, now=1180, boot="b1")
+        self.assertEqual(called, [], "a paused camera is not touched again this boot")
+        # A new boot gets a fresh chance.
+        self.assertTrue(self.step(self.seen(("cat", 0.9)), 2000, boot="b2")[0].startswith("NOOBIA P1"))
+
+    def test_success_resets_the_failure_count(self):
+        bad = {"ok": False, "busy": False, "error": "x"}
+        self.step(bad, 1000)
+        self.step(bad, 1060)
+        self.step(self.seen(("cat", 0.9)), 1120)
+        self.assertEqual(self.step(bad, 1180), [])
+        self.assertEqual(self.step(bad, 1240), [])
+
+    def test_line_feeds_the_templated_pattern(self):
+        sys.path.insert(0, os.environ["NOOBIA_AUTONOMY_DIR"])
+        import ranker
+        import sense
+        line = self.step(self.seen(("laptop", 0.7534), ("person", 0.87), ("cat", 0.45)), 1000)[0]
+        pats = json.loads((HERE.parents[1] / "autonomy" / "patterns-lynx.json").read_text())["store"]
+        pat = next(p for p in pats if p["id"] == "camera-objects")
+        self.assertEqual(ranker.render_message(pat, sense.parse_line(line)),
+                         "With your back camera you see laptop, person, cat.")
 
 
 if __name__ == "__main__":

@@ -114,6 +114,10 @@
 !/tools/camera/*.py
 !/tools/camera/*.initd
 !/tools/camera/*.sh
+!/tools/camera/agent_tool/
+/tools/camera/agent_tool/*
+!/tools/camera/agent_tool/*.json
+!/tools/camera/agent_tool/*.sh
 !/tools/camera/README.md
 !/tools/gnss/
 /tools/gnss/*

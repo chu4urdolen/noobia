@@ -32,6 +32,7 @@ from pathlib import Path
 
 SENSES_ROOT = Path(__file__).resolve().parent.parent
 TOUCH_EVERY_S = 2.0
+CAMERA_EVERY_S = 60.0   # Tom 2026-11-22: one real look a minute
 MOTION_EVERY_S = 1.0   # Tom 2026-11-22: tilt sampled ~1/s, debounced 30 s in the sense
 FAST_SAMPLE_EVERY_S = 10.0
 SAMPLE_EVERY_S = 30.0
@@ -123,6 +124,7 @@ def run_loop(*args, **kwargs) -> int:
             senses[k] = v
     last_touch = 0.0
     last_motion = 0.0
+    last_camera = 0.0
     last_fast = 0.0
     last_sample = 0.0
     while not _stop:
@@ -141,10 +143,14 @@ def run_loop(*args, **kwargs) -> int:
                     call(name, senses[name].run)
             last_fast = now
         if now - last_sample >= SAMPLE_EVERY_S:
-            for name in ("wifi", "power", "nexus", "network", "camera"):
+            for name in ("wifi", "power", "nexus", "network"):
                 if senses.get(name):
                     call(name, senses[name].run)
             last_sample = now
+        if now - last_camera >= CAMERA_EVERY_S:
+            if senses.get("camera"):
+                call("camera", senses["camera"].run)
+            last_camera = now
         time.sleep(0.5)
     return 0
 

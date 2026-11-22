@@ -13,6 +13,59 @@ except (ImportError, ValueError):
 
 logger = logging.getLogger("nexus-detect")
 
+# Raw Bayer frames from Lynx's CAMSV camera (Gwyn, 2026-11-22). Lynx has no
+# numpy/PIL, so she posts the raw frame here; decoding, the 270 degree
+# upright rotation and gray-world white balance reuse the proven C1 code.
+BAYER_SIZES = {(1600, 1200), (3264, 2448)}
+_C1 = None
+
+
+def _c1():
+    """Import lynx_camera_c1_wrapper lazily (it pulls in PIL/numpy)."""
+    global _C1
+    if _C1 is None:
+        import os
+        import sys
+        from pathlib import Path
+        cam = Path(os.environ.get("NOOBIA", "/noobia")) / "lynx" / "tools" / "camera"
+        tools = cam.parent
+        for p in (str(cam), str(tools)):
+            if p not in sys.path:
+                sys.path.insert(0, p)
+        import lynx_camera_c1_wrapper as c1  # noqa: E402
+        _C1 = c1
+    return _C1
+
+
+def detect_bayer(detector, raw: bytes, width: int, height: int) -> tuple[int, dict]:
+    """(HTTP status, body) for one raw RGGB frame. Never an empty success on failure."""
+    import time
+    if (width, height) not in BAYER_SIZES:
+        return 400, {"error": f"unsupported size {width}x{height}; allowed: 1600x1200, 3264x2448"}
+    if len(raw) != width * height:
+        return 400, {"error": f"expected {width * height} bytes for {width}x{height}, got {len(raw)}"}
+    c1 = _c1()
+    t0 = time.monotonic()
+    try:
+        png = c1.lift_bayer_to_png(raw, width=width, height=height)
+        variants = c1.get_detection_frame_variants(png)
+    except Exception as exc:  # undecodable: say so
+        return 422, {"error": f"Bayer decode failed: {type(exc).__name__}: {exc}"}
+    t1 = time.monotonic()
+    best: dict[str, float] = {}
+    for _name, image in variants:
+        for obj in detector.detect_raw(image) or []:
+            label = c1.normalize_coco_label(str(obj.get("label", "unknown")))
+            conf = float(obj.get("confidence", 0.0))
+            if conf > best.get(label, -1.0):
+                best[label] = conf
+    t2 = time.monotonic()
+    objects = [{"label": k, "confidence": round(v, 4)}
+               for k, v in sorted(best.items(), key=lambda kv: -kv[1])]
+    return 200, {"objects": objects, "variants": len(variants),
+                 "model_loaded": bool(getattr(detector, "model_loaded", False)),
+                 "decode_ms": int((t1 - t0) * 1000), "detect_ms": int((t2 - t1) * 1000)}
+
 
 class DetectRequestHandler(BaseHTTPRequestHandler):
     detector: ObjectDetector = ObjectDetector()
@@ -33,7 +86,30 @@ class DetectRequestHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+    def _json(self, code: int, body: dict) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(body).encode("utf-8"))
+
     def do_POST(self):
+        if self.path.startswith("/detect_bayer"):
+            from urllib.parse import parse_qs, urlparse
+            q = parse_qs(urlparse(self.path).query)
+            try:
+                width = int(q.get("w", ["1600"])[0])
+                height = int(q.get("h", ["1200"])[0])
+            except ValueError:
+                self._json(400, {"error": "w and h must be integers"})
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            if length <= 0 or length > 10 * 1024 * 1024:
+                self._json(400, {"error": "invalid content length"})
+                return
+            raw = self.rfile.read(length)
+            code, body = detect_bayer(self.detector, raw, width, height)
+            self._json(code, body)
+            return
         if self.path.startswith("/detect"):
             content_length = int(self.headers.get("Content-Length", 0))
             if content_length <= 0 or content_length > 10 * 1024 * 1024:  # 10 MB limit

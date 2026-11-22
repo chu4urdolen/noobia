@@ -28,12 +28,6 @@ start() {
 }
 
 status() {
-    # Tom 2026-11-22: while the guard switch exists the battery/thermal
-    # watchers are deliberately off (lynx-quiet-watchers); that is not a fault.
-    if [ -e /etc/lynx/power-thermal-guard.disable ]; then
-        einfo "guards off by /etc/lynx/power-thermal-guard.disable"
-        return 0
-    fi
     [ -r "$health_state/pid" ] || return 1
     pid=$(cat "$health_state/pid") || return 1
     case "$pid" in ''|*[!0-9]*) return 1;; esac

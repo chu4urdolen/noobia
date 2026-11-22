@@ -1773,7 +1773,7 @@ static int run(const char *action, unsigned int seconds)
 						}
 					}
 					lit = true;
-					lit_until = monotonic_milliseconds() + 10000U;
+					lit_until = monotonic_milliseconds() + 15000U;
 					printf("touch_wake\n");
 					fflush(stdout);
 				}
@@ -1800,8 +1800,16 @@ static int run(const char *action, unsigned int seconds)
 							printf("hearing_toggled\n");
 							fflush(stdout);
 						} else if (page == PAGE_HOME && y < 2360) {
-							/* Tapped on portrait: purely sensory and tactile */
+							/* Tapped on portrait: trigger tactile tick and emit instant P1 sense */
 							haptic_tick(25);
+							pid_t pid = fork();
+							if (pid == 0) {
+								execl("/usr/bin/python3", "python3",
+								      "/usr/local/lib/noobia/autonomy/sense.py",
+								      "1", "touch", "tap", "dur_ms=100",
+								      "-t", "screen tapped on portrait", (char *)NULL);
+								_exit(0);
+							}
 							printf("portrait_tapped x=%d y=%d\n", x, y);
 							fflush(stdout);
 						} else if (page == PAGE_CONSOLE &&
@@ -1866,8 +1874,16 @@ static int run(const char *action, unsigned int seconds)
 			bool console_refresh = portrait && page == PAGE_CONSOLE && lit &&
 				console_seq != shown_console_sequence;
 			time_t thought_mtime = get_thought_mtime();
-			bool thought_refresh = portrait && page == PAGE_HOME && lit &&
-				thought_mtime != shown_thought_mtime;
+			bool thought_refresh = false;
+			if (portrait && thought_mtime != shown_thought_mtime && thought_mtime > 0) {
+				/* Light up screen for 15 seconds when a thought is displayed */
+				if (!lit) {
+					if (set_brightness(250) >= 0)
+						lit = true;
+				}
+				lit_until = now_ms + 15000U;
+				thought_refresh = true;
+			}
 			int hearing_on = read_hearing_enabled();
 			bool hearing_refresh = portrait && page == PAGE_HOME && lit &&
 				hearing_on != shown_hearing_on;

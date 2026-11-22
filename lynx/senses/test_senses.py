@@ -488,15 +488,18 @@ class TestPowerSense(SensesCase):
 
     def test_thermal_hot_with_rearm(self):
         sf = self.state_file("power")
-        r1, _ = self.run_sample(sf, cap=80, soc=43000)
+        # Tom 2026-11-22: hot at 50 C, re-arm at 45 C.
+        r0, _ = self.run_sample(sf, cap=80, soc=47000)
+        self.assertFalse(any("thermal.hot" in e for e in r0["emitted"]))
+        r1, _ = self.run_sample(sf, cap=80, soc=51000)
         hot = [e for e in r1["emitted"] if "thermal.hot" in e]
         self.assertEqual(len(hot), 1)
-        self.assertIn("soc_mc=43000", hot[0])
-        r2, _ = self.run_sample(sf, cap=80, soc=43000)
+        self.assertIn("soc_mc=51000", hot[0])
+        r2, _ = self.run_sample(sf, cap=80, soc=51000)
         self.assertFalse(any("thermal.hot" in e for e in r2["emitted"]))
-        r3, _ = self.run_sample(sf, cap=80, soc=37000)   # re-arm
+        r3, _ = self.run_sample(sf, cap=80, soc=44000)   # re-arm
         self.assertFalse(any("thermal.hot" in e for e in r3["emitted"]))
-        r4, _ = self.run_sample(sf, cap=80, soc=42500)   # warn again
+        r4, _ = self.run_sample(sf, cap=80, soc=50500)   # warn again
         self.assertEqual(len([e for e in r4["emitted"] if "thermal.hot" in e]), 1)
 
     def test_null_capacity_is_honest_unknown(self):

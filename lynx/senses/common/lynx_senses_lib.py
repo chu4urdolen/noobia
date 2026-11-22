@@ -63,8 +63,8 @@ POWER_CRITICAL_PCT = 15      # at or below: battery.critical (P1)
 POWER_CRITICAL_REARM_PCT = 20
 POWER_LOW_PCT = 30           # at or below: battery.low (P3)
 POWER_LOW_REARM_PCT = 35
-POWER_THERMAL_HOT_mC = 42000  # at or above: thermal.hot (P3)
-POWER_THERMAL_REARM_mC = 38000
+POWER_THERMAL_HOT_mC = 50000  # at or above: thermal.hot (Tom 2026-11-22: 50 C)
+POWER_THERMAL_REARM_mC = 45000
 POWER_CHARGE_MA = 50         # deadband: >= +50 mA charging, <= -50 discharging
 POWER_SAMPLE_EVERY = 15      # one P0 status.sample per this many samples
 

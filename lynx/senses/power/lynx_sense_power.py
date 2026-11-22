@@ -89,6 +89,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
     cap = battery.get("capacity_percent")
     current = battery.get("current_mA_signed")
     soc = (status_data.get("thermal") or {}).get("max_mC")
+    soc_max = soc
     state_name = charging_state(current)
 
     path = state_path("power", state_file)
@@ -157,8 +158,11 @@ def run(dry_run: bool = False, state_file: str | None = None,
             state["thermal_armed"] = False
 
     # Temperature change (Tom, 2026-11-22): checked at most once a minute;
-    # reported when the SoC max differs by >= TEMP_DELTA_C from the last
-    # REPORTED reading (so a slow drift is reported once it adds up).
+    # reported when her BATTERY temperature differs by >= TEMP_DELTA_C from
+    # the last REPORTED reading. The SoC reading spikes for seconds during
+    # every camera look, which made her report "hot" every minute.
+    bat_t = battery.get("temperature_mC")
+    soc = bat_t if isinstance(bat_t, int) and bat_t > 0 else None
     if soc is not None and isinstance(soc, int):
         ref = state.get("temp_ref_mC")
         last_check = int(state.get("temp_check_t", 0))
@@ -179,6 +183,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
                 emitted.append(line)
                 state["temp_ref_mC"] = soc
 
+    soc = soc_max
     if state_name != "unknown":
         state["charging"] = state_name
     if samples % POWER_SAMPLE_EVERY == 0:

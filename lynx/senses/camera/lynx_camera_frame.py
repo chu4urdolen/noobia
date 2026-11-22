@@ -40,6 +40,17 @@ DEVICE = Path(os.environ.get("LYNX_CAMERA_DEVICE", "/dev/video145"))
 DETECT_URL = os.environ.get("NOOBIA_DETECT_BAYER_URL", "http://192.168.100.106:5050/detect_bayer")
 DISABLE = (Path("/etc/lynx/disable-camera-capture"), Path("/etc/noobia/camera.disable"))
 WIDTH, HEIGHT = 1600, 1200          # sensor4 (GC02M1, rear) CAMSV baseline
+# The stock camera firmware the CCU/SCP drivers request at stream-on, as the
+# proven trial stages it (trial_camera_camsv_frame.py FIRMWARE_FILES). Kept
+# on storage; the kernel firmware path points here ONLY during a capture and
+# is always restored to /vendor/firmware.
+FW_DIR = Path(os.environ.get("LYNX_CAMERA_FW", "/usr/local/lib/lynx/camera-fw"))
+FW_FILES = {"lib3a.ccu_dummy": "6f8d51193a28c9279d403bda99e008f12af4f20add5d1154ee7f3523381ffdde",
+            "remoteproc_scp": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"}
+FW_PATH = Path(os.environ.get("LYNX_FIRMWARE_PATH_PARAM", "/sys/module/firmware_class/parameters/path"))
+FW_DEFAULT = "/vendor/firmware"
+V4L2_CTL = os.environ.get("LYNX_V4L2_CTL", "/usr/bin/v4l2-ctl")
+SETTLE_MS = 750
 CAPTURE_TIMEOUT_S = 20.0            # helper waits at most 9 s for the frame
 DETECT_TIMEOUT_S = 20.0
 CAMERA = "back"
@@ -91,19 +102,64 @@ class _Lock:
             self.fh.close()
 
 
+_FW_OK: bool | None = None
+
+
+def firmware_ready() -> str | None:
+    """None if the staged stock firmware is present and intact, else the reason."""
+    global _FW_OK
+    if _FW_OK:
+        return None
+    import hashlib
+    for name, sha in FW_FILES.items():
+        f = FW_DIR / name
+        try:
+            if hashlib.sha256(f.read_bytes()).hexdigest() != sha:
+                return f"camera firmware {f} has the wrong checksum"
+        except OSError:
+            return f"camera firmware {f} missing"
+    _FW_OK = True
+    return None
+
+
 def capture(run=subprocess.run) -> tuple[bytes | None, str]:
     """One raw frame, or (None, honest reason). The frame file never outlives this call."""
     if not DEVICE.exists():
         return None, f"{DEVICE} absent: camera stack not prepared for this boot"
     if not Path(CAPTURE).is_file():
         return None, f"capture helper {CAPTURE} not installed"
+    why = firmware_ready()
+    if why:
+        return None, why
+    try:
+        before = FW_PATH.read_text().strip()
+    except OSError as exc:
+        return None, f"firmware path unreadable: {exc}"
+    if before != FW_DEFAULT:
+        return None, f"unexpected firmware path {before!r}; refusing to capture"
+    try:
+        fmt = run([V4L2_CTL, "-d", str(DEVICE),
+                   f"--set-fmt-video=width={WIDTH},height={HEIGHT},pixelformat=BA81"],
+                  capture_output=True, text=True, timeout=10)
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return None, f"capture format step failed: {type(exc).__name__}"
+    if fmt.returncode != 0:
+        return None, f"capture format not applied: {(fmt.stderr or '')[-120:]}"
     FRAME.unlink(missing_ok=True)
     try:
-        proc = run(["/usr/bin/python3", CAPTURE, "--sensor", "4", "--output", str(FRAME)],
-                   capture_output=True, text=True, timeout=CAPTURE_TIMEOUT_S)
-    except subprocess.TimeoutExpired:
-        FRAME.unlink(missing_ok=True)
-        return None, f"capture helper timed out after {CAPTURE_TIMEOUT_S:.0f} s"
+        FW_PATH.write_text(str(FW_DIR))
+        try:
+            proc = run(["/usr/bin/python3", CAPTURE, "--sensor", "4", "--settle-ms", str(SETTLE_MS),
+                        "--output", str(FRAME)],
+                       capture_output=True, text=True, timeout=CAPTURE_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            FRAME.unlink(missing_ok=True)
+            return None, f"capture helper timed out after {CAPTURE_TIMEOUT_S:.0f} s"
+    finally:
+        try:
+            FW_PATH.write_text(FW_DEFAULT)   # always put the kernel's firmware path back
+        except OSError:
+            pass
     try:
         report = json.loads((proc.stdout or "").strip().splitlines()[-1])
     except (ValueError, IndexError):

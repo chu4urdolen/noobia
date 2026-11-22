@@ -51,7 +51,20 @@ class FrameTest(unittest.TestCase):
         self.dev, self.helper = d / "video145", d / "capture.py"
         self.dev.write_text("")
         self.helper.write_text("")
+        import hashlib
+        fw = d / "fw"
+        fw.mkdir()
+        fw_files = {}
+        for name in ("lib3a.ccu_dummy", "remoteproc_scp"):
+            (fw / name).write_bytes(name.encode())
+            fw_files[name] = hashlib.sha256(name.encode()).hexdigest()
+        self.fwpath = d / "fwpath"
+        self.fwpath.write_text("/vendor/firmware")
+        frame._FW_OK = None
         self.patches = [mock.patch.object(frame, "DEVICE", self.dev),
+                        mock.patch.object(frame, "FW_DIR", fw),
+                        mock.patch.object(frame, "FW_FILES", fw_files),
+                        mock.patch.object(frame, "FW_PATH", self.fwpath),
                         mock.patch.object(frame, "CAPTURE", str(self.helper)),
                         mock.patch.object(frame, "FRAME", d / "look.bayer"),
                         mock.patch.object(frame, "LOCK", d / "camera.lock"),
@@ -66,6 +79,10 @@ class FrameTest(unittest.TestCase):
 
     def writing_run(self, data=RAW, rc=0, report=None):
         def run(argv, **kw):
+            if "--output" not in argv:          # the v4l2-ctl format step
+                run.fmt = argv
+                return Proc(0)
+            run.fw_during = self.fwpath.read_text()
             run.argv = argv
             Path(argv[argv.index("--output") + 1]).write_bytes(data)
             return Proc(rc, report)
@@ -81,6 +98,28 @@ class FrameTest(unittest.TestCase):
         self.assertEqual(len(op.seen.data), 1600 * 1200)
         self.assertIn("w=1600&h=1200", op.seen.full_url)
         self.assertFalse(frame.FRAME.exists(), "raw frame must not outlive the look")
+
+    def test_firmware_path_set_only_during_capture_and_restored(self):
+        run = self.writing_run()
+        frame.look(run=run, opener=opener_for({"objects": []}))
+        self.assertEqual(run.fw_during, str(frame.FW_DIR))
+        self.assertEqual(self.fwpath.read_text(), "/vendor/firmware")
+        self.assertIn("--set-fmt-video=width=1600,height=1200,pixelformat=BA81", run.fmt)
+        self.assertIn("--settle-ms", run.argv)
+        # Restored even when the capture fails.
+        frame.look(run=self.writing_run(rc=1, report={"state": "failed", "error": "x"}),
+                   opener=opener_for({}))
+        self.assertEqual(self.fwpath.read_text(), "/vendor/firmware")
+
+    def test_refuses_with_unexpected_firmware_path_or_bad_firmware(self):
+        self.fwpath.write_text("/somewhere/else")
+        r = frame.look(run=self.writing_run(), opener=opener_for({}))
+        self.assertIn("unexpected firmware path", r["error"])
+        self.fwpath.write_text("/vendor/firmware")
+        (frame.FW_DIR / "remoteproc_scp").write_bytes(b"tampered")
+        frame._FW_OK = None
+        r = frame.look(run=self.writing_run(), opener=opener_for({}))
+        self.assertIn("wrong checksum", r["error"])
 
     def test_no_camera_control_ioctls_requested(self):
         run = self.writing_run()
@@ -102,9 +141,17 @@ class FrameTest(unittest.TestCase):
         self.assertIn("expected 1920000", r["error"])
 
         def slow(argv, **kw):
+            if "--output" not in argv:
+                return Proc(0)
             raise subprocess.TimeoutExpired(argv, 20)
         r = frame.look(run=slow, opener=opener_for({}))
         self.assertIn("timed out", r["error"])
+        self.assertEqual(self.fwpath.read_text(), "/vendor/firmware")
+
+        def hung_fmt(argv, **kw):
+            raise subprocess.TimeoutExpired(argv, 10)
+        r = frame.look(run=hung_fmt, opener=opener_for({}))
+        self.assertIn("format step failed", r["error"])
 
     def test_detector_problems_are_never_an_empty_success(self):
         r = frame.look(run=self.writing_run(), opener=opener_for({"objects": [], "model_loaded": False}))

@@ -85,7 +85,7 @@ def _check_flags(health_ok: object, audio_ready: object,
 
 def classify_retry_policy(snapshot: object, soc_temp_mc: object,
                           health_ok: bool, audio_ready: bool,
-                          sensorhub_ready: bool) -> RetryDecision:
+                          sensorhub_ready: bool, guards_off: bool = False) -> RetryDecision:
     """Classify one Lynx bootstrap retry round.
 
     ``snapshot`` is the parsed battery snapshot mapping
@@ -142,6 +142,8 @@ def classify_retry_policy(snapshot: object, soc_temp_mc: object,
         return _wait("health not ok")
 
     charge = values["capacity_percent"]
+    if guards_off:   # Tom 2026-11-22: charge/temperature limits off by switch
+        return RetryDecision(ATTEMPT_START, "all bootstrap gates pass (guards off by switch)")
     if charge < MIN_CHARGE_PERCENT:
         return _wait(f"charge below {MIN_CHARGE_PERCENT} percent")
 

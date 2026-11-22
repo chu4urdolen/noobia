@@ -43,9 +43,10 @@ b = s["battery"]
 t = s["thermal"]["max_mC"]
 ok = (b["gauge_type"] == 42495 and
       all(value == 0 for value in b["read_errors"].values()) and
-      b["capacity_percent"] is not None and b["capacity_percent"] > 20 and
-      b["temperature_mC"] is not None and 0 < b["temperature_mC"] < 40000 and
-      t is not None and t < 55000 and
+      (__import__("os").path.exists("/etc/lynx/power-thermal-guard.disable") or (
+       b["capacity_percent"] is not None and b["capacity_percent"] > 20 and
+       b["temperature_mC"] is not None and 0 < b["temperature_mC"] < 40000 and
+       t is not None and t < 55000)) and
       s["root_filesystem"]["ext4_errors_count"] == 0)
 if not ok:
     print("display hardware guard failed", file=sys.stderr)

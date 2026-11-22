@@ -96,9 +96,11 @@ def verify_boot_and_firmware():
 
 def health(min_battery=15):
     status = json.loads(run(["/usr/local/bin/lynx-status", "--assert-ready"], timeout=8))
-    if status["issues"] or status["battery"]["capacity_percent"] < min_battery or \
-            status["battery"]["temperature_mC"] >= 40000 or \
-            status["thermal"]["max_mC"] >= 55000:
+    guards_off = Path("/etc/lynx/power-thermal-guard.disable").exists()  # Tom 2026-11-22
+    if status["issues"] or (not guards_off and (
+            status["battery"]["capacity_percent"] < min_battery or
+            status["battery"]["temperature_mC"] >= 40000 or
+            status["thermal"]["max_mC"] >= 55000)):
         raise RuntimeError("battery, thermal, or Alpine health guard failed")
     return status
 

@@ -12,10 +12,13 @@ test "$(sed -n 's/^temperature_error=//p' "$snapshot")" = 0
 capacity=$(sed -n 's/^capacity_percent=//p' "$snapshot")
 temperature=$(sed -n 's/^temperature_millidegrees_celsius=//p' "$snapshot")
 current=$(sed -n 's/^gauge_current_ma_signed=//p' "$snapshot")
+# Tom 2026-11-22: charge and temperature limits are off while /etc/lynx/power-thermal-guard.disable exists.
+if [ ! -e /etc/lynx/power-thermal-guard.disable ]; then
 test "$capacity" -ge 25
 test "$temperature" -lt 35000
 if test "$capacity" -lt 50; then test "$current" -gt 0; fi
 test "$(cat /sys/class/thermal/thermal_zone0/temp)" -lt 45000
+fi
 grep -q '^scp ' /proc/modules
 grep -q '^mtk_tinysys_ipi ' /proc/modules
 test -L /sys/bus/platform/devices/1c400000.scp/driver

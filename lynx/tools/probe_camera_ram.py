@@ -10,6 +10,7 @@ import subprocess
 import time
 
 from lynx_wifi_v19_contact import ssh_command
+from lynx_guard_switch import guards_off  # Tom 2026-11-22: guards off by switch
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = ROOT / "linux-port/artifacts/stock-cph2493-August-eu-ota"
@@ -70,9 +71,9 @@ def main():
         health = json.loads(step("health", "/usr/local/bin/lynx-status --assert-ready"))
         minimum = 25 if health["battery"]["current_mA_signed"] > 0 else 35
         if (health["boot_id"] != identity[0] or health["issues"] or
-                health["battery"]["capacity_percent"] < minimum or
-                health["battery"]["temperature_mC"] >= 35000 or
-                health["thermal"]["max_mC"] >= 45000):
+                (not guards_off() and health["battery"]["capacity_percent"] < minimum) or
+                (not guards_off() and health["battery"]["temperature_mC"] >= 35000) or
+                (not guards_off() and health["thermal"]["max_mC"] >= 45000)):
             raise RuntimeError("health gate failed")
         step("stage_dir", f"mkdir -p {STAGE}; chmod 700 {STAGE}")
         # A separate process can reboot a wedged module probe. Never unload the

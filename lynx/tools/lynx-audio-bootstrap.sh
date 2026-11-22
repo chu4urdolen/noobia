@@ -19,11 +19,14 @@ test "$(field current_error)" = 0
 capacity=$(field capacity_percent)
 temperature=$(field temperature_millidegrees_celsius)
 current=$(field gauge_current_ma_signed)
+# Tom 2026-11-22: charge and temperature limits are off while /etc/lynx/power-thermal-guard.disable exists.
+if [ ! -e /etc/lynx/power-thermal-guard.disable ]; then
 test "$capacity" -ge 25
 test "$temperature" -lt 35000
 if test "$capacity" -lt 50; then test "$current" -gt 0; fi
 soc_temp=$(cat /sys/class/thermal/thermal_zone0/temp)
 test "$soc_temp" -lt 45000
+fi
 
 while read -r name digest file; do
     case "$name" in ''|*[!a-zA-Z0-9_]*) exit 1 ;; esac

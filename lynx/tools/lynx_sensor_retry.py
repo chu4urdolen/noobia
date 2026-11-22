@@ -65,7 +65,8 @@ def probe():
         soc_temp = int(SOC.joinpath('temp').read_text().strip())
         state = command('/usr/local/bin/lynx-status', '--assert-ready', timeout=10)
         healthy = state.returncode == 0 and not json.loads(state.stdout).get('issues')
-        decision = classify_retry_policy(snapshot(), soc_temp, healthy, audio, sensor)
+        decision = classify_retry_policy(snapshot(), soc_temp, healthy, audio, sensor,
+                                         guards_off=Path('/etc/lynx/power-thermal-guard.disable').exists())
         return {'action': decision.action, 'reason': decision.reason,
                 'audio_ready': audio, 'sensorhub_ready': sensor}
     except (OSError, ValueError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:

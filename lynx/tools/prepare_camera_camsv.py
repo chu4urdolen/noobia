@@ -14,6 +14,7 @@ import sys
 import time
 
 from lynx_wifi_v19_contact import ssh_command
+from lynx_guard_switch import guards_off
 
 ROOT = Path(__file__).resolve().parent.parent
 HOST = "192.168.100.107"
@@ -39,10 +40,11 @@ def snapshot():
     health = json.loads(lines[3])
     if health["boot_id"] != lines[0] or health["issues"]:
         raise RuntimeError("Lynx health gate failed")
-    if health["battery"]["capacity_percent"] < 35 or health["battery"]["temperature_mC"] >= 35000:
-        raise RuntimeError("battery gate failed")
-    if health["thermal"]["max_mC"] >= 45000:
-        raise RuntimeError("thermal gate failed")
+    if not guards_off():   # Tom 2026-11-22: off while Lynx's guard switch exists
+        if health["battery"]["capacity_percent"] < 35 or health["battery"]["temperature_mC"] >= 35000:
+            raise RuntimeError("battery gate failed")
+        if health["thermal"]["max_mC"] >= 45000:
+            raise RuntimeError("thermal gate failed")
     modules = remote("cat /proc/modules")
     return {"boot_id": lines[0], "health": health,
             "isp_loaded": "mtk_cam_isp " in modules,

@@ -10,6 +10,7 @@ import sys
 import time
 
 from lynx_wifi_v19_contact import ssh_command
+from lynx_guard_switch import guards_off  # Tom 2026-11-22: guards off by switch
 
 ROOT = Path(__file__).resolve().parent.parent
 STAGE = "/run/lynx/camera-camsv-trial"
@@ -95,9 +96,9 @@ def main():
         if "mtk_cam_isp " not in step("module_before", "cat /proc/modules").stdout.decode():
             raise RuntimeError("sensor-power ISP module is not loaded")
         health = json.loads(step("health_before", "/usr/local/bin/lynx-status --assert-ready").stdout)
-        if (health["issues"] or health["battery"]["capacity_percent"] < 35 or
-                health["battery"]["temperature_mC"] >= 35000 or
-                health["thermal"]["max_mC"] >= 45000):
+        if (health["issues"] or (not guards_off() and health["battery"]["capacity_percent"] < 35) or
+                (not guards_off() and health["battery"]["temperature_mC"] >= 35000) or
+                (not guards_off() and health["thermal"]["max_mC"] >= 45000)):
             raise RuntimeError("health gate failed")
         graph = step("graph_before", "media-ctl -d /dev/media1 -p").stdout.decode()
         seninf = graph.split("entity 27: seninf-1", 1)[1].split("\n- entity ", 1)[0]

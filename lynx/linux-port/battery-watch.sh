@@ -10,7 +10,6 @@ LAST=/run/lynx/battery-last
 STOP_MILLIDEGREES=50000
 
 check_once() {
-    [ -e "$GUARD_SWITCH" ] && { echo GUARD_SWITCH_OFF; return 0; }
     IFS=' ' read -r uptime rest < /proc/uptime
     printf 'sample_uptime_seconds=%s\n' "$uptime" > "$LAST.tmp"
     if ! "$BB" cat "$SOURCE" >> "$LAST.tmp"; then
@@ -32,6 +31,8 @@ check_once() {
     case "$digits" in ''|*[!0-9]*) echo BATTERY_WATCH_INVALID_TEMPERATURE; return 1 ;; esac
     [ "$temp_error" = 0 ] || { echo BATTERY_WATCH_TEMPERATURE_UNAVAILABLE; return 1; }
     echo "BATTERY_WATCH_SAMPLE uptime=$uptime temperature_millidegrees=$temperature"
+    # Guard switch: keep sampling (lynx-health reads the sample), never act.
+    [ -e "$GUARD_SWITCH" ] && { over=0; return 0; }
     if [ "$temperature" -ge "$STOP_MILLIDEGREES" ]; then over=$((over+1)); else over=0; fi
     if [ "$temperature" -ge "$STOP_MILLIDEGREES" ] && [ "$over" -lt "$READS_TO_ACT" ]; then
         echo "BATTERY_WATCH_OVER_LIMIT consecutive=$over of $READS_TO_ACT (no action yet)"

@@ -12,7 +12,6 @@ READY=/run/lynx/thermal-watch.ready
 STOP_MILLIDEGREES=75000
 
 check_once() {
-    [ -e "$GUARD_SWITCH" ] && { echo GUARD_SWITCH_OFF; return 0; }
     if [ ! -e "$READY" ]; then
         echo THERMAL_WATCH_WAITING_FOR_SENSORS
         return 0
@@ -38,6 +37,8 @@ check_once() {
         [ "$value" -lt "$STOP_MILLIDEGREES" ] || hot=1
     done
     echo "THERMAL_WATCH_SAMPLE valid=$count maximum_millidegrees=$maximum"
+    # Guard switch: keep sampling (lynx-health reads the sample), never act.
+    [ -e "$GUARD_SWITCH" ] && { over=0; return 0; }
     if [ "$hot" = 1 ]; then over=$((over+1)); else over=0; fi
     if [ "$hot" = 1 ] && [ "$over" -lt "$READS_TO_ACT" ]; then
         echo "THERMAL_WATCH_OVER_LIMIT consecutive=$over of $READS_TO_ACT (no action yet)"

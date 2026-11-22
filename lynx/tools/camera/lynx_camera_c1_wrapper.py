@@ -105,10 +105,21 @@ def ensure_decodable_image(raw_bytes: bytes, source_hint: str = "") -> bytes:
     except Exception:
         pass
 
-    # Check if raw Bayer payload (1600x1200 sensor4 mode)
-    if len(raw_bytes) == 1600 * 1200 or source_hint.endswith((".bayer", "download_frame.stdout")):
+    # Check if raw Bayer payload (1600x1200 sensor4 mode or 3264x2448 sensor2 mode)
+    if len(raw_bytes) == 1600 * 1200:
         try:
             return lift_bayer_to_png(raw_bytes, width=1600, height=1200)
+        except Exception as exc:
+            raise ValueError(f"failed to decode raw Bayer frame from {source_hint}: {exc}") from exc
+    elif len(raw_bytes) == 3264 * 2448:
+        try:
+            return lift_bayer_to_png(raw_bytes, width=3264, height=2448)
+        except Exception as exc:
+            raise ValueError(f"failed to decode raw Bayer frame from {source_hint}: {exc}") from exc
+    elif source_hint.endswith((".bayer", "download_frame.stdout")):
+        try:
+            width, height = (3264, 2448) if len(raw_bytes) == 3264 * 2448 else (1600, 1200)
+            return lift_bayer_to_png(raw_bytes, width=width, height=height)
         except Exception as exc:
             raise ValueError(f"failed to decode raw Bayer frame from {source_hint}: {exc}") from exc
 
@@ -153,9 +164,11 @@ def find_latest_trial_frame(
     if not root.is_dir():
         raise FileNotFoundError(f"logs root not found: {root}")
 
-    # Glob both camera-camsv-frame-* and legacy camsv-frame-*
+    # Glob camera-camsv-frame-*, camera-wide-frame-*, and legacy camsv-frame-*
     dirs = sorted(
-        list(root.glob("camera-camsv-frame-*")) + list(root.glob("camsv-frame-*")),
+        list(root.glob("camera-camsv-frame-*"))
+        + list(root.glob("camera-wide-frame-*"))
+        + list(root.glob("camsv-frame-*")),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
@@ -196,7 +209,11 @@ def find_latest_trial_frame(
             continue
 
         # Look for valid frame file within candidate dir
-        for cand in ("sensor4-preview-lifted.png", "sensor4-lifted.png", "sensor4.bayer", "download_frame.stdout"):
+        for cand in (
+            "sensor4-preview-lifted.png", "sensor4-lifted.png", "sensor4.bayer",
+            "sensor2-preview-lifted.png", "sensor2-lifted.png", "sensor2.bayer",
+            "download_frame.stdout",
+        ):
             f = d / cand
             if f.is_file() and f.stat().st_size > 0:
                 return f
@@ -362,18 +379,30 @@ def run_c1_wrapper(
     do_emit: bool = False,
     detect_fn=None,
     emit_remote_fn=None,
+    lens: str | None = None,
 ) -> dict:
     """Execute C1 detection and emit canonical sense lines onto Lynx."""
+    if lens is None:
+        src = frame_source.lower()
+        if "sensor2" in src or "wide" in src:
+            lens = "wide"
+        elif "sensor4" in src or "macro" in src:
+            lens = "macro"
+
     objects = detect_objects(frame_bytes, detect_url=detect_url, timeout_s=timeout_s, detect_fn=detect_fn)
 
     lines: list[str] = []
     # If no objects detected, produce one P0 informational observation
     if not objects:
-        text = "frame analyzed, no objects recognized"
+        text = f"[{lens}] frame analyzed, no objects recognized" if lens else "frame analyzed, no objects recognized"
+        fields = {"objects": "0"}
+        if lens:
+            fields["lens"] = lens
         if format_line:
-            line = format_line(0, "camera", "frame.analyzed", fields={"objects": "0"}, text=text)
+            line = format_line(0, "camera", "frame.analyzed", fields=fields, text=text)
         else:
-            line = f"NOOBIA P0 camera frame.analyzed objects=0 | {text}"
+            fields_str = " ".join(f"{k}={v}" for k, v in fields.items())
+            line = f"NOOBIA P0 camera frame.analyzed {fields_str} | {text}"
         lines.append(line)
         if do_emit:
             if emit_remote_fn:
@@ -386,11 +415,15 @@ def run_c1_wrapper(
             norm_label = normalize_coco_label(label)
             conf = float(obj.get("confidence", 0.0))
             conf_str = f"{conf:.2f}"
-            text = f"{label} seen by camera"
+            text = f"[{lens}] {label} seen by camera" if lens else f"{label} seen by camera"
+            fields = {"label": norm_label, "conf": conf_str}
+            if lens:
+                fields["lens"] = lens
             if format_line:
-                line = format_line(1, "camera", "object.seen", fields={"label": norm_label, "conf": conf_str}, text=text)
+                line = format_line(1, "camera", "object.seen", fields=fields, text=text)
             else:
-                line = f"NOOBIA P1 camera object.seen label={norm_label} conf={conf_str} | {text}"
+                fields_str = " ".join(f"{k}={v}" for k, v in fields.items())
+                line = f"NOOBIA P1 camera object.seen {fields_str} | {text}"
             lines.append(line)
 
             if do_emit:
@@ -407,6 +440,7 @@ def run_c1_wrapper(
         "objects": objects,
         "emitted_lines": lines,
         "emitted": bool(do_emit),
+        "lens": lens,
     }
 
 
@@ -419,6 +453,7 @@ def main(argv=None) -> int:
     parser.add_argument("--detect-url", default=DEFAULT_DETECT_URL, help=f"Nexus detect service URL (default: {DEFAULT_DETECT_URL})")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_S, help="Detection timeout in seconds")
     parser.add_argument("--emit", action="store_true", help="Emit formatted sense line to Lynx syslog (noobia-sense)")
+    parser.add_argument("--lens", choices=["macro", "wide"], default=None, help="Camera lens (macro or wide)")
     parser.add_argument("--logs-root", type=Path, default=REPO / "lynx" / "logs", help="Root logs directory for Stage B trials")
 
     args = parser.parse_args(argv)
@@ -444,6 +479,7 @@ def main(argv=None) -> int:
             detect_url=args.detect_url,
             timeout_s=args.timeout,
             do_emit=args.emit,
+            lens=args.lens,
         )
         print(json.dumps(res, indent=2))
         return 0

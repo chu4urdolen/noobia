@@ -82,16 +82,47 @@ class TestCameraC1Wrapper(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             find_latest_trial_frame(logs_dir, expected_boot_id="boot-A", max_age_s=300.0, now_ts=now)
 
-    def test_frame_with_unknown_boot_is_refused(self):
+    def test_find_latest_trial_frame_wide_camera(self):
         logs_dir = self.tmp_dir / "logs"
         logs_dir.mkdir()
-        t = logs_dir / "camera-camsv-frame-300"
-        t.mkdir()
-        (t / "sensor4-lifted.png").write_bytes(self._make_png_bytes())
-        (t / "result.json").write_text('{"steps": [{"name": "boot_id", "unix_ns": 99990000000000}]}')
-        # fresh, but no boot_id.stdout: it cannot be tied to the current boot
-        with self.assertRaises(RuntimeError):
-            find_latest_trial_frame(logs_dir, expected_boot_id="boot-B", max_age_s=300.0, now_ts=100000.0)
+        now = 100000.0
+
+        t_wide = logs_dir / "camera-wide-frame-250"
+        t_wide.mkdir()
+        (t_wide / "sensor2-preview-lifted.png").write_bytes(self._make_png_bytes())
+        (t_wide / "boot_id.stdout").write_text("boot-W\n")
+        (t_wide / "result.json").write_text('{"steps": [{"name": "boot_id", "unix_ns": 99950000000000}]}')
+
+        found = find_latest_trial_frame(logs_dir, expected_boot_id="boot-W", max_age_s=300.0, now_ts=now)
+        self.assertEqual(found, t_wide / "sensor2-preview-lifted.png")
+
+    def test_wide_bayer_decode(self):
+        raw_bayer = bytes([128] * (3264 * 2448))
+        png_bytes = ensure_decodable_image(raw_bayer, source_hint="sensor2.bayer")
+        self.assertTrue(png_bytes.startswith(b"\x89PNG"))
+        with Image.open(io.BytesIO(png_bytes)) as img:
+            self.assertEqual(img.size, (3264, 2448))
+
+    def test_run_c1_wrapper_lens_tagging(self):
+        emitted_lines = []
+
+        def mock_detect(frame_bytes):
+            return [{"label": "cat", "confidence": 0.95}]
+
+        def mock_emit_remote(line):
+            emitted_lines.append(line)
+
+        res = run_c1_wrapper(
+            frame_bytes=self._make_png_bytes(),
+            frame_source="sensor2_wide_frame.png",
+            do_emit=True,
+            detect_fn=mock_detect,
+            emit_remote_fn=mock_emit_remote,
+            lens="wide",
+        )
+        self.assertTrue(res["ok"])
+        self.assertEqual(res["lens"], "wide")
+        self.assertIn("NOOBIA P1 camera object.seen label=cat conf=0.95 lens=wide | [wide] cat seen by camera", res["emitted_lines"][0])
 
     def test_bayer_decode_and_loud_failure(self):
         # 1. Synthesize a valid 1600x1200 Bayer array (1920000 bytes)

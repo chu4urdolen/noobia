@@ -404,7 +404,11 @@ def apply_perception_floor(lines: list, decision: dict) -> dict:
             if fields:
                 match_dict["fields"] = {k: str(v) for k, v in fields.items()}
             if p["sense"] == "camera":
-                msg = f"You see a {label}."
+                lens = fields.get("lens") if fields else None
+                if lens:
+                    msg = f"You see a {label} through your {lens} camera."
+                else:
+                    msg = f"You see a {label}."
             elif p["sense"] == "touch":
                 msg = f"Someone is touching or holding your screen ({label})."
             else:

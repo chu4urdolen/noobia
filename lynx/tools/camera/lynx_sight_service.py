@@ -32,10 +32,12 @@ class SightService:
         interval_s: float = 5.0,
         max_iterations: int = 0,
         detect_url: str = "http://127.0.0.1:5050/detect",
+        mode: str = "alternate",
     ):
         self.interval_s = max(1.0, float(interval_s))
         self.max_iterations = int(max_iterations)
         self.detect_url = detect_url
+        self.mode = mode
         self.running = True
 
     def stop(self, signum=None, frame=None):
@@ -105,11 +107,19 @@ class SightService:
                     time.sleep(25)
                     continue
 
-                # 2. Capture frame
+                # 2. Select camera and capture frame
+                if self.mode == "alternate":
+                    active_lens = "macro" if iteration % 2 == 1 else "wide"
+                elif self.mode == "wide":
+                    active_lens = "wide"
+                else:
+                    active_lens = "macro"
+
+                script_name = "trial_camera_camsv_frame.py" if active_lens == "macro" else "trial_camera_wide_frame.py"
                 t0 = time.time()
                 capture_cmd = [
                     sys.executable,
-                    str(LYNX_TOOLS / "trial_camera_camsv_frame.py"),
+                    str(LYNX_TOOLS / script_name),
                     "--attended",
                     "--boot-id",
                     boot_id,
@@ -119,7 +129,7 @@ class SightService:
 
                 if cap_res.returncode != 0:
                     err_msg = cap_res.stderr.strip() or cap_res.stdout.strip()
-                    self.log(f"frame #{iteration} capture failed ({dt_cap:.1f}s): {err_msg[:120]}")
+                    self.log(f"frame #{iteration} [{active_lens}] capture failed ({dt_cap:.1f}s): {err_msg[:120]}")
                     time.sleep(5)
                     continue
 
@@ -130,6 +140,8 @@ class SightService:
                     "--latest-trial",
                     "--boot-id",
                     boot_id,
+                    "--lens",
+                    active_lens,
                     "--emit",
                     "--detect-url",
                     self.detect_url,
@@ -141,14 +153,14 @@ class SightService:
                         objs = c1_out.get("objects", [])
                         labels = [f"{o.get('label')}:{o.get('confidence'):.2f}" for o in objs]
                         self.log(
-                            f"frame #{iteration} ok ({dt_cap:.1f}s) | "
+                            f"frame #{iteration} [{active_lens}] ok ({dt_cap:.1f}s) | "
                             f"detected: {labels or 'none'} | "
                             f"batt: {battery_pct}% | temp: {temp_c:.1f}°C"
                         )
                     except Exception:
-                        self.log(f"frame #{iteration} ok ({dt_cap:.1f}s) | parsed stdout: {det_res.stdout.strip()[:80]}")
+                        self.log(f"frame #{iteration} [{active_lens}] ok ({dt_cap:.1f}s) | parsed stdout: {det_res.stdout.strip()[:80]}")
                 else:
-                    self.log(f"frame #{iteration} detect error: {det_res.stderr.strip()[:100]}")
+                    self.log(f"frame #{iteration} [{active_lens}] detect error: {det_res.stderr.strip()[:100]}")
 
                 # 4. Settle interval
                 effective_interval = max(self.interval_s, 25.0) if current_mA < 0 else self.interval_s
@@ -187,6 +199,7 @@ def main():
     ap = argparse.ArgumentParser(description="Autonomous sight daemon for Lynx")
     ap.add_argument("--interval", type=float, default=5.0, help="Settle interval in seconds between captures")
     ap.add_argument("--max-iterations", type=int, default=0, help="Max iterations (0 = run forever)")
+    ap.add_argument("--mode", choices=["alternate", "macro", "wide"], default="alternate", help="Camera mode: alternate, macro, or wide")
     ap.add_argument("--stop", action="store_true", help="Stop running sight service")
     args = ap.parse_args()
 
@@ -195,7 +208,7 @@ def main():
         return 0
 
     stop_existing()
-    svc = SightService(interval_s=args.interval, max_iterations=args.max_iterations)
+    svc = SightService(interval_s=args.interval, max_iterations=args.max_iterations, mode=args.mode)
     svc.run()
     return 0
 

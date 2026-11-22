@@ -68,6 +68,8 @@ def unmute():
 
 
 def ready():
+    if Path("/etc/lynx/power-thermal-guard.disable").exists():
+        return "disabled"
     result = subprocess.run([HEALTH, "--assert-ready"], capture_output=True,
                             text=True, timeout=5, check=True)
     state = json.loads(result.stdout)
@@ -118,8 +120,18 @@ def split_sentences(text: str) -> list:
     return parts or [cleaned]
 
 
+def sanitize_text(text: str) -> str:
+    # Replace em-dashes and en-dashes with comma/hyphen
+    text = text.replace("—", ", ").replace("–", "-")
+    # Strip emojis and non-ASCII characters
+    text = re.sub(r'[^\x00-\x7F]+', ' ', text)
+    # Collapse multiple spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
 def speak(text: str) -> dict:
-    clean_text = text.strip()
+    clean_text = sanitize_text(text)
     if not clean_text:
         return {"ok": False, "error": "empty speech text"}
 

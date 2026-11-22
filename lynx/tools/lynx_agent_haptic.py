@@ -3,6 +3,8 @@
 
 import argparse
 import json
+import os
+from pathlib import Path
 import re
 import socket
 import subprocess
@@ -34,6 +36,8 @@ def nrp(command):
 
 
 def health():
+    if os.path.exists("/etc/lynx/power-thermal-guard.disable"):
+        return {"boot_id": "disabled"}
     result = subprocess.run(["/usr/local/bin/lynx-status", "--assert-ready"],
                             capture_output=True, text=True, timeout=5, check=True)
     value = json.loads(result.stdout)

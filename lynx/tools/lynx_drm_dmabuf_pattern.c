@@ -1235,28 +1235,55 @@ static void paint_chat(uint32_t *pixels)
 	rectangle(pixels, 75, 300, 1090, 5, teal);
 	draw_text(pixels, "HER THOUGHTS & YOUR WORDS", 85, 325, 4, teal);
 
-	struct { char text[101]; uint32_t color; } rows[128];
+	struct { char text[64]; uint32_t color; } rows[256];
 	unsigned int count = 0;
 	FILE *stream = fopen(THOUGHT_FILE, "r");
 	if (stream) {
-		char line[256];
+		char line[512];
 		while (fgets(line, sizeof(line), stream)) {
 			char *msg = line;
 			while (*msg == ' ' || *msg == '\t') msg++;
 			if (!*msg || *msg == '\n' || *msg == '\r')
 				continue;
 			msg[strcspn(msg, "\r\n")] = 0;
-			unsigned int slot = count < 128 ? count : 127;
-			if (count >= 128)
-				memmove(rows, rows + 1, sizeof(rows[0]) * 127);
+
 			uint32_t col = white;
 			if (!strncmp(msg, "Noob:", 5) || !strncmp(msg, "User:", 5))
 				col = teal;
 			else if (!strncmp(msg, "*", 1))
 				col = amber;
-			rows[slot].color = col;
-			snprintf(rows[slot].text, sizeof(rows[slot].text), "%s", msg);
-			count++;
+
+			/* Word wrap into rows of up to 44 characters */
+			const int max_chars = 44;
+			char *p = msg;
+			size_t rem = strlen(p);
+			bool first_line = true;
+			while (rem > 0 && count < 256) {
+				while (*p == ' ') { p++; rem--; }
+				if (rem == 0) break;
+
+				int split = (int)rem <= max_chars ? (int)rem : max_chars;
+				if (split < (int)rem) {
+					int s = split;
+					while (s > 0 && p[s] != ' ') s--;
+					if (s > 0) split = s;
+				}
+
+				unsigned int slot = count < 256 ? count : 255;
+				if (count >= 256)
+					memmove(rows, rows + 1, sizeof(rows[0]) * 255);
+
+				rows[slot].color = col;
+				if (!first_line)
+					snprintf(rows[slot].text, sizeof(rows[slot].text), "  %.*s", split > 42 ? 42 : split, p);
+				else
+					snprintf(rows[slot].text, sizeof(rows[slot].text), "%.*s", split, p);
+
+				first_line = false;
+				count++;
+				p += split;
+				rem -= (size_t)split;
+			}
 		}
 		fclose(stream);
 	}
@@ -1265,8 +1292,8 @@ static void paint_chat(uint32_t *pixels)
 		rows[0].color = teal;
 		count = 1;
 	}
-	if (count > 128)
-		count = 128;
+	if (count > 256)
+		count = 256;
 	chat_history_count = count;
 
 	unsigned int visible = count > 14 ? 14 : count;
@@ -1276,9 +1303,7 @@ static void paint_chat(uint32_t *pixels)
 	unsigned int first = maximum - chat_history_offset;
 	for (unsigned int i = 0; i < visible; i++) {
 		unsigned int row = first + i;
-		char text[46] = { 0 };
-		snprintf(text, sizeof(text), "%.*s", 45, rows[row].text);
-		draw_text(pixels, text, 75, 390 + i * 62, 4, rows[row].color);
+		draw_text(pixels, rows[row].text, 75, 390 + i * 62, 4, rows[row].color);
 	}
 
 	/* Vertical scrollbar on right: x=1185, y=390, h=960 */

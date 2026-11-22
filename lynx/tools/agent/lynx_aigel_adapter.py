@@ -54,7 +54,9 @@ PREAMBLE = (
     "own way: express yourself with at least one of your tools - an image, a "
     "sound, your voice, the flashlight, a buzz - whatever fits how you feel, "
     "and say one short sentence. Keep physical actions brief and bounded, and "
-    "do not repeat an action you just took for the same thing."
+    "do not repeat an action you just took for the same thing. "
+    "Write and speak in plain ASCII text only: do not use emojis (no smileys or symbols like hearts or waving hands) "
+    "and do not use em-dashes or special punctuation, because the speech synthesizer reads them aloud and the display font cannot render them."
 )
 WHO = {"ranker": "your senses (a known pattern)", "aigel": "Aigel, your angel"}
 

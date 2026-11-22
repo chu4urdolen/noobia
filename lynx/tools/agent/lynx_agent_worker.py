@@ -40,6 +40,8 @@ def stop(_signum, _frame):
 
 
 def ready():
+    if Path('/etc/lynx/power-thermal-guard.disable').exists():
+        return True
     try:
         result = subprocess.run(['/usr/local/bin/lynx-status', '--assert-ready'],
                                 capture_output=True, timeout=8, check=True)

@@ -19,3 +19,6 @@
 !/docs/SENSOR-HARDWARE-RESULT.json
 !/docs/CPU-HARDWARE-RESULT.json
 !/docs/BATTERY-HARDWARE-RESULT.json
+!/quiet-watchers/
+/quiet-watchers/*
+!/quiet-watchers/*.initd

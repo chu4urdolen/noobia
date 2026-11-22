@@ -56,6 +56,125 @@ def _pattern_matches(pattern: dict, line: dict) -> bool:
     return True
 
 
+# --------------------------------------------------------------------------
+# Templated messages (Tom, 2026-11-22)
+#
+# A pattern may carry a ``template`` instead of a fixed ``message`` text.
+# Placeholders are filled from what the line says:
+#   {name}   a named group of the pattern's ``regex``, or a key=value field
+#   {name*}  every value the ``each`` item-regex captured for group ``name``,
+#            de-duplicated in order and joined with ", " (or each["join"])
+#
+# ``each`` handles "an unknown number of things" without the dangerous
+# nested quantifier ``((\w+)\(...\)/?)+`` (which Python could not capture
+# repeatedly anyway: a repeated group keeps only its last match). Instead
+# the item regex is applied in a bounded while() loop over one region:
+#   "each": {"regex": "(?P<label>[a-z_]+)\\((?P<conf>[0-9.]+)\\)",
+#            "group": "items"}        # optional: a named group of ``regex``;
+#                                     # omitted -> the line's free text
+#
+# Line:     NOOBIA P1 camera objects.seen n=3 | laptop(0.7534)/person(0.873)/cat(0.45)
+# Template: You see {label*}.
+# Message:  You see laptop, person, cat.
+# --------------------------------------------------------------------------
+TEMPLATE_RE = re.compile(r"\{([a-z_][a-z0-9_]*)(\*?)\}")
+MAX_EACH_ITEMS = 32
+MAX_VALUE_CHARS = 64
+MAX_MESSAGE_CHARS = 400
+
+
+def _clean_value(value: str) -> str:
+    """A captured value as safe, short, printable ASCII for a sentence."""
+    text = "".join(ch for ch in str(value) if 32 <= ord(ch) < 127)
+    return text.replace("_", " ").strip()[:MAX_VALUE_CHARS]
+
+
+def extract_captures(pattern: dict, line: dict) -> tuple[dict[str, str], dict[str, list[str]]]:
+    """Return (single values, repeated item lists) captured from one line."""
+    values: dict[str, str] = {k: str(v) for k, v in (line.get("fields") or {}).items()}
+    lists: dict[str, list[str]] = {}
+    regex = pattern.get("regex")
+    if regex:
+        m = re.search(regex, line.get("raw", ""))
+        if m:
+            values.update({k: v for k, v in m.groupdict().items() if v is not None})
+    each = pattern.get("each")
+    if isinstance(each, dict) and each.get("regex"):
+        group = each.get("group")
+        region = values.get(group, "") if group else line.get("text", "")
+        item_re = re.compile(each["regex"])
+        pos, count = 0, 0
+        while pos <= len(region) and count < MAX_EACH_ITEMS:
+            im = item_re.search(region, pos)
+            if im is None:
+                break
+            for k, v in im.groupdict().items():
+                if v is not None:
+                    lists.setdefault(k, []).append(v)
+            # Always advance, even on an (invalid) zero-width match.
+            pos = im.end() if im.end() > im.start() else im.end() + 1
+            count += 1
+    return values, lists
+
+
+def render_message(pattern: dict, line: dict) -> str:
+    """The sentence for a matched line: the filled template, or the fixed message.
+
+    A template whose placeholders cannot all be filled falls back to the
+    pattern's fixed ``message`` so a strange line never yields a broken
+    sentence like "You see ."."""
+    text, complete = fill_template(pattern, line)
+    return text if complete else pattern.get("message", "")
+
+
+def fill_template(pattern: dict, line: dict) -> tuple[str, bool]:
+    """(filled template, every placeholder was filled). No template -> (message, True)."""
+    template = pattern.get("template")
+    if not template:
+        return pattern.get("message", ""), True
+    values, lists = extract_captures(pattern, line)
+    joiner = (pattern.get("each") or {}).get("join", ", ")
+    missing = False
+
+    def fill(m: re.Match) -> str:
+        nonlocal missing
+        name, star = m.group(1), m.group(2)
+        if star:
+            seen: list[str] = []
+            for v in lists.get(name, []):
+                cv = _clean_value(v)
+                if cv and cv not in seen:
+                    seen.append(cv)
+            if not seen:
+                missing = True
+                return ""
+            return joiner.join(seen)
+        if name in values and _clean_value(values[name]):
+            return _clean_value(values[name])
+        if lists.get(name):
+            return _clean_value(lists[name][0])
+        missing = True
+        return ""
+
+    text = TEMPLATE_RE.sub(fill, template)
+    return text[:MAX_MESSAGE_CHARS], not missing
+
+
+def _check_regex(regex: Any, what: str) -> re.Pattern:
+    if not isinstance(regex, str):
+        raise ValueError(f"{what} must be a string")
+    if len(regex) > 200:
+        raise ValueError(f"{what} exceeds 200 characters: {len(regex)}")
+    if BACKREF_RE.search(regex):
+        raise ValueError(f"back-references are not permitted in {what}: {regex}")
+    if NESTED_QUANT_RE.search(regex):
+        raise ValueError(f"nested quantifiers are not permitted in {what}: {regex}")
+    try:
+        return re.compile(regex)
+    except re.error as e:
+        raise ValueError(f"invalid {what}: {e}") from e
+
+
 def validate_pattern(pattern: dict, corpus: list[str]) -> None:
     """Validate structured pattern and its regex/examples against corpus. Raises ValueError on failure."""
     if not isinstance(pattern, dict):
@@ -90,25 +209,35 @@ def validate_pattern(pattern: dict, corpus: list[str]) -> None:
 
     regex = pattern.get("regex")
     if regex is not None:
-        if not isinstance(regex, str):
-            raise ValueError("regex must be a string")
-        if len(regex) > 200:
-            raise ValueError(f"regex exceeds 200 characters: {len(regex)}")
         if not must_not:
             raise ValueError("advanced regex requires at least one must_not example")
-        if BACKREF_RE.search(regex):
-            raise ValueError(f"back-references are not permitted in pattern regex: {regex}")
-        if NESTED_QUANT_RE.search(regex):
-            raise ValueError(f"nested quantifiers are not permitted in pattern regex: {regex}")
-
-        try:
-            compiled = re.compile(regex)
-        except re.error as e:
-            raise ValueError(f"invalid regex: {e}") from e
-
+        compiled = _check_regex(regex, "pattern regex")
         for c_line in corpus:
             if compiled.search(c_line):
                 raise ValueError(f"regex matches baseline corpus line: {c_line}")
+
+    each = pattern.get("each")
+    if each is not None:
+        if not isinstance(each, dict) or not each.get("regex"):
+            raise ValueError("each must be an object with a 'regex'")
+        item_re = _check_regex(each["regex"], "each regex")
+        if item_re.search("") is not None:
+            raise ValueError("each regex must not match the empty string")
+        if not item_re.groupindex:
+            raise ValueError("each regex needs at least one named group (?P<name>...)")
+        group = each.get("group")
+        if group is not None and (not regex or group not in re.compile(regex).groupindex):
+            raise ValueError(f"each group '{group}' is not a named group of the pattern regex")
+
+    template = pattern.get("template")
+    if template is not None:
+        if not isinstance(template, str) or not template.strip() or len(template) > 300:
+            raise ValueError("template must be a non-empty string of at most 300 characters")
+        # Every must example must fill the template completely.
+        for line_str in must:
+            parsed = parse_line(line_str)
+            if parsed and not fill_template(pattern, parsed)[1]:
+                raise ValueError(f"template could not be filled from 'must' example: {line_str}")
 
     # Verify against must examples
     for line_str in must:
@@ -247,6 +376,7 @@ class Ranker:
         explained = []
         unexplained = []
         messages = []
+        deliveries = []  # (rendered text, pattern id), in delivery order
         delivered_this_batch = set()
 
         for line in lines:
@@ -264,7 +394,9 @@ class Ranker:
                             last_deliv = self._last_delivery.get(pid)
                             if pid not in delivered_this_batch:
                                 if last_deliv is None or (now - last_deliv >= cooldown):
-                                    messages.append(pat["message"])
+                                    text = render_message(pat, line)
+                                    messages.append(text)
+                                    deliveries.append((text, pid))
                                     self._last_delivery[pid] = now
                                     delivered_this_batch.add(pid)
                     break
@@ -281,4 +413,5 @@ class Ranker:
             "explained": explained,
             "unexplained": unexplained,
             "messages": messages,
+            "deliveries": deliveries,
         }

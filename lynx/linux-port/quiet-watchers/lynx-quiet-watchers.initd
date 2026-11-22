@@ -1,0 +1,72 @@
+#!/sbin/openrc-run
+# Lynx's battery/thermal watchers, made glitch-proof (Gwyn, 2026-11-22, for Tom).
+#
+# The boot image starts four watchers from RAM (/run/lynx). Their old copies
+# power Lynx off on one bad reading or 3 failed health checks, and a dead
+# watcher makes `rc-service lynx-health status` fail, which
+# /usr/libexec/lynx-maintenance-watch.sh used to answer with a poweroff.
+# That chain switched Lynx off twice on 2026-11-22.
+#
+# While /etc/lynx/power-thermal-guard.disable exists (Tom: guards OFF):
+#   - the maintenance watcher (patched on storage) skips its safety check;
+#   - this service STOPS the RAM watchers: health supervisor first, so
+#     nothing reacts to the others going away. Nothing is restarted.
+# Without the switch:
+#   - each watcher is replaced by the storage copy that acts only after 10
+#     consecutive bad readings (and the supervisor after 10 failed checks),
+#     restarted with the pidfiles lynx-health checks.
+#
+# Source: /noobia/lynx/linux-port/{thermal-watch,battery-watch,
+#   thermal-cooling-watch,lynx-health-supervisor,lynx-maintenance-watch}.sh
+# Rollback: rc-update del lynx-quiet-watchers default
+description="Glitch-proof Lynx watchers; off while the guard switch exists"
+SRC=/usr/libexec/lynx/quiet-watchers
+SWITCH=/etc/lynx/power-thermal-guard.disable
+MAINT=/usr/libexec/lynx-maintenance-watch.sh
+
+depend() {
+    after lynx-health lynx-battery-reserve lynx-maintenance
+}
+
+kill_named() {
+    for p in $(pgrep -f "sh /run/lynx/$1"); do kill "$p" 2>/dev/null; done
+}
+
+start_one() {
+    name=$1; args=$2; log=$3; pidfile=$4
+    [ -f "$SRC/$name" ] || { eerror "$SRC/$name missing"; return 1; }
+    kill_named "$name"
+    sleep 1
+    cp "$SRC/$name" "/run/lynx/$name" && chmod 700 "/run/lynx/$name" || return 1
+    mkdir -p "$(dirname "$pidfile")"
+    start-stop-daemon -S -b -m -p "$pidfile" -1 "$log" -2 "$log" \
+        -x /bin/busybox -- sh "/run/lynx/$name" $args
+}
+
+start() {
+    # Never touch a watcher while the maintenance watcher could still answer
+    # a failed health check with a poweroff.
+    if ! grep -q 'SAFETY_FAILS_TO_ACT' "$MAINT"; then
+        eerror "$MAINT is not the glitch-proof version; leaving watchers alone"
+        return 1
+    fi
+    if [ -e "$SWITCH" ]; then
+        ebegin "Guard switch present: stopping RAM battery/thermal watchers"
+        kill_named lynx-health-supervisor.sh
+        sleep 1
+        kill_named thermal-watch.sh
+        kill_named battery-watch.sh
+        einfo "thermal-cooling-watch (soft throttle only) left running"
+        eend 0
+        return 0
+    fi
+    ebegin "Installing glitch-proof watchers (10 consecutive readings)"
+    kill_named lynx-health-supervisor.sh
+    rm -rf /run/lynx/health-supervisor
+    rc=0
+    start_one thermal-watch.sh "" /run/lynx/thermal-watch.log /run/lynx/thermal-watch.pid || rc=1
+    start_one battery-watch.sh "" /run/lynx/battery-watch.log /run/lynx/battery-watch.pid || rc=1
+    sleep 2
+    start_one lynx-health-supervisor.sh "--watch" /run/lynx/health-supervisor.log /run/lynx/health-supervisor.pid || rc=1
+    eend $rc
+}

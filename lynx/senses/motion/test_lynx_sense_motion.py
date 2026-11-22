@@ -20,37 +20,83 @@ class TestLynxSenseMotion(unittest.TestCase):
         self.assertEqual(motion.classify_orientation(9800, 200, 500), "landscape_left")
         self.assertEqual(motion.classify_orientation(-9800, 200, 500), "landscape_right")
 
-    def test_motion_run_transition_pickup(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            state_file = str(Path(tmpdir) / "state.json")
+    def test_tilt_degrees(self):
+        self.assertAlmostEqual(motion.tilt_degrees(0, 0, 9800), 0.0, places=3)
+        self.assertAlmostEqual(motion.tilt_degrees(0, 9800, 0), 90.0, places=3)
+        self.assertAlmostEqual(motion.tilt_degrees(0, 6930, 6930), 45.0, places=1)
+        self.assertAlmostEqual(motion.tilt_degrees(0, 0, -9800), 0.0, places=3)  # face down is flat
 
-            # First sample: flat_up (baseline, no emission)
-            res1, code1 = motion.run(
-                dry_run=True,
-                state_file=state_file,
-                reader=lambda: {"raw": [0, 0, 9800]},
-                now=1000,
-            )
-            self.assertEqual(code1, 0)
-            self.assertEqual(res1["emitted"], [])
-            self.assertEqual(res1["orientation"], "flat_up")
 
-            # Save state explicitly since dry_run was True
-            motion.save_state(Path(state_file), {"samples": 1, "orientation": "flat_up"})
+class TestPositionDebounce(unittest.TestCase):
+    FLAT, UP = [0, 0, 9800], [0, 9800, 300]
 
-            # Second sample: picked up into portrait -> P1 pickup
-            res2, code2 = motion.run(
-                dry_run=True,
-                state_file=state_file,
-                reader=lambda: {"raw": [0, 9800, 200]},
-                now=1005,
-            )
-            self.assertEqual(code2, 0)
-            self.assertEqual(len(res2["emitted"]), 1)
-            line = res2["emitted"][0]
-            self.assertTrue(line.startswith("NOOBIA P1 motion pickup"))
-            self.assertIn("to=portrait", line)
-            self.assertIn("from=flat_up", line)
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.sf = str(Path(self.tmp.name) / "state.json")
+        self._orig_save = motion.save_state
+        self.emitted = []
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def step(self, raw, now):
+        # Not dry: state is saved; emit_line is stubbed so nothing reaches syslog.
+        orig = motion.emit_line
+        def fake_emit(sense, p, s, event, fields=None, text="", dry_run=False):
+            line = f"NOOBIA P{p} {s} {event} " + " ".join(f"{k}={v}" for k, v in (fields or {}).items())
+            return line
+        motion.emit_line = fake_emit
+        try:
+            res, code = motion.run(dry_run=False, state_file=self.sf,
+                                   reader=lambda: {"raw": raw}, now=now)
+        finally:
+            motion.emit_line = orig
+        self.assertEqual(code, 0)
+        lines = [l for l in res["emitted"] if "position.change" in l]
+        self.emitted += lines
+        return lines
+
+    def test_baseline_says_nothing(self):
+        self.assertEqual(self.step(self.FLAT, 1000), [])
+
+    def test_reports_only_after_30s_hold(self):
+        self.step(self.FLAT, 1000)
+        for t in range(1001, 1030):
+            self.assertEqual(self.step(self.UP, t), [], f"too early at t={t}")
+        lines = self.step(self.UP, 1031)
+        self.assertEqual(len(lines), 1)
+        self.assertIn("to=vertical", lines[0])
+        self.assertIn("from=horizontal", lines[0])
+        # Holding still: no repeats.
+        for t in range(1032, 1100):
+            self.assertEqual(self.step(self.UP, t), [])
+
+    def test_brief_pickup_is_ignored(self):
+        self.step(self.FLAT, 1000)
+        for t in range(1001, 1020):
+            self.step(self.UP, t)
+        for t in range(1020, 1100):
+            self.step(self.FLAT, t)
+        self.assertEqual(self.emitted, [])
+
+    def test_wobble_resets_the_timer(self):
+        self.step(self.FLAT, 1000)
+        t = 1001
+        for _ in range(5):  # 20 s up, 1 s flat, repeatedly: never 30 s held
+            for _ in range(20):
+                self.step(self.UP, t); t += 1
+            self.step(self.FLAT, t); t += 1
+        self.assertEqual(self.emitted, [])
+
+    def test_back_and_forth(self):
+        self.step(self.FLAT, 1000)
+        for t in range(1001, 1040):
+            self.step(self.UP, t)
+        for t in range(1040, 1080):
+            self.step(self.FLAT, t)
+        self.assertEqual(len(self.emitted), 2)
+        self.assertIn("to=vertical", self.emitted[0])
+        self.assertIn("to=horizontal", self.emitted[1])
 
 
 if __name__ == "__main__":

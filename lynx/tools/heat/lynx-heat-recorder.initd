@@ -1,0 +1,23 @@
+#!/sbin/openrc-run
+# Passive heat/battery/CPU recorder (Gwyn, 2026-11-22). Observes only.
+# Source: /noobia/lynx/tools/heat/. Disable: touch /etc/lynx/heat-recorder.disable
+description="Lynx passive heat and power recorder"
+supervisor="supervise-daemon"
+name="lynx-heat-recorder"
+command="/usr/bin/python3"
+command_args="/usr/local/bin/lynx-heat-recorder --interval 5"
+respawn_delay=10
+respawn_max=3
+respawn_period=600
+DISABLE_SWITCH="/etc/lynx/heat-recorder.disable"
+
+depend() {
+    after lynx-local-logs
+}
+
+start_pre() {
+    if [ -f "$DISABLE_SWITCH" ]; then
+        ewarn "lynx-heat-recorder disabled by $DISABLE_SWITCH"
+        return 1
+    fi
+}

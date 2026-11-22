@@ -6,6 +6,8 @@ BB=/bin/busybox
 RUN=/run/lynx
 INTERVAL=30
 MAX_RETRIES=3
+GUARD_SWITCH=/etc/lynx/power-thermal-guard.disable
+SAFETY_FAILS_TO_ACT=10
 
 event() {
     printf 'LYNX_MAINTENANCE %s\n' "$*"
@@ -147,12 +149,17 @@ case "${1:-}" in
         ssh_fail=0
         wifi_fail=0
         while :; do
-            if safety_ok; then
+            # Tom 2026-11-22: guards are switched off by $GUARD_SWITCH, and when
+            # on, one glitchy reading must never stop Lynx: only
+            # SAFETY_FAILS_TO_ACT consecutive failures (5 min at 30 s) act.
+            if [ -e "$GUARD_SWITCH" ]; then
+                safety_fail=0
+            elif safety_ok; then
                 safety_fail=0
             else
                 safety_fail=$((safety_fail+1))
-                event "SAFETY_GUARD_FAILED consecutive=$safety_fail"
-                [ "$safety_fail" -lt 2 ] || shutdown_safely safety_guard_failed
+                event "SAFETY_GUARD_FAILED consecutive=$safety_fail of $SAFETY_FAILS_TO_ACT"
+                [ "$safety_fail" -lt "$SAFETY_FAILS_TO_ACT" ] || shutdown_safely safety_guard_failed
             fi
             if /sbin/rc-service lynx-local-logs status >/dev/null 2>&1; then
                 log_fail=0

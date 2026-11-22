@@ -1,0 +1,515 @@
+{
+ "store": [
+  {
+   "id": "touch-tap",
+   "match": {
+    "sense": "touch",
+    "event": "tap"
+   },
+   "template": "Someone tapped your screen {count} times.",
+   "message": "Someone tapped your screen.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 touch tap count=3 dur_ms=90 | taps on the panel"
+    ],
+    "must_not": [
+     "NOOBIA P1 touch hold count=1 dur_ms=2000 | a hold"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "touch-hold",
+   "match": {
+    "sense": "touch",
+    "event": "hold"
+   },
+   "template": "Someone pressed and held your screen for {dur_ms} ms.",
+   "message": "Someone pressed and held your screen.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 touch hold dur_ms=2100 | a hold on the panel"
+    ],
+    "must_not": [
+     "NOOBIA P1 touch tap dur_ms=90 | a tap"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "camera-objects",
+   "match": {
+    "sense": "camera",
+    "event": "objects.seen"
+   },
+   "template": "With your {cam} camera you see {label*}.",
+   "message": "You see something.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 camera objects.seen cam=back n=3 | laptop(0.7534)/person(0.873)/cat(0.452)",
+     "NOOBIA P1 camera objects.seen cam=front n=1 | cup(0.61)"
+    ],
+    "must_not": [
+     "NOOBIA P0 camera frame.analyzed objects=0 | nothing"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<items>.+)$",
+   "each": {
+    "group": "items",
+    "regex": "(?P<label>[a-z_]+)\\((?P<conf>[0-9.]+)\\)"
+   }
+  },
+  {
+   "id": "camera-object",
+   "match": {
+    "sense": "camera",
+    "event": "object.seen"
+   },
+   "template": "You see a {label}.",
+   "message": "You see something.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 camera object.seen label=cat conf=0.91 | a cat"
+    ],
+    "must_not": [
+     "NOOBIA P1 camera objects.seen cam=back n=1 | cat(0.9)"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "motion-position",
+   "match": {
+    "sense": "motion",
+    "event": "position.change"
+   },
+   "template": "You are now {to}, tilted {tilt} degrees from flat.",
+   "message": "Your position changed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 motion position.change to=horizontal from=vertical tilt=8 | placed flat"
+    ],
+    "must_not": [
+     "NOOBIA P0 motion status.sample orientation=flat_up | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "motion-pickup",
+   "match": {
+    "sense": "motion",
+    "event": "pickup"
+   },
+   "template": "Someone picked you up; you are now {to}.",
+   "message": "Someone picked you up.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 motion pickup to=portrait from=flat_up | picked up"
+    ],
+    "must_not": [
+     "NOOBIA P1 motion placed to=flat_up from=portrait | placed"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "motion-placed",
+   "match": {
+    "sense": "motion",
+    "event": "placed"
+   },
+   "template": "You were put down; you are now {to}.",
+   "message": "You were put down.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 motion placed to=flat_up from=portrait | placed"
+    ],
+    "must_not": [
+     "NOOBIA P1 motion pickup to=portrait from=flat_up | picked up"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "thermal-change",
+   "match": {
+    "sense": "power",
+    "event": "temp.change"
+   },
+   "template": "Your temperature {dir} to {c} C, {delta} degrees since the last check.",
+   "message": "Your temperature changed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 power temp.change dir=rose c=41 delta=6 prev=35 | warmer"
+    ],
+    "must_not": [
+     "NOOBIA P1 power thermal.hot soc_mc=45000 state=charging | warm"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "thermal-hot",
+   "match": {
+    "sense": "power",
+    "event": "thermal.hot"
+   },
+   "template": "You are getting warm: {soc_mc} millidegrees, {state}.",
+   "message": "You are getting warm.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 power thermal.hot soc_mc=45000 state=charging | warm"
+    ],
+    "must_not": [
+     "NOOBIA P1 power temp.change dir=rose c=41 delta=6 | warmer"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "power-charging",
+   "match": {
+    "sense": "power",
+    "event": "charging.change"
+   },
+   "template": "Your power changed from {from} to {to}.",
+   "message": "Your power source changed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 power charging.change from=discharging to=charging | Lynx is now charging"
+    ],
+    "must_not": [
+     "NOOBIA P1 power battery.low cap=15 state=discharging | low"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "battery-low",
+   "match": {
+    "sense": "power",
+    "event": "battery.low"
+   },
+   "template": "Your battery is getting low: {cap} percent.",
+   "message": "Your battery is getting low.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 power battery.low cap=15 state=discharging | low"
+    ],
+    "must_not": [
+     "NOOBIA P1 power battery.critical cap=4 state=discharging | critical"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "battery-critical",
+   "match": {
+    "sense": "power",
+    "event": "battery.critical"
+   },
+   "template": "Your battery is critically low: {cap} percent.",
+   "message": "Your battery is critically low.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 power battery.critical cap=4 state=discharging | critical"
+    ],
+    "must_not": [
+     "NOOBIA P1 power battery.low cap=15 state=discharging | low"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "hearing-sound",
+   "match": {
+    "sense": "hearing",
+    "event": "sound.heard"
+   },
+   "template": "You heard a sound, loudness {peak}.",
+   "message": "You heard a sound.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 hearing sound.heard peak=279 rms=12.1 | Lynx heard sound"
+    ],
+    "must_not": [
+     "NOOBIA P0 hearing status.sample peak=10 rms=3.2 | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "light-bright",
+   "match": {
+    "sense": "light",
+    "event": "bright"
+   },
+   "template": "The light around you became bright.",
+   "message": "The light around you became bright.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 light bright raw=900 | bright"
+    ],
+    "must_not": [
+     "NOOBIA P1 light dark raw=2 | dark"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "light-dark",
+   "match": {
+    "sense": "light",
+    "event": "dark"
+   },
+   "template": "It became dark around you.",
+   "message": "It became dark around you.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 light dark raw=2 | dark"
+    ],
+    "must_not": [
+     "NOOBIA P1 light bright raw=900 | bright"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "proximity-near",
+   "match": {
+    "sense": "proximity",
+    "event": "near"
+   },
+   "template": "Something came close to your face.",
+   "message": "Something came close to your face.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 proximity near dist=0 | near"
+    ],
+    "must_not": [
+     "NOOBIA P1 proximity far dist=5 | far"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "proximity-far",
+   "match": {
+    "sense": "proximity",
+    "event": "far"
+   },
+   "template": "The thing near your face moved away.",
+   "message": "The thing near your face moved away.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 proximity far dist=5 | far"
+    ],
+    "must_not": [
+     "NOOBIA P1 proximity near dist=0 | near"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "network-device-seen",
+   "match": {
+    "sense": "network",
+    "event": "device.seen"
+   },
+   "template": "A new device appeared on your network at {ip}.",
+   "message": "A new device appeared on your network.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 network device.seen ip=192.168.100.50 mac=aa:bb:cc:dd:ee:ff | seen"
+    ],
+    "must_not": [
+     "NOOBIA P1 network device.lost ip=192.168.100.50 | lost"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "network-device-lost",
+   "match": {
+    "sense": "network",
+    "event": "device.lost"
+   },
+   "template": "The device at {ip} left your network.",
+   "message": "A device left your network.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 network device.lost ip=192.168.100.50 | lost"
+    ],
+    "must_not": [
+     "NOOBIA P1 network device.seen ip=192.168.100.50 mac=aa:bb | seen"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "wifi-down",
+   "match": {
+    "sense": "wifi",
+    "event": "link.down"
+   },
+   "template": "Your Wi-Fi went down.",
+   "message": "Your Wi-Fi went down.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 wifi link.down iface=wlan0 | Wi-Fi went down"
+    ],
+    "must_not": [
+     "NOOBIA P1 wifi link.up iface=wlan0 | Wi-Fi is back"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "wifi-up",
+   "match": {
+    "sense": "wifi",
+    "event": "link.up"
+   },
+   "template": "Your Wi-Fi is back.",
+   "message": "Your Wi-Fi is back.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 wifi link.up iface=wlan0 | Wi-Fi is back"
+    ],
+    "must_not": [
+     "NOOBIA P1 wifi link.down iface=wlan0 | Wi-Fi went down"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "wifi-weak",
+   "match": {
+    "sense": "wifi",
+    "event": "rssi.low"
+   },
+   "template": "Your Wi-Fi signal is weak: {signal} dBm.",
+   "message": "Your Wi-Fi signal is weak.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 wifi rssi.low signal=-82 iface=wlan0 | weak"
+    ],
+    "must_not": [
+     "NOOBIA P1 wifi link.up iface=wlan0 | back"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "nexus-up",
+   "match": {
+    "sense": "nexus",
+    "event": "reachable"
+   },
+   "template": "Nexus, your home, is reachable again.",
+   "message": "Nexus is reachable again.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 nexus reachable host=192.168.100.106 port=112 | back"
+    ],
+    "must_not": [
+     "NOOBIA P1 nexus unreachable host=192.168.100.106 port=112 errors=3 | gone"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "nexus-down",
+   "match": {
+    "sense": "nexus",
+    "event": "unreachable"
+   },
+   "template": "You cannot reach Nexus, your home.",
+   "message": "You cannot reach Nexus.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 nexus unreachable host=192.168.100.106 port=112 errors=3 | gone"
+    ],
+    "must_not": [
+     "NOOBIA P1 nexus reachable host=192.168.100.106 port=112 | back"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  }
+ ],
+ "archive": []
+}

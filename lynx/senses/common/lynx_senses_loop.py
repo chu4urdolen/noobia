@@ -32,6 +32,7 @@ from pathlib import Path
 
 SENSES_ROOT = Path(__file__).resolve().parent.parent
 TOUCH_EVERY_S = 2.0
+MOTION_EVERY_S = 1.0   # Tom 2026-11-22: tilt sampled ~1/s, debounced 30 s in the sense
 FAST_SAMPLE_EVERY_S = 10.0
 SAMPLE_EVERY_S = 30.0
 
@@ -121,6 +122,7 @@ def run_loop(*args, **kwargs) -> int:
         for k, v in kwargs.items():
             senses[k] = v
     last_touch = 0.0
+    last_motion = 0.0
     last_fast = 0.0
     last_sample = 0.0
     while not _stop:
@@ -129,8 +131,12 @@ def run_loop(*args, **kwargs) -> int:
             if senses.get("touch"):
                 call("touch", senses["touch"].run)
             last_touch = now
+        if now - last_motion >= MOTION_EVERY_S:
+            if senses.get("motion"):
+                call("motion", senses["motion"].run)
+            last_motion = now
         if now - last_fast >= FAST_SAMPLE_EVERY_S:
-            for name in ("light", "proximity", "hearing", "motion"):
+            for name in ("light", "proximity", "hearing"):
                 if senses.get(name):
                     call(name, senses[name].run)
             last_fast = now

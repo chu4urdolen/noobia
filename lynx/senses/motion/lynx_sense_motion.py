@@ -12,10 +12,8 @@ Raw gravity vector:
 - tilted landscape: x ~ +/-9800 mG
 
 Events:
-- transition from flat to upright/held: NOOBIA P1 motion pickup orientation=... from=...
-- transition from upright/held to flat: NOOBIA P1 motion placed orientation=... from=...
-- general orientation change:          NOOBIA P1 motion orientation.change to=... from=...
-- every 15 samples:                    NOOBIA P0 motion status.sample orientation=... x=... y=... z=...
+- tilt crosses 45 degrees and holds 30 s: NOOBIA P1 motion position.change to=horizontal|vertical from=... tilt=N
+- every 60 samples:                       NOOBIA P0 motion status.sample orientation=... x=... y=... z=...
 """
 
 from __future__ import annotations
@@ -42,7 +40,17 @@ from lynx_senses_lib import (  # noqa: E402
 )
 
 DEFAULT_MOTION_BIN = "/usr/local/bin/lynx-motion-read"
-MOTION_SAMPLE_EVERY = 15
+MOTION_SAMPLE_EVERY = 60          # a P0 status sample about once a minute at 1 Hz
+POSITION_DEBOUNCE_S = 30
+
+
+def tilt_degrees(x: int, y: int, z: int) -> float:
+    """Angle between the screen normal and vertical gravity: 0 = flat, 90 = upright."""
+    import math
+    g = math.sqrt(x * x + y * y + z * z)
+    if g <= 0:
+        return 0.0
+    return math.degrees(math.acos(min(1.0, abs(z) / g)))
 
 
 def read_motion_sensor(bin_path: str = DEFAULT_MOTION_BIN) -> dict:
@@ -99,30 +107,30 @@ def run(dry_run: bool = False, state_file: str | None = None,
     samples = int(state.get("samples", 0)) + 1
     prev_orient = state.get("orientation")
 
-    if prev_orient is None:
-        # First sample sets baseline
-        pass
-    elif current_orient != prev_orient:
-        if prev_orient in ("flat_up", "flat_down") and current_orient in ("portrait", "landscape_left", "landscape_right", "tilted"):
-            event = "pickup"
-            text = f"Lynx was picked up into {current_orient} (from {prev_orient})"
-        elif prev_orient in ("portrait", "landscape_left", "landscape_right", "tilted") and current_orient in ("flat_up", "flat_down"):
-            event = "placed"
-            text = f"Lynx was placed down ({current_orient}) (from {prev_orient})"
-        else:
-            event = "orientation.change"
-            text = f"Lynx orientation changed to {current_orient} (from {prev_orient})"
-
+    # Position (Tom, 2026-11-22): sampled about once a second; reported only
+    # when the tilt from flat crosses 45 degrees (horizontal <-> vertical) and
+    # the new position has held for POSITION_DEBOUNCE_S. Wobbling around 45
+    # degrees, or a brief pick-up, produces nothing.
+    tilt = tilt_degrees(rx, ry, rz)
+    position = "horizontal" if tilt < 45.0 else "vertical"
+    reported = state.get("position")
+    candidate, since = state.get("candidate"), state.get("candidate_since")
+    if reported is None:
+        reported = position  # first sample sets the baseline, says nothing
+        candidate, since = None, None
+    elif position == reported:
+        candidate, since = None, None
+    elif candidate != position:
+        candidate, since = position, t
+    elif t - int(since or t) >= POSITION_DEBOUNCE_S:
         line = emit_line(
-            sense,
-            1,
-            "motion",
-            event,
-            fields={"to": current_orient, "from": prev_orient, "x": rx, "y": ry, "z": rz},
-            text=text,
+            sense, 1, "motion", "position.change",
+            fields={"to": position, "from": reported, "tilt": int(round(tilt))},
+            text=f"Lynx is now {position} (tilt {int(round(tilt))} degrees)",
             dry_run=dry_run,
         )
         emitted.append(line)
+        reported, candidate, since = position, None, None
 
     if samples % MOTION_SAMPLE_EVERY == 0:
         line = emit_line(
@@ -140,6 +148,9 @@ def run(dry_run: bool = False, state_file: str | None = None,
         "samples": samples,
         "orientation": current_orient,
         "last_raw": [rx, ry, rz],
+        "position": reported,
+        "candidate": candidate,
+        "candidate_since": since,
         "last_ts": t,
     }
     if not dry_run:
@@ -148,6 +159,8 @@ def run(dry_run: bool = False, state_file: str | None = None,
     result = base_result("motion", emitted=emitted, dry_run=dry_run)
     result.update({
         "orientation": current_orient,
+        "position": reported,
+        "tilt": round(tilt, 1),
         "raw": [rx, ry, rz],
         "samples": samples,
     })

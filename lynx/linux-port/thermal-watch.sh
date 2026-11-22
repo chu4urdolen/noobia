@@ -3,11 +3,16 @@
 # Battery sensing is added separately after identification. Missing/invalid
 # readings are logged, never interpreted as cool or as a valid safety proof.
 BB=/bin/busybox
+# Tom 2026-11-22: never act on one glitchy reading; 10 in a row (50 s at 5 s).
+READS_TO_ACT=10
+over=0
+GUARD_SWITCH=/etc/lynx/power-thermal-guard.disable
 THERMAL_ROOT=/sys/class/thermal
 READY=/run/lynx/thermal-watch.ready
 STOP_MILLIDEGREES=75000
 
 check_once() {
+    [ -e "$GUARD_SWITCH" ] && { echo GUARD_SWITCH_OFF; return 0; }
     if [ ! -e "$READY" ]; then
         echo THERMAL_WATCH_WAITING_FOR_SENSORS
         return 0
@@ -33,6 +38,11 @@ check_once() {
         [ "$value" -lt "$STOP_MILLIDEGREES" ] || hot=1
     done
     echo "THERMAL_WATCH_SAMPLE valid=$count maximum_millidegrees=$maximum"
+    if [ "$hot" = 1 ]; then over=$((over+1)); else over=0; fi
+    if [ "$hot" = 1 ] && [ "$over" -lt "$READS_TO_ACT" ]; then
+        echo "THERMAL_WATCH_OVER_LIMIT consecutive=$over of $READS_TO_ACT (no action yet)"
+        return 0
+    fi
     if [ "$hot" = 1 ]; then
         echo "THERMAL_WATCH_TEMPERATURE_HIGH cutoff_millidegrees=$STOP_MILLIDEGREES; throttling to low power"
         for dev in "$THERMAL_ROOT"/cooling_device*; do

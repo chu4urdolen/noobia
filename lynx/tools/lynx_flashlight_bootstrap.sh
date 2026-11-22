@@ -7,6 +7,9 @@ modules=/usr/local/lib/lynx/flashlight
 test "$(uname -r)" = 5.10.149-android12-9-o-g311738fbb5a8
 test "$(cat /sys/bus/i2c/devices/6-0063/name)" = lm3642_22823
 grep -q '^mtk_pbm ' /proc/modules
+# Tom 2026-11-22: battery/thermal gates are off while the guard switch exists;
+# the kernel and LM3642 identity checks above still apply.
+if [ ! -e /etc/lynx/power-thermal-guard.disable ]; then
 health=$(/usr/local/bin/lynx-status --assert-ready)
 printf '%s' "$health" | /usr/bin/python3 -c '
 import json,sys
@@ -16,6 +19,7 @@ assert h["battery"]["capacity_percent"] >= 25
 assert h["battery"]["temperature_mC"] < 35000
 assert h["thermal"]["max_mC"] < 45000
 '
+fi
 
 load() {
     name=$1

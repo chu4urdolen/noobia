@@ -144,9 +144,12 @@ class Harness:
         if reason == "priority" and self.ranker is not None:
             result = self.ranker.process(lines, now)
             delivered = 0
-            for text in result["messages"]:
-                pid = next((p for line, p in result["explained"]
-                            if self._message_of(p) == text), None)
+            deliveries = result.get("deliveries")
+            if deliveries is None:  # an older ranker without templated messages
+                deliveries = [(text, next((p for line, p in result["explained"]
+                                           if self._message_of(p) == text), None))
+                              for text in result["messages"]]
+            for text, pid in deliveries:
                 evidence = [l["raw"] for l, p in result["explained"] if p == pid][:MAX_EVIDENCE]
                 delivered += self._deliver("ranker", text, evidence, pid)
             self.log(f"harness chunk reason=priority lines={len(lines)} "

@@ -83,7 +83,7 @@ case "${1:-}" in
             else
                 failures=$((failures+1))
                 echo "LYNX_HEALTH_FAILURE count=$failures" >> "$STATE/events.log"
-                if [ "$failures" -ge 3 ]; then
+                if [ "$failures" -ge 10 ] && [ ! -e /etc/lynx/power-thermal-guard.disable ]; then
                     echo LYNX_HEALTH_LOW_POWER_QUIESCENT >> "$STATE/events.log"
                     echo '<4>LYNX_HEALTH_LOW_POWER_QUIESCENT' > /dev/kmsg 2>/dev/null || true
                     for dev in "$THERMAL"/cooling_device*; do

@@ -66,6 +66,10 @@ def charging_state(current_ma: int | None) -> str:
     return "idle"
 
 
+TEMP_CHECK_S = 60
+TEMP_DELTA_C = 5.0
+
+
 def run(dry_run: bool = False, state_file: str | None = None,
         status=None, now: int | None = None) -> tuple[dict, int]:
     """One power sample. status is injectable for tests.
@@ -151,6 +155,29 @@ def run(dry_run: bool = False, state_file: str | None = None,
                 state["thermal_armed"] = True
         if soc <= POWER_THERMAL_REARM_mC:
             state["thermal_armed"] = False
+
+    # Temperature change (Tom, 2026-11-22): checked at most once a minute;
+    # reported when the SoC max differs by >= TEMP_DELTA_C from the last
+    # REPORTED reading (so a slow drift is reported once it adds up).
+    if soc is not None and isinstance(soc, int):
+        ref = state.get("temp_ref_mC")
+        last_check = int(state.get("temp_check_t", 0))
+        if ref is None:
+            state["temp_ref_mC"] = soc
+            state["temp_check_t"] = t
+        elif t - last_check >= TEMP_CHECK_S:
+            state["temp_check_t"] = t
+            delta = (soc - int(ref)) / 1000.0
+            if abs(delta) >= TEMP_DELTA_C:
+                line = emit_line(
+                    sense, 1, "power", "temp.change",
+                    fields={"dir": "rose" if delta > 0 else "dropped",
+                            "c": int(round(soc / 1000)), "delta": int(round(abs(delta))),
+                            "prev": int(round(int(ref) / 1000)), "state": state_name},
+                    text=f"Lynx temperature {'rose' if delta > 0 else 'dropped'} to {soc / 1000:.1f} C",
+                    dry_run=dry_run)
+                emitted.append(line)
+                state["temp_ref_mC"] = soc
 
     if state_name != "unknown":
         state["charging"] = state_name

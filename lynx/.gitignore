@@ -299,3 +299,7 @@
 !/tools/agent/install_media_agent_tools.py
 !/tools/agent/install_peripheral_status_tools.py
 !/tools/agent/install_platform_status_tools.py
+!/tools/heat/
+/tools/heat/*
+!/tools/heat/*.py
+!/tools/heat/*.initd

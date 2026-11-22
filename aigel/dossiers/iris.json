@@ -1,0 +1,26 @@
+{
+  "noob": "Iris",
+  "compiled_at": "2026-11-22T19:04:31Z",
+  "contact_info": {
+    "name": "Iris",
+    "identity": "ESP32 camera Noob",
+    "route": "Device tools in `iris/`; no verified Council route",
+    "instructions_path": ""
+  },
+  "forge_description": "Iris: ESP32-S3 camera Noob and the shared ESP32 Noob runtime (NoobRuntime): firmware, VM programs, Nexus UART/BLE tools",
+  "recent_notes_count": 1,
+  "medical_profile": {
+    "hardware_summary": "ESP32 camera Noob",
+    "known_senses": [
+      "camera",
+      "light",
+      "power"
+    ],
+    "known_actuators": [
+      "led"
+    ],
+    "sensitivities_and_limits": "Maintain Principle 10: Quiescent low-power waiting over autonomous reboots.",
+    "recent_medical_history": "Recent updates recorded in forge DB.",
+    "bedside_care_tips": "Check thermal vitals and battery stability. Test gentle reflex response on iris."
+  }
+}

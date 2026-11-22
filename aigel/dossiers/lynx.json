@@ -1,0 +1,24 @@
+{
+  "noob": "Lynx",
+  "compiled_at": "2026-11-22T19:04:37Z",
+  "contact_info": {
+    "name": "Lynx",
+    "identity": "OnePlus Nord 3 running native Alpine Linux",
+    "route": "Native device tools and NRP/1; no verified Council route",
+    "instructions_path": "`/noobia/lynx/AGENTS.md`"
+  },
+  "forge_description": "Native Alpine/BusyBox Linux on the OnePlus Nord 3 (Lynx, CPH2493 MT6983): boot images, hardware trials, NRP/1 runtime, local agent tools. Tested and verified working: touchscreen, haptics, lights, cameras, speakers, USB gadget serial.",
+  "recent_notes_count": 10,
+  "medical_profile": {
+    "hardware_summary": "OnePlus Nord 3 running native Alpine Linux",
+    "known_senses": [
+      "general_telemetry"
+    ],
+    "known_actuators": [
+      "led"
+    ],
+    "sensitivities_and_limits": "Maintain Principle 10: Quiescent low-power waiting over autonomous reboots.",
+    "recent_medical_history": "Recent updates recorded in forge DB.",
+    "bedside_care_tips": "Check thermal vitals and battery stability. Test gentle reflex response on lynx."
+  }
+}

@@ -94,7 +94,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
             if ip not in current_devices:
                 line = emit_line(
                     sense,
-                    3,
+                    1,
                     "network",
                     "device.lost",
                     fields={"ip": ip},

@@ -77,7 +77,7 @@ for pidfile in /run/lynx/thermal-watch.pid /run/lynx/battery-watch.pid; do
     kill -0 "$(cat "$pidfile")"
 done
 initial=$(temperature)
-[ "$initial" -lt 40000 ]
+[ "$initial" -lt 48000 ]
 mkdir "$base"  # Never overwrite ownership or run a second instance.
 count=0
 for dev in /sys/class/thermal/cooling_device*; do

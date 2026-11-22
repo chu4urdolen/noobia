@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """S2 touch sense for Lynx (PLAN.md): tap/hold events from TOUCH_STATUS.
 
-Event sense, P5 (routine change). Reads the runtime's touch queue state
+Event sense, P1 (immediate priority reaction). Reads the runtime's touch queue state
 with the non-consuming TOUCH_STATUS call only (never TOUCH_POLL, which
 is the sole popper of the shared 8-slot queue - see
 lynx/linux-port/docs/LYNX-TOUCH-EVENTS-DESIGN-20261121.md), and emits
 on the finger down/up transition:
 
-- press <= 800 ms  ->  NOOBIA P5 touch tap dur_ms=... queued=... dropped=...
-- press >  800 ms  ->  NOOBIA P5 touch hold dur_ms=... queued=... dropped=...
+- press <= 800 ms  ->  NOOBIA P1 touch tap dur_ms=... queued=... dropped=...
+- press >  800 ms  ->  NOOBIA P1 touch hold dur_ms=... queued=... dropped=...
 
 Convention (Aigel-style defaults, configurable, honest):
 - The press is measured from the first sample that sees ``down=1`` to
@@ -110,7 +110,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
                 last_emitted = state.get("last_emitted_ts", 0)
                 if t - last_emitted >= 5:
                     line = emit_line(
-                        sense, 5, "touch", event,
+                        sense, 1, "touch", event,
                         fields={"dur_ms": dur_ms,
                                 "queued": sampled["queued"],
                                 "dropped": sampled["dropped"]},

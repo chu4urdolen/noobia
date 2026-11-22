@@ -1,0 +1,10 @@
+{
+  "name": "lynx_flow",
+  "description": "Entity: Lynx. Read the full sensory-cognitive-effector flow (power, senses in syslog, autonomy chunk queue, conscious thoughts, and front screen display sync).",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "timeout": 15
+}

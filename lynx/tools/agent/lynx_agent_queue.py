@@ -91,10 +91,11 @@ class JobQueue:
             self._write(path, {"prompt": prompt, "created_ns": time.time_ns()})
             return job_id
 
-    def claim_next(self):
+    def claim_next(self, max_pending_age_s=None, max_sense_age_s=20.0):
         with self._locked():
             pending = sorted(self.root.glob("*.pending"),
                              key=lambda p: (p.lstat().st_mtime_ns, p.name))
+            now_ns = time.time_ns()
             for path in pending:
                 self._id(path.stem)
                 if not self._regular(path):
@@ -107,6 +108,16 @@ class JobQueue:
                 prompt = payload.get("prompt")
                 if not isinstance(prompt, str):
                     raise QueueError("malformed job prompt")
+
+                created_ns = payload.get("created_ns", path.lstat().st_mtime_ns)
+                age_s = (now_ns - created_ns) / 1e9
+                is_sense = prompt.lstrip().startswith("[sense]")
+                if (max_pending_age_s is not None and age_s > max_pending_age_s) or \
+                   (max_sense_age_s is not None and is_sense and age_s > max_sense_age_s):
+                    path.unlink(missing_ok=True)
+                    self._sync_dir()
+                    continue
+
                 os.replace(path, target)
                 self._sync_dir()
                 return path.stem, prompt

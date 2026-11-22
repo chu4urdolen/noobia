@@ -79,7 +79,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
     elif current_state != prev_state:
         line = emit_line(
             sense,
-            3,
+            1,
             "proximity",
             current_state,
             fields={"dist": dist_val},

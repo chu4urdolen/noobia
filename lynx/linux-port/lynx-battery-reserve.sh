@@ -8,7 +8,7 @@ STATE=/run/lynx/battery-reserve
 CUTOFF=20
 INTERVAL=30
 CHARGE_CURRENT_MIN=50
-CHARGE_TEMP_MAX=40000
+CHARGE_TEMP_MAX=52000
 CRITICAL_CUTOFF=10
 MAX_HOLD_SAMPLES=240
 
@@ -36,13 +36,15 @@ read_battery() {
     printf '%s %s %s\n' "$capacity" "$current" "$temperature"
 }
 
-request_shutdown() {
+enter_low_power() {
     reason=$1
-    printf 'LYNX_BATTERY_RESERVE_SHUTDOWN reason=%s\n' "$reason"
-    printf '<2>LYNX_BATTERY_RESERVE_SHUTDOWN reason=%s\n' "$reason" > /dev/kmsg || true
-    /sbin/openrc-shutdown --poweroff now || true
-    $BB sleep 15
-    $BB poweroff -f
+    printf 'LYNX_BATTERY_RESERVE_LOW_POWER reason=%s\n' "$reason"
+    printf '<4>LYNX_BATTERY_RESERVE_LOW_POWER reason=%s\n' "$reason" > /dev/kmsg 2>/dev/null || true
+    for dev in /sys/class/thermal/cooling_device*; do
+        [ -f "$dev/cur_state" ] && echo 1 > "$dev/cur_state" 2>/dev/null || true
+    done
+    /sbin/rc-service lynx-agent stop 2>/dev/null || true
+    /sbin/rc-service lynx-senses stop 2>/dev/null || true
 }
 
 case "${1:-}" in
@@ -66,14 +68,10 @@ case "${1:-}" in
                 set -- $sample
                 capacity=$1 current=$2 temperature=$3
                 if [ "$temperature" -ge "$CHARGE_TEMP_MAX" ]; then
-                    request_shutdown charging_temperature
-                    exit 2
-                fi
-                if [ "$capacity" -le "$CRITICAL_CUTOFF" ]; then
-                    request_shutdown critical_capacity
-                    exit 2
-                fi
-                if [ "$capacity" -gt "$CUTOFF" ]; then
+                    enter_low_power charging_temperature
+                elif [ "$capacity" -le "$CRITICAL_CUTOFF" ]; then
+                    enter_low_power critical_capacity
+                elif [ "$capacity" -gt "$CUTOFF" ]; then
                     low=0 charging=0 hold=0
                 elif [ "$current" -ge "$CHARGE_CURRENT_MIN" ]; then
                     charging=$((charging+1))
@@ -83,8 +81,7 @@ case "${1:-}" in
                         printf 'LYNX_BATTERY_RESERVE_CHARGING capacity_percent=%s current_ma=%s hold_samples=%s\n' \
                             "$capacity" "$current" "$hold"
                         if [ "$hold" -ge "$MAX_HOLD_SAMPLES" ]; then
-                            request_shutdown no_charge_progress
-                            exit 2
+                            enter_low_power no_charge_progress
                         fi
                     fi
                 else
@@ -93,8 +90,7 @@ case "${1:-}" in
                     printf 'LYNX_BATTERY_RESERVE_LOW capacity_percent=%s current_ma=%s consecutive=%s\n' \
                         "$capacity" "$current" "$low"
                     if [ "$low" -ge 3 ]; then
-                        request_shutdown low_capacity
-                        exit 2
+                        enter_low_power low_capacity
                     fi
                 fi
             else
@@ -102,8 +98,7 @@ case "${1:-}" in
                 failed=$((failed+1))
                 printf 'LYNX_BATTERY_RESERVE_GAUGE_FAILED consecutive=%s\n' "$failed"
                 if [ "$failed" -ge 3 ]; then
-                    request_shutdown gauge_unavailable
-                    exit 2
+                    enter_low_power gauge_unavailable
                 fi
             fi
             $BB sleep "$INTERVAL"

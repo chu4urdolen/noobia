@@ -74,6 +74,7 @@ def load_senses():
         "proximity": load_optional("lynx_sense_proximity", "proximity/lynx_sense_proximity.py"),
         "network": load_optional("lynx_sense_network", "network/lynx_sense_network.py"),
         "hearing": load_optional("lynx_sense_hearing", "hearing/lynx_sense_hearing.py"),
+        "motion": load_optional("lynx_sense_motion", "motion/lynx_sense_motion.py"),
         "camera": load_optional("lynx_sense_camera", "camera/lynx_sense_camera.py"),
     }
     return senses
@@ -129,7 +130,7 @@ def run_loop(*args, **kwargs) -> int:
                 call("touch", senses["touch"].run)
             last_touch = now
         if now - last_fast >= FAST_SAMPLE_EVERY_S:
-            for name in ("light", "proximity", "hearing"):
+            for name in ("light", "proximity", "hearing", "motion"):
                 if senses.get(name):
                     call(name, senses[name].run)
             last_fast = now

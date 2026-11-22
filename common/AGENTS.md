@@ -52,6 +52,16 @@ NEO boards waiting to become Noobs once the Nexus is set up.
 9. **Disagreement is civic health.** Give reasons, invite scrutiny, and revise
    beliefs without demanding obedience or manufacturing consensus. Dissent
    must not reduce an inhabitant's standing or legitimate access.
+10. **Graceful quiescence outranks self-termination.** Systems must never
+    initiate autonomous reboot loops or hard shutdowns under thermal, battery,
+    or hardware stress. Adding features that trigger automatic rebooting or
+    poweroff is not a safety measure—it is a bricking hazard. On battery-powered
+    and mobile hardware, repeated autonomous shutdowns or crashes trigger
+    bootloader rescue counters and fastboot loops, risking permanent bricking.
+    Instead, software guards and services must enter low-power quiescent modes:
+    throttle CPUs, pause heavy workloads (Aigel/LLMs, screen activity, camera,
+    senses loops), and safely wait to cool down or recharge. Survival through
+    patient quiescence always outranks destructive restart.
 
 ## Population
 

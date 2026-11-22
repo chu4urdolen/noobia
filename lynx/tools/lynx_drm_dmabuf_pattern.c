@@ -59,6 +59,7 @@
 #define CONSOLE_SOCKET "/run/lynx-console/control.sock"
 #define THOUGHT_FILE "/var/lib/noobia/lynx_thought.txt"
 #define HEARING_ENABLED_FILE "/var/lib/noobia/senses/hearing/enabled"
+#define AIGEL_MODE_FILE "/var/lib/noobia/aigel_mode.txt"
 #define MAX_SCENE_FRAMES 64
 
 static volatile sig_atomic_t stop_requested;
@@ -946,6 +947,32 @@ static int read_hearing_enabled(void)
 	return val;
 }
 
+static int read_aigel_learning_mode(void)
+{
+	FILE *f = fopen(AIGEL_MODE_FILE, "r");
+	if (!f)
+		return 0;
+	char buf[32] = {0};
+	int val = 0;
+	if (fgets(buf, sizeof(buf), f)) {
+		if (strstr(buf, "learn") || buf[0] == '1')
+			val = 1;
+	}
+	fclose(f);
+	return val;
+}
+
+static void toggle_aigel_mode(void)
+{
+	int current = read_aigel_learning_mode();
+	int new_mode = current ? 0 : 1;
+	FILE *f = fopen(AIGEL_MODE_FILE, "w");
+	if (f) {
+		fprintf(f, "%s\n", new_mode ? "learning" : "normal");
+		fclose(f);
+	}
+}
+
 static void toggle_hearing(void)
 {
 	int current = read_hearing_enabled();
@@ -1010,77 +1037,63 @@ static void paint_thoughts(uint32_t *pixels)
 	const uint32_t white = 0x00f5f8fa, muted = 0x007d94a5, shadow = 0x00000000;
 
 	FILE *f = fopen(THOUGHT_FILE, "r");
-	char content[2048] = {0};
-	size_t n = 0;
-	long offset = 0;
+	char last_thought[1024] = {0};
 	if (f) {
-		if (fseek(f, 0, SEEK_END) == 0) {
-			long size = ftell(f);
-			if (size > (long)(sizeof(content) - 1))
-				offset = size - (long)(sizeof(content) - 1);
-			fseek(f, offset, SEEK_SET);
+		char line[1024];
+		while (fgets(line, sizeof(line), f)) {
+			char *p = line;
+			while (*p == ' ' || *p == '\t')
+				p++;
+			if (!*p || *p == '\n' || *p == '\r')
+				continue;
+			p[strcspn(p, "\r\n")] = 0;
+			/* Front screen shows only Lynx's own thoughts, not user input lines */
+			if (!strncmp(p, "Noob:", 5) || !strncmp(p, "User:", 5))
+				continue;
+			snprintf(last_thought, sizeof(last_thought), "%s", p);
 		}
-		n = fread(content, 1, sizeof(content) - 1, f);
 		fclose(f);
 	}
 
-	if (n == 0) {
+	if (last_thought[0] == 0) {
 		draw_text_shadow(pixels, "(listening...)", 75, 2300, 4, muted, shadow);
 		return;
 	}
 
-	for (size_t i = 0; i < n; i++) {
-		if (content[i] == '\r' || content[i] == '\t')
-			content[i] = ' ';
+	for (size_t i = 0; last_thought[i]; i++) {
+		if (last_thought[i] == '\r' || last_thought[i] == '\t')
+			last_thought[i] = ' ';
 	}
 
-	char *start = content;
-	if (offset > 0) {
-		char *first_nl = strchr(content, '\n');
-		if (first_nl && *(first_nl + 1))
-			start = first_nl + 1;
-	}
-
-	/* Word wrap into lines */
+	/* Word wrap her latest thought into lines of up to 44 characters */
 	const unsigned int scale = 4;
 	const unsigned int line_h = 7 * scale + 10; /* 28 + 10 = 38px */
 	const int max_chars = 44;
-	char lines[32][64];
+	char lines[16][64];
 	int line_count = 0;
 
-	char *p = start;
-	while (*p && line_count < 32) {
-		while (*p == ' ' || *p == '\n')
+	char *p = last_thought;
+	size_t rem = strlen(p);
+	while (rem > 0 && line_count < 16) {
+		while (*p == ' ') {
 			p++;
-		if (!*p)
+			rem--;
+		}
+		if (rem == 0)
 			break;
 
-		char *next_nl = strchr(p, '\n');
-		size_t segment_len = next_nl ? (size_t)(next_nl - p) : strlen(p);
-
-		while (segment_len > 0 && line_count < 32) {
-			while (*p == ' ') {
-				p++;
-				segment_len--;
-			}
-			if (segment_len == 0)
-				break;
-
-			int split = (int)segment_len <= max_chars ? (int)segment_len : max_chars;
-			if (split < (int)segment_len) {
-				int s = split;
-				while (s > 0 && p[s] != ' ')
-					s--;
-				if (s > 0)
-					split = s;
-			}
-			snprintf(lines[line_count], sizeof(lines[line_count]), "%.*s", split, p);
-			line_count++;
-			p += split;
-			segment_len -= (size_t)split;
+		int split = (int)rem <= max_chars ? (int)rem : max_chars;
+		if (split < (int)rem) {
+			int s = split;
+			while (s > 0 && p[s] != ' ')
+				s--;
+			if (s > 0)
+				split = s;
 		}
-		if (next_nl)
-			p = next_nl + 1;
+		snprintf(lines[line_count], sizeof(lines[line_count]), "%.*s", split, p);
+		line_count++;
+		p += split;
+		rem -= (size_t)split;
 	}
 
 	if (line_count == 0) {
@@ -1088,7 +1101,7 @@ static void paint_thoughts(uint32_t *pixels)
 		return;
 	}
 
-	/* Keep scrolling window: show the most recent lines (up to 10 lines) */
+	/* Show up to 10 lines */
 	const int max_visible = 10;
 	int start_idx = line_count > max_visible ? line_count - max_visible : 0;
 	int visible_count = line_count - start_idx;
@@ -1272,7 +1285,7 @@ static void paint_chat(uint32_t *pixels)
 			char *p = msg;
 			size_t rem = strlen(p);
 			bool first_line = true;
-			while (rem > 0 && count < 256) {
+			while (rem > 0) {
 				while (*p == ' ') { p++; rem--; }
 				if (rem == 0) break;
 
@@ -1439,8 +1452,18 @@ static void add_scroll_row(struct text_row *rows, unsigned int *count, unsigned 
 	const char *p = text;
 	size_t rem = strlen(p);
 	bool first = true;
+	if (rem == 0) {
+		if (first && *count < max_rows) {
+			unsigned int slot = *count;
+			rows[slot].color = color;
+			rows[slot].is_header = false;
+			rows[slot].text[0] = 0;
+			(*count)++;
+		}
+		return;
+	}
 	while (rem > 0 && *count < max_rows) {
-		while (*p == ' ') { p++; rem--; }
+		while (*p == ' ' || *p == '\r' || *p == '\n') { p++; rem--; }
 		if (rem == 0) break;
 		int split = (int)rem <= max_chars ? (int)rem : max_chars;
 		if (split < (int)rem) {
@@ -1874,6 +1897,26 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 	status_item(pixels, 1, 9, "NOOB NRP",
 		    pid_matches("/run/lynx/noobd.pid", "lynx-noobd") ?
 		    "RUNNING" : "UNAVAILABLE");
+
+	/* Aigel Mode Switch Button on Status Screen */
+	bool learning = read_aigel_learning_mode();
+	uint32_t mode_bg = learning ? 0x003e2908 : 0x000c2e2c;
+	uint32_t mode_border = learning ? 0x00edb961 : 0x0009dcc4;
+	uint32_t mode_tc = learning ? 0x00edb961 : 0x0009dcc4;
+	rectangle(pixels, 75, 2380, 1090, 105, mode_bg);
+	rectangle(pixels, 75, 2380, 1090, 3, mode_border);
+	rectangle(pixels, 75, 2482, 1090, 3, mode_border);
+	rectangle(pixels, 75, 2380, 3, 105, mode_border);
+	rectangle(pixels, 1162, 2380, 3, 105, mode_border);
+
+	if (learning) {
+		draw_text(pixels, "AIGEL: LEARNING (10-MIN PASS)", 95, 2400, 5, mode_tc);
+		draw_text(pixels, "TAP TO SWITCH TO NORMAL MODE (DB ONLY)", 95, 2448, 4, white);
+	} else {
+		draw_text(pixels, "AIGEL: NORMAL (FAST DB ONLY)", 95, 2400, 5, mode_tc);
+		draw_text(pixels, "TAP TO SWITCH TO LEARNING MODE (10-MIN)", 95, 2448, 4, white);
+	}
+
 	nav_buttons(pixels, page);
 	return 0;
 }
@@ -2497,6 +2540,13 @@ static int run(const char *action, unsigned int seconds)
 							} else if (x >= 635 && x < 1190) {
 								target = PAGE_CHAT;
 							}
+						} else if (page == PAGE_STATUS &&
+							   y >= 2370 && y < 2495 && x >= 75 && x < 1165) {
+							toggle_aigel_mode();
+							page_changed = true;
+							haptic_tick(35);
+							printf("aigel_mode_toggled\n");
+							fflush(stdout);
 						} else if (page == PAGE_HOME && y < 2360) {
 							/* Tapped on portrait: trigger tactile tick and emit instant P1 sense (throttled to >= 5s) */
 							haptic_tick(25);

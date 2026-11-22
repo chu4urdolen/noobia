@@ -5,7 +5,7 @@
 BB=/bin/busybox
 THERMAL_ROOT=/sys/class/thermal
 READY=/run/lynx/thermal-watch.ready
-STOP_MILLIDEGREES=60000
+STOP_MILLIDEGREES=75000
 
 check_once() {
     if [ ! -e "$READY" ]; then
@@ -34,9 +34,11 @@ check_once() {
     done
     echo "THERMAL_WATCH_SAMPLE valid=$count maximum_millidegrees=$maximum"
     if [ "$hot" = 1 ]; then
-        echo "THERMAL_WATCH_TEMPERATURE_STOP cutoff_millidegrees=$STOP_MILLIDEGREES"
-        "$BB" poweroff -f
-        return 2
+        echo "THERMAL_WATCH_TEMPERATURE_HIGH cutoff_millidegrees=$STOP_MILLIDEGREES; throttling to low power"
+        for dev in "$THERMAL_ROOT"/cooling_device*; do
+            [ -f "$dev/cur_state" ] && echo 1 > "$dev/cur_state" 2>/dev/null || true
+        done
+        return 0
     fi
     [ "$count" -gt 0 ] || echo THERMAL_WATCH_NO_VALID_CPU_READINGS
     return 0

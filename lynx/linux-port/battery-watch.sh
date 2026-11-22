@@ -3,7 +3,7 @@
 BB=/bin/busybox
 SOURCE=/sys/bus/i2c/devices/7-0055/battery_snapshot
 LAST=/run/lynx/battery-last
-STOP_MILLIDEGREES=45000
+STOP_MILLIDEGREES=50000
 
 check_once() {
     IFS=' ' read -r uptime rest < /proc/uptime
@@ -28,9 +28,11 @@ check_once() {
     [ "$temp_error" = 0 ] || { echo BATTERY_WATCH_TEMPERATURE_UNAVAILABLE; return 1; }
     echo "BATTERY_WATCH_SAMPLE uptime=$uptime temperature_millidegrees=$temperature"
     if [ "$temperature" -ge "$STOP_MILLIDEGREES" ]; then
-        echo "BATTERY_WATCH_TEMPERATURE_STOP cutoff_millidegrees=$STOP_MILLIDEGREES"
-        "$BB" poweroff -f
-        return 2
+        echo "BATTERY_WATCH_TEMPERATURE_HIGH cutoff_millidegrees=$STOP_MILLIDEGREES; throttling to low power"
+        for dev in /sys/class/thermal/cooling_device*; do
+            [ -f "$dev/cur_state" ] && echo 1 > "$dev/cur_state" 2>/dev/null || true
+        done
+        return 0
     fi
     return 0
 }

@@ -98,7 +98,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
         pass
     elif state_name != "unknown" and state_name != state.get("charging"):
         line = emit_line(
-            sense, 5, "power", "charging.change",
+            sense, 1, "power", "charging.change",
             fields={"from": state.get("charging", "unknown"),
                     "to": state_name,
                     **({"current_ma": current} if current is not None else {})},
@@ -126,7 +126,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
             state["low_armed"] = True  # critical covers the low warning
         if low and not state.get("low_armed"):
             line = emit_line(
-                sense, 3, "power", "battery.low",
+                sense, 1, "power", "battery.low",
                 fields={"cap": cap, "state": state_name},
                 text=f"Lynx battery is getting low ({cap}%)",
                 dry_run=dry_run)
@@ -143,7 +143,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
         if soc >= POWER_THERMAL_HOT_mC:
             if not state.get("thermal_armed"):
                 line = emit_line(
-                    sense, 3, "power", "thermal.hot",
+                    sense, 1, "power", "thermal.hot",
                     fields={"soc_mc": soc, "state": state_name},
                     text=f"Lynx SoC is warm ({soc / 1000:.1f} C)",
                     dry_run=dry_run)

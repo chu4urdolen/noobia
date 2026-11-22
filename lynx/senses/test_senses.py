@@ -262,18 +262,18 @@ class TestTouchSense(SensesCase):
         self.assertEqual(len(result["emitted"]), 1)
         line = result["emitted"][0]
         self.assertTrue(
-            line.startswith("NOOBIA P5 touch tap dur_ms=0 queued=2 dropped=1"),
+            line.startswith("NOOBIA P1 touch tap dur_ms=0 queued=2 dropped=1"),
             line)
         self.assertIn("a tap on the panel", line)
         self.assertEqual(len(self.recorder.emits), 1)  # live mode: one syslog line
-        self.assertEqual(self.recorder.emits[0][0][:3], (5, "touch", "tap"))
+        self.assertEqual(self.recorder.emits[0][0][:3], (1, "touch", "tap"))
 
     def test_long_press_is_hold(self):
         sf = self.state_file("touch")
         self.run_sample(sf, True, 1000)
         result, _ = self.run_sample(sf, False, 1002)
         line = result["emitted"][0]
-        self.assertTrue(line.startswith("NOOBIA P5 touch hold dur_ms=2000"), line)
+        self.assertTrue(line.startswith("NOOBIA P1 touch hold dur_ms=2000"), line)
         self.assertIn("a long hold on the panel", line)
 
     def test_custom_hold_threshold(self):
@@ -458,7 +458,7 @@ class TestPowerSense(SensesCase):
         result, _ = self.run_sample(sf, cap=80, current=-800)
         self.assertEqual(len(result["emitted"]), 1)
         line = result["emitted"][0]
-        self.assertTrue(line.startswith("NOOBIA P5 power charging.change"), line)
+        self.assertTrue(line.startswith("NOOBIA P1 power charging.change"), line)
         self.assertIn("from=charging", line)
         self.assertIn("to=discharging", line)
 
@@ -484,7 +484,7 @@ class TestPowerSense(SensesCase):
         r28, _ = self.run_sample(sf, cap=28)  # low again -> warn once
         low = [e for e in r28["emitted"] if "battery.low" in e]
         self.assertEqual(len(low), 1)
-        self.assertTrue(low[0].startswith("NOOBIA P3 power battery.low cap=28"))
+        self.assertTrue(low[0].startswith("NOOBIA P1 power battery.low cap=28"))
 
     def test_thermal_hot_with_rearm(self):
         sf = self.state_file("power")

@@ -84,10 +84,11 @@ case "${1:-}" in
                 failures=$((failures+1))
                 echo "LYNX_HEALTH_FAILURE count=$failures" >> "$STATE/events.log"
                 if [ "$failures" -ge 3 ]; then
-                    echo LYNX_HEALTH_SAFE_POWEROFF >> "$STATE/events.log"
-                    echo '<2>LYNX_HEALTH_SAFE_POWEROFF' > /dev/kmsg
-                    "$BB" poweroff -f
-                    exit 2
+                    echo LYNX_HEALTH_LOW_POWER_QUIESCENT >> "$STATE/events.log"
+                    echo '<4>LYNX_HEALTH_LOW_POWER_QUIESCENT' > /dev/kmsg 2>/dev/null || true
+                    for dev in "$THERMAL"/cooling_device*; do
+                        [ -f "$dev/cur_state" ] && echo 1 > "$dev/cur_state" 2>/dev/null || true
+                    done
                 fi
             fi
             "$BB" sleep 5

@@ -78,7 +78,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
     elif current_mode != prev_mode and current_mode in ("dark", "bright"):
         line = emit_line(
             sense,
-            3,
+            1,
             "light",
             current_mode,
             fields={"raw": raw_val},

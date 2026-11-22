@@ -103,7 +103,7 @@
   ],
   "effects": {
     "actuates": 3,
-    "read_only": 31,
+    "read_only": 32,
     "runs_task": 1,
     "samples_microphone": 1,
     "stops": 3
@@ -155,7 +155,7 @@
       ]
     }
   },
-  "tool_count": 39,
+  "tool_count": 40,
   "tools": [
     {
       "also_components": [],
@@ -468,6 +468,29 @@
       "required_inputs": [],
       "status_source": "hardware",
       "timeout_s": 5
+    },
+    {
+      "also_components": [],
+      "attended": [],
+      "component": null,
+      "description": "Entity: Lynx. Read the full sensory-cognitive-effector flow (power, senses in syslog, autonomy chunk queue, conscious thoughts, and front screen display sync).",
+      "effect": "read_only",
+      "entry": {
+        "args": [],
+        "command": "lynx-flow"
+      },
+      "files_sha256": {
+        "json": "54b2837ae0186fd023a537923571112208926b9aa8a6bd9f503a624033e6fe3f",
+        "sh": "e4b44fcd8b93905487e14d05130132b9cf3a884e0bfe096092cbb409f7ff71f5"
+      },
+      "group": "overview",
+      "inputs": [],
+      "name": "lynx_flow",
+      "nrp_id": null,
+      "reports_component_status": false,
+      "required_inputs": [],
+      "status_source": null,
+      "timeout_s": 15
     },
     {
       "also_components": [],

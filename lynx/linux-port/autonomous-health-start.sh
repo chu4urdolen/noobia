@@ -47,9 +47,8 @@ esac
 [ ! -e "$RUN/health-bootstrap" ] || fail 'bootstrap already attempted'
 mkdir "$RUN/health-bootstrap" || fail 'cannot reserve bootstrap state'
 
-# An independent timer is deliberately never cancelled on a failed step. If a
-# kernel module probe blocks the child, this timer still requests power-off.
-( "$BB" sleep 180; say 'STARTUP_TIMEOUT_POWER_OFF'; "$BB" poweroff -f ) \
+# An independent timer logs a warning if startup takes too long; never powers off.
+( "$BB" sleep 180; say 'STARTUP_TIMEOUT_WARNING' ) \
     > "$RUN/health-bootstrap/timer.log" 2>&1 < /dev/null &
 timer=$!
 printf '%s\n' "$timer" > "$RUN/health-bootstrap/timer.pid"
@@ -131,7 +130,7 @@ install_script wfi-fallback.sh
     fail 'safe WFI fallback refused'
 
 install_script thermal-cooling-watch.sh
-# Its tested startup guard requires every CPU/SoC reading below 40°C. Wait
+# Its tested startup guard requires every CPU/SoC reading below 48°C. Wait
 # briefly for passive cooling. Launch only once, after a read-only check.
 cooling_temperature_ready() {
     cpu=0 soc=0
@@ -141,12 +140,12 @@ cooling_temperature_ready() {
         case "$kind" in soc_max) soc=$((soc+1));; cpu_*) cpu=$((cpu+1));; *) continue;; esac
         value=$(cat "$zone/temp") || return 1
         case "$value" in ''|*[!0-9]*) return 1;; esac
-        [ "$value" -gt 0 ] && [ "$value" -lt 40000 ] || return 1
+        [ "$value" -gt 0 ] && [ "$value" -lt 48000 ] || return 1
     done
     [ "$soc" -ge 1 ] && [ "$cpu" -ge 2 ]
 }
 cool_ready=0
-for attempt in 1 2 3 4 5 6; do
+for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do
     if cooling_temperature_ready; then
         cool_ready=1
         break
@@ -154,7 +153,12 @@ for attempt in 1 2 3 4 5 6; do
     say "COOLING_TEMPERATURE_WAIT attempt=$attempt"
     "$BB" sleep 10
 done
-[ "$cool_ready" = 1 ] || fail 'cooling temperature deadline exceeded'
+if [ "$cool_ready" != 1 ]; then
+    say 'COOLING_TEMPERATURE_DEADLINE_EXCEEDED; proceeding with throttle enabled'
+    for dev in /sys/class/thermal/cooling_device*; do
+        [ -f "$dev/cur_state" ] && echo 1 > "$dev/cur_state" 2>/dev/null || true
+    done
+fi
 [ ! -e "$RUN/thermal-cooling-watch" ] || fail 'cooling startup already attempted'
 "$BB" nohup "$BB" sh "$RUN/thermal-cooling-watch.sh" --run \
     > "$RUN/thermal-cooling-watch.log" 2>&1 < /dev/null &

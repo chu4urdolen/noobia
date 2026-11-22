@@ -113,7 +113,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
     elif sound_heard and not prev_heard:
         line = emit_line(
             sense,
-            3,
+            1,
             "hearing",
             "sound.heard",
             fields={"peak": peak, "rms": round(rms, 1)},

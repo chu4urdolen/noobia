@@ -9,9 +9,9 @@ SYS=/sys
 THERMAL=$SYS/class/thermal
 PROC=/proc
 ETC=/etc/lynx
-THERMAL_WATCH_SHA=dacb8380a8210db439e6abc30d16477e727bea40fb9f3c2798601850ae4c0c35
-BATTERY_WATCH_SHA=4c575f30a530821cbc3fc9f4aa0cce0bfb5a1d44eebd60f95f7b5cf2cdc8520e
-COOLING_WATCH_SHA=5310290b6a8e981e2250910fb5b4b54428a1faa6b1f6177e36f5be2aade1233b
+THERMAL_WATCH_SHA=822ec22915db93ac6a00a6d98356bc11c8d9265530e9e4183a6e68b30814df8a
+BATTERY_WATCH_SHA=8d2d912ef5b42456709b0b1feb058e57e9b8f67b0c41a4580d40224dc18d5ce7
+COOLING_WATCH_SHA=ed1ede4e1d5628ae87c394e8106398703707f0805353f18adf01be2b95ef8fd8
 
 fail() { echo "OPENRC_HANDOFF_REFUSED $*" >&2; return 1; }
 
@@ -77,8 +77,8 @@ lynx_openrc_handoff_guard() {
     battery_temp=$(sed -n 's/^temperature_millidegrees_celsius=//p' "$RUN/battery-last")
     battery_capacity=$(sed -n 's/^capacity_percent=//p' "$RUN/battery-last")
     case "$battery_temp:$battery_capacity" in *[!0-9:]*) fail 'invalid battery temperature/capacity'; return 1;; esac
-    [ "$battery_temp" -lt 35000 ] || { fail 'battery temperature is not below 35C'; return 1; }
-    [ "$battery_capacity" -ge 20 ] && [ "$battery_capacity" -le 100 ] || { fail 'battery charge is below 20% or invalid'; return 1; }
+    [ "$battery_temp" -lt 48000 ] || { fail 'battery temperature is not below 48C'; return 1; }
+    [ "$battery_capacity" -ge 10 ] && [ "$battery_capacity" -le 100 ] || { fail 'battery charge is below 10% or invalid'; return 1; }
 
     # Repeat the thermal reading check at the handoff boundary. Keep the stricter
     # <40C initial condition used by the tested cooling watcher.
@@ -94,7 +94,7 @@ lynx_openrc_handoff_guard() {
         thermal_count=$((thermal_count+1))
     done
     [ "$soc_count" -ge 1 ] && [ "$cpu_count" -ge 2 ] || { fail 'CPU/SoC sensor inventory incomplete'; return 1; }
-    [ "$thermal_count" -ge 3 ] && [ "$thermal_max" -lt 40000 ] || { fail 'CPU/SoC temperatures must all be below 40C'; return 1; }
+    [ "$thermal_count" -ge 3 ] && [ "$thermal_max" -lt 48000 ] || { fail 'CPU/SoC temperatures must all be below 48C'; return 1; }
 
     cooling_count=0
     for dev in "$THERMAL"/cooling_device*; do

@@ -107,7 +107,7 @@ def run(dry_run: bool = False, state_file: str | None = None,
             state["rssi_armed"] = False  # hysteresis: link got better
         if not state.get("rssi_armed") and signal <= WIFI_RSSI_LOW_DBM:
             line = emit_line(
-                sense, 3, "wifi", "rssi.low",
+                sense, 1, "wifi", "rssi.low",
                 fields={"signal": signal, "iface": iface},
                 text=f"Wi-Fi signal is weak ({signal} dBm)",
                 dry_run=dry_run)

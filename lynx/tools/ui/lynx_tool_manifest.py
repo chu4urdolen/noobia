@@ -64,6 +64,7 @@ COMMAND_SOURCE = {command: source for source, (command, _) in SOURCES.items()}
 TOOLS = {
     "lynx_agent_health": ("read_only", "agent", None, False),
     "lynx_queue_health": ("read_only", "agent", None, False),
+    "lynx_flow": ("read_only", "overview", None, False),
     "lynx_codex": ("runs_task", "agent", None, False),
     "lynx_platform_status": ("read_only", "overview", ("platform", "*"), True),
     "lynx_peripheral_status": ("read_only", "overview", ("peripheral", "*"), True),

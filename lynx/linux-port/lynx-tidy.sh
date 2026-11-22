@@ -20,6 +20,11 @@ LOGS="/var/log/lynx-agent.jsonl /var/log/lynx-agent-worker.log /var/log/lynx-sen
       /var/log/lynx-bluetoothd.log /var/lib/noobia/lynx_thought.txt
       /var/log/lynx-tidy.log /var/log/lynx-charge-guard.log"
 
+# Files whose writers open them anew for every append: replaced atomically
+# (a reader such as the display never sees a half-written file). All other
+# logs are held open by their service with O_APPEND and are trimmed in place.
+ATOMIC="/var/lib/noobia/lynx_thought.txt /var/log/lynx-agent.jsonl"
+
 trim() {
     f=$1
     [ -f "$f" ] && [ ! -L "$f" ] || return 0
@@ -28,7 +33,10 @@ trim() {
     tmp="$f.tidy.$$"
     # Keep whole lines: drop the first (partial) line of the kept tail.
     "$BB" tail -c "$KEEP_BYTES" "$f" | "$BB" sed '1d' > "$tmp" || { rm -f "$tmp"; return 0; }
-    cat "$tmp" > "$f" && rm -f "$tmp"
+    case " $ATOMIC " in
+        *" $f "*) chmod --reference="$f" "$tmp" 2>/dev/null; mv -f "$tmp" "$f" ;;
+        *) cat "$tmp" > "$f" && rm -f "$tmp" ;;
+    esac
     echo "LYNX_TIDY_TRIMMED $f from=$size to=$("$BB" stat -c %s "$f")"
 }
 
@@ -51,6 +59,8 @@ once() {
 
 case "${1:-}" in
     --once) once ;;
-    --watch) while :; do once; "$BB" sleep "$INTERVAL"; done ;;
+    --watch)
+        trap 'rm -f /var/log/*.tidy.* /var/lib/noobia/*.tidy.* 2>/dev/null; exit 0' TERM INT
+        while :; do once; "$BB" sleep "$INTERVAL" & wait $!; done ;;
     *) echo 'Usage: lynx-tidy.sh --once|--watch' >&2; exit 2 ;;
 esac

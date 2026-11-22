@@ -408,7 +408,7 @@ static int read_scene(struct scene *scene)
 	return 1;
 }
 
-static int paint_lynx_portrait(uint32_t *pixels, const char *name, int capacity)
+__attribute__((unused)) static int paint_lynx_portrait(uint32_t *pixels, const char *name, int capacity)
 {
 	char path[256];
 	if (!safe_name(name))
@@ -940,16 +940,10 @@ static void toggle_hearing(void)
 
 static void paint_thoughts(uint32_t *pixels)
 {
-	const uint32_t dark = 0x00121c29, teal = 0x0009dcc4;
-	const uint32_t white = 0x00f5f8fa, muted = 0x007d94a5;
-
-	/* Container box: x=50..1190, y=2050..2340 (height 290) */
-	rectangle(pixels, 50, 2050, 1140, 290, dark);
-	rectangle(pixels, 50, 2050, 1140, 4, teal);
-	draw_text(pixels, "THOUGHTS", 75, 2065, 5, teal);
+	const uint32_t white = 0x00f5f8fa, muted = 0x00546572;
 
 	FILE *f = fopen(THOUGHT_FILE, "r");
-	char content[512] = {0};
+	char content[1024] = {0};
 	size_t n = 0;
 	if (f) {
 		n = fread(content, 1, sizeof(content) - 1, f);
@@ -957,7 +951,7 @@ static void paint_thoughts(uint32_t *pixels)
 	}
 
 	if (n == 0) {
-		draw_text(pixels, "(listening and waiting...)", 75, 2125, 5, muted);
+		draw_text(pixels, "(listening...)", 80, 600, 8, muted);
 		return;
 	}
 
@@ -969,33 +963,37 @@ static void paint_thoughts(uint32_t *pixels)
 	while (*start == ' ')
 		start++;
 	if (!*start) {
-		draw_text(pixels, "(listening and waiting...)", 75, 2125, 5, muted);
+		draw_text(pixels, "(listening...)", 80, 600, 8, muted);
 		return;
 	}
 
-	/* Word wrap up to 3 lines with 36 chars each */
-	unsigned int y = 2125;
+	/* Scale 8 text: each char is 6*8 = 48px wide. Available width is 1080px -> 22 chars per line */
+	const unsigned int scale = 8;
+	const unsigned int line_h = 7 * scale + 34; /* 56 + 34 = 90px line height */
+	const int max_chars = 22;
+	unsigned int y = 440;
 	char *cursor = start;
-	for (int line = 0; line < 3 && *cursor; line++) {
-		char line_buf[40] = {0};
+
+	for (int line = 0; line < 19 && *cursor && y < 2280; line++) {
+		char line_buf[64] = {0};
 		size_t len = strlen(cursor);
-		if (len <= 36) {
+		if ((int)len <= max_chars) {
 			snprintf(line_buf, sizeof(line_buf), "%s", cursor);
 			cursor += len;
 		} else {
-			int split = 36;
+			int split = max_chars;
 			while (split > 0 && cursor[split] != ' ')
 				split--;
 			if (split <= 0)
-				split = 36;
+				split = max_chars;
 			memcpy(line_buf, cursor, (size_t)split);
 			line_buf[split] = '\0';
 			cursor += split;
 			while (*cursor == ' ')
 				cursor++;
 		}
-		draw_text(pixels, line_buf, 75, y, 5, white);
-		y += 60;
+		draw_text(pixels, line_buf, 80, y, scale, white);
+		y += line_h;
 	}
 }
 
@@ -1027,8 +1025,28 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 	const uint32_t teal = 0x0009dcc4;
 	char value[48];
 	if (page == PAGE_HOME) {
-		if (paint_lynx_portrait(pixels, pose, capacity) < 0)
-			return -1;
+		(void)pose;
+		for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
+			pixels[i] = 0x00080d14; /* Deep clean obsidian black */
+
+		/* Clean top header: LYNX, Time, Battery */
+		draw_text(pixels, "LYNX", 460, 75, 14, teal);
+		time_t now = time(NULL);
+		if (now >= 1700000000) {
+			struct tm local;
+			if (localtime_r(&now, &local)) {
+				snprintf(value, sizeof(value), "%02d:%02d", local.tm_hour, local.tm_min);
+				draw_text(pixels, value, 80, 200, 9, white);
+			}
+		}
+		if (capacity >= 0 && capacity <= 100) {
+			snprintf(value, sizeof(value), "%d%%", capacity);
+			draw_text(pixels, value, 960, 200, 9, white);
+			rectangle(pixels, 880, 290, 280, 10, 0x00334e5b);
+			rectangle(pixels, 880, 290, (unsigned int)(280 * capacity / 100), 10, capacity > 20 ? teal : 0x00edb961);
+		}
+		rectangle(pixels, 60, 320, 1120, 3, 0x001d2d3a);
+
 		paint_thoughts(pixels);
 		paint_hearing_button(pixels);
 		nav_buttons(pixels, page);

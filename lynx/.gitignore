@@ -27,6 +27,10 @@
 !/tools/local_calls/lynx_magnetometer_read.json
 !/tools/local_calls/lynx_motion_read.sh
 !/tools/local_calls/lynx_motion_read.json
+!/tools/voice/
+/tools/voice/*
+!/tools/voice/*.py
+!/tools/voice/lynx-speech
 !/tools/ram-log-reader/
 /tools/ram-log-reader/*
 !/tools/ram-log-reader/*.py

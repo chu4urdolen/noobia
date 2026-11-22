@@ -408,9 +408,11 @@ static int read_scene(struct scene *scene)
 	return 1;
 }
 
-__attribute__((unused)) static int paint_lynx_portrait(uint32_t *pixels, const char *name, int capacity)
+static int paint_lynx_portrait(uint32_t *pixels, const char *name, int capacity)
 {
 	char path[256];
+	if (!name || !*name)
+		name = "01_standing_smile";
 	if (!safe_name(name))
 		return -1;
 	snprintf(path, sizeof(path), FRAME_DIR "/%s.rgb565.gz", name);
@@ -938,12 +940,40 @@ static void toggle_hearing(void)
 	}
 }
 
+static void haptic_tick(int duration_ms)
+{
+	int fd = open("/sys/class/leds/vibrator/duration", O_WRONLY);
+	if (fd >= 0) {
+		char buf[16];
+		int n = snprintf(buf, sizeof(buf), "%d\n", duration_ms);
+		if (n > 0) {
+			ssize_t ret = write(fd, buf, (size_t)n);
+			(void)ret;
+		}
+		close(fd);
+	}
+	fd = open("/sys/class/leds/vibrator/activate", O_WRONLY);
+	if (fd >= 0) {
+		ssize_t ret = write(fd, "1\n", 2);
+		(void)ret;
+		close(fd);
+	}
+}
+
+static void draw_text_shadow(uint32_t *pixels, const char *word, unsigned int x,
+			     unsigned int y, unsigned int scale, uint32_t color,
+			     uint32_t shadow_color)
+{
+	draw_text(pixels, word, x + 2, y + 2, scale, shadow_color);
+	draw_text(pixels, word, x, y, scale, color);
+}
+
 static void paint_thoughts(uint32_t *pixels)
 {
-	const uint32_t white = 0x00f5f8fa, muted = 0x00546572;
+	const uint32_t white = 0x00f5f8fa, muted = 0x007d94a5, shadow = 0x00000000;
 
 	FILE *f = fopen(THOUGHT_FILE, "r");
-	char content[1024] = {0};
+	char content[2048] = {0};
 	size_t n = 0;
 	if (f) {
 		n = fread(content, 1, sizeof(content) - 1, f);
@@ -951,49 +981,75 @@ static void paint_thoughts(uint32_t *pixels)
 	}
 
 	if (n == 0) {
-		draw_text(pixels, "(listening...)", 80, 600, 8, muted);
+		draw_text_shadow(pixels, "(listening...)", 75, 2300, 4, muted, shadow);
 		return;
 	}
 
 	for (size_t i = 0; i < n; i++) {
-		if (content[i] == '\r' || content[i] == '\n')
+		if (content[i] == '\r' || content[i] == '\t')
 			content[i] = ' ';
 	}
-	char *start = content;
-	while (*start == ' ')
-		start++;
-	if (!*start) {
-		draw_text(pixels, "(listening...)", 80, 600, 8, muted);
+
+	/* Word wrap into lines */
+	const unsigned int scale = 4;
+	const unsigned int line_h = 7 * scale + 10; /* 28 + 10 = 38px */
+	const int max_chars = 44;
+	char lines[32][64];
+	int line_count = 0;
+
+	char *p = content;
+	while (*p && line_count < 32) {
+		while (*p == ' ' || *p == '\n')
+			p++;
+		if (!*p)
+			break;
+
+		char *next_nl = strchr(p, '\n');
+		size_t segment_len = next_nl ? (size_t)(next_nl - p) : strlen(p);
+
+		while (segment_len > 0 && line_count < 32) {
+			while (*p == ' ') {
+				p++;
+				segment_len--;
+			}
+			if (segment_len == 0)
+				break;
+
+			int split = (int)segment_len <= max_chars ? (int)segment_len : max_chars;
+			if (split < (int)segment_len) {
+				int s = split;
+				while (s > 0 && p[s] != ' ')
+					s--;
+				if (s > 0)
+					split = s;
+			}
+			snprintf(lines[line_count], sizeof(lines[line_count]), "%.*s", split, p);
+			line_count++;
+			p += split;
+			segment_len -= (size_t)split;
+		}
+		if (next_nl)
+			p = next_nl + 1;
+	}
+
+	if (line_count == 0) {
+		draw_text_shadow(pixels, "(listening...)", 75, 2300, 4, muted, shadow);
 		return;
 	}
 
-	/* Scale 8 text: each char is 6*8 = 48px wide. Available width is 1080px -> 22 chars per line */
-	const unsigned int scale = 8;
-	const unsigned int line_h = 7 * scale + 34; /* 56 + 34 = 90px line height */
-	const int max_chars = 22;
-	unsigned int y = 440;
-	char *cursor = start;
+	/* Keep scrolling window: show the most recent lines (up to 10 lines) */
+	const int max_visible = 10;
+	int start_idx = line_count > max_visible ? line_count - max_visible : 0;
+	int visible_count = line_count - start_idx;
 
-	for (int line = 0; line < 19 && *cursor && y < 2280; line++) {
-		char line_buf[64] = {0};
-		size_t len = strlen(cursor);
-		if ((int)len <= max_chars) {
-			snprintf(line_buf, sizeof(line_buf), "%s", cursor);
-			cursor += len;
-		} else {
-			int split = max_chars;
-			while (split > 0 && cursor[split] != ' ')
-				split--;
-			if (split <= 0)
-				split = max_chars;
-			memcpy(line_buf, cursor, (size_t)split);
-			line_buf[split] = '\0';
-			cursor += split;
-			while (*cursor == ' ')
-				cursor++;
-		}
-		draw_text(pixels, line_buf, 80, y, scale, white);
-		y += line_h;
+	/* Position right above hearing button (y=2360) with transparent background */
+	unsigned int base_y = 2330 - (unsigned int)visible_count * line_h;
+	if (base_y < 1850)
+		base_y = 1850;
+
+	for (int i = start_idx; i < line_count; i++) {
+		draw_text_shadow(pixels, lines[i], 70, base_y, scale, white, shadow);
+		base_y += line_h;
 	}
 }
 
@@ -1025,28 +1081,8 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 	const uint32_t teal = 0x0009dcc4;
 	char value[48];
 	if (page == PAGE_HOME) {
-		(void)pose;
-		for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
-			pixels[i] = 0x00080d14; /* Deep clean obsidian black */
-
-		/* Clean top header: LYNX, Time, Battery */
-		draw_text(pixels, "LYNX", 460, 75, 14, teal);
-		time_t now = time(NULL);
-		if (now >= 1700000000) {
-			struct tm local;
-			if (localtime_r(&now, &local)) {
-				snprintf(value, sizeof(value), "%02d:%02d", local.tm_hour, local.tm_min);
-				draw_text(pixels, value, 80, 200, 9, white);
-			}
-		}
-		if (capacity >= 0 && capacity <= 100) {
-			snprintf(value, sizeof(value), "%d%%", capacity);
-			draw_text(pixels, value, 960, 200, 9, white);
-			rectangle(pixels, 880, 290, 280, 10, 0x00334e5b);
-			rectangle(pixels, 880, 290, (unsigned int)(280 * capacity / 100), 10, capacity > 20 ? teal : 0x00edb961);
-		}
-		rectangle(pixels, 60, 320, 1120, 3, 0x001d2d3a);
-
+		if (paint_lynx_portrait(pixels, pose, capacity) < 0)
+			return -1;
 		paint_thoughts(pixels);
 		paint_hearing_button(pixels);
 		nav_buttons(pixels, page);
@@ -1745,6 +1781,7 @@ static int run(const char *action, unsigned int seconds)
 					if (portrait && lit && !suppress_tap &&
 					    tap_x >= 0 && tap_x <= 12399 &&
 					    tap_y >= 0 && tap_y <= 27719) {
+						haptic_tick(25);
 						int x = tap_x * (int)WIDTH / 12400;
 						int y = tap_y * (int)HEIGHT / 27720;
 						enum lynx_page target = page;
@@ -1761,6 +1798,23 @@ static int run(const char *action, unsigned int seconds)
 							toggle_hearing();
 							page_changed = true;
 							printf("hearing_toggled\n");
+							fflush(stdout);
+						} else if (page == PAGE_HOME && y < 2360) {
+							/* Tapped on portrait! */
+							haptic_tick(45);
+							FILE *sf = fopen("/var/log/noobia/sense.log", "a");
+							if (sf) {
+								fprintf(sf, "{\"source\":\"touch\",\"type\":\"tap\",\"x\":%d,\"y\":%d,\"t\":%ld}\n",
+									x, y, (long)time(NULL));
+								fclose(sf);
+							}
+							FILE *tf = fopen(THOUGHT_FILE, "w");
+							if (tf) {
+								fprintf(tf, "*(giggles)* You touched my screen! 💙\n");
+								fclose(tf);
+							}
+							page_changed = true;
+							printf("portrait_tapped x=%d y=%d\n", x, y);
 							fflush(stdout);
 						} else if (page == PAGE_CONSOLE &&
 							   y >= 450 && y < 2450) {
@@ -1954,7 +2008,7 @@ int main(int argc, char **argv)
 		return self_test_console_keys();
 	if (argc == 4 && !strcmp(argv[1], "--preview-page")) {
 		if (!strcmp(argv[2], "home"))
-			return render_preview("", argv[3], PAGE_HOME);
+			return render_preview("01_standing_smile", argv[3], PAGE_HOME);
 		if (!strcmp(argv[2], "console"))
 			return render_preview("", argv[3], PAGE_CONSOLE);
 		if (!strcmp(argv[2], "status"))

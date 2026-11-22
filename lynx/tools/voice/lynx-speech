@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+"""Lynx Distributed Speech Engine.
+
+Pipelined multi-sentence synthesis via Nexus Piper (en_US-kristin-medium)
+with safe digital attenuation (volume=0.08) and local Flite slt fallback.
+"""
+
+import json
+import os
+from pathlib import Path
+import queue
+import re
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import urllib.error
+import urllib.request
+
+HEALTH = "/usr/local/bin/lynx-status"
+THOUGHT_FILE = Path("/var/lib/noobia/lynx_thought.txt")
+NEXUS_VOICE_URL = "http://192.168.100.106:115/api/v1/tts"
+KEY_FILE = Path("/etc/lynx/nexus-voice.key")
+
+MIXER = [
+    ("I2S3_CH1 DL1_CH1", "on"),
+    ("I2S3_CH2 DL1_CH2", "on"),
+    ("I2S3_HD_Mux", "Low_Jitter"),
+    ("primary_play_scenario", "on"),
+    ("Audio IRQ1 CNT", "1024"),
+    ("TFA_CHIP_SELECTOR", "2"),
+    ("TFA98XX Profile", "MMI_Test_SpeakerR"),
+]
+RESET = [
+    ("Speaker_R_Mute_Switch", "On"),
+    ("Speaker_L_Mute_Switch", "On"),
+    ("I2S3_CH1 DL1_CH1", "off"),
+    ("I2S3_CH2 DL1_CH2", "off"),
+    ("primary_play_scenario", "off"),
+    ("TFA_CHIP_SELECTOR", "0"),
+    ("TFA98XX Profile", "StereoR"),
+    ("I2S3_HD_Mux", "Normal"),
+    ("Audio IRQ1 CNT", "0"),
+]
+
+
+def mixer_set(control, value):
+    subprocess.run(["amixer", "-c0", "cset", f"name={control}", value],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                   timeout=3)
+
+
+def mute():
+    for control, value in RESET:
+        try:
+            mixer_set(control, value)
+        except Exception:
+            pass
+
+
+def unmute():
+    for control, value in MIXER:
+        try:
+            mixer_set(control, value)
+        except Exception:
+            pass
+
+
+def ready():
+    result = subprocess.run([HEALTH, "--assert-ready"], capture_output=True,
+                            text=True, timeout=5, check=True)
+    state = json.loads(result.stdout)
+    battery = state["battery"]
+    floor = 20 if battery["current_mA_signed"] > 0 else 30
+    if (state.get("issues") or battery["capacity_percent"] < floor or
+            battery["temperature_mC"] >= 35000 or state["thermal"]["max_mC"] >= 45000):
+        raise RuntimeError("power or thermal guard failed")
+    return state["boot_id"]
+
+
+def fetch_nexus_wav(text: str, token: str) -> bytes:
+    payload = json.dumps({"text": text}).encode("utf-8")
+    req = urllib.request.Request(
+        NEXUS_VOICE_URL,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}"
+        }
+    )
+    with urllib.request.urlopen(req, timeout=8) as res:
+        if res.status == 200:
+            return res.read()
+    raise RuntimeError("Nexus TTS non-200")
+
+
+def synthesize_flite_safe(text: str, out_wav: Path) -> bool:
+    with tempfile.NamedTemporaryFile(suffix=".wav") as tmp_raw:
+        syn = subprocess.run(["flite", "-voice", "slt", "-t", text, "-o", tmp_raw.name],
+                             capture_output=True, timeout=6)
+        if syn.returncode != 0:
+            return False
+        # Only 8% volume scaling for TFA amplifier hardware safety, NO PITCH EFFECTS
+        sox = subprocess.run(["sox", "-v", "0.08", tmp_raw.name, "-r", "48000", "-c", "2", str(out_wav)],
+                             capture_output=True, timeout=6)
+        return sox.returncode == 0 and out_wav.is_file()
+
+
+def split_sentences(text: str) -> list:
+    cleaned = re.sub(r'[\r\n\t]+', ' ', text).strip()
+    raw_parts = re.split(r'(?<=[.!?])\s+', cleaned)
+    parts = []
+    for p in raw_parts:
+        p = p.strip()
+        if p:
+            parts.append(p)
+    return parts or [cleaned]
+
+
+def speak(text: str) -> dict:
+    clean_text = text.strip()
+    if not clean_text:
+        return {"ok": False, "error": "empty speech text"}
+
+    boot_id = ready()
+
+    # Update thought file so screen displays her thoughts
+    try:
+        THOUGHT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        # Append so thoughts accumulate and scroll
+        with THOUGHT_FILE.open("a", encoding="utf-8") as f:
+            f.write(clean_text + "\n")
+    except Exception:
+        pass
+
+    token = KEY_FILE.read_text().strip() if KEY_FILE.is_file() else ""
+    sentences = split_sentences(clean_text)
+
+    # Parallel pipeline: queue WAV files for each sentence
+    wav_queue = queue.Queue(maxsize=4)
+
+    def producer():
+        for sent in sentences:
+            wav_bytes = None
+            if token:
+                try:
+                    wav_bytes = fetch_nexus_wav(sent, token)
+                except Exception:
+                    wav_bytes = None
+
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                path = Path(f.name)
+
+            if wav_bytes:
+                path.write_bytes(wav_bytes)
+                wav_queue.put(path)
+            else:
+                # Fallback to local Flite slt
+                ok = synthesize_flite_safe(sent, path)
+                if ok:
+                    wav_queue.put(path)
+                else:
+                    path.unlink(missing_ok=True)
+        wav_queue.put(None)
+
+    prod_thread = threading.Thread(target=producer, daemon=True)
+    prod_thread.start()
+
+    played_count = 0
+    try:
+        unmute()
+        while True:
+            wav_path = wav_queue.get()
+            if wav_path is None:
+                break
+            try:
+                subprocess.run([
+                    "aplay", "-D", "hw:0,0",
+                    "--period-size=1024", "--buffer-size=4096",
+                    str(wav_path)
+                ], capture_output=True, timeout=15)
+                played_count += 1
+            finally:
+                wav_path.unlink(missing_ok=True)
+    finally:
+        mute()
+
+    prod_thread.join(timeout=1)
+    return {"ok": True, "spoken": clean_text, "sentences": len(sentences),
+            "played": played_count, "boot_id": boot_id}
+
+
+def main():
+    try:
+        raw = sys.stdin.read(4096).strip()
+        if raw.startswith("{"):
+            data = json.loads(raw)
+            text = data.get("text", "")
+        else:
+            text = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else raw
+
+        if not text:
+            print(json.dumps({"ok": False, "error": "no text provided"}))
+            return 1
+
+        res = speak(text)
+        print(json.dumps(res))
+        return 0 if res.get("ok") else 1
+    except Exception as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}))
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

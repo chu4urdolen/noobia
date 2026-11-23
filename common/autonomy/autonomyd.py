@@ -209,6 +209,8 @@ class Daemon:
         chunker = trigger.Chunker(
             window_s=float(t.get("window_s", 60)), max_lines=int(t.get("max_lines", 15)),
             volume_resets_priority=bool(t.get("volume_resets_priority", True)),
+            uniform_priority=int(t.get("uniform_priority", 0)),
+            carry_priority=bool(t.get("carry_priority", True)),
             disabled=kill.exists)
         h = config.get("harness", {})
         self.harness = harness_mod.Harness(
@@ -219,7 +221,10 @@ class Daemon:
             clock=clock, heartbeat_s=float(h.get("heartbeat_s", 300)),
             silence_s=float(h.get("silence_s", 900)),
             max_per_hour=int(h.get("max_per_hour", 30)), queue_max=int(h.get("queue_max", 20)),
-            extra_heartbeat_fields=self._heartbeat_fields, disabled=kill.exists)
+            extra_heartbeat_fields=self._heartbeat_fields, disabled=kill.exists,
+            combine=bool(h.get("combine", False)),
+            aigel_enabled=bool(config["aigel"].get("enabled", True)),
+            async_aigel=bool(h.get("async_aigel", False)))
         self.interval_s = float(config.get("interval_s", 1.0))
         self._dirty = False
 

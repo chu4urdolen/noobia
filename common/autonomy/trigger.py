@@ -38,6 +38,8 @@ class Chunker:
         carry_max_lines: int = 200,
         carry_max_age_s: float = 600.0,
         volume_resets_priority: bool = True,
+        uniform_priority: int = 0,
+        carry_priority: bool = True,
         silence_s: float = 900.0,
         heartbeat_s: float = 300.0,
         disabled: Callable[[], bool] = lambda: False,
@@ -49,6 +51,11 @@ class Chunker:
         self.carry_max_lines = int(carry_max_lines)
         self.carry_max_age_s = float(carry_max_age_s)
         self.volume_resets_priority = bool(volume_resets_priority)
+        # Tom 2026-11-23: every reaction at one level (e.g. 5): five such
+        # lines of ANY kind close the chunk; fewer wait for window_s.
+        self.uniform_priority = int(uniform_priority)
+        # False: a timeout sends priority lines too instead of carrying them.
+        self.carry_priority = bool(carry_priority)
         self.silence_s = float(silence_s)
         self.heartbeat_s = float(heartbeat_s)
         self.disabled = disabled
@@ -111,6 +118,8 @@ class Chunker:
         if self._chunk_open_time is None:
             self._chunk_open_time = now
 
+        if self.uniform_priority >= 1 and parsed.get("p", 0) >= 1:
+            parsed = dict(parsed, p=self.uniform_priority)
         self._current.append((now, parsed))
 
         # Check PRIORITY trigger
@@ -197,7 +206,7 @@ class Chunker:
             self._overflow_carried = []
             new_carried = []
             for arr_time, l in self._current:
-                if l.get("p", 0) >= 1 and not l.get("self_caused", False):
+                if self.carry_priority and l.get("p", 0) >= 1 and not l.get("self_caused", False):
                     new_carried.append((arr_time, l))
                 else:
                     to_send.append(l)

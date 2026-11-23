@@ -6,7 +6,8 @@
   },
   "aigel": {
     "url": "http://192.168.100.106:112/api/v1/chunk",
-    "hmac_secret_file": "/etc/noobia/aigel-lynx.secret"
+    "hmac_secret_file": "/etc/noobia/aigel-lynx.secret",
+    "enabled": true
   },
   "adapter": {
     "path": "/usr/local/lib/noobia/lynx",
@@ -27,14 +28,18 @@
     ]
   },
   "trigger": {
-    "window_s": 60,
-    "max_lines": 15
+    "window_s": 15,
+    "max_lines": 15,
+    "uniform_priority": 5,
+    "carry_priority": false
   },
   "harness": {
     "heartbeat_s": 300,
     "silence_s": 900,
     "max_per_hour": 30,
-    "queue_max": 20
+    "queue_max": 20,
+    "combine": true,
+    "async_aigel": true
   },
   "kill_switch": "/etc/noobia/autonomy.disable",
   "interval_s": 1.0

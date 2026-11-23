@@ -49,8 +49,22 @@ class Harness:
                  emit=None, log=None, on_priority_rules=None, validate_pattern=None,
                  clock=time.monotonic, heartbeat_s=300.0, silence_s=900.0,
                  min_interval_s=1.0, max_per_hour=30, queue_max=20,
-                 extra_heartbeat_fields=None, disabled=None):
+                 extra_heartbeat_fields=None, disabled=None, combine=False,
+                 aigel_enabled=True, async_aigel=False):
         self.host, self.read_new, self.chunker = host, read_new, chunker
+        # combine (Tom 2026-11-23): every chunk, whatever closed it, goes
+        # through the pattern DB, and all its unique sentences reach the Noob
+        # as ONE observation ("You see laptop. You are now lying flat. ...").
+        self.combine = bool(combine)
+        # Aigel off (Tom 2026-11-23): lines no pattern explains go straight to
+        # the Noob in the combined message instead of to Aigel.
+        self.aigel_enabled = bool(aigel_enabled)
+        # async_aigel: Aigel thinks on the same Qwen and can take a minute;
+        # the call runs in a worker thread so reading senses and delivering
+        # matched sentences to the Noob never waits for her. Replies are
+        # applied here in the main loop (ranker and queue stay single-threaded).
+        self.async_aigel = bool(async_aigel)
+        self._inflight = None          # (thread, box) while a send is running
         self.client, self.adapter, self.ranker = client, adapter, ranker
         self.emit = emit or (lambda line: None)
         self.log = log or (lambda line: None)
@@ -141,6 +155,8 @@ class Harness:
     # --------------------------------------------------------------- routing
     def _route(self, chunk, now):
         reason, lines = chunk["reason"], chunk["lines"]
+        if self.combine and self.ranker is not None and reason != "silence":
+            return self._route_combined(chunk, now)
         if reason == "priority" and self.ranker is not None:
             result = self.ranker.process(lines, now)
             delivered = 0
@@ -160,6 +176,31 @@ class Harness:
         self.log(f"harness chunk reason={reason} lines={len(lines)} -> aigel")
         self._enqueue({"reason": reason, "lines": lines})
         return 0
+
+    def _route_combined(self, chunk, now):
+        reason, lines = chunk["reason"], chunk["lines"]
+        result = self.ranker.process(lines, now)
+        deliveries = result.get("deliveries") or []
+        raw_texts = [str(t).strip() for t, _ in deliveries]
+        direct = []
+        if not self.aigel_enabled:
+            direct = [l for l in result["unexplained"]
+                      if l.get("p", 0) >= 1 and not l.get("self_caused") and l.get("text")]
+            raw_texts += [str(l["text"]).strip() for l in direct]
+        texts = list(dict.fromkeys(t for t in raw_texts if t))
+        delivered = 0
+        if texts:
+            sentences = [t if t[-1] in ".!?" else t + "." for t in texts]
+            pids = list(dict.fromkeys(pid for _, pid in deliveries if pid))
+            evidence = ([l["raw"] for l, p in result["explained"] if l.get("raw")]
+                        + [l["raw"] for l in direct if l.get("raw")])[:MAX_EVIDENCE]
+            pid = pids[0] if len(pids) == 1 else "combined"
+            delivered = self._deliver("ranker", " ".join(sentences), evidence, pid)
+        self.log(f"harness chunk reason={reason} lines={len(lines)} combined={len(texts)} "
+                 f"explained={len(result['explained'])} unexplained={len(result['unexplained'])}")
+        if result["unexplained"] and self.aigel_enabled:
+            self._enqueue({"reason": reason, "lines": result["unexplained"]})
+        return delivered
 
     def _message_of(self, pattern_id):
         for p in self.ranker.store:
@@ -183,6 +224,11 @@ class Harness:
 
     def _flush(self, now):
         delivered = 0
+        if not self.aigel_enabled:
+            self.queue.clear()
+            return 0
+        if self.async_aigel:
+            return self._flush_async(now)
         if now < self.retry_at:
             return 0
         while self.queue and self._rate_ok(now):
@@ -201,6 +247,42 @@ class Harness:
             self.queue.popleft()
             self.sent_times.append(now)
             delivered += self._apply_reply(reply, chunk)
+        return delivered
+
+    def _flush_async(self, now):
+        import threading
+        delivered = 0
+        if self._inflight is not None:
+            thread, box = self._inflight
+            if thread.is_alive():
+                return 0
+            self._inflight = None
+            chunk = box["chunk"]
+            if "error" in box:
+                exc = box["error"]
+                self.failures += 1
+                wait = min(self.max_backoff_s, 2.0 ** min(self.failures, 16))
+                self.retry_at = now + wait
+                self.log(f"harness aigel send failed ({self.failures} in a row, retry in {wait:.0f} s): "
+                         f"{type(exc).__name__}: {str(exc)[:160]}")
+            else:
+                self.failures = 0
+                self.retry_at = 0.0
+                if self.queue and self.queue[0] is chunk:
+                    self.queue.popleft()
+                self.sent_times.append(now)
+                delivered += self._apply_reply(box["reply"], chunk)
+        if self.queue and now >= self.retry_at and self._rate_ok(now):
+            box = {"chunk": self.queue[0]}
+
+            def send(box=box):
+                try:
+                    box["reply"] = self.client.send_chunk(box["chunk"])
+                except Exception as exc:  # noqa: BLE001
+                    box["error"] = exc
+            thread = threading.Thread(target=send, name="aigel-send", daemon=True)
+            self._inflight = (thread, box)
+            thread.start()
         return delivered
 
     def _apply_reply(self, reply, chunk):

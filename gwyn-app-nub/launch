@@ -3,8 +3,16 @@ set -euo pipefail
 NOOBIA="${NOOBIA:-/noobia}"
 
 root=$NOOBIA/gwyn-app-nub
-claude=/home/aria/.local/bin/claude
-[[ -x "$claude" ]] || { echo "Claude Code is not installed at $claude" >&2; exit 1; }
+user="${USER:-$(id -un 2>/dev/null || echo aria)}"
+home="${HOME:-$(getent passwd "$user" 2>/dev/null | cut -d: -f6 || echo "/home/$user")}"
+claude=""
+for candidate in "$home/.local/bin/claude" /usr/local/bin/claude $(command -v claude 2>/dev/null); do
+    if [[ -x "$candidate" ]]; then
+        claude="$candidate"
+        break
+    fi
+done
+[[ -n "$claude" ]] || { echo "Claude Code is not installed in PATH or ~/.local/bin/claude" >&2; exit 1; }
 export CLAUDE_CONFIG_DIR="$root/private/claude"
 mkdir -p "$CLAUDE_CONFIG_DIR"
 chmod 700 "$root/private" "$CLAUDE_CONFIG_DIR"
@@ -32,7 +40,10 @@ if [[ -n "$attach" ]]; then
     session="noobia-gwyn-${attach:0:8}"
     tmux has-session -t "$session" 2>/dev/null || { echo "Gwyn session is not running: $attach" >&2; exit 1; }
 else
-    [[ "$(/usr/bin/id -un)" == "aria" ]] || { echo "Run Gwyn from the aria account" >&2; exit 1; }
+    ssh_env=""
+    if [[ -z "${GIT_SSH_COMMAND:-}" && -f "$home/.ssh/noobia_dushich_github" ]]; then
+        ssh_env="GIT_SSH_COMMAND='ssh -i $home/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes'"
+    fi
     attach="$(python3 -c 'import uuid; print(uuid.uuid4())')"
     session="noobia-gwyn-${attach:0:8}"
     if [[ -n "$resume" ]]; then
@@ -46,7 +57,7 @@ else
         conversation="$attach"; claude_args="--session-id $attach"
     fi
     tmux new-session -d -s "$session" -n workshop -c "$root" \
-        "exec env HOME=/home/aria USER=aria LOGNAME=aria CLAUDE_CONFIG_DIR=$CLAUDE_CONFIG_DIR GIT_AUTHOR_NAME='Gwyn App Nub' GIT_AUTHOR_EMAIL=gwyn@nexus.local GIT_COMMITTER_NAME='Gwyn App Nub' GIT_COMMITTER_EMAIL=gwyn@nexus.local GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes' NOOBIA_GWYN_SESSION=$attach NOOBIA_GWYN_CONVERSATION_ID=$conversation $claude $claude_args"
+        "exec env HOME=$home USER=$user LOGNAME=$user CLAUDE_CONFIG_DIR=$CLAUDE_CONFIG_DIR GIT_AUTHOR_NAME='Gwyn App Nub' GIT_AUTHOR_EMAIL=gwyn@nexus.local GIT_COMMITTER_NAME='Gwyn App Nub' GIT_COMMITTER_EMAIL=gwyn@nexus.local $ssh_env NOOBIA_GWYN_SESSION=$attach NOOBIA_GWYN_CONVERSATION_ID=$conversation $claude $claude_args"
     tmux select-pane -t "$session":0.0 -T 'Gwyn + Noob • Claude Code'
     tmux set-option -t "$session" history-limit 50000
     tmux set-option -t "$session" mouse on

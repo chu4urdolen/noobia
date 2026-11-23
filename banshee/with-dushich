@@ -36,13 +36,32 @@ else
             echo "Antigravity conversation is unavailable: $conversation" >&2; exit 1
         }
     fi
+    user="${USER:-$(id -un 2>/dev/null || echo aria)}"
+    home="${HOME:-$(getent passwd "$user" 2>/dev/null | cut -d: -f6 || echo "/home/$user")}"
+    agy_bin=""
+    for candidate in "$home/.local/bin/agy" /usr/local/bin/agy $(command -v agy 2>/dev/null); do
+        if [[ -x "$candidate" ]]; then
+            agy_bin="$candidate"
+            break
+        fi
+    done
+    if [[ -z "$agy_bin" ]]; then
+        echo "Google Antigravity CLI ('agy') not found in PATH or ~/.local/bin/agy" >&2
+        exit 1
+    fi
+
     attach="$(python3 -c 'import uuid; print(uuid.uuid4())')"
     session="noobia-banshee-${attach:0:8}"
     agy_args="--dangerously-skip-permissions"
     [[ -z "$conversation" ]] || agy_args="$agy_args --conversation $conversation"
-    [[ "$(/usr/bin/id -un)" == "aria" ]] || { echo "Run Banshee from the aria account" >&2; exit 1; }
+
+    ssh_env=""
+    if [[ -z "${GIT_SSH_COMMAND:-}" && -f "$home/.ssh/noobia_dushich_github" ]]; then
+        ssh_env="GIT_SSH_COMMAND='ssh -i $home/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes'"
+    fi
+
     tmux new-session -d -s "$session" -n workshop -c $NOOBIA/banshee \
-        "exec env HOME=/home/aria USER=aria LOGNAME=aria GIT_AUTHOR_NAME=Banshee GIT_AUTHOR_EMAIL=banshee@nexus.local GIT_COMMITTER_NAME=Banshee GIT_COMMITTER_EMAIL=banshee@nexus.local GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes' NOOBIA_BANSHEE_SESSION=$attach NOOBIA_BANSHEE_CONVERSATION_ID=$conversation /home/aria/.local/bin/agy $agy_args"
+        "exec env HOME=$home USER=$user LOGNAME=$user GIT_AUTHOR_NAME=Banshee GIT_AUTHOR_EMAIL=banshee@nexus.local GIT_COMMITTER_NAME=Banshee GIT_COMMITTER_EMAIL=banshee@nexus.local $ssh_env NOOBIA_BANSHEE_SESSION=$attach NOOBIA_BANSHEE_CONVERSATION_ID=$conversation $agy_bin $agy_args"
     tmux select-pane -t "$session":0.0 -T 'Banshee + Noob • Antigravity'
     tmux set-option -t "$session" history-limit 50000
     tmux set-option -t "$session" mouse on

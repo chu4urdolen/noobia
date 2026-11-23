@@ -783,11 +783,28 @@ if _GI_AVAILABLE:
 
         # -- terminal lifecycle & reconnect --------------------------------
         def _on_child_exited(self, _term, status) -> None:
+            now = time.monotonic()
             self.reconnect_label.set_text(f"Session terminated (code {status})")
             self.reconnect_box.show_all()
-            if self.agent and status != 0:
-                GLib.timeout_add(2000, self._auto_respawn_if_visible)
+
+            spawn_age = now - getattr(self, "_last_spawn_time", 0.0)
+            fail_count = getattr(self, "_consecutive_fails", 0)
+            if status != 0 or spawn_age < 2.0:
+                fail_count += 1
+            else:
+                fail_count = 0
+            self._consecutive_fails = fail_count
+
+            # Auto-respawn up to 2 times on rapid failure to prevent an infinite loop;
+            # afterwards, keep the reconnect card visible with guidance (Principle 10).
+            if self.agent and status != 0 and fail_count <= 2:
+                delay_ms = 2000 * fail_count
+                GLib.timeout_add(delay_ms, self._auto_respawn_if_visible)
                 return
+            if fail_count > 2:
+                self.reconnect_label.set_text(
+                    f"Process exited rapidly (code {status}). Check configuration or install CLI."
+                )
             if self._poll_id is not None:
                 GLib.source_remove(self._poll_id)
                 self._poll_id = None
@@ -798,10 +815,12 @@ if _GI_AVAILABLE:
             return False
 
         def _on_reconnect_clicked(self, _btn) -> None:
+            self._consecutive_fails = 0
             self.spawn()
 
         def spawn(self) -> None:
             """Launch the quadrant's command in the terminal (via idle)."""
+            self._last_spawn_time = time.monotonic()
             self.reconnect_box.hide()
             argv = self.command or ["bash"]
 

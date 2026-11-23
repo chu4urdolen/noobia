@@ -2,14 +2,83 @@
 set -euo pipefail
 NOOBIA="${NOOBIA:-/noobia}"
 
-# Solo Dushich runs with Aria's Unix authority and a separate Codex home.
+user="${USER:-$(id -un 2>/dev/null || echo aria)}"
+home_dir="${HOME:-$(getent passwd "$user" 2>/dev/null | cut -d: -f6 || echo "/home/$user")}"
 codex=$NOOBIA/common/runtime/codex/node_modules/.bin/codex
 home=$NOOBIA/dushich/solo/private/codex
-[[ -x "$codex" ]] || { echo "Dushich Codex CLI is missing" >&2; exit 1; }
-[[ -f "$home/config.toml" ]] || { echo "Solo Dushich config is missing" >&2; exit 1; }
-[[ -r "$home/AGENTS.md" ]] || { echo "Solo Dushich instructions are missing" >&2; exit 1; }
+
+# Ensure private directory exists
+mkdir -p "$home"
+chmod 700 "$NOOBIA/dushich/solo/private" "$home"
+
+# Auto-provision relative AGENTS.md link if missing
+if [[ ! -e "$home/AGENTS.md" ]]; then
+    ln -sf "../../AGENTS.md" "$home/AGENTS.md"
+fi
+
+# Auto-provision model catalog if missing
+if [[ ! -e "$home/model.json" ]]; then
+    cat > "$home/model.json" <<'EOF'
+{
+  "models": [
+    {
+      "base_instructions": "",
+      "context_window": 131072,
+      "default_reasoning_level": null,
+      "default_verbosity": "low",
+      "display_name": "qwen3.8:27b",
+      "experimental_supported_tools": [],
+      "input_modalities": [
+        "text"
+      ],
+      "priority": 0,
+      "shell_type": "default",
+      "slug": "qwen3.8:27b",
+      "support_verbosity": true,
+      "supported_in_api": true,
+      "supported_reasoning_levels": [],
+      "supports_parallel_tool_calls": false,
+      "supports_reasoning_summaries": false,
+      "truncation_policy": {
+        "limit": 10000,
+        "mode": "bytes"
+      },
+      "visibility": "list"
+    }
+  ]
+}
+EOF
+fi
+
+# Auto-provision config.toml if missing
+if [[ ! -e "$home/config.toml" ]]; then
+    cat > "$home/config.toml" <<EOF
+model = "qwen3.8:27b"
+model_provider = "ollama"
+oss_provider = "ollama"
+model_catalog_json = "$home/model.json"
+model_context_window = 131072
+model_auto_compact_token_limit = 114688
+model_reasoning_effort = "medium"
+model_reasoning_summary = "none"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+web_search = "disabled"
+
+[projects."$NOOBIA"]
+trust_level = "trusted"
+
+[tui]
+screen_reader_detection_done = true
+EOF
+    chmod 600 "$home/config.toml"
+fi
+
+[[ -x "$codex" ]] || { echo "Dushich Codex CLI is missing (run: common/runtime/install.sh codex)" >&2; exit 1; }
+[[ -f "$home/config.toml" ]] || { echo "Solo Dushich config is missing: $home/config.toml" >&2; exit 1; }
+[[ -r "$home/AGENTS.md" ]] || { echo "Solo Dushich instructions are missing: $home/AGENTS.md" >&2; exit 1; }
 /usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1:11434/api/version >/dev/null || {
-    echo "Local Ollama is unavailable" >&2; exit 1;
+    echo "Local Ollama is unavailable on http://127.0.0.1:11434" >&2; exit 1;
 }
 
 if [[ $# -gt 0 ]]; then
@@ -33,12 +102,19 @@ except Exception:
 ' 2>/dev/null || true
 fi
 
+ssh_cmd=""
+if [[ -n "${GIT_SSH_COMMAND:-}" ]]; then
+    ssh_cmd="GIT_SSH_COMMAND=$GIT_SSH_COMMAND"
+elif [[ -f "$home_dir/.ssh/noobia_dushich_github" ]]; then
+    ssh_cmd="GIT_SSH_COMMAND=ssh -i $home_dir/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes"
+fi
+
 exec /usr/bin/env -i \
-    HOME=/home/aria USER=aria LOGNAME=aria \
+    HOME="$home_dir" USER="$user" LOGNAME="$user" \
     NOOBIA="$NOOBIA" CODEX_HOME="$home" \
     GIT_AUTHOR_NAME=Dushich GIT_AUTHOR_EMAIL=dushich@nexus.local \
     GIT_COMMITTER_NAME=Dushich GIT_COMMITTER_EMAIL=dushich@nexus.local \
-    GIT_SSH_COMMAND='ssh -i /home/aria/.ssh/noobia_dushich_github -o IdentityAgent=none -o IdentitiesOnly=yes' \
+    ${ssh_cmd:+"$ssh_cmd"} \
     OLLAMA_HOST=http://127.0.0.1:11434 \
     PATH="$NOOBIA/common/runtime/codex/node_modules/.bin:$NOOBIA/common/bin:/usr/local/bin:/usr/bin:/bin" \
     TERM="${TERM:-xterm}" LANG="${LANG:-C.UTF-8}" \

@@ -138,8 +138,10 @@ Git.
      for cloud agents, `Local: 100%` for Dushich) sits directly above Rose on
      each avatar sidebar.
    - **Configuration & Installer:** Customize quadrants with `--config` or
-     `~/.config/nexus-forge/config.json`. Set up dependencies and put Noobia's
-     commands on `PATH` on any machine using [`common/tools/install_nexus_forge.sh`](tools/install_nexus_forge.sh).
+     `~/.config/nexus-forge/config.json`. Set up dependencies, provision local
+     Dushich configs, and put Noobia's commands on `PATH` using `./install.sh`
+     (or [`common/tools/install_nexus_forge.sh`](tools/install_nexus_forge.sh)).
+     Supports `--check` and `--dry-run`.
 4. **Avatars.** Every 0.4 seconds the window reads each terminal's visible
    text and title, plus the hidden tmux panes. It switches that agent's
    avatar between `idle`, `working_1`–`working_4`, and `final` frames from
@@ -323,6 +325,7 @@ and the LAN inference endpoint are described in
 ## Checking that it works
 
 ```sh
+./install.sh --check                                            # verify dependencies and environment
 python3 common/nexus_forge/nexus_forge.py --self-test           # window, layout, avatars
 python3 -m unittest discover -s common/nexus_forge -p 'test_*.py'
 python3 -m unittest discover -s dushich/coding -p 'test_*.py'   # task runner, summarizer

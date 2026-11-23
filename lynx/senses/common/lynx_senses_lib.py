@@ -117,10 +117,11 @@ def clean_text(value: object) -> str:
     return text[:300]
 
 
-# Tom, 2026-11-23/24: "put priority 5 on all" lines. Five P5 lines of any
-# kind close an autonomy chunk; fewer wait for its 15 s window. 0 keeps each
+# Tom, 2026-11-24: every line P20, with a 20 s autonomy window: twenty lines
+# of any kind (in practice the 15-line volume limit comes first) close a chunk
+# early; otherwise the 20 s window does. 0 keeps each
 # sense's own priority (the unit tests use that to check sense meanings).
-REACTION_PRIORITY = int(os.environ.get("LYNX_REACTION_PRIORITY", "5"))
+REACTION_PRIORITY = int(os.environ.get("LYNX_REACTION_PRIORITY", "20"))
 
 
 def emit_line(sense_mod, p: int, sense: str, event: str,
@@ -131,7 +132,7 @@ def emit_line(sense_mod, p: int, sense: str, event: str,
     caller reports that honestly and emits nothing."""
     fields = {clean_field(k): clean_field(v) for k, v in (fields or {}).items()}
     if REACTION_PRIORITY >= 1:
-        p = REACTION_PRIORITY   # Tom 2026-11-24: every line is P5, status samples too
+        p = REACTION_PRIORITY   # Tom 2026-11-24: every line is P20, status samples too
     line = sense_mod.format_line(p, sense, event, fields=fields or None,
                                  text=clean_text(text))
     if not dry_run:

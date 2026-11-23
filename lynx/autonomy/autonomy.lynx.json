@@ -28,9 +28,9 @@
     ]
   },
   "trigger": {
-    "window_s": 15,
+    "window_s": 20,
     "max_lines": 15,
-    "uniform_priority": 5,
+    "uniform_priority": 20,
     "carry_priority": false
   },
   "harness": {

@@ -37,10 +37,10 @@ the format. **The formatter is never copied into Lynx's tree** (drift risk).
 
 Priorities follow the Aigel warn/fail convention (P1 = fail-class,
 P3 = warn-class, P5 = routine change, P0 = sample). **On Lynx every line is
-emitted as P5** (Tom, 2026-11-24; `REACTION_PRIORITY` in
+emitted as P20** (Tom, 2026-11-24; `REACTION_PRIORITY` in
 `common/lynx_senses_lib.py`, env `LYNX_REACTION_PRIORITY`, 0 = keep the
-per-sense priorities below): five lines of any kind close an autonomy chunk,
-fewer wait for its 15 s window. The table keeps each sense's own priority,
+per-sense priorities below), and the autonomy window is 20 s: a chunk closes
+after 20 s, or earlier when more than 15 lines arrive (volume limit). The table keeps each sense's own priority,
 which tells what the event means. Defaults are
 constants in `common/lynx_senses_lib.py`, documented here so a reviewer
 can check them without opening code:
@@ -127,7 +127,7 @@ asked for by Tom. Dushich was busy; his part is assigned here and he may
 trade items. Every new sense follows the same recipe: a sense line in
 `lynx/senses/`, a pattern in `lynx/autonomy/make_patterns.py`, offline
 tests, then a one-shot test on Lynx before it joins the service. Since
-`325adcb` every P ≥ 1 line counts as P5 and chunks are combined into one
+`325adcb` every P ≥ 1 line counts as P5 (P20 and a 20 s window since 2026-11-24) and chunks are combined into one
 observation, so new senses never flood her. Nothing here may shut Lynx down
 or reboot her (Principle 10).
 

@@ -338,6 +338,7 @@ and cost no cloud tokens.
 | What happened in a project, and who is working on it? | `forge-db project get NAME` |
 | Digest a huge log, transcript, or file | `dushich-summarizer --file PATH --instructions "focus..."` |
 | Discuss something with a local mind | `dushich_ask` (MCP); for coding work, a verified handoff (`dushich_start`) |
+| What is in this picture? | `curl --data-binary @img.jpg localhost:5050/detect` (fast YOLOv8n); `localhost:5051/analyze` (YOLO11x + Florence-2 objects and a caption, ~25 s on CPU); `5050/detect_bayer?w=&h=` for raw RGGB frames |
 | See a web app or page for real | Playwright: `common/runtime/web-venv/bin/python check.py` (headless Chromium) |
 | A clean Python environment for a project | `uv venv`, `uv pip install ...`, `uv run` |
 | Audio, video, databases | `ffmpeg`, `sqlite3` |

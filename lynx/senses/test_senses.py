@@ -44,6 +44,22 @@ def _load(name: str, rel: str):
 # Load the shared lib under its canonical name FIRST so the sense
 # modules' `from lynx_senses_lib import ...` reuses this exact object.
 lib = _load("lynx_senses_lib", "common/lynx_senses_lib.py")
+lib.REACTION_PRIORITY = 0   # these tests check each sense's own priority
+
+
+class TestReactionPriority(unittest.TestCase):
+    def test_every_reaction_is_p5_and_samples_stay_p0(self):
+        class Sense:
+            def format_line(self, p, sense, event, fields=None, text=""):
+                return f"NOOBIA P{p} {sense} {event}"
+        old, lib.REACTION_PRIORITY = lib.REACTION_PRIORITY, 5
+        try:
+            for p in (1, 3, 5):
+                self.assertEqual(lib.emit_line(Sense(), p, "touch", "tap", dry_run=True), "NOOBIA P5 touch tap")
+            self.assertEqual(lib.emit_line(Sense(), 0, "motion", "status.sample", dry_run=True),
+                             "NOOBIA P0 motion status.sample")
+        finally:
+            lib.REACTION_PRIORITY = old
 touch = _load("lynx_sense_touch", "touch/lynx_sense_touch.py")
 wifi = _load("lynx_sense_wifi", "wifi/lynx_sense_wifi.py")
 power = _load("lynx_sense_power", "power/lynx_sense_power.py")

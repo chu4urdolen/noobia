@@ -18,7 +18,7 @@ Events:
 Gestures (G3, Gwyn 2026-11-23), from a ~1 s burst of 12.5 Hz samples read
 straight from ``lynx-hf-sample`` (same sensor-on time as the single read):
 - motion.freefall  >= 2 samples in a row below 0.35 g          (a drop)
-- motion.shaken    >= 4 samples over 0.5 g from 1 g, both ways
+- motion.shaken    >= 3 samples over 0.15 g from 1 g, both ways
 - motion.pickup    clear movement after resting >= 60 s
 - motion.placed    still again for >= 15 s after being moved
 - motion.rocked    tilt swinging 0.3-1.2 Hz, 6-60 degrees, over ~8 s
@@ -54,8 +54,8 @@ BURST_SECONDS = 1.0
 BURST_EVENTS = 12
 G_MM = 9807                        # 1 g in the driver's raw unit (mm/s^2, gain 1000)
 FREEFALL_G = 0.35
-SHAKE_DEV_G = 0.5
-SHAKE_SAMPLES = 4
+SHAKE_DEV_G = 0.15             # Tom 2026-11-24: was 0.5; resting noise is <= 0.09 g
+SHAKE_SAMPLES = 3
 STILL_JITTER_MM = 250              # burst spread below this = still
 MOVE_JITTER_MM = 1200              # burst spread above this = clearly moving
 REST_BEFORE_PICKUP_S = 60

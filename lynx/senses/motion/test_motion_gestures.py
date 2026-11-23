@@ -59,6 +59,16 @@ class Gestures(unittest.TestCase):
         self.assertIn("shaken", got)
         self.assertNotIn("freefall", got, "single low samples are not a drop")
 
+    def test_mild_shake_counts(self):
+        self.still(1000)
+        mild = [vec(0, g) for g in (1.2, 0.82, 1.18, 1.0, 0.8, 1.0, 1.0, 1.0, 1.0)]
+        self.assertIn("shaken", self.step(1001, mild))
+
+    def test_resting_noise_is_not_a_shake(self):
+        noise = [vec(0, g) for g in (1.0, 0.98, 1.09, 0.92, 1.05, 0.95, 1.03, 0.97, 1.0)]
+        for s in range(30):
+            self.assertNotIn("shaken", self.step(1000 + s, noise))
+
     def test_pickup_after_rest_then_placed(self):
         for s in range(0, 61):
             self.assertEqual(self.still(1000 + s), [])

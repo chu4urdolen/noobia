@@ -60,6 +60,8 @@
 #define THOUGHT_FILE "/var/lib/noobia/lynx_thought.txt"
 #define HEARING_ENABLED_FILE "/var/lib/noobia/senses/hearing/enabled"
 #define AIGEL_MODE_FILE "/var/lib/noobia/aigel_mode.txt"
+/* Shutdown button: armed until this monotonic time (ms), 0 = not armed. */
+static uint64_t shutdown_armed_until_ms = 0;
 #define MAX_SCENE_FRAMES 64
 
 static volatile sig_atomic_t stop_requested;
@@ -1903,18 +1905,38 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 	uint32_t mode_bg = learning ? 0x003e2908 : 0x000c2e2c;
 	uint32_t mode_border = learning ? 0x00edb961 : 0x0009dcc4;
 	uint32_t mode_tc = learning ? 0x00edb961 : 0x0009dcc4;
-	rectangle(pixels, 75, 2380, 1090, 105, mode_bg);
-	rectangle(pixels, 75, 2380, 1090, 3, mode_border);
-	rectangle(pixels, 75, 2482, 1090, 3, mode_border);
-	rectangle(pixels, 75, 2380, 3, 105, mode_border);
-	rectangle(pixels, 1162, 2380, 3, 105, mode_border);
+	/* Left: Aigel mode (x 75..755). Right: shut down (x 775..1165). */
+	rectangle(pixels, 75, 2405, 680, 95, mode_bg);
+	rectangle(pixels, 75, 2405, 680, 3, mode_border);
+	rectangle(pixels, 75, 2497, 680, 3, mode_border);
+	rectangle(pixels, 75, 2405, 3, 95, mode_border);
+	rectangle(pixels, 752, 2405, 3, 95, mode_border);
 
 	if (learning) {
-		draw_text(pixels, "AIGEL: LEARNING (10-MIN PASS)", 95, 2400, 5, mode_tc);
-		draw_text(pixels, "TAP TO SWITCH TO NORMAL MODE (DB ONLY)", 95, 2448, 4, white);
+		draw_text(pixels, "AIGEL: LEARNING", 95, 2418, 5, mode_tc);
+		draw_text(pixels, "TAP FOR NORMAL MODE", 95, 2462, 4, white);
 	} else {
-		draw_text(pixels, "AIGEL: NORMAL (FAST DB ONLY)", 95, 2400, 5, mode_tc);
-		draw_text(pixels, "TAP TO SWITCH TO LEARNING MODE (10-MIN)", 95, 2448, 4, white);
+		draw_text(pixels, "AIGEL: NORMAL", 95, 2418, 5, mode_tc);
+		draw_text(pixels, "TAP FOR LEARNING MODE", 95, 2462, 4, white);
+	}
+
+	/* Shutdown (Tom, 2026-11-23): a person's choice, never automatic. First
+	 * tap arms it for 5 s, a second tap shuts Lynx down cleanly. */
+	bool armed = shutdown_armed_until_ms != 0 &&
+		     monotonic_milliseconds() < shutdown_armed_until_ms;
+	uint32_t sd_bg = armed ? 0x00501010 : 0x00241618;
+	uint32_t sd_border = armed ? 0x00ff5a5a : 0x00b05a5a;
+	rectangle(pixels, 775, 2405, 390, 95, sd_bg);
+	rectangle(pixels, 775, 2405, 390, 3, sd_border);
+	rectangle(pixels, 775, 2497, 390, 3, sd_border);
+	rectangle(pixels, 775, 2405, 3, 95, sd_border);
+	rectangle(pixels, 1162, 2405, 3, 95, sd_border);
+	if (armed) {
+		draw_text(pixels, "TAP AGAIN", 800, 2418, 5, 0x00ffd0d0);
+		draw_text(pixels, "TO SHUT DOWN", 800, 2462, 4, white);
+	} else {
+		draw_text(pixels, "SHUT DOWN", 800, 2418, 5, 0x00ff8a8a);
+		draw_text(pixels, "TAP TWICE", 800, 2462, 4, white);
 	}
 
 	nav_buttons(pixels, page);
@@ -2541,12 +2563,34 @@ static int run(const char *action, unsigned int seconds)
 								target = PAGE_CHAT;
 							}
 						} else if (page == PAGE_STATUS &&
-							   y >= 2370 && y < 2495 && x >= 75 && x < 1165) {
+							   y >= 2400 && y < 2505 && x >= 75 && x < 760) {
 							toggle_aigel_mode();
 							page_changed = true;
 							haptic_tick(35);
 							printf("aigel_mode_toggled\n");
 							fflush(stdout);
+						} else if (page == PAGE_STATUS &&
+							   y >= 2400 && y < 2505 && x >= 775 && x < 1165) {
+							uint64_t now_sd = monotonic_milliseconds();
+							if (shutdown_armed_until_ms != 0 &&
+							    now_sd < shutdown_armed_until_ms) {
+								shutdown_armed_until_ms = 0;
+								haptic_tick(120);
+								printf("shutdown_confirmed\n");
+								fflush(stdout);
+								pid_t sd_pid = fork();
+								if (sd_pid == 0) {
+									execl("/sbin/openrc-shutdown", "openrc-shutdown",
+									      "--poweroff", "now", (char *)NULL);
+									_exit(127);
+								}
+							} else {
+								shutdown_armed_until_ms = now_sd + 5000U;
+								haptic_tick(35);
+								printf("shutdown_armed\n");
+								fflush(stdout);
+							}
+							page_changed = true;
 						} else if (page == PAGE_HOME && y < 2360) {
 							/* Tapped on portrait: trigger tactile tick and emit instant P1 sense (throttled to >= 5s) */
 							haptic_tick(25);

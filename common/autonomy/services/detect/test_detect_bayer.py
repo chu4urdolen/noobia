@@ -95,6 +95,12 @@ class DetectBayerTest(unittest.TestCase):
         self.assertTrue(body["strong_models"].startswith("unavailable"))
         self.assertEqual(body["objects"][0]["label"], "cat")
 
+    def test_front_gbrg_phase_is_accepted(self):
+        code, body = self.post("/detect_bayer?w=2320&h=1744&phase=gbrg", b"\x10" * (2320 * 1744))
+        self.assertEqual(code, 200, body)
+        code, body = self.post("/detect_bayer?w=2320&h=1744&phase=xyz", b"\x10" * (2320 * 1744))
+        self.assertEqual(code, 400)
+
     def test_wrong_size_is_rejected_with_the_sizes(self):
         code, body = self.post("/detect_bayer", b"\x00" * 1000)
         self.assertEqual(code, 400)

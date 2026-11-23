@@ -65,7 +65,8 @@ CAMERAS = {
     "wide": {"sensor": 2, "w": 3264, "h": 2448, "links": ((71, 0, 53, 0), (53, 1, 615, 0)), "seninf": 53},
     # Front S5K3P9SP (Tom 2026-11-24): binned (four-cell summed) 2320x1744 mode,
     # an ordinary Bayer frame; sensor1 -> seninf-0 -> camsv-0, like the wide.
-    "front": {"sensor": 1, "w": 2320, "h": 1744, "links": ((19, 0, 1, 0), (1, 1, 615, 0)), "seninf": 1},
+    "front": {"sensor": 1, "w": 2320, "h": 1744, "links": ((19, 0, 1, 0), (1, 1, 615, 0)), "seninf": 1,
+              "phase": "gbrg"},   # measured on the first frame, 2026-11-24
 }
 MEDIA = os.environ.get("LYNX_CAMERA_MEDIA", "/dev/media1")
 MEDIA_CTL = os.environ.get("LYNX_MEDIA_CTL", "/usr/bin/media-ctl")
@@ -77,7 +78,7 @@ def _link(link, enabled: bool) -> str:
 
 
 def current_route(run=subprocess.run) -> str | None:
-    """'back', 'wide' or None (unknown/partial) from the live media graph."""
+    """The one routed camera ('back', 'wide', 'front') or None (unknown/partial)."""
     try:
         g = run([MEDIA_CTL, "-d", MEDIA, "-p"], capture_output=True, text=True, timeout=10).stdout
     except (OSError, subprocess.SubprocessError):
@@ -90,8 +91,8 @@ def current_route(run=subprocess.run) -> str | None:
         block = block[1].split("\n- entity ", 1)[0]
         return (f'"sensor{cam["sensor"]}":0 [ENABLED,DYNAMIC]' in block and
                 '"mtk-cam camsv-0":0 [ENABLED,DYNAMIC]' in block)
-    back, wide = active("back"), active("wide")
-    return "back" if back and not wide else "wide" if wide and not back else None
+    on = [name for name in CAMERAS if active(name)]
+    return on[0] if len(on) == 1 else None   # exactly one camera routed, else unknown
 
 
 def select_route(target: str, run=subprocess.run) -> str | None:
@@ -269,8 +270,10 @@ def _capture(run, cam) -> tuple[bytes | None, str]:
     return raw, "captured"
 
 
-def detect(raw: bytes, opener=urllib.request.urlopen, w: int = WIDTH, h: int = HEIGHT) -> tuple[list[dict] | None, str]:
-    req = urllib.request.Request(f"{DETECT_URL}?w={w}&h={h}", data=raw, method="POST",
+def detect(raw: bytes, opener=urllib.request.urlopen, w: int = WIDTH, h: int = HEIGHT,
+           phase: str = "rggb") -> tuple[list[dict] | None, str]:
+    extra = f"&phase={phase}" if phase != "rggb" else ""
+    req = urllib.request.Request(f"{DETECT_URL}?w={w}&h={h}{extra}", data=raw, method="POST",
                                  headers={"Content-Type": "application/octet-stream"})
     try:
         with opener(req, timeout=DETECT_TIMEOUT_S) as resp:
@@ -302,7 +305,8 @@ def look(wait_s: float = 0.0, run=subprocess.run, opener=urllib.request.urlopen,
         return {"ok": False, "error": str(exc), "busy": True}
     if raw is None:
         return {"ok": False, "error": why, "busy": False}
-    objects, why = detect(raw, opener=opener, w=CAMERAS[camera]["w"], h=CAMERAS[camera]["h"])
+    objects, why = detect(raw, opener=opener, w=CAMERAS[camera]["w"], h=CAMERAS[camera]["h"],
+                          phase=CAMERAS[camera].get("phase", "rggb"))
     if objects is None:
         return {"ok": False, "error": why, "busy": False}
     caption = clean_caption(getattr(detect, "last_caption", ""))

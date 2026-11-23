@@ -120,13 +120,21 @@ def _strong(image: bytes, timeout: float = 45.0, yolo_only: bool = False) -> tup
         return None, f"unavailable: {type(exc).__name__}"
 
 
-def detect_bayer(detector, raw: bytes, width: int, height: int) -> tuple[int, dict]:
-    """(HTTP status, body) for one raw RGGB frame. Never an empty success on failure."""
+def detect_bayer(detector, raw: bytes, width: int, height: int, phase: str = "rggb") -> tuple[int, dict]:
+    """(HTTP status, body) for one raw Bayer frame. Never an empty success on failure.
+
+    phase: the sensor's 2x2 colour order. "gbrg" (front S5K3P9SP, measured
+    2026-11-24: greens on the diagonal, red bottom-left) becomes RGGB by
+    dropping the first and last rows."""
     import time
     if (width, height) not in BAYER_SIZES:
         return 400, {"error": f"unsupported size {width}x{height}; allowed: 1600x1200, 3264x2448, 2320x1744"}
     if len(raw) != width * height:
         return 400, {"error": f"expected {width * height} bytes for {width}x{height}, got {len(raw)}"}
+    if phase not in ("rggb", "gbrg"):
+        return 400, {"error": f"unsupported phase {phase!r}; allowed: rggb, gbrg"}
+    if phase == "gbrg":
+        raw, height = raw[width:-width], height - 2
     c1 = _c1()
     t0 = time.monotonic()
     try:
@@ -214,6 +222,7 @@ class DetectRequestHandler(BaseHTTPRequestHandler):
             try:
                 width = int(q.get("w", ["1600"])[0])
                 height = int(q.get("h", ["1200"])[0])
+                phase = str(q.get("phase", ["rggb"])[0]).lower()
             except ValueError:
                 self._json(400, {"error": "w and h must be integers"})
                 return
@@ -222,7 +231,7 @@ class DetectRequestHandler(BaseHTTPRequestHandler):
                 self._json(400, {"error": "invalid content length"})
                 return
             raw = self.rfile.read(length)
-            code, body = detect_bayer(self.detector, raw, width, height)
+            code, body = detect_bayer(self.detector, raw, width, height, phase)
             self._json(code, body)
             return
         if self.path.startswith("/detect"):

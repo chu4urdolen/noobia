@@ -194,7 +194,8 @@ class FrameTest(unittest.TestCase):
                 st = "ENABLED,DYNAMIC" if on else "DYNAMIC"
                 return (f'- entity {n}: seninf-x\n  <- "sensor{sensor}":0 [{st}]\n'
                         f'  -> "mtk-cam camsv-0":0 [{st}]\n')
-            return blk(27, 4, route["now"] == "back") + blk(53, 2, route["now"] == "wide")
+            return (blk(1, 1, route["now"] == "front") + blk(27, 4, route["now"] == "back")
+                    + blk(53, 2, route["now"] == "wide"))
         def run(argv, **kw):
             calls.append(argv)
             if argv[0].endswith("media-ctl"):
@@ -205,17 +206,32 @@ class FrameTest(unittest.TestCase):
                     return type("P", (), {"returncode": 1, "stdout": "", "stderr": "EINVAL"})()
                 if spec.startswith("71:0->53:0[5]"):
                     route["now"] = "wide"
+                if spec.startswith("19:0->1:0[5]"):
+                    route["now"] = "front"
                 if spec.startswith("45:0->27:0[5]"):
                     route["now"] = "back"
                 return type("P", (), {"returncode": 0, "stdout": "", "stderr": ""})()
             if "--output" not in argv:
                 return Proc(0)
             sensor = argv[argv.index("--sensor") + 1]
-            size = 3264 * 2448 if sensor == "2" else 1600 * 1200
+            size = {"2": 3264 * 2448, "1": 2320 * 1744}.get(sensor, 1600 * 1200)
             run.route_during = route["now"]
             Path(argv[argv.index("--output") + 1]).write_bytes(b"\x10" * size)
             return Proc()
         return run, route, calls
+
+    def test_front_look_switches_route_and_always_back(self):
+        run, route, calls = self.graph_run()
+        op = opener_for({"objects": [{"label": "person", "confidence": 0.8}]})
+        r = frame.look(run=run, opener=op, camera="front")
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(run.route_during, "front")
+        self.assertEqual(route["now"], "back", "resting route restored")
+        self.assertIn("w=2320&h=1744&phase=gbrg", op.seen.full_url)
+
+    def test_front_route_is_recognised(self):
+        run, route, _ = self.graph_run(start="front")
+        self.assertEqual(frame.current_route(run), "front")
 
     def test_wide_look_switches_route_and_always_back(self):
         run, route, calls = self.graph_run()

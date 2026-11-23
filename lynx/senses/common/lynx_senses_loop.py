@@ -77,6 +77,9 @@ def load_senses():
         "network": load_optional("lynx_sense_network", "network/lynx_sense_network.py"),
         "hearing": load_optional("lynx_sense_hearing", "hearing/lynx_sense_hearing.py"),
         "motion": load_optional("lynx_sense_motion", "motion/lynx_sense_motion.py"),
+        "slider": load_optional("lynx_sense_slider", "slider/lynx_sense_slider.py"),
+        "magnet": load_optional("lynx_sense_magnet", "magnet/lynx_sense_magnet.py"),
+        "telepathy": load_optional("lynx_sense_telepathy", "telepathy/lynx_sense_telepathy.py"),
         # camera: separate service lynx-camera-sense (see lynx_sense_camera.py --loop)
     }
     return senses
@@ -130,12 +133,14 @@ def run_loop(*args, **kwargs) -> int:
     while not _stop:
         now = time.monotonic()
         if now - last_touch >= TOUCH_EVERY_S:
-            if senses.get("touch"):
-                call("touch", senses["touch"].run)
+            for name in ("touch", "slider"):
+                if senses.get(name):
+                    call(name, senses[name].run)
             last_touch = now
         if now - last_motion >= MOTION_EVERY_S:
-            if senses.get("motion"):
-                call("motion", senses["motion"].run)
+            for name in ("motion", "magnet"):
+                if senses.get(name):
+                    call(name, senses[name].run)
             last_motion = now
         if now - last_fast >= FAST_SAMPLE_EVERY_S:
             for name in ("light", "proximity", "hearing"):
@@ -143,7 +148,7 @@ def run_loop(*args, **kwargs) -> int:
                     call(name, senses[name].run)
             last_fast = now
         if now - last_sample >= SAMPLE_EVERY_S:
-            for name in ("wifi", "power", "nexus", "network"):
+            for name in ("wifi", "power", "nexus", "network", "telepathy"):
                 if senses.get(name):
                     call(name, senses[name].run)
             last_sample = now

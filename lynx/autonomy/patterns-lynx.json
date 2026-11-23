@@ -43,6 +43,93 @@
    "origin": "gwyn"
   },
   {
+   "id": "body-slider",
+   "match": {
+    "sense": "body",
+    "event": "slider.change"
+   },
+   "template": "Your alert slider moved to {to}.",
+   "message": "Your alert slider moved.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 body slider.change to=silent from=vibrate | Alert slider moved to silent",
+     "NOOBIA P1 body slider.change to=ring from=silent | Alert slider moved to ring"
+    ],
+    "must_not": [
+     "NOOBIA P0 body status.sample slider=silent | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "magnet-wand",
+   "match": {
+    "sense": "magnet",
+    "event": "wand"
+   },
+   "template": "A magnet is hovering near you ({mag_ut} uT)!",
+   "message": "A magnet is hovering near you.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 magnet wand mag_ut=240.5 | A magnet is hovering near me (240.5 uT)"
+    ],
+    "must_not": [
+     "NOOBIA P0 compass status.sample heading=North mag_ut=45.2 | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "compass-heading",
+   "match": {
+    "sense": "compass",
+    "event": "heading"
+   },
+   "template": "You turned to face {to} ({deg} degrees).",
+   "message": "Your compass heading changed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 compass heading to=East from=North deg=92.4 | Compass heading turned to East (92.4\u00b0)"
+    ],
+    "must_not": [
+     "NOOBIA P0 compass status.sample heading=North mag_ut=45.2 | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "mesh-telepathy",
+   "match": {
+    "sense": "mesh",
+    "event": "telepathy"
+   },
+   "template": "Your friend {friend} is {state}.",
+   "message": "A friend in Noobia did something.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 mesh telepathy friend=dushich state=thinking | Dushich is deep in thought",
+     "NOOBIA P1 mesh telepathy friend=rose state=singing | Rose is playing music",
+     "NOOBIA P1 mesh telepathy friend=iris state=motion_spotted | Sister Iris spotted movement"
+    ],
+    "must_not": [
+     "NOOBIA P0 mesh status.sample | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
    "id": "camera-objects",
    "match": {
     "sense": "camera",
@@ -196,6 +283,69 @@
     ],
     "must_not": [
      "NOOBIA P1 motion pickup to=portrait from=flat_up | picked up"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "motion-freefall",
+   "match": {
+    "sense": "motion",
+    "event": "freefall"
+   },
+   "template": "You are falling!",
+   "message": "You are falling!",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 motion freefall | Lynx is falling (free fall)"
+    ],
+    "must_not": [
+     "NOOBIA P1 motion shaken | Lynx is being shaken"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "motion-shaken",
+   "match": {
+    "sense": "motion",
+    "event": "shaken"
+   },
+   "template": "Someone is shaking you.",
+   "message": "Someone is shaking you.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 motion shaken | Lynx is being shaken"
+    ],
+    "must_not": [
+     "NOOBIA P1 motion freefall | Lynx is falling (free fall)"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "motion-rocked",
+   "match": {
+    "sense": "motion",
+    "event": "rocked"
+   },
+   "template": "Someone is rocking you gently.",
+   "message": "Someone is rocking you gently.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 motion rocked hz=0.6 degrees=28 | Lynx is being rocked gently"
+    ],
+    "must_not": [
+     "NOOBIA P1 motion shaken | Lynx is being shaken"
     ]
    },
    "hits": 0,

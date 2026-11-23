@@ -71,7 +71,9 @@ class DetectBayerTest(unittest.TestCase):
         self.assertEqual(sorted(set(self.fake.calls)), [(1200, 1600), (1600, 1200)])
 
     def test_strong_models_merge_and_caption(self):
-        def fake_strong(image, timeout=90.0):
+        def fake_strong(image, timeout=90.0, yolo_only=False):
+            if yolo_only:
+                return ({"objects": [{"label": "person", "confidence": 0.81}]}, "ok")
             return ({"objects": [{"label": "cat", "confidence": 0.95, "source": "yolo11x"},
                                  {"label": "keyboard", "confidence": 0.5, "source": "florence2"}],
                      "caption": "A cat lying on a laptop keyboard.", "ms": {"yolo": 900}}, "ok")
@@ -85,6 +87,7 @@ class DetectBayerTest(unittest.TestCase):
         self.assertEqual(body["objects"][0], {"label": "cat", "confidence": 0.95})
         self.assertIn({"label": "keyboard", "confidence": 0.5}, body["objects"])
         self.assertEqual(body["caption"], "A cat lying on a laptop keyboard.")
+        self.assertIn({"label": "person", "confidence": 0.81}, body["objects"], "zoom crop finds the person")
 
     def test_strong_models_down_falls_back(self):
         code, body = self.post("/detect_bayer", bytes(range(256)) * 7500)

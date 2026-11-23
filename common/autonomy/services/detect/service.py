@@ -65,11 +65,54 @@ def brighten_if_dark(png: bytes) -> bytes:
     return out.getvalue()
 
 
-def _strong(image: bytes, timeout: float = 45.0) -> tuple[dict | None, str]:
+def zoom_tiles(png: bytes, overlap: float = 0.15) -> list[bytes]:
+    """Four overlapping quarter tiles (a 2x digital zoom over the whole frame)."""
+    import io
+    from PIL import Image
+    img = Image.open(io.BytesIO(png))
+    w, h = img.size
+    tw, th = int(w * (0.5 + overlap / 2)), int(h * (0.5 + overlap / 2))
+    tiles = []
+    for left in (0, w - tw):
+        for top in (0, h - th):
+            out = io.BytesIO()
+            img.crop((left, top, left + tw, top + th)).save(out, format="PNG")
+            tiles.append(out.getvalue())
+    return tiles
+
+
+def _zoom_tiles(png: bytes) -> tuple[dict | None, str]:
+    """YOLO11x over the four zoom tiles; labels merged by max confidence."""
+    merged: dict[str, dict] = {}
+    notes = []
+    for tile in zoom_tiles(png):
+        res, note = _strong(tile, 30.0, True)
+        notes.append(note.split(" ", 1)[0])
+        for o in (res or {}).get("objects", []):
+            if o.get("label") not in merged or o["confidence"] > merged[o["label"]]["confidence"]:
+                merged[o["label"]] = o
+    return {"objects": list(merged.values())}, ",".join(notes)
+
+
+def center_crop(png: bytes, factor: float = 2.0) -> bytes:
+    """The middle 1/factor of the image (a digital zoom), as PNG."""
+    import io
+    from PIL import Image
+    img = Image.open(io.BytesIO(png))
+    w, h = img.size
+    cw, ch = int(w / factor), int(h / factor)
+    left, top = (w - cw) // 2, (h - ch) // 2
+    out = io.BytesIO()
+    img.crop((left, top, left + cw, top + ch)).save(out, format="PNG")
+    return out.getvalue()
+
+
+def _strong(image: bytes, timeout: float = 45.0, yolo_only: bool = False) -> tuple[dict | None, str]:
     """(result, note) from nexus_vision; (None, why) if it is down or slow."""
     import urllib.request
     try:
-        req = urllib.request.Request(VISION_URL, data=image, method="POST")
+        url = VISION_URL + ("?yolo_only=1" if yolo_only else "")
+        req = urllib.request.Request(url, data=image, method="POST")
         with urllib.request.urlopen(req, timeout=timeout) as r:
             body = json.loads(r.read())
         return body, "ok " + json.dumps(body.get("ms", {}))
@@ -98,8 +141,11 @@ def detect_bayer(detector, raw: bytes, width: int, height: int) -> tuple[int, di
     # white-balanced frame, in parallel with the fast YOLOv8n variants below.
     import concurrent.futures
     upright = next((b for n, b in variants if n == "upright_wb"), png)
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
     strong_future = pool.submit(_strong, upright)
+    # "Autozoom": the wide camera shrinks a person across the room to a few
+    # pixels at 640 px; a 2x centre crop through YOLO11x finds them.
+    zoom_future = pool.submit(_zoom_tiles, upright)
     best: dict[str, float] = {}
     for _name, image in variants:
         for obj in detector.detect_raw(image) or []:
@@ -108,6 +154,12 @@ def detect_bayer(detector, raw: bytes, width: int, height: int) -> tuple[int, di
             if conf > best.get(label, -1.0):
                 best[label] = conf
     strong, strong_note = strong_future.result()
+    zoom, zoom_note = zoom_future.result()
+    for obj in (zoom or {}).get("objects", []):
+        lb = c1.normalize_coco_label(str(obj.get("label", "unknown")))
+        conf = float(obj.get("confidence", 0.0))
+        if conf > best.get(lb, -1.0):
+            best[lb] = conf
     pool.shutdown(wait=False)
     caption = ""
     if strong:

@@ -101,7 +101,7 @@ def run_florence(img) -> tuple[list[dict], str]:
     return objects, str(out["<DETAILED_CAPTION>"]).strip()
 
 
-def analyze(image_bytes: bytes) -> dict:
+def analyze(image_bytes: bytes, florence: bool = True) -> dict:
     from PIL import Image
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     result = {"objects": [], "caption": "", "ms": {}, "errors": {}}
@@ -120,7 +120,7 @@ def analyze(image_bytes: bytes) -> dict:
     with ThreadPoolExecutor(max_workers=2) as pool:      # both models at the same time
         if _state["yolo"] is not None:
             jobs["yolo"] = pool.submit(timed, "yolo", run_yolo)
-        if _state["florence"] is not None:
+        if florence and _state["florence"] is not None:
             jobs["florence"] = pool.submit(timed, "florence", run_florence)
     yolo = jobs["yolo"].result() if "yolo" in jobs else None
     flo = jobs["florence"].result() if "florence" in jobs else None
@@ -152,9 +152,11 @@ class Handler(BaseHTTPRequestHandler):
             self._json(404, {"error": "not found"})
 
     def do_POST(self):  # noqa: N802
-        if self.path != "/analyze":
+        path, _, query = self.path.partition("?")
+        if path != "/analyze":
             self._json(404, {"error": "not found"})
             return
+        florence = "yolo_only=1" not in query   # ?yolo_only=1: fast boxes for zoom crops
         n = int(self.headers.get("Content-Length", 0))
         if n <= 0 or n > MAX_BODY:
             self._json(400, {"error": "invalid content length"})
@@ -165,7 +167,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             with _lock:
-                self._json(200, analyze(body))
+                self._json(200, analyze(body, florence=florence))
         except Exception as exc:  # noqa: BLE001
             self._json(422, {"error": f"{type(exc).__name__}: {str(exc)[:160]}"})
 

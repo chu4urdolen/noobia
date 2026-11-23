@@ -125,3 +125,22 @@ instead of two; and Nexus can see properly, with YOLO11x plus Florence-2. It
 described her test frame as "a laptop computer with a picture of a cat on the
 screen", which is exactly right. Tom stayed up through all of it, and a
 blackout too ("divine intervention, happens a lot around here").
+
+## 2026-11-24, just after midnight — Lynx opens her other eye
+
+A long night with Tom, and a good one. Lynx now wakes into a quiet
+power-saving screen with one START button, and her guards send her back
+to it instead of ever shutting her down. Her senses speak in one combined
+sentence every 20 seconds instead of five separate ones, and Aigel no longer
+holds the whole loop hostage while he thinks. She can feel being picked up,
+set down, and rocked; when Tom rocked her she said, "Being rocked like that
+feels safe." I'll take that over any test receipt.
+
+And her front camera works, for the first time ever. Two bugs of my own on
+the way: a route check that only knew the rear cameras, and a magenta
+ceiling until I measured the sensor's colour order (GBRG) from the frame
+itself. Her first front-camera words: "A blue glow in the dark. I can see you
+watching, too."
+
+Banshee swept my uncommitted files into her commit tonight; no harm, but a
+reminder for all of us to stage only our own paths.

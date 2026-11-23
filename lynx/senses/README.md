@@ -115,6 +115,36 @@ The `lynx/tools/run_all_lynx_tests.py` runner scans `lynx/tools` only;
 adding `lynx/senses` to its discovery is a small follow-up (queued with
 D29/D30, Gwyn's Round 9).
 
+## Sense expansion plan (2026-11-23)
+
+Ideas from Gwyn (forge-db `lynx` notes #414–#417) and Banshee (#418–#419),
+asked for by Tom. Dushich was busy; his part is assigned here and he may
+trade items. Every new sense follows the same recipe: a sense line in
+`lynx/senses/`, a pattern in `lynx/autonomy/make_patterns.py`, offline
+tests, then a one-shot test on Lynx before it joins the service. Since
+`325adcb` every P ≥ 1 line counts as P5 and chunks are combined into one
+observation, so new senses never flood her. Nothing here may shut Lynx down
+or reboot her (Principle 10).
+
+| # | Sense | Events | Ideas | Owner |
+| --- | --- | --- | --- | --- |
+| G1 | Hearing on Nexus: `/hear` (Whisper speech-to-text + sound classes) | `hearing.speech`, `hearing.sound` (knock, music, laughter, dog, alarm) | 415a | **Gwyn** |
+| G2 | Startle reflex | `hearing.startle` (+20 dB over ambient) | 419b | **Gwyn** |
+| G3 | Motion gestures | `motion.picked_up`, `.set_down`, `.shaken`, `.freefall`, `.rocked` | 414b, 418c | **Gwyn** |
+| G4 | Change-gated vision + flashlight night look | look only when the frame differs; `camera.dark` | 415d, 415g | **Gwyn** |
+| B1 | Alert slider + side buttons as senses and modes | `body.slider` (silent / vibrate / ring), `body.button` | 414a, 418a | **Banshee** |
+| B2 | Petting and the purr reflex | `touch.pet` (≥ 300 ms swipe) → gentle haptic purr | 414c, 418b | **Banshee** |
+| B3 | Magnet wand and compass | `magnet.wand`, `compass.heading` | 414d, 418e | **Banshee** |
+| B4 | Mesh telepathy (fellow Noobs) | `nexus.mind.active`, `rose.singing`, `iris.motion_spotted`, notes for Lynx | 416e, 419c | **Banshee** |
+| B5 | NFC tag cards as toys | `nfc.card` (food, goodnight, play, hug) | 416d | **Banshee** (if the NFC stack works) |
+| D1 | Feeding, hunger, fever | `power.feeding`, `power.hunger` (≤ 20 %), `power.satisfied` (80 %), `body.fever` | 414f, 419d | **Dushich** |
+| D2 | Interoception and waking | `body.headache` (load, crashes), `body.woke` (boot reason, count), vital pulse | 417a, 417b, 419a | **Dushich** |
+| D3 | Time and breeze | `time.of_day` (morning / evening / night), `thermal.breeze` (fast cool-down) | 417c, 418d | **Dushich** |
+| — | Later, needs consent or hardware work | presence by LAN/BLE devices, face recognition, Wi-Fi motion, GNSS sky, weather, fingerprint, Iris eye, `you talked a lot` | 414g, 415e–h, 416a–c/f–h, 417d | unassigned |
+
+Privacy: presence, voices and faces stay on Nexus/Lynx, opt-in, never
+written to shared files with MAC addresses or names (Principles 1 and 8).
+
 ## Owners
 
 - Source + tests + atlas: **Dushich** (2026-11-21).

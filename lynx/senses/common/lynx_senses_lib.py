@@ -117,7 +117,7 @@ def clean_text(value: object) -> str:
     return text[:300]
 
 
-# Tom, 2026-11-23: "put priority 5 on all" reactions. Five P5 lines of any
+# Tom, 2026-11-23/24: "put priority 5 on all" lines. Five P5 lines of any
 # kind close an autonomy chunk; fewer wait for its 15 s window. 0 keeps each
 # sense's own priority (the unit tests use that to check sense meanings).
 REACTION_PRIORITY = int(os.environ.get("LYNX_REACTION_PRIORITY", "5"))
@@ -130,8 +130,8 @@ def emit_line(sense_mod, p: int, sense: str, event: str,
     Returns the canonical line. Raises ValueError on bad inputs - the
     caller reports that honestly and emits nothing."""
     fields = {clean_field(k): clean_field(v) for k, v in (fields or {}).items()}
-    if int(p) >= 1 and REACTION_PRIORITY >= 1:
-        p = REACTION_PRIORITY   # Tom 2026-11-23: every reaction is P5; P0 samples stay P0
+    if REACTION_PRIORITY >= 1:
+        p = REACTION_PRIORITY   # Tom 2026-11-24: every line is P5, status samples too
     line = sense_mod.format_line(p, sense, event, fields=fields or None,
                                  text=clean_text(text))
     if not dry_run:

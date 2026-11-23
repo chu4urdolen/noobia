@@ -48,7 +48,7 @@ lib.REACTION_PRIORITY = 0   # these tests check each sense's own priority
 
 
 class TestReactionPriority(unittest.TestCase):
-    def test_every_reaction_is_p5_and_samples_stay_p0(self):
+    def test_every_line_is_p5_samples_too(self):
         class Sense:
             def format_line(self, p, sense, event, fields=None, text=""):
                 return f"NOOBIA P{p} {sense} {event}"
@@ -57,7 +57,7 @@ class TestReactionPriority(unittest.TestCase):
             for p in (1, 3, 5):
                 self.assertEqual(lib.emit_line(Sense(), p, "touch", "tap", dry_run=True), "NOOBIA P5 touch tap")
             self.assertEqual(lib.emit_line(Sense(), 0, "motion", "status.sample", dry_run=True),
-                             "NOOBIA P0 motion status.sample")
+                             "NOOBIA P5 motion status.sample")
         finally:
             lib.REACTION_PRIORITY = old
 touch = _load("lynx_sense_touch", "touch/lynx_sense_touch.py")

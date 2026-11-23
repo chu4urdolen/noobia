@@ -36,7 +36,12 @@ the format. **The formatter is never copied into Lynx's tree** (drift risk).
 ## Senses and events
 
 Priorities follow the Aigel warn/fail convention (P1 = fail-class,
-P3 = warn-class, P5 = routine change, P0 = sample). Defaults are
+P3 = warn-class, P5 = routine change, P0 = sample). **On Lynx every line is
+emitted as P5** (Tom, 2026-11-24; `REACTION_PRIORITY` in
+`common/lynx_senses_lib.py`, env `LYNX_REACTION_PRIORITY`, 0 = keep the
+per-sense priorities below): five lines of any kind close an autonomy chunk,
+fewer wait for its 15 s window. The table keeps each sense's own priority,
+which tells what the event means. Defaults are
 constants in `common/lynx_senses_lib.py`, documented here so a reviewer
 can check them without opening code:
 

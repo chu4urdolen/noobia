@@ -62,6 +62,41 @@
 #define AIGEL_MODE_FILE "/var/lib/noobia/aigel_mode.txt"
 /* Shutdown button: armed until this monotonic time (ms), 0 = not armed. */
 static uint64_t shutdown_armed_until_ms = 0;
+/* Power modes (Tom, 2026-11-23): "active" or "saving <reason>", written by
+ * /usr/local/bin/lynx-power-mode. Power saving is the boot default; the
+ * guards also switch to it (never a shutdown). */
+#define POWER_MODE_FILE "/var/lib/noobia/power-mode"
+#define POWER_MODE_TOOL "/usr/local/bin/lynx-power-mode"
+
+static bool read_power_saving(char *reason, size_t size)
+{
+	char line[96] = "";
+	FILE *f = fopen(POWER_MODE_FILE, "r");
+	if (f) {
+		if (!fgets(line, sizeof(line), f))
+			line[0] = '\0';
+		fclose(f);
+	}
+	line[strcspn(line, "\r\n")] = '\0';
+	bool saving = strncmp(line, "active", 6) != 0;	/* missing file = saving */
+	if (reason && size) {
+		const char *r = strncmp(line, "saving", 6) == 0 ? line + 6 : "";
+		while (*r == ' ')
+			r++;
+		snprintf(reason, size, "%s", *r ? r : "");
+	}
+	return saving;
+}
+
+static void run_power_mode(const char *mode, const char *reason)
+{
+	pid_t pid = fork();
+	if (pid == 0) {
+		setsid();
+		execl(POWER_MODE_TOOL, "lynx-power-mode", mode, reason, (char *)NULL);
+		_exit(127);
+	}
+}
 #define MAX_SCENE_FRAMES 64
 
 static volatile sig_atomic_t stop_requested;
@@ -479,7 +514,8 @@ enum lynx_page {
 	PAGE_INPUTS,
 	PAGE_OUTPUTS,
 	PAGE_STATUS,
-	PAGE_CONSOLE
+	PAGE_CONSOLE,
+	PAGE_POWER	/* power saving: one START button (Tom, 2026-11-23) */
 };
 static char console_input[161];
 static size_t console_input_length;
@@ -1770,9 +1806,51 @@ static void paint_outputs(uint32_t *pixels)
 	rectangle(pixels, sb_x, sb_y + pos, 45, thumb, teal);
 }
 
+static void paint_power_page(uint32_t *pixels, int capacity)
+{
+	const uint32_t dark = 0x000b1219, white = 0x00f5f8fa, muted = 0x007d94a5;
+	const uint32_t teal = 0x0009dcc4, start_bg = 0x000c2e2c;
+	char reason[64], line[96];
+	read_power_saving(reason, sizeof(reason));
+	rectangle(pixels, 0, 0, WIDTH, HEIGHT, dark);
+	draw_text(pixels, "LYNX", 470, 330, 14, white);
+	draw_text(pixels, "POWER SAVING", 270, 600, 9, teal);
+	snprintf(line, sizeof(line), "%s", reason[0] ? reason : "resting");
+	for (char *c = line; *c; c++)
+		*c = (char)toupper((unsigned char)*c);
+	draw_text(pixels, line, 90, 760, 5, muted);
+	int soc = -1;
+	FILE *t = fopen("/sys/class/thermal/thermal_zone0/temp", "r");
+	if (t) {
+		if (fscanf(t, "%d", &soc) != 1)
+			soc = -1;
+		fclose(t);
+	}
+	if (capacity >= 0 && soc > 0)
+		snprintf(line, sizeof(line), "BATTERY %d%%   CPU %d C", capacity, soc / 1000);
+	else if (capacity >= 0)
+		snprintf(line, sizeof(line), "BATTERY %d%%", capacity);
+	else
+		snprintf(line, sizeof(line), " ");
+	draw_text(pixels, line, 90, 860, 6, white);
+	/* The START button: x 170..1070, y 1150..1450 */
+	rectangle(pixels, 170, 1150, 900, 300, start_bg);
+	rectangle(pixels, 170, 1150, 900, 6, teal);
+	rectangle(pixels, 170, 1444, 900, 6, teal);
+	rectangle(pixels, 170, 1150, 6, 300, teal);
+	rectangle(pixels, 1064, 1150, 6, 300, teal);
+	draw_text(pixels, "START", 395, 1235, 16, teal);
+	draw_text(pixels, "TAP START TO WAKE LYNX", 270, 1560, 5, white);
+	draw_text(pixels, "HER GUARDS STAY ON AND NEVER SHUT HER DOWN", 70, 1640, 4, muted);
+}
+
 static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 			   const char *pose, int capacity)
 {
+	if (page == PAGE_POWER) {
+		paint_power_page(pixels, capacity);
+		return 0;
+	}
 	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa;
 	const uint32_t teal = 0x0009dcc4;
 	char value[48];
@@ -1905,38 +1983,46 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 	uint32_t mode_bg = learning ? 0x003e2908 : 0x000c2e2c;
 	uint32_t mode_border = learning ? 0x00edb961 : 0x0009dcc4;
 	uint32_t mode_tc = learning ? 0x00edb961 : 0x0009dcc4;
-	/* Left: Aigel mode (x 75..755). Right: shut down (x 775..1165). */
-	rectangle(pixels, 75, 2405, 680, 95, mode_bg);
-	rectangle(pixels, 75, 2405, 680, 3, mode_border);
-	rectangle(pixels, 75, 2497, 680, 3, mode_border);
+	/* Aigel mode (x 75..555), power saving (x 570..865), shut down (x 880..1165). */
+	rectangle(pixels, 75, 2405, 480, 95, mode_bg);
+	rectangle(pixels, 75, 2405, 480, 3, mode_border);
+	rectangle(pixels, 75, 2497, 480, 3, mode_border);
 	rectangle(pixels, 75, 2405, 3, 95, mode_border);
-	rectangle(pixels, 752, 2405, 3, 95, mode_border);
-
+	rectangle(pixels, 552, 2405, 3, 95, mode_border);
 	if (learning) {
-		draw_text(pixels, "AIGEL: LEARNING", 95, 2418, 5, mode_tc);
-		draw_text(pixels, "TAP FOR NORMAL MODE", 95, 2462, 4, white);
+		draw_text(pixels, "AIGEL: LEARNING", 92, 2418, 4, mode_tc);
+		draw_text(pixels, "TAP FOR NORMAL", 92, 2462, 4, white);
 	} else {
-		draw_text(pixels, "AIGEL: NORMAL", 95, 2418, 5, mode_tc);
-		draw_text(pixels, "TAP FOR LEARNING MODE", 95, 2462, 4, white);
+		draw_text(pixels, "AIGEL: NORMAL", 92, 2418, 4, mode_tc);
+		draw_text(pixels, "TAP FOR LEARNING", 92, 2462, 4, white);
 	}
 
-	/* Shutdown (Tom, 2026-11-23): a person's choice, never automatic. First
-	 * tap arms it for 5 s, a second tap shuts Lynx down cleanly. */
+	/* Power saving: one tap stops everything non-essential (Tom, 2026-11-23). */
+	rectangle(pixels, 570, 2405, 295, 95, 0x00102a3a);
+	rectangle(pixels, 570, 2405, 295, 3, 0x005ab0e0);
+	rectangle(pixels, 570, 2497, 295, 3, 0x005ab0e0);
+	rectangle(pixels, 570, 2405, 3, 95, 0x005ab0e0);
+	rectangle(pixels, 862, 2405, 3, 95, 0x005ab0e0);
+	draw_text(pixels, "POWER SAVE", 590, 2418, 4, 0x008fd0f5);
+	draw_text(pixels, "SLEEP MODE", 590, 2462, 4, white);
+
+	/* Shutdown: a person's choice, never automatic. First tap arms it for 5 s,
+	 * a second tap shuts Lynx down cleanly. */
 	bool armed = shutdown_armed_until_ms != 0 &&
 		     monotonic_milliseconds() < shutdown_armed_until_ms;
 	uint32_t sd_bg = armed ? 0x00501010 : 0x00241618;
 	uint32_t sd_border = armed ? 0x00ff5a5a : 0x00b05a5a;
-	rectangle(pixels, 775, 2405, 390, 95, sd_bg);
-	rectangle(pixels, 775, 2405, 390, 3, sd_border);
-	rectangle(pixels, 775, 2497, 390, 3, sd_border);
-	rectangle(pixels, 775, 2405, 3, 95, sd_border);
+	rectangle(pixels, 880, 2405, 285, 95, sd_bg);
+	rectangle(pixels, 880, 2405, 285, 3, sd_border);
+	rectangle(pixels, 880, 2497, 285, 3, sd_border);
+	rectangle(pixels, 880, 2405, 3, 95, sd_border);
 	rectangle(pixels, 1162, 2405, 3, 95, sd_border);
 	if (armed) {
-		draw_text(pixels, "TAP AGAIN", 800, 2418, 5, 0x00ffd0d0);
-		draw_text(pixels, "TO SHUT DOWN", 800, 2462, 4, white);
+		draw_text(pixels, "TAP AGAIN", 900, 2418, 4, 0x00ffd0d0);
+		draw_text(pixels, "TO SHUT DOWN", 900, 2462, 3, white);
 	} else {
-		draw_text(pixels, "SHUT DOWN", 800, 2418, 5, 0x00ff8a8a);
-		draw_text(pixels, "TAP TWICE", 800, 2462, 4, white);
+		draw_text(pixels, "SHUT DOWN", 900, 2418, 4, 0x00ff8a8a);
+		draw_text(pixels, "TAP TWICE", 900, 2462, 4, white);
 	}
 
 	nav_buttons(pixels, page);
@@ -2324,7 +2410,7 @@ static int run(const char *action, unsigned int seconds)
 	time_t shown_thought_mtime = 0;
 	int shown_hearing_on = -1;
 	time_t shown_minute = 0;
-	enum lynx_page page = PAGE_HOME;
+	enum lynx_page page = read_power_saving(NULL, 0) ? PAGE_POWER : PAGE_HOME;
 	struct touch_state touch_state = { 0 };
 	bool page_changed = false, suppress_tap = false;
 
@@ -2541,7 +2627,16 @@ static int run(const char *action, unsigned int seconds)
 						int x = tap_x * (int)WIDTH / 12400;
 						int y = tap_y * (int)HEIGHT / 27720;
 						enum lynx_page target = page;
-						if (y >= 2550 && y < 2710) {
+						if (page == PAGE_POWER) {
+							/* Only START responds here; no nav bar. */
+							if (x >= 170 && x < 1070 && y >= 1150 && y < 1450) {
+								haptic_tick(60);
+								run_power_mode("active", "");
+								printf("power_start\n");
+								fflush(stdout);
+								target = PAGE_HOME;
+							}
+						} else if (y >= 2550 && y < 2710) {
 							if (x >= 40 && x < 256)
 								target = PAGE_HOME;
 							else if (x >= 276 && x < 492)
@@ -2563,14 +2658,21 @@ static int run(const char *action, unsigned int seconds)
 								target = PAGE_CHAT;
 							}
 						} else if (page == PAGE_STATUS &&
-							   y >= 2400 && y < 2505 && x >= 75 && x < 760) {
+							   y >= 2400 && y < 2505 && x >= 75 && x < 555) {
 							toggle_aigel_mode();
 							page_changed = true;
 							haptic_tick(35);
 							printf("aigel_mode_toggled\n");
 							fflush(stdout);
 						} else if (page == PAGE_STATUS &&
-							   y >= 2400 && y < 2505 && x >= 775 && x < 1165) {
+							   y >= 2400 && y < 2505 && x >= 570 && x < 865) {
+							haptic_tick(60);
+							run_power_mode("saving", "power save button");
+							printf("power_saving\n");
+							fflush(stdout);
+							target = PAGE_POWER;
+						} else if (page == PAGE_STATUS &&
+							   y >= 2400 && y < 2505 && x >= 880 && x < 1165) {
 							uint64_t now_sd = monotonic_milliseconds();
 							if (shutdown_armed_until_ms != 0 &&
 							    now_sd < shutdown_armed_until_ms) {
@@ -2681,6 +2783,18 @@ static int run(const char *action, unsigned int seconds)
 			if (now_ms - last_battery_poll >= 1000U) {
 				capacity = read_battery_percent();
 				last_battery_poll = now_ms;
+				/* Follow the power mode (START, POWER SAVE, or a guard). */
+				bool saving_now = read_power_saving(NULL, 0);
+				if (portrait && saving_now && page != PAGE_POWER) {
+					page = PAGE_POWER;
+					page_changed = true;
+					if (!lit && set_brightness(250) >= 0)
+						lit = true;
+					lit_until = now_ms + 15000U;
+				} else if (portrait && !saving_now && page == PAGE_POWER) {
+					page = PAGE_HOME;
+					page_changed = true;
+				}
 			}
 			size_t next_frame = shown_frame;
 			int scene_result = 0;
@@ -2699,7 +2813,7 @@ static int run(const char *action, unsigned int seconds)
 					next_frame = ((now_ms - scene_started) / 500U) %
 						     scene.count;
 			}
-			bool status_refresh = portrait && (page == PAGE_STATUS || page == PAGE_INPUTS || page == PAGE_OUTPUTS) && lit &&
+			bool status_refresh = portrait && (page == PAGE_STATUS || page == PAGE_INPUTS || page == PAGE_OUTPUTS || page == PAGE_POWER) && lit &&
 				now_ms - last_page_refresh >= 1000U;
 			unsigned int console_seq = page == PAGE_CONSOLE ?
 				console_sequence() : 0;
@@ -2857,6 +2971,8 @@ int main(int argc, char **argv)
 			return render_preview("", argv[3], PAGE_CONSOLE);
 		if (!strcmp(argv[2], "status"))
 			return render_preview("", argv[3], PAGE_STATUS);
+		if (!strcmp(argv[2], "power"))
+			return render_preview("", argv[3], PAGE_POWER);
 		return 2;
 	}
 	if (argc == 3 && !strcmp(argv[1], "--preview-console-symbols")) {

@@ -24,8 +24,9 @@ class KeeperTest(unittest.TestCase):
         self.p.stop()
         self.tmp.cleanup()
 
-    def lynx_says(self, boot="b1", uptime=600, prepared="NOT_PREPARED", healthy="HEALTHY", safe="SAFE_WATCHERS"):
-        return lambda cmd: f"{boot}\n{uptime}\n{prepared}\n{healthy}\n{safe}\n"
+    def lynx_says(self, boot="b1", uptime=600, prepared="NOT_PREPARED", healthy="HEALTHY",
+                  safe="SAFE_WATCHERS", mode="MODE_active"):
+        return lambda cmd: f"{boot}\n{uptime}\n{prepared}\n{healthy}\n{safe}\n{mode}\n"
 
     def prep(self, state="prepared_no_stream"):
         def f():
@@ -66,6 +67,11 @@ class KeeperTest(unittest.TestCase):
 
     def test_never_prepares_while_original_watchers_run(self):
         self.assertEqual(k.decide(self.lynx_says(safe="UNSAFE_WATCHERS"), self.prep()), "waiting-for-safe-watchers")
+        self.assertEqual(self.prepared, [])
+        self.assertEqual(k.decide(self.lynx_says(), self.prep()), "prepared")
+
+    def test_no_camera_prep_in_power_saving(self):
+        self.assertEqual(k.decide(self.lynx_says(mode="MODE_saving"), self.prep()), "power-saving")
         self.assertEqual(self.prepared, [])
         self.assertEqual(k.decide(self.lynx_says(), self.prep()), "prepared")
 

@@ -86,14 +86,16 @@ def decide(read=lynx, prepare=None) -> str:
                "/usr/local/bin/lynx-status --assert-ready >/dev/null 2>&1 && echo HEALTHY || echo UNHEALTHY; "
                "grep -q 'failures\" -ge 10' /run/lynx/lynx-health-supervisor.sh && "
                "! grep -q -E 'poweroff|reboot' /run/lynx/thermal-watch.sh /run/lynx/battery-watch.sh "
-               "&& echo SAFE_WATCHERS || echo UNSAFE_WATCHERS")
+               "&& echo SAFE_WATCHERS || echo UNSAFE_WATCHERS; "
+               "m=$(cut -d' ' -f1 /var/lib/noobia/power-mode 2>/dev/null); echo MODE_${m:-saving}")
     if out is None:
         return "unreachable"
     lines = out.split()
-    if len(lines) < 5:
+    if len(lines) < 6:
         return "unreadable"
     boot, uptime, prepared, healthy = lines[0], int(lines[1]) if lines[1].isdigit() else 0, lines[2], lines[3]
     safe = lines[4] == "SAFE_WATCHERS"
+    active = lines[5] == "MODE_active"
     for kind in ("done", "failed", "skipped"):
         if marker(boot, kind).exists():
             return f"already-{kind}"
@@ -114,6 +116,9 @@ def decide(read=lynx, prepare=None) -> str:
         return "settling"
     if healthy != "HEALTHY":
         return "waiting-for-health"
+    if not active:
+        # Power saving (boot default, or a guard rested her): no camera prep.
+        return "power-saving"
     if not safe:
         # 2026-11-23: camera heat + the boot image's original watchers (poweroff
         # on one 60 C reading or 3 health flickers) switched Lynx off. Never

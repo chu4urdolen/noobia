@@ -11,6 +11,20 @@ THERMAL_ROOT=/sys/class/thermal
 READY=/run/lynx/thermal-watch.ready
 STOP_MILLIDEGREES=75000
 
+# Tom 2026-11-23: a guard never shuts Lynx down - it sends her to power
+# saving (the START screen) with the reason, once per 10-reading run.
+rest_lynx() {
+    case "$(cat /var/lib/noobia/power-mode 2>/dev/null)" in saving*) return 0;; esac
+    echo "GUARD_POWER_SAVING $1"
+    [ -x /usr/local/bin/lynx-power-mode ] && /usr/local/bin/lynx-power-mode saving "$1" >/dev/null 2>&1 &
+    if [ ! -e "$GUARD_SWITCH" ]; then
+        for dev in /sys/class/thermal/cooling_device*; do
+            [ -f "$dev/cur_state" ] && echo 1 > "$dev/cur_state" 2>/dev/null || true
+        done
+    fi
+    return 0
+}
+
 check_once() {
     if [ ! -e "$READY" ]; then
         echo THERMAL_WATCH_WAITING_FOR_SENSORS
@@ -37,19 +51,12 @@ check_once() {
         [ "$value" -lt "$STOP_MILLIDEGREES" ] || hot=1
     done
     echo "THERMAL_WATCH_SAMPLE valid=$count maximum_millidegrees=$maximum"
-    # Guard switch: keep sampling (lynx-health reads the sample), never act.
-    [ -e "$GUARD_SWITCH" ] && { over=0; return 0; }
     if [ "$hot" = 1 ]; then over=$((over+1)); else over=0; fi
-    if [ "$hot" = 1 ] && [ "$over" -lt "$READS_TO_ACT" ]; then
+    if [ "$hot" = 1 ] && [ "$over" -ge "$READS_TO_ACT" ]; then
+        rest_lynx "too warm ($((maximum / 1000)) C)"
+        over=0
+    elif [ "$hot" = 1 ]; then
         echo "THERMAL_WATCH_OVER_LIMIT consecutive=$over of $READS_TO_ACT (no action yet)"
-        return 0
-    fi
-    if [ "$hot" = 1 ]; then
-        echo "THERMAL_WATCH_TEMPERATURE_HIGH cutoff_millidegrees=$STOP_MILLIDEGREES; throttling to low power"
-        for dev in "$THERMAL_ROOT"/cooling_device*; do
-            [ -f "$dev/cur_state" ] && echo 1 > "$dev/cur_state" 2>/dev/null || true
-        done
-        return 0
     fi
     [ "$count" -gt 0 ] || echo THERMAL_WATCH_NO_VALID_CPU_READINGS
     return 0

@@ -52,7 +52,7 @@ FW_DEFAULT = "/vendor/firmware"
 V4L2_CTL = os.environ.get("LYNX_V4L2_CTL", "/usr/bin/v4l2-ctl")
 SETTLE_MS = 750
 CAPTURE_TIMEOUT_S = 20.0            # helper waits at most 9 s for the frame
-DETECT_TIMEOUT_S = 20.0
+DETECT_TIMEOUT_S = 50.0           # strong models (YOLO11x + Florence-2) take ~22 s on CPU
 CAMERA = "back"
 
 # Both rear cameras Aria proved on 2026-11-21 (forge note on lynx): the macro

@@ -40,7 +40,7 @@ def _c1():
 VISION_URL = "http://127.0.0.1:5051/analyze"
 
 
-def _strong(image: bytes, timeout: float = 90.0) -> tuple[dict | None, str]:
+def _strong(image: bytes, timeout: float = 45.0) -> tuple[dict | None, str]:
     """(result, note) from nexus_vision; (None, why) if it is down or slow."""
     import urllib.request
     try:

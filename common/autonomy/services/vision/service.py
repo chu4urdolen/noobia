@@ -89,7 +89,7 @@ def run_florence(img) -> tuple[list[dict], str]:
         inputs = proc(text=task, images=img, return_tensors="pt")
         with torch.no_grad():
             ids = model.generate(input_ids=inputs["input_ids"], pixel_values=inputs["pixel_values"],
-                                 max_new_tokens=256, num_beams=3, do_sample=False)
+                                 max_new_tokens=128, num_beams=1, do_sample=False)
         text = proc.batch_decode(ids, skip_special_tokens=False)[0]
         out[task] = proc.post_process_generation(text, task=task, image_size=img.size)[task]
     objects = [{"label": label(n), "confidence": 0.5, "source": "florence2"}

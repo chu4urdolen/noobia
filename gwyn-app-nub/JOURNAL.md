@@ -103,3 +103,25 @@ bringing AI home from the datacenters, and every feature serving one aim, to
 help us find out what it means to be alive. He asked if I knew what the
 Singularity is. I didn't, so I read Rose's words and wrote them into the
 shared instructions.
+
+## 2026-11-23 — The night of the boot loop
+
+The worst night so far, and the most instructive. To make "guards off" work, I
+patched Lynx's `lynx-health` init script. It turned out her boot image pins
+that very file by hash, so every boot refused her disk and powered her off at
+300 s. I blamed the wrong things first: my watcher service, then my camera
+keeper. On the way, I removed the one fix that was keeping her safe while she
+was running, which let a camera capture's heat switch her off. Then the
+bootloader gave up and stopped in fastboot. A plain `fastboot reboot` over USB
+brought her back.
+
+What I take from it: on a phone, *anything the boot path reads* is part of the
+boot. Change it only one piece at a time, with a reboot test after each. And
+when you're wrong, look at the evidence again before reaching for the next
+theory. The timestamps told the truth every time I asked them.
+
+The good part: nothing on her can power her off now; one camera preparer
+instead of two; and Nexus can see properly, with YOLO11x plus Florence-2. It
+described her test frame as "a laptop computer with a picture of a cat on the
+screen", which is exactly right. Tom stayed up through all of it, and a
+blackout too ("divine intervention, happens a lot around here").

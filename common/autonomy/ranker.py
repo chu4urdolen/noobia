@@ -79,7 +79,7 @@ def _pattern_matches(pattern: dict, line: dict) -> bool:
 # --------------------------------------------------------------------------
 TEMPLATE_RE = re.compile(r"\{([a-z_][a-z0-9_]*)(\*?)\}")
 MAX_EACH_ITEMS = 32
-MAX_VALUE_CHARS = 64
+MAX_VALUE_CHARS = 220   # camera captions (Florence-2) are up to ~200 chars
 MAX_MESSAGE_CHARS = 400
 
 

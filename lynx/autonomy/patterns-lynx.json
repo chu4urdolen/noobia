@@ -63,11 +63,59 @@
    },
    "hits": 0,
    "origin": "gwyn",
-   "regex": "\\| (?P<items>.+)$",
+   "regex": "\\| (?P<items>[^~]+)$",
    "each": {
     "group": "items",
     "regex": "(?P<label>[a-z_]+)\\((?P<conf>[0-9.]+)\\)"
    }
+  },
+  {
+   "id": "camera-objects-caption",
+   "match": {
+    "sense": "camera",
+    "event": "objects.seen"
+   },
+   "template": "With your {cam} camera you see {label*}. It looks like this: {caption}",
+   "message": "You see something.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 camera objects.seen cam=wide n=2 | mouse(0.85)/laptop(0.72) ~ A desk with a laptop and a monitor."
+    ],
+    "must_not": [
+     "NOOBIA P1 camera objects.seen cam=wide n=2 | mouse(0.85)/laptop(0.72)"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<items>[^~]+) ~ (?P<caption>[^~]+)$",
+   "each": {
+    "group": "items",
+    "regex": "(?P<label>[a-z_]+)\\((?P<conf>[0-9.]+)\\)"
+   }
+  },
+  {
+   "id": "camera-scene",
+   "match": {
+    "sense": "camera",
+    "event": "scene.seen"
+   },
+   "template": "With your {cam} camera you see this: {caption}",
+   "message": "You see something.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 camera scene.seen cam=wide | A person sitting at a computer in a dark room."
+    ],
+    "must_not": [
+     "NOOBIA P1 camera objects.seen cam=wide n=1 | cup(0.8)"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<caption>.+)$"
   },
   {
    "id": "camera-object",

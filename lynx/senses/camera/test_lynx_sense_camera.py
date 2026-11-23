@@ -230,6 +230,13 @@ class FrameTest(unittest.TestCase):
         fmts = [c for c in calls if c[0].endswith("v4l2-ctl")]
         self.assertIn("width=1600,height=1200", fmts[-1][-1], "macro format restored last")
 
+    def test_unprepared_wide_is_not_prepared_not_a_route_failure(self):
+        run, route, calls = self.graph_run()
+        self.dev.unlink()
+        r = frame.look(run=run, opener=opener_for({}), camera="wide")
+        self.assertIn("not prepared", r["error"])
+        self.assertFalse([c for c in calls if c[0].endswith("media-ctl")], "no route touched")
+
     def test_wide_route_failure_is_honest_and_back_stays(self):
         run, route, calls = self.graph_run(fail_link=True)
         r = frame.look(run=run, opener=opener_for({}), camera="wide")
@@ -282,6 +289,13 @@ class SenseTest(unittest.TestCase):
         self.assertTrue(self.step(self.seen(("laptop", 0.74), ("cat", 0.6)), 1120)[0].startswith("NOOBIA P1"))
         self.assertTrue(self.step(self.seen(("laptop", 0.74)), 1120 + 301)[0].startswith("NOOBIA P1"))
 
+    def test_caption_only_scene_spoken_at_most_every_5_minutes(self):
+        r = {"ok": True, "camera": "wide", "objects": [{"label": "person", "confidence": 0.5}],
+             "items": "", "labels": ["person"], "caption": "A person at a desk in a dark room."}
+        self.assertEqual(self.step(r, 1000), ["NOOBIA P1 camera scene.seen cam=wide | A person at a desk in a dark room."])
+        self.assertTrue(self.step(r, 1060)[0].startswith("NOOBIA P0 camera scene.seen"))
+        self.assertTrue(self.step(r, 1301)[0].startswith("NOOBIA P1 camera scene.seen"))
+
     def test_empty_frame(self):
         lines = self.step(self.seen(), 1000)
         self.assertEqual(lines, ["NOOBIA P0 camera frame.analyzed objects=0 cam=back | frame analyzed, no objects recognized"])
@@ -294,7 +308,12 @@ class SenseTest(unittest.TestCase):
         for t in range(4):
             cam.run(state_file=self.state, now=1000 + 60 * t, boot="b1",
                     look=lambda wait_s, camera="back": used.append(camera) or self.seen(("cat", 0.9)))
-        self.assertEqual(used, ["back", "wide", "back", "wide"])
+        self.assertEqual(used, ["wide", "wide", "wide", "wide"])
+        for t in range(4, 10):
+            cam.run(state_file=self.state, now=1000 + 60 * t, boot="b1",
+                    look=lambda wait_s, camera="back": used.append(camera) or self.seen(("cat", 0.9)))
+        self.assertEqual(used[4], "back", "every fifth look is the macro")
+        self.assertEqual(used.count("back"), 2)
 
     def test_a_failing_camera_is_dropped_the_other_goes_on_then_pause(self):
         bad = {"ok": False, "busy": False, "error": "capture failed: no frame within 9 seconds"}
@@ -305,8 +324,8 @@ class SenseTest(unittest.TestCase):
         for t in range(8):
             r, _ = cam.run(state_file=self.state, look=look, now=1000 + 60 * t, boot="b1")
             lines += r["emitted"]
-        self.assertEqual(used[:6], ["back", "wide", "back", "wide", "back", "wide"])
-        self.assertEqual(used[6:], ["back", "back"], "wide dropped after 3 failures, back goes on")
+        self.assertEqual(used[:3], ["wide", "wide", "wide"])
+        self.assertEqual(used[3:], ["back"] * 5, "wide dropped after 3 failures, the macro goes on")
         self.assertEqual(len([l for l in lines if "unavailable cam=wide" in l]), 1)
         # Both failing: back too is paused after 3, then nothing is touched this boot.
         def all_bad(wait_s, camera="back"):

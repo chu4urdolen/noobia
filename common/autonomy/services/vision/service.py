@@ -36,7 +36,7 @@ MODELS = NOOBIA / "common" / "runtime" / "models"
 YOLO_WEIGHTS = MODELS / "yolo11x.pt"
 FLORENCE_ID = os.environ.get("NEXUS_FLORENCE_MODEL", "microsoft/Florence-2-large")
 MAX_BODY = 20 * 1024 * 1024
-YOLO_MIN_CONF = 0.35
+YOLO_MIN_CONF = 0.45   # brightened night frames are noisy; 0.35 produced "kite"
 
 _state = {"yolo": None, "florence": None, "processor": None, "errors": {}, "loading": True}
 _lock = threading.Lock()      # torch CPU inference: one image at a time per model
@@ -59,16 +59,20 @@ def load_models() -> None:
     except Exception as exc:  # noqa: BLE001
         _state["errors"]["yolo"] = repr(exc)
     try:
-        from unittest import mock
         from transformers import AutoModelForCausalLM, AutoProcessor
-        from transformers.dynamic_module_utils import get_imports
+        import transformers.dynamic_module_utils as dmu
+
+        original = dmu.get_imports
 
         def no_flash_attn(path):   # Florence-2's remote code lists flash_attn; CPU has none
-            return [i for i in get_imports(path) if i != "flash_attn"]
-        with mock.patch("transformers.dynamic_module_utils.get_imports", no_flash_attn):
+            return [i for i in original(path) if i != "flash_attn"]
+        dmu.get_imports = no_flash_attn
+        try:
             _state["florence"] = AutoModelForCausalLM.from_pretrained(
                 FLORENCE_ID, trust_remote_code=True, attn_implementation="eager").eval()
             _state["processor"] = AutoProcessor.from_pretrained(FLORENCE_ID, trust_remote_code=True)
+        finally:
+            dmu.get_imports = original
     except Exception as exc:  # noqa: BLE001
         _state["errors"]["florence"] = repr(exc)
     _state["loading"] = False

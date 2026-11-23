@@ -46,6 +46,8 @@ import lynx_camera_frame as frame  # noqa: E402
 
 SEEN_WINDOW_S = 300.0
 MAX_FAILURES = 3
+MACRO_EVERY = 5      # one macro (close-up) look per five
+SCENE_EVERY_S = 300  # a caption-only scene is spoken at most every 5 minutes
 
 
 def boot_id() -> str:
@@ -78,9 +80,14 @@ def run(dry_run: bool = False, state_file: str | None = None, look=None,
     # Alternate Lynx's two proven rear cameras, one look a minute each in turn
     # (Tom 2026-11-22: both cameras permanently on). A camera that keeps
     # failing is dropped for the boot; the other one goes on.
+    # Wide (IMX355) is her main eye; the macro (GC02M1) only focuses a few cm
+    # away, so it looks every MACRO_EVERY-th turn, for close-ups (Tom, 2026-11-23).
     cams = [c for c in frame.CAMERAS if c not in state.get("dropped", [])] or list(frame.CAMERAS)
     turn = int(state.get("turn", 0))
-    camera = cams[turn % len(cams)]
+    if len(cams) == 1:
+        camera = cams[0]
+    else:
+        camera = "back" if turn % MACRO_EVERY == MACRO_EVERY - 1 else "wide"
     state["turn"] = turn + 1
     result = (look or frame.look)(wait_s=0.0, camera=camera)
     if not result.get("ok"):
@@ -120,8 +127,21 @@ def run(dry_run: bool = False, state_file: str | None = None, look=None,
     state["failures"] = 0
     state.setdefault("cam_failures", {})[camera] = 0
     last_seen: dict[str, float] = state.get("last_seen", {})
-    objects, labels = result["objects"], result["labels"]
-    if not objects:
+    # Only labels with a real score (YOLO) count as seen; Florence-2's
+    # unscored guesses (confidence exactly 0.5) live in its caption instead.
+    objects = [o for o in result["objects"] if abs(float(o.get("confidence", 0)) - 0.5) > 1e-6]
+    labels = [frame.clean_label(o.get("label")) for o in objects]
+    caption = str(result.get("caption", ""))
+    if not objects and caption:
+        # No confirmed (scored) object, but Florence-2 described the scene -
+        # what she has at night. Spoken at most once per SCENE_EVERY_S.
+        speak = t - float(state.get("last_scene_t", -1e12)) >= SCENE_EVERY_S
+        if speak:
+            state["last_scene_t"] = t
+        emitted.append(emit_line(sense, 1 if speak else 0, "camera", "scene.seen",
+                                 fields={"cam": result.get("camera", "back")},
+                                 text=caption, dry_run=dry_run))
+    elif not objects:
         emitted.append(emit_line(sense, 0, "camera", "frame.analyzed",
                                  fields={"objects": 0, "cam": result.get("camera", "back")},
                                  text="frame analyzed, no objects recognized", dry_run=dry_run))
@@ -129,9 +149,10 @@ def run(dry_run: bool = False, state_file: str | None = None, look=None,
         new = [lb for lb in labels if t - float(last_seen.get(lb, -1e12)) >= SEEN_WINDOW_S]
         for lb in labels:
             last_seen[lb] = t
+        text = frame.items_text(objects) + (f" ~ {caption}" if caption else "")
         emitted.append(emit_line(sense, 1 if new else 0, "camera", "objects.seen",
                                  fields={"cam": result.get("camera", "back"), "n": len(objects)},
-                                 text=result["items"], dry_run=dry_run))
+                                 text=text, dry_run=dry_run))
     # Forget labels not seen for an hour, so state stays small.
     state["last_seen"] = {k: v for k, v in last_seen.items() if t - float(v) < 3600}
     if not dry_run:

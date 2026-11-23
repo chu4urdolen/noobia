@@ -131,6 +131,14 @@ def items_text(objects: list[dict]) -> str:
                     for o in objects[:16])
 
 
+def clean_caption(text: str) -> str:
+    """Florence-2's caption as one safe line: ASCII, no '|' or '~', <= 200 chars."""
+    t = "".join(ch for ch in str(text) if 32 <= ord(ch) < 127).replace("|", " ").replace("~", " ")
+    t = re.sub(r"\s+", " ", t).strip()
+    t = re.sub(r"^(the image shows|this image shows|the image is of|in this image,?)\s+", "", t, flags=re.I)
+    return t[:200].rstrip(" .") + ("." if t else "")
+
+
 class _Lock:
     def __init__(self, wait_s: float):
         self.wait_s, self.fh = wait_s, None
@@ -179,6 +187,11 @@ def firmware_ready() -> str | None:
 def capture(run=subprocess.run, camera: str = "back") -> tuple[bytes | None, str]:
     """One raw frame, or (None, honest reason). The frame file never outlives this call.
     A wide look switches the route to the IMX355 and always switches back."""
+    if not DEVICE.exists():
+        # Checked before any route switch: an unprepared camera is "not
+        # prepared" (a known state), never a route failure that would pause
+        # the wide camera for the whole boot.
+        return None, f"{DEVICE} absent: camera stack not prepared for this boot"
     if camera == "back":
         return _capture(run, CAMERAS["back"])
     why = select_route(camera, run)
@@ -266,6 +279,7 @@ def detect(raw: bytes, opener=urllib.request.urlopen, w: int = WIDTH, h: int = H
     if not body.get("model_loaded", True):
         return None, "Nexus detector has no model loaded"
     objects = [o for o in body.get("objects", []) if isinstance(o, dict)]
+    detect.last_caption = str(body.get("caption", ""))
     return sorted(objects, key=lambda o: -float(o.get("confidence", 0))), "detected"
 
 
@@ -288,6 +302,8 @@ def look(wait_s: float = 0.0, run=subprocess.run, opener=urllib.request.urlopen,
     objects, why = detect(raw, opener=opener, w=CAMERAS[camera]["w"], h=CAMERAS[camera]["h"])
     if objects is None:
         return {"ok": False, "error": why, "busy": False}
+    caption = clean_caption(getattr(detect, "last_caption", ""))
     return {"ok": True, "camera": camera, "objects": objects, "items": items_text(objects),
+            "caption": caption,
             "labels": [clean_label(o.get("label")) for o in objects],
             "elapsed_s": round(time.monotonic() - t0, 2)}

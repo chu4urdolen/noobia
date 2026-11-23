@@ -38,6 +38,31 @@ def _c1():
 
 
 VISION_URL = "http://127.0.0.1:5051/analyze"
+DARK_MEAN = 60.0      # 0..255; Lynx's raw sensors have a fixed exposure and no AE
+DARK_MIN_CONF = 0.70  # scored labels in brightened (dark) frames must be at least this sure
+
+
+def brighten_if_dark(png: bytes) -> bytes:
+    """Levels stretch + gamma lift for dark frames (evening rooms); bright frames untouched.
+
+    Lynx's CAMSV path has no automatic exposure (camera-control ioctls crash
+    her kernel), so at night a frame can average 1/255. Stretching the 1..99.5
+    percentiles and lifting the mean toward ~0.4 lets the detectors see."""
+    import io
+    import numpy as np
+    from PIL import Image
+    img = Image.open(io.BytesIO(png)).convert("RGB")
+    arr = np.asarray(img).astype(np.float32)
+    if arr.mean() >= DARK_MEAN:
+        return png
+    lo, hi = np.percentile(arr, 1.0), np.percentile(arr, 99.5)
+    arr = np.clip((arr - lo) / max(hi - lo, 1.0), 0.0, 1.0)
+    mean = max(float(arr.mean()), 1e-3)
+    gamma = min(max(np.log(0.4) / np.log(mean), 0.15), 1.0) if mean < 0.4 else 1.0
+    arr = (arr ** gamma) * 255.0
+    out = io.BytesIO()
+    Image.fromarray(arr.astype(np.uint8)).save(out, format="PNG")
+    return out.getvalue()
 
 
 def _strong(image: bytes, timeout: float = 45.0) -> tuple[dict | None, str]:
@@ -62,7 +87,9 @@ def detect_bayer(detector, raw: bytes, width: int, height: int) -> tuple[int, di
     c1 = _c1()
     t0 = time.monotonic()
     try:
-        png = c1.lift_bayer_to_png(raw, width=width, height=height)
+        lifted = c1.lift_bayer_to_png(raw, width=width, height=height)
+        png = brighten_if_dark(lifted)
+        was_dark = png is not lifted
         variants = c1.get_detection_frame_variants(png)
     except Exception as exc:  # undecodable: say so
         return 422, {"error": f"Bayer decode failed: {type(exc).__name__}: {exc}"}
@@ -91,9 +118,13 @@ def detect_bayer(detector, raw: bytes, width: int, height: int) -> tuple[int, di
                 best[lb] = conf
         caption = str(strong.get("caption", ""))[:300]
     t2 = time.monotonic()
+    if was_dark:
+        # A brightened night frame is mostly amplified noise: only very sure
+        # labels count (0.55 produced "kite" for a person at a desk).
+        best = {k: v for k, v in best.items() if v >= DARK_MIN_CONF or abs(v - 0.5) < 1e-6}
     objects = [{"label": k, "confidence": round(v, 4)}
                for k, v in sorted(best.items(), key=lambda kv: -kv[1])]
-    return 200, {"objects": objects, "variants": len(variants), "caption": caption,
+    return 200, {"objects": objects, "variants": len(variants), "caption": caption, "dark": was_dark,
                  "strong_models": strong_note,
                  "model_loaded": bool(getattr(detector, "model_loaded", False)),
                  "decode_ms": int((t1 - t0) * 1000), "detect_ms": int((t2 - t1) * 1000)}

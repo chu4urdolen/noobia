@@ -16,7 +16,7 @@ logger = logging.getLogger("nexus-detect")
 # Raw Bayer frames from Lynx's CAMSV camera (Gwyn, 2026-11-22). Lynx has no
 # numpy/PIL, so she posts the raw frame here; decoding, the 270 degree
 # upright rotation and gray-world white balance reuse the proven C1 code.
-BAYER_SIZES = {(1600, 1200), (3264, 2448)}
+BAYER_SIZES = {(1600, 1200), (3264, 2448), (2320, 1744)}   # macro, wide, front (binned)
 _C1 = None
 
 
@@ -124,7 +124,7 @@ def detect_bayer(detector, raw: bytes, width: int, height: int) -> tuple[int, di
     """(HTTP status, body) for one raw RGGB frame. Never an empty success on failure."""
     import time
     if (width, height) not in BAYER_SIZES:
-        return 400, {"error": f"unsupported size {width}x{height}; allowed: 1600x1200, 3264x2448"}
+        return 400, {"error": f"unsupported size {width}x{height}; allowed: 1600x1200, 3264x2448, 2320x1744"}
     if len(raw) != width * height:
         return 400, {"error": f"expected {width * height} bytes for {width}x{height}, got {len(raw)}"}
     c1 = _c1()

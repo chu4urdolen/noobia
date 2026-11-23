@@ -263,10 +263,14 @@ class SenseTest(unittest.TestCase):
         self.emit.start()
         self.nodis = mock.patch.object(cam.frame, "disabled", lambda: None)
         self.nodis.start()
+        # These tests are about the rear eye; the front pairing has its own class.
+        self.nofront = mock.patch.object(cam, "FRONT_WITH_EVERY_LOOK", False)
+        self.nofront.start()
 
     def tearDown(self):
         self.emit.stop()
         self.nodis.stop()
+        self.nofront.stop()
         self.tmp.cleanup()
 
     def step(self, result, t, boot="b1"):
@@ -368,3 +372,53 @@ class SenseTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FrontPairTest(unittest.TestCase):
+    """Tom 2026-11-24: a front picture alongside every rear one."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.state = str(Path(self.tmp.name) / "state.json")
+        import lynx_senses_lib as lib
+        lib._STATE_CACHE.clear()
+        self.p = [mock.patch.object(cam, "emit_line", lambda s, p, sn, ev, fields=None, text="", dry_run=False:
+                                    f"P{p} {sn} {ev} " + " ".join(f"{k}={v}" for k, v in (fields or {}).items())),
+                  mock.patch.object(cam.frame, "disabled", lambda: None),
+                  mock.patch.object(cam, "FRONT_WITH_EVERY_LOOK", True)]
+        for x in self.p:
+            x.start()
+        self.used = []
+
+    def tearDown(self):
+        for x in self.p:
+            x.stop()
+        self.tmp.cleanup()
+
+    def run_with(self, t, fail=()):
+        def look(wait_s, camera="back"):
+            self.used.append(camera)
+            if camera in fail:
+                return {"ok": False, "error": "boom"}
+            return {"ok": True, "camera": camera, "objects": [{"label": "person", "confidence": 0.8}]}
+        res, code = cam.run(state_file=self.state, look=look, now=t, boot="b1")
+        self.assertEqual(code, 0)
+        return res
+
+    def test_rear_then_front_each_look(self):
+        res = self.run_with(1000)
+        self.assertEqual(self.used, ["wide", "front"])
+        self.assertEqual([l.split()[3] for l in res["emitted"]], ["cam=wide", "cam=front"])
+        self.assertEqual(set(res["sampled"]["cameras"]), {"wide", "front"})
+
+    def test_same_label_on_both_sides_is_new_for_each(self):
+        res = self.run_with(1000)
+        self.assertTrue(all(l.startswith("P1") for l in res["emitted"]))
+
+    def test_failing_front_is_dropped_rear_goes_on(self):
+        for i in range(3):
+            self.run_with(1000 + 60 * i, fail=("front",))
+        self.used.clear()
+        res = self.run_with(1300, fail=("front",))
+        self.assertEqual(self.used, ["wide"], "front dropped for the boot after 3 failures")
+        self.assertTrue(res["available"])
+

@@ -127,8 +127,8 @@ def reqbufs(fd, count):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--sensor", type=int, choices=(2, 4), default=4,
-                        help="sensor4 macro baseline or sensor2 wide trial")
+    parser.add_argument("--sensor", type=int, choices=(1, 2, 4), default=4,
+                        help="sensor4 macro baseline, sensor2 wide, or sensor1 front (binned 2320x1744)")
     parser.add_argument("--probe-only", action="store_true")
     parser.add_argument("--settle-ms", type=int, default=0,
                         help="wait after stream-on before queuing the single frame")
@@ -147,7 +147,7 @@ def main():
     # This helper is sent through SSH as `python3 -`, so it must be
     # self-contained. Dushich's independently tested frame_geometry utility
     # (commit 369aca5) checks these bounded calculations offline.
-    width, height = {4: (1600, 1200), 2: (3264, 2448)}[args.sensor]
+    width, height = {4: (1600, 1200), 2: (3264, 2448), 1: (2320, 1744)}[args.sensor]
     image_bytes = width * height
     if image_bytes + 24 > 32 * 1024 * 1024:
         parser.error("capture buffer exceeds 32 MiB")

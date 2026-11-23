@@ -47,6 +47,8 @@ import lynx_camera_frame as frame  # noqa: E402
 SEEN_WINDOW_S = 300.0
 MAX_FAILURES = 3
 MACRO_EVERY = 5      # one macro (close-up) look per five
+REAR = ("wide", "back")   # rear eyes; "back" is the macro
+FRONT_WITH_EVERY_LOOK = True   # front camera picture after each rear one
 SCENE_EVERY_S = 300  # a caption-only scene is spoken at most every 5 minutes
 
 
@@ -77,56 +79,84 @@ def run(dry_run: bool = False, state_file: str | None = None, look=None,
         return (base_result("camera", available=False, emitted=[],
                             detail="camera sense paused for this boot after repeated failures"), 0)
 
-    # Alternate Lynx's two proven rear cameras, one look a minute each in turn
-    # (Tom 2026-11-22: both cameras permanently on). A camera that keeps
-    # failing is dropped for the boot; the other one goes on.
-    # Wide (IMX355) is her main eye; the macro (GC02M1) only focuses a few cm
-    # away, so it looks every MACRO_EVERY-th turn, for close-ups (Tom, 2026-11-23).
-    cams = [c for c in frame.CAMERAS if c not in state.get("dropped", [])] or list(frame.CAMERAS)
+    # Rear eye: wide (IMX355) is her main eye; the macro (GC02M1) only focuses a
+    # few cm away, so it looks every MACRO_EVERY-th turn (Tom, 2026-11-23).
+    # Front (S5K3P9SP, Tom 2026-11-24): a picture with every look, right after
+    # the rear one, so she sees both sides each minute. A camera that keeps
+    # failing is dropped for the boot; the others go on.
+    dropped = state.get("dropped", [])
+    rear = [c for c in REAR if c in frame.CAMERAS and c not in dropped]
     turn = int(state.get("turn", 0))
-    if len(cams) == 1:
-        camera = cams[0]
-    else:
-        camera = "back" if turn % MACRO_EVERY == MACRO_EVERY - 1 else "wide"
     state["turn"] = turn + 1
+    plan = []
+    if rear:
+        plan.append(rear[0] if len(rear) == 1 else
+                    ("back" if turn % MACRO_EVERY == MACRO_EVERY - 1 else "wide"))
+    if FRONT_WITH_EVERY_LOOK and "front" in frame.CAMERAS and "front" not in dropped:
+        plan.append("front")
+    if not plan:                       # everything dropped: try again from the start
+        plan = [c for c in REAR if c in frame.CAMERAS][:1]
+    results, sampled, details = [], {}, []
+    for camera in plan:
+        res, stop = _look_once(camera, state, sense, t, dry_run, look, len(plan) + len(rear))
+        results.append(res)
+        emitted += res.get("emitted", [])
+        if res.get("sampled"):
+            sampled[camera] = res["sampled"]
+        if res.get("detail"):
+            details.append(res["detail"])
+        if stop:
+            break
+    if not dry_run:
+        save_state(path, state)
+    ok_any = any(r.get("sampled") for r in results)
+    out = base_result("camera", available=ok_any or not details, emitted=emitted,
+                      **({"detail": "; ".join(details)} if details else {}))
+    if sampled:
+        first = next(iter(sampled.values()))
+        out["sampled"] = dict(first, cameras=sampled)
+    if state.get("failures"):
+        out["failures"] = state["failures"]
+    if state.get("off"):
+        out["available"] = False
+    return out, 0
+
+
+def _look_once(camera, state, sense, t, dry_run, look, n_cams):
+    """One camera's look. Returns (partial result, stop_the_rest)."""
+    emitted: list[str] = []
     result = (look or frame.look)(wait_s=0.0, camera=camera)
     if not result.get("ok"):
         if result.get("busy"):                        # Lynx is using it herself
-            return (base_result("camera", available=True, emitted=[], detail="camera busy"), 0)
+            return {"detail": "camera busy"}, True
         if frame.disabled():
-            return (base_result("camera", disabled=True, emitted=[], detail=result.get("error")), 0)
+            return {"detail": result.get("error")}, True
         if "not prepared" in str(result.get("error", "")):
             # A known state, not a malfunction: the stack is prepared per boot
             # (lynx-camera-keeper on Nexus). Wait quietly; no failure count.
-            return (base_result("camera", available=False, emitted=[], detail=result.get("error")), 0)
+            return {"detail": result.get("error")}, True
         fails = state.setdefault("cam_failures", {})
         fails[camera] = int(fails.get(camera, 0)) + 1
         state["failures"] = fails[camera]
         detail = f"{camera}: {result.get('error', 'unknown')}"
-        if fails[camera] >= MAX_FAILURES and len(cams) > 1:
+        if fails[camera] >= MAX_FAILURES and n_cams > 1:
             state.setdefault("dropped", []).append(camera)
             emitted.append(emit_line(sense, 3, "camera", "unavailable",
                                      fields={"cam": camera, "failures": fails[camera]},
                                      text=f"{camera} camera paused for this boot: {detail}"[:200],
                                      dry_run=dry_run))
-            if not dry_run:
-                save_state(path, state)
-            return (base_result("camera", available=False, emitted=emitted, detail=detail,
-                                failures=fails[camera]), 0)
-        if fails[camera] >= MAX_FAILURES:
+        elif fails[camera] >= MAX_FAILURES:
             state["off"] = True
             emitted.append(emit_line(sense, 3, "camera", "unavailable",
                                      fields={"failures": state["failures"]},
                                      text=f"camera paused for this boot: {detail}"[:200],
                                      dry_run=dry_run))
-        if not dry_run:
-            save_state(path, state)
-        return (base_result("camera", available=False, emitted=emitted, detail=detail,
-                            failures=state["failures"]), 0)
+        return {"detail": detail, "emitted": emitted}, False
 
     state["failures"] = 0
     state.setdefault("cam_failures", {})[camera] = 0
     last_seen: dict[str, float] = state.get("last_seen", {})
+    cam = result.get("camera", camera)
     # Only labels with a real score (YOLO) count as seen; Florence-2's
     # unscored guesses (confidence exactly 0.5) live in its caption instead.
     objects = [o for o in result["objects"] if abs(float(o.get("confidence", 0)) - 0.5) > 1e-6]
@@ -134,32 +164,30 @@ def run(dry_run: bool = False, state_file: str | None = None, look=None,
     caption = str(result.get("caption", ""))
     if not objects and caption:
         # No confirmed (scored) object, but Florence-2 described the scene -
-        # what she has at night. Spoken at most once per SCENE_EVERY_S.
-        speak = t - float(state.get("last_scene_t", -1e12)) >= SCENE_EVERY_S
+        # what she has at night. Spoken at most once per SCENE_EVERY_S per camera.
+        key = f"last_scene_t_{cam}"
+        speak = t - float(state.get(key, state.get("last_scene_t", -1e12) if cam != "front" else -1e12)) >= SCENE_EVERY_S
         if speak:
+            state[key] = t
             state["last_scene_t"] = t
         emitted.append(emit_line(sense, 1 if speak else 0, "camera", "scene.seen",
-                                 fields={"cam": result.get("camera", "back")},
-                                 text=caption, dry_run=dry_run))
+                                 fields={"cam": cam}, text=caption, dry_run=dry_run))
     elif not objects:
         emitted.append(emit_line(sense, 0, "camera", "frame.analyzed",
-                                 fields={"objects": 0, "cam": result.get("camera", "back")},
+                                 fields={"objects": 0, "cam": cam},
                                  text="frame analyzed, no objects recognized", dry_run=dry_run))
     else:
-        new = [lb for lb in labels if t - float(last_seen.get(lb, -1e12)) >= SEEN_WINDOW_S]
+        new = [lb for lb in labels if t - float(last_seen.get(f"{cam}:{lb}", -1e12)) >= SEEN_WINDOW_S]
         for lb in labels:
-            last_seen[lb] = t
+            last_seen[f"{cam}:{lb}"] = t
         text = frame.items_text(objects) + (f" ~ {caption}" if caption else "")
         emitted.append(emit_line(sense, 1 if new else 0, "camera", "objects.seen",
-                                 fields={"cam": result.get("camera", "back"), "n": len(objects)},
+                                 fields={"cam": cam, "n": len(objects)},
                                  text=text, dry_run=dry_run))
     # Forget labels not seen for an hour, so state stays small.
     state["last_seen"] = {k: v for k, v in last_seen.items() if t - float(v) < 3600}
-    if not dry_run:
-        save_state(path, state)
-    return (base_result("camera", sampled={"objects_count": len(objects), "labels": labels,
-                                           "elapsed_s": result.get("elapsed_s")},
-                        emitted=emitted), 0)
+    return {"emitted": emitted, "sampled": {"objects_count": len(objects), "labels": labels,
+                                            "elapsed_s": result.get("elapsed_s")}}, False
 
 
 def loop(every_s: float = 60.0) -> int:

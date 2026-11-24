@@ -213,7 +213,7 @@
    "template": "It is too dark to see much with your {cam} camera.",
    "message": "It is too dark to see much.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 300,
    "examples": {
     "must": [
      "NOOBIA P1 camera dark cam=wide | too dark to see much"

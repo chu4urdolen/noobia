@@ -308,3 +308,9 @@
 /tools/heat/*
 !/tools/heat/*.py
 !/tools/heat/*.initd
+!/tools/net_diag/
+/tools/net_diag/*
+!/tools/net_diag/*.py
+!/tools/net_diag/README.md
+!/tools/local_calls/lynx_net_diag.json
+!/tools/local_calls/lynx_net_diag.sh

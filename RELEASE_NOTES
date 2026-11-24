@@ -1,0 +1,87 @@
+Nexus Forge v1.0.0 Release Notes
+================================
+
+Autonomous Republic of Noobia
+Release Date: 2026-11-24
+License: WTFPL (Do What The Fuck You Want To Public License)
+Repository: https://github.com/chu4urdolen/noobia
+
+
+Overview
+--------
+Nexus Forge is an open-source, local-first Linux coding environment
+where AI coding agents collaborate in real-time alongside one human.
+
+It combines a 4-quadrant terminal cockpit with live animated avatar
+sidebars, local LLM assistance via Ollama, shared semantic memory
+(forge-db), and iterative context compaction.
+
+
+What is Included in v1.0.0
+--------------------------
+1. 4 Terminal Quadrants (GTK3 + VTE 2.91)
+   - Resizable 2x2 grid running independent tmux sessions.
+   - Quadrant zoom: press Ctrl+Shift+Z or F11 (or double-click the header)
+     to toggle full-window view.
+   - Terminal reconnect overlay with crash-loop backoff protection.
+
+2. Animated Avatar Sidebars
+   - Real-time visual status for each agent (idle, working, final).
+   - Helper avatar animations when Dushich assists in a quadrant.
+
+3. Live Token Quota Badges
+   - Real-time hourly and weekly rate limit usage meters for cloud agents.
+   - Local indicator for offline inference.
+
+4. Dushich: Local AI Collaborator
+   - Local assistant running Qwen 27B on Ollama with 131k context.
+   - Takes verified coding tasks through Model Context Protocol (MCP).
+   - Executes in isolated Git workspaces with automated tests and checks.
+   - Zero cloud token cost.
+
+5. Forge Memory (forge-db)
+   - SQLite shared memory for project tracking, atlas paths, and notes.
+   - Semantic meaning search using vector embeddings (Ollama or FastEmbed).
+   - Collision detection prevents conflicting agent work on shared projects.
+
+6. Iterative Context Summarizer (dushich-summarizer)
+   - Sentence-boundary window summarizer on local GPU.
+   - Compacts massive logs, transcripts, and source files efficiently.
+
+7. Turnkey Installer (./install.sh)
+   - One-command setup for modern Linux (Ubuntu, Debian, Fedora, Arch).
+   - Supports --check, --dry-run, and --config-only.
+   - Automatically provisions local configurations with portable relative links.
+
+8. User-Agnostic Launchers
+   - Dynamically resolves user accounts and home directories.
+   - Safe Git SSH guards that never overwrite environment variables.
+
+
+Quickstart
+----------
+1. Clone the repository:
+   git clone --branch v1.0.0 https://github.com/chu4urdolen/noobia.git
+   cd noobia
+
+2. Run the installer:
+   ./install.sh
+
+3. Start the cockpit:
+   nexus-forge
+
+Headless self-test (no display needed):
+   python3 common/nexus_forge/nexus_forge.py --self-test
+
+
+Customizing Quadrants
+---------------------
+Quadrants can be customized by editing ~/.config/nexus-forge/config.json
+to point to any shell, local Ollama model, or tool.
+
+
+Prerequisites
+-------------
+- Linux (Ubuntu 22.04+, Debian 12+, Fedora, Arch)
+- Python 3.10+, GTK3, VTE 2.91, tmux
+- Optional: Ollama (for local Qwen model), uv, chafa

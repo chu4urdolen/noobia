@@ -51,7 +51,7 @@ def read_hardware_mag() -> dict:
     if not os.path.exists(cmd):
         raise RuntimeError(f"Magnetometer read tool not found at {cmd}")
 
-    res = subprocess.run([cmd], input=b"{}\n", capture_output=True, text=True, timeout=5)
+    res = subprocess.run([cmd], input="{}\n", capture_output=True, text=True, timeout=5)
     if res.returncode != 0:
         raise RuntimeError(f"Magnetometer read failed: {res.stderr.strip() or res.stdout.strip()}")
 

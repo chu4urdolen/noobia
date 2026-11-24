@@ -793,6 +793,336 @@
    },
    "hits": 0,
    "origin": "gwyn"
+  },
+  {
+   "id": "netdiag-ifaces",
+   "match": {
+    "sense": "netdiag",
+    "event": "ifaces"
+   },
+   "template": "{summary}",
+   "message": "Network interfaces audit completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 netdiag ifaces count=3 | There are 3 active network interfaces: wlan0 (192.168.100.107), lo (127.0.0.1), and dummy0."
+    ],
+    "must_not": [
+     "NOOBIA P20 netdiag lan count=2 | scan"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "netdiag-lan",
+   "match": {
+    "sense": "netdiag",
+    "event": "lan"
+   },
+   "template": "{summary}",
+   "message": "Local network sweep completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 netdiag lan count=2 iface=wlan0 | Local network sweep on wlan0 found 2 live devices: 192.168.100.1 (gateway), 192.168.100.106."
+    ],
+    "must_not": [
+     "NOOBIA P20 netdiag ifaces count=3 | interfaces"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "netdiag-wifi",
+   "match": {
+    "sense": "netdiag",
+    "event": "wifi"
+   },
+   "template": "{summary}",
+   "message": "Wi-Fi airspace reconnaissance completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 netdiag wifi count=4 iface=wlan0 | Wi-Fi airspace scan detected 4 networks; strongest is 'Singularity_5G' on 5180 MHz (-52 dBm)."
+    ],
+    "must_not": [
+     "NOOBIA P20 netdiag lan count=2 | scan"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "netdiag-ports",
+   "match": {
+    "sense": "netdiag",
+    "event": "ports"
+   },
+   "template": "{summary}",
+   "message": "Port audit completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 netdiag ports target=192.168.100.106 count=3 | Port audit on 192.168.100.106 discovered 3 open ports: 22 (SSH), 8080 (http-proxy), 11434 (Ollama)."
+    ],
+    "must_not": [
+     "NOOBIA P20 netdiag lan count=2 | scan"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "netdiag-vuln",
+   "match": {
+    "sense": "netdiag",
+    "event": "vuln"
+   },
+   "template": "{summary}",
+   "message": "Security posture audit completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 netdiag vuln target=127.0.0.1 clean=true | Security posture audit on 127.0.0.1: clean. 0 critical vulnerabilities; 2 listening ports detected."
+    ],
+    "must_not": [
+     "NOOBIA P20 netdiag lan count=2 | scan"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "netdiag-ssl",
+   "match": {
+    "sense": "netdiag",
+    "event": "ssl"
+   },
+   "template": "{summary}",
+   "message": "SSL certificate audit completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 netdiag ssl host=192.168.100.106 port=443 | SSL audit for 192.168.100.106:443: TLS connection established using TLSv1.3."
+    ],
+    "must_not": [
+     "NOOBIA P20 netdiag lan count=2 | scan"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "netdiag-dns",
+   "match": {
+    "sense": "netdiag",
+    "event": "dns"
+   },
+   "template": "{summary}",
+   "message": "DNS audit completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 netdiag dns domain=google.com status=NOERROR | DNS audit for google.com via default resolver returned NOERROR in 14 ms."
+    ],
+    "must_not": [
+     "NOOBIA P20 netdiag lan count=2 | scan"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "netdiag-pcap",
+   "match": {
+    "sense": "netdiag",
+    "event": "pcap"
+   },
+   "template": "{summary}",
+   "message": "Packet sampling completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 netdiag pcap iface=wlan0 count=10 | Packet sampling captured 10 packets on wlan0."
+    ],
+    "must_not": [
+     "NOOBIA P20 netdiag lan count=2 | scan"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "netdiag-trace",
+   "match": {
+    "sense": "netdiag",
+    "event": "trace"
+   },
+   "template": "{summary}",
+   "message": "Route trace completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 netdiag trace target=8.8.8.8 hops=4 | Traced route to 8.8.8.8 across 4 hops, first hop 192.168.100.1 (1.8 ms)."
+    ],
+    "must_not": [
+     "NOOBIA P20 netdiag lan count=2 | scan"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "cellular-sim",
+   "match": {
+    "sense": "cellular",
+    "event": "sim"
+   },
+   "template": "{summary}",
+   "message": "SIM card audit completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 cellular sim card_present=false | SIM card audit: Dual-SIM tray hardware detected; platform hotplug detection active (2 nodes, oplus_sim_detect=present); modem baseband currently in quiescent standby."
+    ],
+    "must_not": [
+     "NOOBIA P20 cellular modem nodes=53 | modem"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "cellular-modem",
+   "match": {
+    "sense": "cellular",
+    "event": "modem"
+   },
+   "template": "{summary}",
+   "message": "Cellular modem status audit completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 cellular modem nodes=53 | Cellular modem status: MediaTek MT6983 MD1 baseband has 53 CCCI channels in /dev; LK bootloader state is 'LK load MD success!'; baseband core is currently 'md1:0'."
+    ],
+    "must_not": [
+     "NOOBIA P20 cellular sim card_present=false | sim"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "cellular-5g",
+   "match": {
+    "sense": "cellular",
+    "event": "5g"
+   },
+   "template": "{summary}",
+   "message": "5G radio capabilities audit completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 cellular 5g bands=13 | 5G radio capability audit: MediaTek M80 5G modem supports 13 5G NR bands (n1, n3, n5, n7, n8, n20, n28A, n38, n40, n41, n66, n77, n78) with 4x4 MIMO, EN-DC dual connectivity, and 21 LTE bands."
+    ],
+    "must_not": [
+     "NOOBIA P20 cellular sim card_present=false | sim"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "cellular-ccmni",
+   "match": {
+    "sense": "cellular",
+    "event": "ccmni"
+   },
+   "template": "{summary}",
+   "message": "CCMNI interface audit completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 cellular ccmni count=22 | CCMNI modem interfaces: 22 MediaTek packet data interfaces active in kernel (ccmni0 through ccmni20, ccmni-lan) ready for 5G data routing."
+    ],
+    "must_not": [
+     "NOOBIA P20 cellular sim card_present=false | sim"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "cellular-recon",
+   "match": {
+    "sense": "cellular",
+    "event": "recon"
+   },
+   "template": "{summary}",
+   "message": "Cellular network reconnaissance completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 cellular recon active=false | Cellular network recon: Baseband radio is in low-power standby (md1:0); no cellular carrier registration is active."
+    ],
+    "must_not": [
+     "NOOBIA P20 cellular sim card_present=false | sim"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "cellular-at",
+   "match": {
+    "sense": "cellular",
+    "event": "at"
+   },
+   "template": "{summary}",
+   "message": "Cellular AT channel probe completed.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 cellular at device=ttyC0 | Modem AT probe: virtual serial channel /dev/ttyC0 is present in /dev; core is quiescent awaiting ccci_mdinit daemon."
+    ],
+    "must_not": [
+     "NOOBIA P20 cellular sim card_present=false | sim"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<summary>.+)$"
   }
  ],
  "archive": []

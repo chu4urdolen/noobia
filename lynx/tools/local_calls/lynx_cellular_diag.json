@@ -1,0 +1,21 @@
+{
+  "name": "lynx_cellular_diag",
+  "description": "Entity: Lynx. 5G and cellular diagnostic toolkit: sim-check, modem-status, 5g-bands, ccmni-stats, cell-recon, at-probe. Supports background execution (fork: true) streaming findings into senses.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["sim-check", "modem-status", "5g-bands", "ccmni-stats", "cell-recon", "at-probe"],
+        "description": "Cellular diagnostic action to execute"
+      },
+      "fork": {
+        "type": "boolean",
+        "description": "If true, forks execution into background immediately; findings stream into senses log"
+      }
+    },
+    "required": ["action"],
+    "additionalProperties": false
+  },
+  "timeout": 18
+}

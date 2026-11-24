@@ -314,3 +314,10 @@
 !/tools/net_diag/README.md
 !/tools/local_calls/lynx_net_diag.json
 !/tools/local_calls/lynx_net_diag.sh
+!/tools/cellular_diag/
+/tools/cellular_diag/*
+!/tools/cellular_diag/*.py
+!/tools/cellular_diag/README.md
+!/tools/local_calls/lynx_cellular_diag.json
+!/tools/local_calls/lynx_cellular_diag.sh
+

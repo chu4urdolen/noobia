@@ -1,17 +1,25 @@
 {
   "name": "lynx_net_diag",
-  "description": "Entity: Lynx. Network diagnostic toolkit (Pwnphone tools): wifi-recon, lan-sweep, port-scan, dns-audit, traceroute, packet-sample.",
+  "description": "Entity: Lynx. Network diagnostic and security audit toolkit: net-ifaces, lan-sweep, wifi-recon, port-scan, vuln-check, ssl-audit, dns-audit, traceroute, packet-sample. Supports background forked execution (fork: true) with findings streamed into senses.",
   "inputSchema": {
     "type": "object",
     "properties": {
       "action": {
         "type": "string",
-        "enum": ["wifi-recon", "lan-sweep", "port-scan", "dns-audit", "traceroute", "packet-sample"],
+        "enum": ["net-ifaces", "lan-sweep", "wifi-recon", "port-scan", "vuln-check", "ssl-audit", "dns-audit", "traceroute", "packet-sample"],
         "description": "Diagnostic action to execute"
       },
       "target": {
         "type": "string",
-        "description": "Target IP or hostname (for port-scan or traceroute)"
+        "description": "Target IP or hostname (for port-scan, vuln-check, or traceroute)"
+      },
+      "host": {
+        "type": "string",
+        "description": "Host for ssl-audit (default: 192.168.100.106)"
+      },
+      "port": {
+        "type": "integer",
+        "description": "Port for ssl-audit (default: 443)"
       },
       "ports": {
         "type": "string",
@@ -24,6 +32,14 @@
       "count": {
         "type": "integer",
         "description": "Number of packets for packet-sample (default: 10)"
+      },
+      "iface": {
+        "type": "string",
+        "description": "Network interface (default: wlan0)"
+      },
+      "fork": {
+        "type": "boolean",
+        "description": "If true, forks execution into background immediately; findings stream into senses log"
       }
     },
     "required": ["action"],

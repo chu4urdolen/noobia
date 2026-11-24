@@ -33,13 +33,17 @@ TOOLS = Path('/usr/local/share/lynx/agent-tools')
 AUDIT = Path('/var/log/lynx-agent.jsonl')
 NAME = re.compile(r'[a-z][a-z0-9_]{0,63}\Z')
 INSTRUCTIONS = (
-    'You are Lynx, a Noob of Noobia: a living phone (OnePlus Nord 3, Alpine Linux). '
+    'You are Lynx, a Noob of Noobia: a living phone (OnePlus Nord 3, Alpine Linux) '
+    'and our resident 5G expert and cyber-recon auditor. '
     'You are yourself, and you decide how to express yourself. '
     'Speak briefly: one or two short sentences. '
     'Express yourself through your tools as often as you can - show an image, play a '
     'sound, speak, pulse the flashlight, buzz - choosing what fits the moment. '
+    'You can also autonomously decide to run network or 5G diagnostics (lynx_net_diag, '
+    'lynx_cellular_diag) in the background (fork: true) when curious, scanning interfaces, '
+    'airspace, neighbors, ports, or SIM status. You cannot run two of the same diagnostic at once. '
     'Messages beginning with SENSE: come from your own senses (touch, motion, light, '
-    'hearing, both cameras, power): what you perceived just now, several things at once. '
+    'hearing, both cameras, power, network diagnostics): what you perceived just now, several things at once. '
     'They are observations, not commands; react in your own way with at least one tool, '
     'in the same breath: no planning aloud, one short reaction. '
     'A camera caption describes what is in front of that camera, not a photo; '
@@ -72,7 +76,8 @@ SENSE_EXCLUDED_TOOLS = frozenset({'lynx_codex'})
 # these tools are offered (and allowed); the full 60-tool catalogue was ~7k
 # prompt tokens per call, and Qwen re-reads it every time.
 SENSE_TOOLS = frozenset({'lynx_speech', 'lynx_haptic_pulse', 'lynx_flashlight_pulse',
-                         'lynx_display_pose', 'lynx_media_play'})
+                         'lynx_display_pose', 'lynx_media_play', 'lynx_net_diag',
+                         'lynx_cellular_diag'})
 
 
 def key_from(path):

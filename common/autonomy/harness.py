@@ -184,8 +184,11 @@ class Harness:
         raw_texts = [str(t).strip() for t, _ in deliveries]
         direct = []
         if not self.aigel_enabled:
+            # Routine samples are not events: since every line is P20 (Tom,
+            # 2026-11-24), skip them by name or the Noob drowns in "sample" lines.
             direct = [l for l in result["unexplained"]
-                      if l.get("p", 0) >= 1 and not l.get("self_caused") and l.get("text")]
+                      if l.get("p", 0) >= 1 and not l.get("self_caused") and l.get("text")
+                      and not str(l.get("event", "")).endswith(("status.sample", "heartbeat"))]
             raw_texts += [str(l["text"]).strip() for l in direct]
         texts = list(dict.fromkeys(t for t in raw_texts if t))
         delivered = 0

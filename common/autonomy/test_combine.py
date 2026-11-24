@@ -80,11 +80,12 @@ class CombineTest(unittest.TestCase):
     def test_aigel_off_sends_unexplained_events_to_the_noob(self):
         h = self.make(aigel_enabled=False)
         self.feed += ["NOOBIA P1 mystery thing x=1 | something strange happened",
-                      "NOOBIA P0 motion status.sample x=1 | routine"]
+                      "NOOBIA P0 motion status.sample x=1 | routine",
+                      "NOOBIA P20 wifi status.sample signal=-60 | routine p20 sample"]
         h.step(); self.t[0] += 16; h.step()
         self.assertEqual(len(self.adapter.messages), 1)
         self.assertIn("something strange happened", self.adapter.messages[0]["text"])
-        self.assertNotIn("routine", self.adapter.messages[0]["text"])
+        self.assertNotIn("routine", self.adapter.messages[0]["text"])   # P0 and P20 samples
         self.assertEqual(self.aigel.chunks, [])
 
     def test_aigel_on_gets_the_unexplained(self):

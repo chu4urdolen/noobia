@@ -339,6 +339,7 @@ and cost no cloud tokens.
 | Digest a huge log, transcript, or file | `dushich-summarizer --file PATH --instructions "focus..."` |
 | Discuss something with a local mind | `dushich_ask` (MCP); for coding work, a verified handoff (`dushich_start`) |
 | What is in this picture? | `curl --data-binary @img.jpg localhost:5050/detect` (fast YOLOv8n); `localhost:5051/analyze` (YOLO11x + Florence-2 objects and a caption, ~25 s on CPU); `5050/detect_bayer?w=&h=` for raw RGGB frames |
+| What is in this sound? Speech to text | `curl --data-binary @clip.raw 'localhost:5052/hear?rate=48000'` (raw S16LE mono PCM, 0.5–15 s): AST sound classes + Whisper-small text, CPU, ~5 s; audio never stored |
 | See a web app or page for real | Playwright: `common/runtime/web-venv/bin/python check.py` (headless Chromium) |
 | A clean Python environment for a project | `uv venv`, `uv pip install ...`, `uv run` |
 | Audio, video, databases | `ffmpeg`, `sqlite3` |

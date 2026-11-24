@@ -438,3 +438,30 @@ class FrontPairTest(unittest.TestCase):
         self.assertEqual(self.used, ["wide"], "front dropped for the boot after 3 failures")
         self.assertTrue(res["available"])
 
+
+class CaptionAndDarkTest(unittest.TestCase):
+    """Tom 2026-11-24: "why is she saying that she sees photos?"."""
+    def test_photo_framing_is_dropped(self):
+        c = frame.clean_caption("a black and white photo of a person at night, surrounded by grass at the "
+                                "bottom of the image. The photo is in black and white, and it is a "
+                                "representation of the 8 best home decor ideas for 2019.")
+        self.assertEqual(c, "A person at night, surrounded by grass.")
+        self.assertNotIn("photo", frame.clean_caption(
+            "The image shows a screen glowing blue, creating a photo of a monitor.").lower())
+
+    def test_dark_frame_says_dark_not_a_guess(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        import lynx_senses_lib as lib
+        lib._STATE_CACHE.clear()
+        with mock.patch.object(cam, "emit_line", lambda s, p, sn, ev, fields=None, text="", dry_run=False:
+                               f"P{p} {sn} {ev} cam={(fields or {}).get('cam')} | {text}"), \
+             mock.patch.object(cam.frame, "disabled", lambda: None), \
+             mock.patch.object(cam, "FRONT_WITH_EVERY_LOOK", False):
+            look = lambda wait_s, camera="back": {"ok": True, "camera": camera, "objects": [], "dark": True,
+                                                  "caption": "A person in a wheelchair in the grass."}
+            res, _ = cam.run(state_file=str(Path(tmp.name) / "s.json"), look=look, now=1000, boot="b1")
+            self.assertEqual(res["emitted"], ["P1 camera dark cam=wide | too dark to see much"])
+            res, _ = cam.run(state_file=str(Path(tmp.name) / "s.json"), look=look, now=1060, boot="b1")
+            self.assertTrue(res["emitted"][0].startswith("P0 camera dark"), "said once per 5 minutes")
+

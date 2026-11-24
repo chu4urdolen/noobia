@@ -140,6 +140,21 @@ def clean_caption(text: str) -> str:
     t = "".join(ch for ch in str(text) if 32 <= ord(ch) < 127).replace("|", " ").replace("~", " ")
     t = re.sub(r"\s+", " ", t).strip()
     t = re.sub(r"^(the image shows|this image shows|the image is of|in this image,?)\s+", "", t, flags=re.I)
+    # Tom 2026-11-24: "why does she say she sees photos?" Florence-2 learned from
+    # internet photos; drop the photo framing so the caption is the scene itself.
+    t = re.sub(r",?\s*creating an?\s+(photo|image|picture)\s+of\s+[^,.]*", "", t, flags=re.I)
+    t = re.sub(r",?\s*(at|in|on|near)\s+the\s+(very\s+)?(top|bottom|left|right|center|centre|middle|side|"
+               r"corner|edge|background|foreground)(\s+\w+)?\s+of\s+the\s+(image|photo|picture|frame)",
+               "", t, flags=re.I)
+    t = re.sub(r"\b(a|an|the)\s+((black and white|black-and-white|blurry|blurred|grainy|dark|close[- ]up|"
+               r"low[- ]light|night|old|vintage)\s+)*(photo|photograph|picture|image|shot|snapshot)\s+of\s+",
+               "", t, flags=re.I)
+    sentences = re.split(r"(?<=[.!?])\s+", t)
+    keep = [x for x in sentences
+            if not re.search(r"\b(photo|photograph|picture|image|frame|camera|representation|ideas for)\b", x, re.I)]
+    t = " ".join(keep or sentences[:1]).strip()
+    t = re.sub(r"\s+(taken|shot|captured)\s+(at|in|from)\b[^.,]*", "", t, flags=re.I)
+    t = t[:1].upper() + t[1:] if t else t
     return t[:200].rstrip(" .") + ("." if t else "")
 
 
@@ -286,6 +301,7 @@ def detect(raw: bytes, opener=urllib.request.urlopen, w: int = WIDTH, h: int = H
         return None, "Nexus detector has no model loaded"
     objects = [o for o in body.get("objects", []) if isinstance(o, dict)]
     detect.last_caption = str(body.get("caption", ""))
+    detect.last_dark = bool(body.get("dark"))
     return sorted(objects, key=lambda o: -float(o.get("confidence", 0))), "detected"
 
 
@@ -311,6 +327,6 @@ def look(wait_s: float = 0.0, run=subprocess.run, opener=urllib.request.urlopen,
         return {"ok": False, "error": why, "busy": False}
     caption = clean_caption(getattr(detect, "last_caption", ""))
     return {"ok": True, "camera": camera, "objects": objects, "items": items_text(objects),
-            "caption": caption,
+            "caption": caption, "dark": bool(getattr(detect, "last_dark", False)),
             "labels": [clean_label(o.get("label")) for o in objects],
             "elapsed_s": round(time.monotonic() - t0, 2)}

@@ -162,7 +162,16 @@ def _look_once(camera, state, sense, t, dry_run, look, n_cams):
     objects = [o for o in result["objects"] if abs(float(o.get("confidence", 0)) - 0.5) > 1e-6]
     labels = [frame.clean_label(o.get("label")) for o in objects]
     caption = str(result.get("caption", ""))
-    if not objects and caption:
+    if result.get("dark") and not objects:
+        # A brightened night frame: Florence-2 only guesses (Tom 2026-11-24:
+        # "why is she saying that she sees photos?"). Tell her it is dark.
+        key = f"last_dark_t_{cam}"
+        speak = t - float(state.get(key) or -1e12) >= SCENE_EVERY_S
+        if speak:
+            state[key] = t
+        emitted.append(emit_line(sense, 1 if speak else 0, "camera", "dark",
+                                 fields={"cam": cam}, text="too dark to see much", dry_run=dry_run))
+    elif not objects and caption:
         # No confirmed (scored) object, but Florence-2 described the scene -
         # what she has at night. Spoken at most once per SCENE_EVERY_S per camera.
         key = f"last_scene_t_{cam}"
@@ -180,7 +189,7 @@ def _look_once(camera, state, sense, t, dry_run, look, n_cams):
         new = [lb for lb in labels if t - float(last_seen.get(f"{cam}:{lb}", -1e12)) >= SEEN_WINDOW_S]
         for lb in labels:
             last_seen[f"{cam}:{lb}"] = t
-        text = frame.items_text(objects) + (f" ~ {caption}" if caption else "")
+        text = frame.items_text(objects) + (f" ~ {caption}" if caption and not result.get("dark") else "")
         emitted.append(emit_line(sense, 1 if new else 0, "camera", "objects.seen",
                                  fields={"cam": cam, "n": len(objects)},
                                  text=text, dry_run=dry_run))

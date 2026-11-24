@@ -44,6 +44,10 @@ class AgentTest(unittest.TestCase):
             'parameters': {'type': 'object', 'properties': {}, 'required': [],
                            'additionalProperties': False}, 'timeout': 2}))
         (root / 'lynx_status.sh').write_text('#!/bin/sh\nprintf "status=ready\\n"\n')
+        (root / 'lynx_speech.json').write_text(json.dumps({
+            'description': 'Speak', 'parameters': {'type': 'object', 'properties': {
+                'text': {'type': 'string'}}, 'required': ['text'], 'additionalProperties': False}}))
+        (root / 'lynx_speech.sh').write_text('#!/bin/sh\nprintf "said\\n"\n')
         return Catalog(root)
 
     def _run(self, prompt):
@@ -62,10 +66,46 @@ class AgentTest(unittest.TestCase):
                     choose=lambda: ('http://local', 'model', 'secret'), send=send)
         return payloads
 
-    def test_sense_job_must_start_with_a_tool(self):
-        payloads = self._run('[sense] This is something your senses perceived ... cat')
-        self.assertEqual(payloads[0].get('tool_choice'), 'required')
-        self.assertNotIn('tool_choice', payloads[1])     # only the first step is forced
+    def test_sense_job_is_one_call_with_a_tool_and_no_thinking(self):
+        for prompt in ('SENSE: You see a cat.', '[sense] legacy job ... cat'):
+            payloads = self._run(prompt)
+            self.assertEqual(len(payloads), 1, "Tom 2026-11-24: one Qwen call per sense")
+            self.assertEqual(payloads[0].get('tool_choice'), 'required')
+            self.assertEqual(payloads[0].get('reasoning'), {'effort': 'none'})
+
+    def test_sense_offers_only_expressive_tools_with_media_names(self):
+        payloads = []
+        def send(base, key, payload):
+            payloads.append(payload)
+            return {'status': 'completed', 'output': [{'type': 'function_call', 'name': 'lynx_speech',
+                                                       'arguments': '{"text": "Hi."}', 'call_id': 'c1'}]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = self._catalog(root)
+            for name, out in (('lynx_speech', 'said'), ('lynx_media_play', 'played'),
+                              ('lynx_media_catalog', '{"sounds": ["chime"], "images": ["02_talking"]}')):
+                (root / f'{name}.json').write_text(json.dumps({'description': name, 'parameters': {
+                    'type': 'object', 'properties': {'text': {'type': 'string'}}, 'required': [],
+                    'additionalProperties': False}}))
+                (root / f'{name}.sh').write_text("#!/bin/sh\nprintf '%s'\n" % out)
+            self.assertEqual(respond('SENSE: You see a cat.', catalog=catalog,
+                                     choose=lambda: ('http://local', 'model', 'secret'), send=send), 'Hi.')
+        tools = {t['name']: t for t in payloads[0]['tools']}
+        self.assertEqual(set(tools), {'lynx_speech', 'lynx_media_play'}, "status/catalog not offered")
+        self.assertIn('chime', tools['lynx_media_play']['description'])
+        self.assertIn('02_talking', tools['lynx_media_play']['description'])
+
+    def test_one_call_answer_is_what_she_said(self):
+        from lynx_agent import one_round_answer
+        calls = [{'name': 'lynx_haptic_pulse', 'arguments': '{}'},
+                 {'name': 'lynx_speech', 'arguments': '{"text": "I hear you."}'}]
+        self.assertEqual(one_round_answer([], calls), 'I hear you.')
+        self.assertEqual(one_round_answer([], calls[:1]), '(lynx_haptic_pulse)')
+
+    def test_chat_may_read_a_tool_answer_first(self):
+        payloads = self._run('CHAT: what is your status?')
+        self.assertEqual(len(payloads), 2)
+        self.assertNotIn('tool_choice', payloads[0])
 
     def test_sense_job_never_gets_codex(self):
         payloads = []
@@ -89,10 +129,10 @@ class AgentTest(unittest.TestCase):
             respond('[sense] something seen', catalog=catalog,
                     choose=lambda: ('http://local', 'model', 'secret'), send=send)
             self.assertNotIn('lynx_codex', [t['name'] for t in payloads[0]['tools']])
-            self.assertIn('lynx_status', [t['name'] for t in payloads[0]['tools']])
-            outs = [i['output'] for i in payloads[1]['input'] if i.get('type') == 'function_call_output']
-            self.assertTrue(outs and 'not available' in outs[0])
-            self.assertFalse((root / 'ran').exists())
+            self.assertNotIn('lynx_status', [t['name'] for t in payloads[0]['tools']])  # lookups too
+            self.assertIn('lynx_speech', [t['name'] for t in payloads[0]['tools']])
+            self.assertEqual(len(payloads), 1)                # one call: no second round
+            self.assertFalse((root / 'ran').exists())          # codex refused, never ran
             # An ordinary question still has codex.
             payloads.clear()
             respond('Please write me a script', catalog=catalog,

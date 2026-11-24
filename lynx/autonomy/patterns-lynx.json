@@ -205,6 +205,27 @@
    "regex": "\\| (?P<caption>.+)$"
   },
   {
+   "id": "camera-dark",
+   "match": {
+    "sense": "camera",
+    "event": "dark"
+   },
+   "template": "It is too dark to see much with your {cam} camera.",
+   "message": "It is too dark to see much.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 camera dark cam=wide | too dark to see much"
+    ],
+    "must_not": [
+     "NOOBIA P1 camera scene.seen cam=wide | A desk."
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
    "id": "camera-object",
    "match": {
     "sense": "camera",

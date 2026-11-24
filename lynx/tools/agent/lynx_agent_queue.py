@@ -111,7 +111,7 @@ class JobQueue:
 
                 created_ns = payload.get("created_ns", path.lstat().st_mtime_ns)
                 age_s = (now_ns - created_ns) / 1e9
-                is_sense = prompt.lstrip().startswith("[sense]")
+                is_sense = prompt.lstrip().startswith(("SENSE:", "[sense]"))
                 if (max_pending_age_s is not None and age_s > max_pending_age_s) or \
                    (max_sense_age_s is not None and is_sense and age_s > max_sense_age_s):
                     path.unlink(missing_ok=True)

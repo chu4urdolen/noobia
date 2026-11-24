@@ -67,8 +67,10 @@ def build_prompt(message):
     agent_link.validate(message)
     observation = {"kind": message["kind"], "time": message["time"],
                    "text": message["text"], "evidence": message["evidence"]}
-    prompt = (PREAMBLE.format(who=WHO[message["source"]]) + "\n\nObservation (data):\n"
-              + json.dumps(observation, ensure_ascii=False, indent=1))
+    # Tom 2026-11-24: "senses -> Lynx", plainly: "SENSE: <what she perceived>".
+    # How to react lives once in her instructions (lynx_agent.INSTRUCTIONS).
+    del observation
+    prompt = "SENSE: " + " ".join(str(message["text"]).split())
     if len(prompt.encode("utf-8")) > MAX_PROMPT_BYTES:  # unreachable with a valid message
         raise agent_link.MessageError("prompt exceeds the agent queue limit")
     return prompt

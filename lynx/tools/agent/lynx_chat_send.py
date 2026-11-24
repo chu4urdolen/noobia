@@ -38,13 +38,7 @@ def main():
         sys.path.insert(0, "/usr/local/share/lynx/agent")
         from lynx_agent_queue import JobQueue
 
-        prompt = (
-            f"[chat] Noob just sent you a direct message through the screen chat: \"{msg}\". "
-            "React to him directly in your own voice: you can use your tools (speech, haptics, lights, display) "
-            "however you wish, and say one short sentence. "
-            "CRITICAL: Write and speak in plain ASCII text only. Never use emojis (no smiley faces or symbols like blue hearts or waving hands) "
-            "and do not use em-dashes or special punctuation, because the text-to-speech engine tries to pronounce emojis aloud and the screen display cannot show them."
-        )
+        prompt = f"CHAT: {msg}"   # Tom 2026-11-24; what CHAT: means is in her instructions
         JobQueue(JOBS).create_job(prompt)
     except Exception as exc:
         print(f"Failed to queue agent job: {exc}", file=sys.stderr)

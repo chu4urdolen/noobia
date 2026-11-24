@@ -320,4 +320,5 @@
 !/tools/cellular_diag/README.md
 !/tools/local_calls/lynx_cellular_diag.json
 !/tools/local_calls/lynx_cellular_diag.sh
+!/tools/stream_logger.py
 

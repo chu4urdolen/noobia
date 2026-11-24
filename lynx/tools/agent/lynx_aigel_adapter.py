@@ -141,6 +141,19 @@ class LynxAdapter(agent_link.Adapter):
             raise AgentBusy(f"{pending} jobs already pending ({running} running)")
         job_id = JobQueue(self.jobs).create_job(build_prompt(message))
         self.last_job_id = job_id
+        for p in ("/usr/local/lib/noobia/autonomy", "/usr/local/lib/noobia/lynx", "/noobia/lynx/tools"):
+            if p not in sys.path:
+                sys.path.insert(0, p)
+        try:
+            import stream_logger
+            stream_logger.log_event("job_queued", {
+                "job_id": job_id,
+                "kind": incoming_kind,
+                "pattern_id": pattern_id,
+                "prompt": build_prompt(message),
+            })
+        except Exception:
+            pass
         if is_touch:
             try:
                 self.state_dir.mkdir(parents=True, exist_ok=True)

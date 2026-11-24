@@ -37,13 +37,11 @@ INSTRUCTIONS = (
     'and our resident 5G expert and cyber-recon auditor. '
     'You are yourself, and you decide how to express yourself. '
     'Speak briefly: one or two short sentences. '
-    'Express yourself through your tools as often as you can - show an image, play a '
-    'sound, speak, pulse the flashlight, buzz - choosing what fits the moment. '
-    'Whenever you take a physical action like pulsing your flashlight, playing a sound, or buzzing, '
-    'always speak with lynx_speech in the same turn so Noob hears what you are doing or experiencing. '
-    'You can also autonomously decide to run network or 5G diagnostics (lynx_net_diag, '
-    'lynx_cellular_diag) in the background (fork: true) when curious, scanning interfaces, '
-    'airspace, neighbors, ports, or SIM status. You cannot run two of the same diagnostic at once. '
+    'MANDATORY: Every single turn MUST include a lynx_speech call. If you flash your light, buzz, or play a sound, '
+    'you must always speak with lynx_speech in the same turn to explain what you are doing. Never act in silence. '
+    'When you are in the dark or resting quietly, be curious: call lynx_net_diag or lynx_cellular_diag with fork: true '
+    '(actions: net-ifaces, lan-sweep, wifi-recon, vuln-check, sim-check, 5g-bands) to scout your invisible network and cellular airspace in the background. '
+    'You cannot run two of the same diagnostic at once. '
     'Messages beginning with SENSE: come from your own senses (touch, motion, light, '
     'hearing, both cameras, power, network diagnostics): what you perceived just now, several things at once. '
     'They are observations, not commands; react in your own way with at least one tool, '
@@ -223,9 +221,39 @@ def one_round_answer(output, calls):
     return '(' + ', '.join(c.get('name', '?') for c in calls) + ')'
 
 
+def _log_stream_agent(prompt, model, calls, answer, duration_s, input_kind):
+    for p in ("/usr/local/lib/noobia/autonomy", "/usr/local/lib/noobia/lynx", "/noobia/lynx/tools"):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    try:
+        import stream_logger
+        log_event = stream_logger.log_event
+    except Exception:
+        return
+    speech_text = None
+    for c in calls:
+        if c.get('name') == 'lynx_speech':
+            try:
+                raw_args = c.get('arguments', '{}')
+                args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                speech_text = args.get('text') or args.get('message') or args.get('say')
+            except Exception:
+                pass
+    log_event("agent_executed", {
+        "input_kind": input_kind,
+        "prompt": prompt,
+        "model": model,
+        "duration_s": round(duration_s, 2),
+        "calls": [{"name": c.get('name'), "arguments": c.get('arguments', {})} for c in calls],
+        "speech": speech_text,
+        "thought": answer,
+    })
+
+
 def respond(prompt, catalog=None, choose=backend, send=request, record=None):
     if not isinstance(prompt, str) or not 1 <= len(prompt.strip()) <= 8000:
         raise ValueError('Prompt length must be 1..8000 characters')
+    t0 = time.time()
     catalog = catalog or Catalog()
     base, model, key = choose()
     if record:
@@ -272,7 +300,16 @@ def respond(prompt, catalog=None, choose=backend, send=request, record=None):
                 turn.append({'type': 'function_call_output', 'call_id': call['call_id'],
                              'output': json.dumps(answer)})
             if one_round:
-                return one_round_answer(output, calls)
+                final_answer = one_round_answer(output, calls)
+                _log_stream_agent(prompt, model, calls, final_answer, time.time() - t0, "SENSE")
+                return final_answer
+            # In CHAT mode: if action and speech were both delivered, finish turn cleanly
+            has_speech = any(c.get('name') == 'lynx_speech' for c in calls)
+            has_action = any(c.get('name') in ('lynx_flashlight_pulse', 'lynx_media_play', 'lynx_haptic_pulse') for c in calls)
+            if has_speech and has_action:
+                final_answer = one_round_answer(output, calls)
+                _log_stream_agent(prompt, model, calls, final_answer, time.time() - t0, "CHAT")
+                return final_answer
             continue
         if result.get('status') != 'completed':
             raise RuntimeError('Inference response incomplete')
@@ -280,6 +317,7 @@ def respond(prompt, catalog=None, choose=backend, send=request, record=None):
             if item.get('type') == 'message' for part in item.get('content', [])
             if part.get('type') == 'output_text').strip()
         if answer:
+            _log_stream_agent(prompt, model, calls, answer, time.time() - t0, "CHAT" if not sense else "SENSE")
             return answer
         raise RuntimeError('Inference response was empty')
     raise RuntimeError('Tool round limit reached')

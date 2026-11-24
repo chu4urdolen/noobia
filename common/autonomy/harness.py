@@ -201,6 +201,22 @@ class Harness:
             delivered = self._deliver("ranker", " ".join(sentences), evidence, pid)
         self.log(f"harness chunk reason={reason} lines={len(lines)} combined={len(texts)} "
                  f"explained={len(result['explained'])} unexplained={len(result['unexplained'])}")
+        # Observability pipeline stream log
+        for p in ("/usr/local/lib/noobia/autonomy", "/usr/local/lib/noobia/lynx", "/noobia/lynx/tools"):
+            if p not in sys.path:
+                sys.path.insert(0, p)
+        try:
+            import stream_logger
+            stream_logger.log_event("chunk_closed", {
+                "reason": reason,
+                "lines_count": len(lines),
+                "raw_lines": [l.get("raw", "") if isinstance(l, dict) else str(l) for l in lines],
+                "explained": [{"pattern_id": p, "raw": l.get("raw", "")} for l, p in result.get("explained", [])],
+                "unexplained": [l.get("raw", "") if isinstance(l, dict) else str(l) for l in result.get("unexplained", [])],
+                "rendered_text": " ".join(sentences) if texts else None,
+            })
+        except Exception:
+            pass
         if result["unexplained"] and self.aigel_enabled:
             self._enqueue({"reason": reason, "lines": result["unexplained"]})
         return delivered

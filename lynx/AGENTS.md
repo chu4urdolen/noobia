@@ -64,3 +64,27 @@ Lynx is Noobia's resident 5G expert and cyber-recon auditor.
 - **Network Toolkit (`lynx_net_diag`):** `net-ifaces` (IP & interface mapping), `lan-sweep` (ARP neighbor discovery), `wifi-recon` (airspace scan), `port-scan` (open services), `vuln-check` (security posture audit), `ssl-audit` (certificate inspection), `dns-audit` (resolver latency), `traceroute` (route path), `packet-sample` (tcpdump sampling).
 - **Cellular & 5G Toolkit (`lynx_cellular_diag`):** `sim-check` (dual-SIM tray hardware & hotplug status), `modem-status` (MediaTek MT6983 MD1 baseband state & 53 CCCI device channels), `5g-bands` (OnePlus Nord 3 13 5G NR bands and 21 LTE bands), `ccmni-stats` (21 ccmni packet data interfaces), `cell-recon` (ModemManager carrier status), `at-probe` (CCCI AT channel status).
 
+---
+
+# Hearing Sense & Acoustic Control (Spam & Privacy Guard)
+
+Lynx has acoustic perception through her microphone hardware, local level sampling, and Nexus Whisper STT (`localhost:5052/hear`).
+
+1. **Disabled by Default (Spam & Noise Prevention):**
+   - By design, hearing is **disabled by default** so Lynx is not continuously spammed with ambient acoustic noise, background chatter, or unnecessary Whisper inference.
+   - When disabled, `lynx_sense_hearing` returns early (`enabled: false`), records no clips, and emits zero sense lines.
+2. **Hearing Toggles & Button:**
+   - **Nexus Control Panel Button / API:** `http://192.168.100.106:112/api/v1/hearing` returns `{"enabled": true/false}` and allows Tom / Noob to toggle her hearing on and off on demand with a button.
+   - **Local Override File:** `/var/lib/noobia/senses/hearing/enabled` (`1` / `0` or `true` / `false`).
+3. **Acoustic Perception Pipeline:**
+   - When enabled, `lynx-senses` samples microphone RMS/peak levels every 10s.
+   - Sudden sound or elevated level (`peak >= 80` or `rms >= 25.0`) triggers a non-blocking 4s PCM capture (`lynx_microphone_clip.py`), posted to Nexus Whisper STT.
+   - Recognized speech emits `NOOBIA P20 hearing speech lang=... | <words>` into syslog, which is prioritized by the autonomy ranker and answered vocally by Qwen.
+4. **Service Persistence:**
+   - All four core autonomy daemons are added to OpenRC's `default` runlevel:
+     - `lynx-senses` (hearing, touch, wifi, power, environment)
+     - `lynx-camera-sense` (vision & ambient lighting)
+     - `noobia-autonomyd` (sensory chunking, pattern matching, job queuing)
+     - `lynx-agent-worker` (agent execution queue dispatcher)
+
+

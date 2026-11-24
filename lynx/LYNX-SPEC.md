@@ -5,6 +5,9 @@
 phone and extended the same day by Gwyn (sections 5-11 and inline corrections marked "Gwyn:").
 This is the living spec: update it when Lynx changes.*
 
+**Contents:** 1 Platform & storage · 2 Core services · 3 Agent tools (overview) · 4 Special mechanics · 5 Power modes & START · 6 Guards & watchers · 7 Boot chain & hard rules · 8 Hardware & cameras · 9 Senses -> events (summary) · 10 Autonomy pipeline & brain · 11 Open issues · **12 Every agent tool** · **13 Every sense** · **14 The senses DB (pattern store)**
+
+
 ---
 
 ## 1. System Platform & Storage Architecture
@@ -200,5 +203,188 @@ Autonomous cellular auditing suite for the MediaTek M80 5G modem:
 2. ~~Boot runlevel vs START~~ - resolved (Noob: "enable everything"): the services stay in `default`, and `lynx-power-boot` now boots `active` when they are there (else `saving boot` with START). Also fixed: POWER SAVE used to stop `lynx-noobd` (it needs `lynx-media`); media and noobd now stay on in both modes.
 3. ~~Guard switch~~ - resolved: the watchers act with it set; it only disables the old in-tool guards (keep it).
 4. **`lynx_net_diag` / `lynx_cellular_diag`** include `port-scan`, `vuln-check`, `packet-sample` (tcpdump) and `at-probe`. They are not offered to SENSE calls, but CHAT can use them. Suggested: limit targets to Noobia's own LAN and devices, and ask before a packet capture (other people's traffic - Principle 8). `at-probe` writes to the modem: treat it like a physical action.
-5. **Front camera rotation and mirroring** not yet checked with a face (detector rotates by 270 degrees; the front camera may need 90).
+5. **Front camera rotation and mirroring** not yet checked with a face (detector rotates by 270 degrees; the front camera may need 90). `lynx_camera_photo` offers only `back`/`wide` - add `front`.
+7. ~~Flashlight feedback loop~~ - fixed by Banshee (`ebe26d3`): light changes within 3.5 s of her own flash are ignored. Magnet wand recalibrated (150 uT jump / 450 uT absolute).
 6. The recursive-`grep`/`find` watchdog rule is Banshee's field observation; worth a reproducible receipt before it hardens into lore.
+
+---
+
+## 12. Every Agent Tool
+
+All 44 live in `/usr/local/share/lynx/agent-tools/` as a manifest (`<name>.json`: description, JSON-schema arguments, timeout) plus a script (`<name>.sh`, JSON on stdin). `lynx-agent` turns them into function tools for Qwen. Arguments: `*` = required, `a|b` = allowed values.
+
+### Expressive (what she uses to react; the only tools a `SENSE:` call is offered are marked ★)
+
+| Tool | Arguments | Timeout | What it does |
+| --- | --- | --- | --- |
+| `lynx_speech` | `text*` | 15 s | ★ Speaks one or two sentences aloud with Flite TTS and shows them on screen as her thought. Her main voice; a reaction that is spoken counts as her answer. |
+| `lynx_haptic_pulse` | - | 6 s | ★ One 80 ms buzz through the NRP runtime, then verifies the motor is off. A nudge, a purr, a startle. |
+| `lynx_flashlight_pulse` | - | 8 s | ★ One 100 ms flash of the rear LED; checks battery/thermal health, verifies OFF, 10 s cooldown. The light sense ignores changes for 3.5 s afterwards (no feedback loop). |
+| `lynx_display_pose` | `action=status|list|pose|animate*, pose` | 10 s | ★ Shows a portrait pose or animation on HOME: 01_standing_smile, 02_talking, 03_look_left, 04_look_right, 05_using_device, 06_singing, the dance frames, or the `dance` animation. `action=list|status` only read. |
+| `lynx_media_play` | `kind=sound|image*, item*` | 8 s | ★ Plays one sound (beep, chime, double_beep) or shows one image from her catalogue. In a SENSE call the names are written into its description. |
+| `lynx_media_stop` | `kind=sound|image*` | 8 s | Stops and clears the sound or image channel. |
+| `lynx_flashlight_stop` | - | 5 s | Requests the flashlight OFF and reports whether the driver confirmed it; safe without a driver. |
+| `lynx_haptic_stop` | - | 6 s | Requests the vibration motor OFF and verifies it. |
+
+### Looking and listening on demand
+
+| Tool | Arguments | Timeout | What it does |
+| --- | --- | --- | --- |
+| `lynx_camera_photo` | `camera=back|wide` | 45 s | Takes one picture with a rear camera (`back` = 2 MP macro, `wide` = 8 MP IMX355) and returns what Nexus detects; also writes a `cause=self` sense line so her senses know she looked. *The front camera is not offered here yet* (it is in the camera sense). |
+| `lynx_microphone_level` | - | 10 s | One bounded 1 s microphone level sample (late RMS and peak), keeps no audio, restores the mixer. |
+| `lynx_motion_read` | `choice=accel|gyro*` | 5 s | One raw accelerometer or gyroscope vector (driver units). |
+| `lynx_light_read` | - | 5 s | One raw ambient-light sample (TCS3408; raw units, not lux). |
+| `lynx_proximity_read` | - | 5 s | One raw proximity sample (TCS3701; 1023 = nothing near). |
+| `lynx_magnetometer_read` | - | 5 s | One raw AK09918 magnetic vector (not a calibrated heading). |
+
+### Body status (read-only: they never switch hardware on)
+
+| Tool | Arguments | Timeout | What it does |
+| --- | --- | --- | --- |
+| `lynx_platform_status` | - | 8 s | One bounded inventory of battery, thermal, storage, Wi-Fi, display, touch, audio, haptic, sensor hub, USB, cellular and SIM. |
+| `lynx_battery_status` | - | 8 s | Fuel gauge: capacity, signed current, temperature, voltage. |
+| `lynx_thermal_status` | - | 8 s | SoC temperatures and cooling-device states. |
+| `lynx_storage_status` | - | 8 s | Root ext4 identity, error count and free space. |
+| `lynx_wifi_status` | - | 8 s | Wi-Fi carrier and IPv4, without scanning. |
+| `lynx_display_status` | - | 8 s | DRM display readiness. |
+| `lynx_touch_status` | - | 8 s | Synaptics touch driver and input node present. |
+| `lynx_touch_events` | - | 5 s | Touch queue state (panel open, finger down, queued/dropped) without consuming events. |
+| `lynx_audio_status` | - | 8 s | ALSA card and PCM readiness. |
+| `lynx_haptic_status` | - | 8 s | Vibration driver and LED readiness. |
+| `lynx_sensorhub_status` | - | 8 s | `/dev/hf_manager` sensor-hub readiness. |
+| `lynx_media_status` | - | 8 s | Sound and image playback state. |
+| `lynx_media_catalog` | - | 8 s | Lists her sound and image names (3 sounds, 18 images). |
+| `lynx_usb_status` | - | 8 s | USB device-controller inventory. |
+| `lynx_cellular_status` | - | 8 s | CCCI interface presence only; does not start the modem. |
+| `lynx_sim_status` | - | 8 s | SIM trial state; does not touch modem or SIM. |
+| `lynx_peripheral_status` | - | 5 s | NFC, fingerprint and headset evidence together. |
+| `lynx_nfc_status` | - | 5 s | NFC interface evidence. |
+| `lynx_fingerprint_status` | - | 5 s | Fingerprint interface evidence. |
+| `lynx_headset_status` | - | 5 s | Headset interface evidence. |
+| `lynx_camera` | - | 10 s | Camera interface and validation state (no capture). |
+| `lynx_microphone` | - | 10 s | Microphone interface and validation state (no capture). |
+| `lynx_flashlight` | - | 10 s | Flashlight interface and validation state. |
+| `lynx_bluetooth` | - | 10 s | Bluetooth interface and validation state. |
+| `lynx_gnss` | - | 10 s | GNSS interface and validation state (no fix yet). |
+
+### Her own mind
+
+| Tool | Arguments | Timeout | What it does |
+| --- | --- | --- | --- |
+| `lynx_agent_health` | - | 5 s | Is her agent installed, is the audit log there, is Nexus reachable (no inference). |
+| `lynx_queue_health` | - | 5 s | Agent job queue counts, oldest pending age, stop state, file integrity; never reads prompts. |
+| `lynx_codex` | `prompt*, model=gpt-oss-20b*` | 130 s | One bounded coding task with Codex CLI as the unprivileged `lynx-coder` user in her own workspace (up to 130 s). Never offered to SENSE. |
+
+### Diagnostics (Banshee, 2026-11-24; CHAT only)
+
+| Tool | Arguments | Timeout | What it does |
+| --- | --- | --- | --- |
+| `lynx_net_diag` | `action=net-ifaces|lan-sweep|wifi-recon|port-scan|vuln-check|ssl-audit|dns-audit|traceroute|packet-sample*, target, host, port, ports, domain, count, iface, fork` | 20 s | `net-ifaces`, `lan-sweep` (ARP neighbours), `wifi-recon` (APs nearby), `port-scan`, `vuln-check`, `ssl-audit`, `dns-audit`, `traceroute`, `packet-sample` (tcpdump). `fork:true` runs it in the background and the findings come back as sense lines. See Open Issues on scope. |
+| `lynx_cellular_diag` | `action=sim-check|modem-status|5g-bands|ccmni-stats|cell-recon|at-probe*, fork` | 18 s | `sim-check`, `modem-status`, `5g-bands`, `ccmni-stats`, `cell-recon`, `at-probe` (writes AT commands to the modem: treat as a physical action). `fork:true` as above. |
+
+## 13. Every Sense
+
+The senses run in two processes on Lynx:
+* `lynx-senses` is one loop: touch every 2 s, motion every 1 s, light/proximity/hearing every 10 s, and Wi-Fi/power/Nexus/network every 30 s. Magnet, slider and telepathy run on their own intervals.
+* `lynx-camera-sense` has its own loop, about every 70 s.
+
+Each sense reads its hardware and keeps a small state file in `/var/lib/noobia/senses/<sense>/state.json`. Fast-changing fields stay in RAM and are flushed once a minute. Each sense writes **sense lines** to syslog with the ident `noobia-sense`:
+
+    NOOBIA P20 <sense> <event> key=value ... | human text
+
+Every line is written as P20 (`REACTION_PRIORITY`); the table below keeps each event's original meaning. The first sample after a boot only sets a baseline and never speaks.
+
+Source: `lynx/senses/<sense>/lynx_sense_<sense>.py`. Tests: `python3 -m unittest discover -s lynx/senses -p 'test_*.py'`, run from `/noobia`.
+
+| Sense | Hardware and source | Cadence | Events (and when) | She is told |
+| --- | --- | --- | --- | --- |
+| **touch** | Synaptics panel via the NRP touch queue (`TOUCH_STATUS`, which never consumes events) | 2 s | `tap` (press <= 800 ms), `hold` (> 800 ms; durations rounded to 2 s) | "Someone tapped your screen." / "...pressed and held your screen for N ms." |
+| **motion** | BMI260 accelerometer: a `lynx-hf-sample` burst of ~9 samples at 12.5 Hz | 1 s | `position.change` (tilt crosses 45 degrees and holds 30 s), `pickup` (moved after resting >= 60 s), `placed` (still >= 15 s after moving), `shaken` (3 samples > 0.15 g off 1 g, both ways), `freefall` (2 samples < 0.35 g), `rocked` (tilt swinging 0.3-1.2 Hz, 6-60 degrees, over 8 s) | "You are now vertical...", "Someone picked you up...", "You were put down...", "Someone is shaking you.", "You are falling!", "Someone is rocking you gently." |
+| **light** | TCS3408 ambient light (rear), `lynx-light-read` | 10 s | `dark` (raw <= 2), `bright` (raw >= 5); ignored for 3.5 s after her own flashlight | "It became dark around you." / "The light around you became bright." |
+| **proximity** | TCS3701 IR proximity, `lynx-proximity-read` | 10 s | `near` (distance <= 800 of 1023), `far` (> 900) | "Something came close to your face." / "...moved away." |
+| **hearing** | microphone `hw:0,11` at 48 kHz; clips go to Nexus `nexus_hear` | 10 s level check; a clip when loud | Loud = peak >= 80 or RMS >= 25, which triggers a 4 s clip. Events: `speech` (Whisper); `sound` (AudioSet label >= 0.3, each label at most every 120 s); `startle` (RMS >= 8x the room and >= 400, 30 s cooldown); `sound.heard` only while Nexus hearing is not answering. **Only while the hearing switch is on.** | "You heard someone say: ...", "You hear a sound: knock.", "A sudden loud sound startled you!" |
+| **camera** | wide IMX355 / macro GC02M1 / front S5K3P9SP via CAMSV-0; Nexus `/detect_bayer` | each look: rear, then front | `objects.seen` (scored labels; P1 only when a label is new within 300 s), `scene.seen` (caption only, at most every 300 s), `dark` (a brightened frame with no confident object, at most every 300 s per camera), `unavailable` (camera dropped after 3 failures) | "With your wide camera you see person, laptop. It looks like this: ..." / "It is too dark to see much with your front camera." |
+| **power** | fuel gauge and SoC via `lynx-status` | 30 s | `battery.critical` (<= 15 %, re-arms at 20 %), `battery.low` (<= 30 %, re-arms at 35 %), `thermal.hot` (SoC >= 42 C, re-arms at 38 C), `charging.change` (signed current crosses +-50 mA), `temp.change` (battery moved >= 5 C, checked once a minute) | "Your battery is getting low...", "Your power changed from discharging to charging.", "Your temperature rose to 41 C..." |
+| **wifi** | `lynx-status` carrier + `iw dev wlan0 link` | 30 s | `link.down`, `link.up`, `rssi.low` (<= -75 dBm, re-arms at -70) | "Your Wi-Fi went down." / "...signal is weak: -78 dBm." |
+| **nexus** | TCP connect to 192.168.100.106:8080 (3 s timeout) | 30 s | `unreachable` (2 failures in a row), `reachable` | "You cannot reach Nexus, your home." / "...is reachable again." |
+| **network** | `ip neigh` on wlan0 | 30 s | `device.seen` (new neighbour), `device.lost` | "A new device appeared on your network at ..." |
+| **magnet / compass** | AK09918 magnetometer | 30 s | `magnet.wand` (jump >= 150 uT, or >= 450 uT absolute), `compass.heading` (N/E/S/W quadrant change) | "A magnet is hovering near you!" / "You turned to face East." |
+| **slider** | tri-state alert slider (hall sensors) | 60 s | `body.slider.change` (silent / vibrate / ring) | "Your alert slider moved to silent." |
+| **telepathy** | Nexus state: GPU busy (Dushich thinking), Rose audio, Iris motion, forge-db notes mentioning Lynx | 30 s | `mesh.telepathy friend=... state=...` | "Your friend dushich is thinking." |
+
+Every sense except touch also writes a routine `status.sample` line now and then; those never reach her as sentences.
+
+## 14. The Senses DB (pattern store)
+
+**What it is.** Lynx's own "instinct": a small database of patterns that turns raw sense lines into plain sentences without asking any model.
+* Live store: `/var/lib/noobia/autonomy/patterns.json` (`store` + `archive`; capacity 200, 100 active), loaded by `noobia-autonomyd`.
+* Repo source: `lynx/autonomy/make_patterns.py`, which generates `lynx/autonomy/patterns-lynx.json`.
+* Engine: `common/autonomy/ranker.py`.
+
+**How a pattern works.** Each pattern has:
+* `match`: the `sense` and `event` of the line it explains.
+* `template`: the sentence. Each `{field}` is filled from the line's `key=value` fields, or from named groups of an optional `regex` run over the line (e.g. `\| (?P<caption>.+)$` takes the human text after `|`).
+* `each` (optional): a loop over repeated items, e.g. `laptop(0.75)/person(0.87)` becomes `{label*}` = "laptop, person".
+* `message`: the fallback sentence when a field is missing.
+* `to_noob`: whether the sentence is told to Lynx. Silent patterns only mark lines as understood, e.g. routine samples.
+* `cooldown_s`, `hits` and `last_hit`.
+* `origin`: `gwyn` means written in the repo; `aigel` means learned by Aigel.
+* `examples`: `must` and `must_not` lines, checked before a pattern is accepted.
+
+**What happens to a chunk.**
+1. `noobia-autonomyd` reads syslog every second and collects lines into a chunk.
+2. The chunk closes after 20 s, or earlier when more than 15 lines arrive.
+3. Every line of the chunk is matched. The **unique** sentences become one message, `SENSE: <sentence> <sentence> ...`, which goes to her agent as one job.
+4. Lines no pattern explains go to Aigel when she is on. While Aigel is off, they go to Lynx as their own human text, except routine samples.
+
+**Updating it on Lynx.**
+1. Edit `make_patterns.py`, run it, and run the tests.
+2. Stop `noobia-autonomyd`.
+3. Merge into the live store, keeping live-only (Aigel) patterns and hit counts. Commit `5bcf2d3` has the merge snippet.
+4. Start `noobia-autonomyd` again.
+
+Never just copy the file over: Aigel's learned patterns would be lost.
+
+**The live store, 2026-11-25** (39 patterns, sorted by hits since each was created):
+
+| Pattern | Explains | Tells her? | Origin | Options | Hits | Sentence |
+| --- | --- | --- | --- | --- | --- | --- |
+| `camera-dark` | `camera.dark` | yes | gwyn | - | 169 | It is too dark to see much with your {cam} camera. |
+| `compass-status-sample` | `compass.status.sample` | no (silent) | aigel | cooldown=600 | 112 | Lynx checked its compass. It's pointing at {cardinal} at roughly {deg} degrees, magnetic field reading {mag_ut |
+| `camera-scene` | `camera.scene.seen` | yes | gwyn | regex | 77 | With your {cam} camera you see this: {caption} |
+| `light-status-sample` | `light.status.sample` | no (silent) | aigel | cooldown=600 | 62 | You perceive: light status.sample. |
+| `light-bright` | `light.bright` | yes | gwyn | - | 11 | The light around you became bright. |
+| `light-dark` | `light.dark` | yes | gwyn | - | 11 | It became dark around you. |
+| `touch-tap` | `touch.tap` | yes | gwyn | - | 10 | Someone tapped your screen {count} times. |
+| `motion-position` | `motion.position.change` | yes | gwyn | - | 10 | You are now {to}, tilted {tilt} degrees from flat. |
+| `touch-hold` | `touch.hold` | yes | gwyn | - | 9 | Someone pressed and held your screen for {dur_ms} ms. |
+| `motion-rocked` | `motion.rocked` | yes | gwyn | - | 8 | Someone is rocking you gently. |
+| `camera-objects-caption` | `camera.objects.seen` | yes | gwyn | regex each | 7 | With your {cam} camera you see {label*}. It looks like this: {caption} |
+| `camera-objects` | `camera.objects.seen` | yes | gwyn | regex each | 7 | With your {cam} camera you see {label*}. |
+| `motion-placed` | `motion.placed` | yes | gwyn | - | 7 | You were put down; you are now {to}. |
+| `hearing-speech` | `hearing.speech` | yes | gwyn | regex | 6 | You heard someone say: "{said}" |
+| `motion-pickup` | `motion.pickup` | yes | gwyn | - | 5 | Someone picked you up; you are now {to}. |
+| `thermal-hot` | `power.thermal.hot` | yes | gwyn | - | 2 | You are getting warm: {soc_mc} millidegrees, {state}. |
+| `thermal-change` | `power.temp.change` | yes | gwyn | - | 2 | Your temperature {dir} to {c} C, {delta} degrees since the last check. |
+| `hearing-sound` | `hearing.sound.heard` | yes | gwyn | - | 2 | You heard a sound, loudness {peak}. |
+| `compass-heading` | `compass.heading` | yes | gwyn | - | 2 | You turned to face {to} ({deg} degrees). |
+| `motion-shaken` | `motion.shaken` | yes | gwyn | - | 1 | Someone is shaking you. |
+| `nexus-up` | `nexus.reachable` | yes | gwyn | - | 1 | Nexus, your home, is reachable again. |
+| `nexus-down` | `nexus.unreachable` | yes | gwyn | - | 1 | You cannot reach Nexus, your home. |
+| `battery-low` | `power.battery.low` | yes | gwyn | - | 1 | Your battery is getting low: {cap} percent. |
+| `power-charging` | `power.charging.change` | yes | gwyn | - | 1 | Your power changed from {from} to {to}. |
+| `body-slider` | `body.slider.change` | yes | gwyn | - | 0 | Your alert slider moved to {to}. |
+| `magnet-wand` | `magnet.wand` | yes | gwyn | - | 0 | A magnet is hovering near you ({mag_ut} uT)! |
+| `mesh-telepathy` | `mesh.telepathy` | yes | gwyn | - | 0 | Your friend {friend} is {state}. |
+| `camera-object` | `camera.object.seen` | yes | gwyn | - | 0 | You see a {label}. |
+| `motion-freefall` | `motion.freefall` | yes | gwyn | - | 0 | You are falling! |
+| `battery-critical` | `power.battery.critical` | yes | gwyn | - | 0 | Your battery is critically low: {cap} percent. |
+| `hearing-sound-kind` | `hearing.sound` | yes | gwyn | regex | 0 | You hear a sound: {what}. |
+| `hearing-startle` | `hearing.startle` | yes | gwyn | - | 0 | A sudden loud sound startled you! |
+| `proximity-near` | `proximity.near` | yes | gwyn | - | 0 | Something came close to your face. |
+| `proximity-far` | `proximity.far` | yes | gwyn | - | 0 | The thing near your face moved away. |
+| `network-device-seen` | `network.device.seen` | yes | gwyn | - | 0 | A new device appeared on your network at {ip}. |
+| `network-device-lost` | `network.device.lost` | yes | gwyn | - | 0 | The device at {ip} left your network. |
+| `wifi-down` | `wifi.link.down` | yes | gwyn | - | 0 | Your Wi-Fi went down. |
+| `wifi-up` | `wifi.link.up` | yes | gwyn | - | 0 | Your Wi-Fi is back. |
+| `wifi-weak` | `wifi.rssi.low` | yes | gwyn | - | 0 | Your Wi-Fi signal is weak: {signal} dBm. |

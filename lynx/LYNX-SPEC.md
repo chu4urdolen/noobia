@@ -115,7 +115,7 @@ Autonomous cellular auditing suite for the MediaTek M80 5G modem:
   * **Nexus Dashboard Button / API:** `http://192.168.100.106:112/api/v1/hearing` (`{"enabled": true/false}`). *(Gwyn: currently DOWN - it is served by `aigel_intake`, which is disabled since 2026-11-24. Use the file.)*
   * **Local File Override:** `/var/lib/noobia/senses/hearing/enabled` (`1` / `0`). If the file exists it wins; it is re-checked right before every clip.
 * **Operation:** When enabled, sound spikes (`peak >= 80` or `rms >= 25.0`) trigger a 4s in-memory PCM capture sent to Nexus Whisper STT (*Gwyn:* `http://192.168.100.106:5052/hear?rate=48000` from Lynx; `localhost:5052` only on Nexus). Spoken words emit `NOOBIA P20 hearing speech | <words>` into syslog and are answered vocally by Qwen.
-* *(Gwyn:)* the same clip also yields `hearing sound | <label>` (top AudioSet class, e.g. knock, music; each label at most every 120 s) and the level sampler emits `hearing startle` (RMS >= 8x the room and >= 400; 30 s cooldown). Nexus `nexus_hear.service`: AST classifier (~1.2 s) first, Whisper-small (~3.6 s) only when AST hears speech, with a names prompt (Lynx, Noobia and the Noobs' names). Capture tool: `/usr/local/bin/lynx_microphone_clip.py` (mixer route `hw:0,11`, 48 kHz mono, PCM to stdout only).
+* *(Gwyn:)* the same clip also yields `hearing sound | <label>` (top AudioSet class, e.g. knock, music; each label at most every 120 s) and the level sampler emits `hearing startle` (RMS >= 8x the room and >= 400; 30 s cooldown). Nexus `nexus_hear.service`: AST classifier (~1.2 s) first, Whisper-small (~3.6 s) only when AST hears speech, with a names prompt (Lynx, Tom, Noobia, the Noobs' names). Capture tool: `/usr/local/bin/lynx_microphone_clip.py` (mixer route `hw:0,11`, 48 kHz mono, PCM to stdout only).
 
 ### 2. Forked Diagnostic Execution & Feedback Loop
 * Diagnostic tools invoked with `fork: true` detach into the background in ~15 ms, allowing the main agent turn to conclude immediately without waiting on network probes.
@@ -150,7 +150,7 @@ Autonomous cellular auditing suite for the MediaTek M80 5G modem:
 ## 6. Guards & Watchers (Principle 10)
 
 * Safe RAM watchers, put in place by `lynx-watchers-swap`: `/run/lynx/thermal-watch.sh` (CPU >= 75 C), `/run/lynx/battery-watch.sh` (battery >= 50 C, or <= 10 % and not charging), `/run/lynx/lynx-health-supervisor.sh` (10 consecutive failures). They act only after **10 readings in a row**, and they **never power off or reboot**: they call `lynx-power-mode saving "<reason>"` (back to the START screen, reason shown) and throttle the CPUs.
-* **Guard switch** `/etc/lynx/power-thermal-guard.disable` (present, and meant to be): the watchers still act (power saving with the reason) and only skip the CPU throttle. What it really disables are the old strict guards *inside her tools* (e.g. the mic refused to record above 35 C battery), which Noob asked to remove ("45 is fine"). Keep it.
+* **Guard switch** `/etc/lynx/power-thermal-guard.disable` (present, and meant to be): the watchers still act (power saving with the reason) and only skip the CPU throttle. What it really disables are the old strict guards *inside her tools* (e.g. the mic refused to record above 35 C battery), which Tom asked to remove ("45 is fine"). Keep it.
 * `lynx-charge-guard` steps the charger input current down at 38/40/42 C. `lynx-maintenance` only throttles.
 
 ## 7. Boot Chain & Hard Rules
@@ -183,7 +183,7 @@ Autonomous cellular auditing suite for the MediaTek M80 5G modem:
 
 * Sense line -> `noobia-autonomyd` (`/etc/noobia/autonomy.json`: `window_s 20`, `max_lines 15`, `uniform_priority 20`, `carry_priority false`, `combine true`, `async_aigel true`, **`aigel.enabled false`**) -> pattern DB (`/var/lib/noobia/autonomy/patterns.json`, 39 live) -> **one combined sentence per chunk** (`SENSE: <unique sentences>`) -> agent job queue `/var/lib/lynx-agent/jobs` -> `lynx-agent-worker` -> `lynx-agent`.
 * Unmatched lines: to Aigel when she is on; while Aigel is off, straight to Lynx (except `*.status.sample` and `heartbeat`). Patterns on `status.sample` never speak (`to_noob false`).
-* **Aigel is disabled** (Noob, 2026-11-24): on Lynx `aigel.enabled false`; on Nexus `aigel_intake` and `aigel_learning_loop` are stopped and disabled (her health monitors still run). Restore: `systemctl enable --now` both, and set `aigel.enabled true`.
+* **Aigel is disabled** (Tom, 2026-11-24): on Lynx `aigel.enabled false`; on Nexus `aigel_intake` and `aigel_learning_loop` are stopped and disabled (her health monitors still run). Restore: `systemctl enable --now` both, and set `aigel.enabled true`.
 * Brain (`/etc/lynx/brain.json`): `nexus-qwen` qwen3.8:27b via `http://192.168.100.106:8080/v1` (`noobia-inference-proxy`, timeout 60 s) -> `local-qwen` -> `cloud-openai` gpt-5.4-mini (30 s).
 * `CHAT:` comes from the chat screen (`/usr/local/bin/lynx-chat-send`, mode 700, run directly by the display).
 * Logs on Lynx: `/var/log/lynx/messages` (syslog, sense lines, `deliver status`), `/var/log/lynx-agent.jsonl` (backend and tool events), `/var/lib/noobia/lynx_thought.txt` (what she said).
@@ -199,8 +199,8 @@ Autonomous cellular auditing suite for the MediaTek M80 5G modem:
 
 ## 11. Open Issues (2026-11-25)
 
-1. **Reaction latency:** Qwen serves one request at a time; callers with 3k-41k-token prompts evict each other's cache. Unknown `/api/chat` callers are still active with Aigel off. Options for Noob and Aria: give Lynx's reflexes priority, `OLLAMA_NUM_PARALLEL=2` if VRAM allows, or a small model for her reflexes.
-2. ~~Boot runlevel vs START~~ - resolved (Noob: "enable everything"): the services stay in `default`, and `lynx-power-boot` now boots `active` when they are there (else `saving boot` with START). Also fixed: POWER SAVE used to stop `lynx-noobd` (it needs `lynx-media`); media and noobd now stay on in both modes.
+1. **Reaction latency:** Qwen serves one request at a time; callers with 3k-41k-token prompts evict each other's cache. Unknown `/api/chat` callers are still active with Aigel off. Options for Tom and Aria: give Lynx's reflexes priority, `OLLAMA_NUM_PARALLEL=2` if VRAM allows, or a small model for her reflexes.
+2. ~~Boot runlevel vs START~~ - resolved (Tom: "enable everything"): the services stay in `default`, and `lynx-power-boot` now boots `active` when they are there (else `saving boot` with START). Also fixed: POWER SAVE used to stop `lynx-noobd` (it needs `lynx-media`); media and noobd now stay on in both modes.
 3. ~~Guard switch~~ - resolved: the watchers act with it set; it only disables the old in-tool guards (keep it).
 4. **`lynx_net_diag` / `lynx_cellular_diag`** include `port-scan`, `vuln-check`, `packet-sample` (tcpdump) and `at-probe`. They are not offered to SENSE calls, but CHAT can use them. Suggested: limit targets to Noobia's own LAN and devices, and ask before a packet capture (other people's traffic - Principle 8). `at-probe` writes to the modem: treat it like a physical action.
 5. **Front camera rotation and mirroring** not yet checked with a face (detector rotates by 270 degrees; the front camera may need 90). `lynx_camera_photo` offers only `back`/`wide` - add `front`.

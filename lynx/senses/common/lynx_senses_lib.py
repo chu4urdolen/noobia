@@ -157,7 +157,8 @@ def state_path(sense: str, override: str | None = None) -> Path:
 # Fields that change on every sample and matter only as counters:
 VOLATILE_STATE_KEYS = frozenset({"samples", "t", "last_ts", "last_raw", "queued", "dropped",
                                  "last_cap", "last_soc_mC", "temp_check_t",
-                                 "tilts", "still_since"})   # motion gesture history (RAM)
+                                 "tilts", "still_since",    # motion gesture history (RAM)
+                                 "quiet_rms"})              # hearing: the room's usual level
 STATE_FLUSH_S = 60.0
 _STATE_CACHE: dict = {}   # str(path) -> (data, last disk write monotonic, written stable view)
 

@@ -1,4 +1,5 @@
 # Vision runtime for nexus_detect's strong models (Gwyn, 2026-11-23).
+# Also runs nexus_hear (Whisper + AST, 2026-11-24); scipy comes with ultralytics.
 # CPU-only PyTorch: the RTX 5090 stays reserved for Qwen.
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.5.1+cpu

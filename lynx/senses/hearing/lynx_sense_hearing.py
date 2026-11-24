@@ -8,7 +8,16 @@ Expects JSON stdin ({}) and returns:
 
 Events:
 - peak >= 100 or rms >= 30.0 -> NOOBIA P3 hearing sound.heard peak=... rms=...
+  (only when Nexus hearing is unavailable; otherwise the clip below says more)
 - every 15 samples: NOOBIA P0 hearing status.sample peak=... rms=...
+
+Listening (G1/G2, Gwyn 2026-11-24): when a level sample is loud, a background
+thread records a LISTEN_S clip (lynx-microphone-clip: PCM only in memory) and
+posts it to nexus_hear (AST sound classes + Whisper). The clip is dropped
+right after. Lines:
+- hearing.speech lang=..  | the words           ("Tom said ...")
+- hearing.sound          | knock               (top non-speech AudioSet class)
+- hearing.startle rms=.. ratio=..               (sudden level far above the room)
 """
 
 from __future__ import annotations
@@ -38,6 +47,22 @@ DEFAULT_MIC_BIN = "/usr/local/share/lynx/agent-tools/lynx_microphone_level.sh"
 DEFAULT_ENABLED_FILE = "/var/lib/noobia/senses/hearing/enabled"
 NEXUS_HEARING_URL = "http://192.168.100.106:112/api/v1/hearing"
 HEARING_PEAK_THRESHOLD = 80
+CLIP_BIN = os.environ.get("LYNX_MIC_CLIP_BIN", "/usr/local/bin/lynx_microphone_clip.py")
+HEAR_URL = os.environ.get("NOOBIA_HEAR_URL", "http://192.168.100.106:5052/hear?rate=48000")
+LISTEN_S = 4
+LISTEN_COOLDOWN_S = 2.0       # between clips
+HEAR_TIMEOUT_S = 40
+SOUND_MIN_SCORE = 0.3
+SOUND_REPEAT_S = 120          # the same sound label again only after this
+STARTLE_RATIO = 8.0           # rms this many times the quiet room ...
+STARTLE_MIN_RMS = 400.0       # ... and at least this loud
+STARTLE_COOLDOWN_S = 30
+QUIET_SOUNDS = {"speech", "silence", "inside, small room", "inside, large room or hall",
+                "white noise", "static", "hum", "noise", "pink noise",
+                "male speech, man speaking", "female speech, woman speaking",
+                "conversation", "narration, monologue"}
+
+_listen = {"thread": None, "last_end": 0.0, "last_sound": {}}
 HEARING_RMS_THRESHOLD = 25.0
 HEARING_SAMPLE_EVERY = 15
 
@@ -74,9 +99,93 @@ def read_microphone_level(bin_path: str = DEFAULT_MIC_BIN) -> dict:
     return json.loads(res.stdout)
 
 
+def record_clip(seconds: int = LISTEN_S) -> bytes:
+    """Raw S16LE 48 kHz mono PCM in memory, from the clip tool's stdout."""
+    res = subprocess.run(["/usr/bin/python3", CLIP_BIN, str(seconds)], capture_output=True,
+                         timeout=seconds + 10)
+    if res.returncode != 0 or not res.stdout:
+        raise RuntimeError((res.stderr or b"clip failed").decode("utf-8", "replace")[-160:])
+    return res.stdout
+
+
+def ask_nexus(pcm: bytes, url: str = HEAR_URL) -> dict:
+    import urllib.request
+    req = urllib.request.Request(url, data=pcm, method="POST",
+                                 headers={"Content-Type": "application/octet-stream"})
+    with urllib.request.urlopen(req, timeout=HEAR_TIMEOUT_S) as r:
+        return json.loads(r.read())
+
+
+def heard_lines(sense, answer: dict, now: float, dry_run: bool) -> list[str]:
+    """Sense lines for one nexus_hear answer (speech first, else a notable sound)."""
+    lines = []
+    speech = " ".join(str(answer.get("speech") or "").split())[:200]
+    if speech:
+        lines.append(emit_line(sense, 1, "hearing", "speech",
+                               fields={"lang": answer.get("language") or "unknown"},
+                               text=speech, dry_run=dry_run))
+        return lines
+    for snd in answer.get("sounds") or []:
+        label = str(snd.get("label", "")).strip()
+        if not label or label.lower() in QUIET_SOUNDS or float(snd.get("score", 0)) < SOUND_MIN_SCORE:
+            continue
+        key = label.lower()
+        if now - _listen["last_sound"].get(key, -1e12) < SOUND_REPEAT_S:
+            break
+        _listen["last_sound"][key] = now
+        lines.append(emit_line(sense, 1, "hearing", "sound",
+                               fields={"score": round(float(snd["score"]), 2)},
+                               text=label.lower()[:60], dry_run=dry_run))
+        break
+    return lines
+
+
+def _listen_worker(sense, dry_run: bool, recorder, asker) -> None:
+    try:
+        pcm = recorder()
+        try:
+            answer = asker(pcm)
+        finally:
+            del pcm                      # the clip never outlives this request
+        heard_lines(sense, answer, now_ts(), dry_run)
+        _listen["error"] = None
+        _listen["ok"] = True
+    except Exception as exc:  # noqa: BLE001 - listening is best effort
+        _listen["error"] = f"{type(exc).__name__}: {str(exc)[:120]}"
+        _listen["ok"] = False
+    finally:
+        _listen["last_end"] = now_ts()
+
+
+def start_listening(sense, dry_run: bool = False, recorder=None, asker=None, now=None,
+                    background: bool = True) -> bool:
+    """Start one clip+hear in the background unless one is running or too soon."""
+    import threading
+    t = now if now is not None else now_ts()
+    th = _listen.get("thread")
+    if th is not None and th.is_alive():
+        return False
+    if t - _listen.get("last_end", 0.0) < LISTEN_COOLDOWN_S:
+        return False
+    args = (sense, dry_run, recorder or record_clip, asker or ask_nexus)
+    if not background:
+        _listen_worker(*args)
+        return True
+    th = threading.Thread(target=_listen_worker, args=args, name="lynx-listen", daemon=True)
+    _listen["thread"] = th
+    th.start()
+    return True
+
+
+def listening() -> bool:
+    th = _listen.get("thread")
+    return th is not None and th.is_alive()
+
+
 def run(dry_run: bool = False, state_file: str | None = None,
         reader=None, now: int | None = None,
-        enabled: bool | None = None) -> tuple[dict, int]:
+        enabled: bool | None = None, recorder=None, asker=None,
+        listen_enabled: bool = True) -> tuple[dict, int]:
     t = int(now if now is not None else now_ts())
     # Disabled by default
     is_on = is_hearing_enabled() if enabled is None else enabled
@@ -87,6 +196,10 @@ def run(dry_run: bool = False, state_file: str | None = None,
         sense = import_sense()
     except SenseUnavailable as exc:
         return failure("hearing", exc)
+
+    if listening():
+        # The clip holds the microphone; the level sample waits its turn.
+        return base_result("hearing", emitted=[], dry_run=dry_run, detail="listening"), 0
 
     try:
         data = (reader or read_microphone_level)()
@@ -107,10 +220,26 @@ def run(dry_run: bool = False, state_file: str | None = None,
 
     sound_heard = peak >= HEARING_PEAK_THRESHOLD or rms >= HEARING_RMS_THRESHOLD
 
+    quiet = float(state.get("quiet_rms", rms if rms > 0 else 5.0))
+    if not sound_heard:
+        quiet = 0.9 * quiet + 0.1 * rms          # the room's usual level
+    ratio = rms / max(quiet, 1.0)
+    if (samples > 3 and rms >= STARTLE_MIN_RMS and ratio >= STARTLE_RATIO
+            and t - float(state.get("startle_t") or -1e12) >= STARTLE_COOLDOWN_S):
+        emitted.append(emit_line(sense, 1, "hearing", "startle",
+                                 fields={"rms": int(rms), "ratio": int(ratio)},
+                                 text="a sudden loud sound", dry_run=dry_run))
+        state["startle_t"] = t
+    nexus_hearing = listen_enabled and sound_heard and samples > 1
+    if nexus_hearing:
+        start_listening(sense, dry_run=dry_run, recorder=recorder, asker=asker)
+
     if samples == 1:
         # First sample sets baseline
         pass
-    elif sound_heard and not prev_heard:
+    elif sound_heard and not prev_heard and not (nexus_hearing and _listen.get("ok")):
+        # The plain level line only while Nexus hearing has not answered: then
+        # the clip's speech/sound line says more, and this one would repeat it.
         line = emit_line(
             sense,
             1,
@@ -140,6 +269,8 @@ def run(dry_run: bool = False, state_file: str | None = None,
         "last_peak": peak,
         "last_rms": rms,
         "last_ts": t,
+        "quiet_rms": round(quiet, 2),
+        "startle_t": state.get("startle_t"),
     }
     if not dry_run:
         save_state(path, new_state)
@@ -150,6 +281,8 @@ def run(dry_run: bool = False, state_file: str | None = None,
         "rms": round(rms, 1),
         "sound_heard": sound_heard,
         "samples": samples,
+        "listening": listening(),
+        "listen_error": _listen.get("error"),
     })
     return result, 0
 

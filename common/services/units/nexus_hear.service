@@ -1,0 +1,26 @@
+[Unit]
+Description=Nexus Hear Service: AST sound classes + Whisper speech-to-text on CPU (port 5052)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+SyslogIdentifier=nexus-hear
+Type=simple
+User=aria
+Group=aria
+WorkingDirectory=/noobia/common/autonomy/services/hear
+ExecStart=/noobia/common/services/nexus_hear.sh
+Restart=on-failure
+RestartSec=20
+StandardOutput=journal
+StandardError=journal
+# Audio lives only in request memory; nothing is written to disk.
+# Never starve Qwen's host process or the desktop: at most 4 of 12 CPU threads, 6 GB RAM.
+CPUQuota=400%
+MemoryHigh=5G
+MemoryMax=6G
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

@@ -478,6 +478,71 @@
    "origin": "gwyn"
   },
   {
+   "id": "hearing-speech",
+   "match": {
+    "sense": "hearing",
+    "event": "speech"
+   },
+   "template": "You heard someone say: \"{said}\"",
+   "message": "You heard someone speak.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 hearing speech lang=en | Good morning, Lynx. How are you today?"
+    ],
+    "must_not": [
+     "NOOBIA P1 hearing sound score=0.8 | knock"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<said>.+)$"
+  },
+  {
+   "id": "hearing-sound-kind",
+   "match": {
+    "sense": "hearing",
+    "event": "sound"
+   },
+   "template": "You hear a sound: {what}.",
+   "message": "You hear a sound.",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 hearing sound score=0.71 | music"
+    ],
+    "must_not": [
+     "NOOBIA P1 hearing speech lang=en | hello"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn",
+   "regex": "\\| (?P<what>.+)$"
+  },
+  {
+   "id": "hearing-startle",
+   "match": {
+    "sense": "hearing",
+    "event": "startle"
+   },
+   "template": "A sudden loud sound startled you!",
+   "message": "A sudden loud sound startled you!",
+   "to_noob": true,
+   "cooldown_s": 0,
+   "examples": {
+    "must": [
+     "NOOBIA P1 hearing startle rms=5200 ratio=40 | a sudden loud sound"
+    ],
+    "must_not": [
+     "NOOBIA P1 hearing sound score=0.8 | knock"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
    "id": "light-bright",
    "match": {
     "sense": "light",

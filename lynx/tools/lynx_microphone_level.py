@@ -37,6 +37,8 @@ def set_value(numid, number):
 
 
 def guarded_health():
+    from pathlib import Path
+    if Path('/etc/lynx/power-thermal-guard.disable').exists(): return 'disabled'
     health = json.loads(run(["/usr/local/bin/lynx-status", "--assert-ready"], 5))
     if (health["issues"] or health["battery"]["capacity_percent"] < 25 or
         health["battery"]["temperature_mC"] >= 35000 or

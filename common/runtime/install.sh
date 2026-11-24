@@ -69,6 +69,9 @@ vision() {  # Python 3.12: CPU PyTorch wheels; the 5090 stays reserved for Qwen
     (cd "$R/models" && "$R/vision-venv/bin/python" -c "from ultralytics import YOLO; YOLO('yolo11x.pt')")
     HF_HOME="$R/models/hf" "$R/vision-venv/bin/python" -c \
         "from huggingface_hub import snapshot_download; snapshot_download('microsoft/Florence-2-large')"
+    step "Whisper-small and AST AudioSet classifier for nexus_hear (into models/hf)"
+    HF_HOME="$R/models/hf" "$R/vision-venv/bin/python" -c \
+        "from huggingface_hub import snapshot_download as d; d('openai/whisper-small'); d('MIT/ast-finetuned-audioset-10-10-0.4593')"
 }
 
 case "${1:-all}" in

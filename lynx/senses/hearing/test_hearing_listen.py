@@ -36,6 +36,11 @@ class Listen(unittest.TestCase):
         self.assertEqual(seen["len"], 2000)
         self.assertEqual(self.lines, ["P1 hearing speech lang=en | Good morning, Lynx."])
 
+    def test_switched_off_just_before_recording_records_nothing(self):
+        recorded = []
+        h._listen_worker(object(), False, lambda: recorded.append(1) or b"x", lambda pcm: {}, lambda: False)
+        self.assertEqual(recorded, [])
+
     def test_notable_sound_once_then_quiet_for_a_while(self):
         ans = {"speech": "", "sounds": [{"label": "Inside, small room", "score": 0.9},
                                         {"label": "Knock", "score": 0.7}]}

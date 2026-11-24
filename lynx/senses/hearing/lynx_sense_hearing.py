@@ -140,8 +140,13 @@ def heard_lines(sense, answer: dict, now: float, dry_run: bool) -> list[str]:
     return lines
 
 
-def _listen_worker(sense, dry_run: bool, recorder, asker) -> None:
+def _listen_worker(sense, dry_run: bool, recorder, asker, enabled_check=None) -> None:
     try:
+        # Tom 2026-11-24: record only while hearing is on - re-checked at the
+        # last moment, so switching it off also stops a clip about to start.
+        if not (enabled_check or is_hearing_enabled)():
+            _listen["error"] = None
+            return
         pcm = recorder()
         try:
             answer = asker(pcm)
@@ -167,7 +172,8 @@ def start_listening(sense, dry_run: bool = False, recorder=None, asker=None, now
         return False
     if t - _listen.get("last_end", 0.0) < LISTEN_COOLDOWN_S:
         return False
-    args = (sense, dry_run, recorder or record_clip, asker or ask_nexus)
+    args = (sense, dry_run, recorder or record_clip, asker or ask_nexus,
+            (lambda: True) if recorder is not None else None)   # tests inject a recorder
     if not background:
         _listen_worker(*args)
         return True

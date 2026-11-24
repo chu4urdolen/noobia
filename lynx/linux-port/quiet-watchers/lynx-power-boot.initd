@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
-# Every boot starts in power saving (Tom, 2026-11-23): the display shows one
-# START button, and lynx-power-mode starts Lynx's services when it is tapped.
+# Boot power mode (Tom, 2026-11-23): power saving with one START button, unless
+# Lynx's own services are enabled in the default runlevel - then active.
 # Writes the mode only; never stops, reboots or powers anything off.
 description="Lynx boots into power saving (START screen)"
 
@@ -10,8 +10,14 @@ depend() {
 }
 
 start() {
-    ebegin "Lynx power mode: saving (boot)"
+    # The screen tells the truth (Gwyn 2026-11-25): if Lynx's own services are
+    # enabled at boot, she boots active (HOME); otherwise power saving (START).
+    mode="saving boot"
+    for svc in lynx-senses noobia-autonomyd lynx-agent-worker; do
+        [ -e "/etc/runlevels/default/$svc" ] && mode="active"
+    done
+    ebegin "Lynx power mode: $mode (boot)"
     mkdir -p /var/lib/noobia
-    printf 'saving boot\n' > /var/lib/noobia/power-mode.tmp && mv /var/lib/noobia/power-mode.tmp /var/lib/noobia/power-mode
+    printf '%s\n' "$mode" > /var/lib/noobia/power-mode.tmp && mv /var/lib/noobia/power-mode.tmp /var/lib/noobia/power-mode
     eend $?
 }

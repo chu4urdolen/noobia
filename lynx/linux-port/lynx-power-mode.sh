@@ -13,7 +13,10 @@ set -u
 MODE_FILE=/var/lib/noobia/power-mode
 LOCK=/run/lynx/power-mode.lock
 # Started in order, stopped in reverse.
-SERVICES="lynx-media lynx-bluetooth lynx-agent-worker noobia-autonomyd lynx-senses lynx-camera-sense"
+SERVICES="lynx-bluetooth lynx-agent-worker noobia-autonomyd lynx-senses lynx-camera-sense"
+# Always on in both modes. lynx-noobd (Nexus's line to her) NEEDS lynx-media, so
+# stopping media for power saving silently stopped noobd too (found 2026-11-25).
+ALWAYS="lynx-media lynx-noobd"
 
 say() { echo "LYNX_POWER_MODE $*"; /bin/busybox logger -t lynx-power-mode "$*" 2>/dev/null || true; }
 
@@ -44,7 +47,7 @@ case "${1:-status}" in
         take_lock
         set_mode active
         say "ACTIVE: starting $SERVICES"
-        for s in $SERVICES; do
+        for s in $ALWAYS $SERVICES; do
             rc-service "$s" start >/dev/null 2>&1 || say "could not start $s"
         done
         say "ACTIVE: done" ;;

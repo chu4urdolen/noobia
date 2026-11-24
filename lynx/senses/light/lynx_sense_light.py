@@ -38,6 +38,31 @@ DEFAULT_LIGHT_BIN = "/usr/local/bin/lynx-light-read"
 LIGHT_DARK_THRESHOLD = 2
 LIGHT_BRIGHT_THRESHOLD = 5
 LIGHT_SAMPLE_EVERY = 15
+FLASHLIGHT_LAST_PULSE_FILE = Path("/run/lynx/flashlight-last-pulse")
+SELF_CAUSED_WINDOW_S = 3.5
+
+
+def was_flashlight_recent(window_s: float = SELF_CAUSED_WINDOW_S) -> bool:
+    """Return True if Lynx pulsed her own flashlight within window_s seconds."""
+    override = os.environ.get("LYNX_FLASHLIGHT_RECENT")
+    if override is not None:
+        return override.lower() in ("1", "true", "yes")
+
+    pulse_file = Path(os.environ.get("LYNX_FLASHLIGHT_LAST_FILE", str(FLASHLIGHT_LAST_PULSE_FILE)))
+    if not pulse_file.exists():
+        return False
+    try:
+        raw = pulse_file.read_text().strip()
+        last_mono = float(raw)
+        import time
+        if 0 <= (time.monotonic() - last_mono) <= window_s:
+            return True
+        # Also check file mtime as backup
+        if 0 <= (time.time() - pulse_file.stat().st_mtime) <= window_s:
+            return True
+    except (OSError, ValueError):
+        pass
+    return False
 
 
 def read_light_sensor(bin_path: str = DEFAULT_LIGHT_BIN) -> dict:
@@ -76,13 +101,19 @@ def run(dry_run: bool = False, state_file: str | None = None,
         # First sample sets baseline
         pass
     elif current_mode != prev_mode and current_mode in ("dark", "bright"):
+        fields = {"raw": raw_val}
+        self_caused = False
+        if current_mode == "bright" and was_flashlight_recent():
+            fields["cause"] = "self"
+            self_caused = True
+
         line = emit_line(
             sense,
             1,
             "light",
             current_mode,
-            fields={"raw": raw_val},
-            text=f"Lynx light sensor detected {current_mode} (raw={raw_val})",
+            fields=fields,
+            text=f"Lynx light sensor detected {current_mode} (raw={raw_val})" + (" [self_caused: flashlight]" if self_caused else ""),
             dry_run=dry_run,
         )
         emitted.append(line)

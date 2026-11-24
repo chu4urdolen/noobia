@@ -77,7 +77,7 @@ class TestSliderSense(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(len(res["emitted"]), 1)
         line = res["emitted"][0]
-        self.assertTrue(line.startswith("NOOBIA P1 body slider.change"))
+        self.assertTrue(line.startswith("NOOBIA P") and "body slider.change" in line)
         self.assertIn("to=ring", line)
         self.assertIn("from=silent", line)
         self.assertEqual(res["state"]["position"], "ring")

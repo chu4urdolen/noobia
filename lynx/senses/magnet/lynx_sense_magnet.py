@@ -39,8 +39,10 @@ from lynx_senses_lib import (  # noqa: E402
 )
 
 SAMPLE_INTERVAL = 30
-EARTH_FIELD_MAX_UT = 120  # Earth's ambient magnetic field is ~25 to 65 uT. Anything >= 180 uT is a local magnet.
-WAND_THRESHOLD_UT = 180
+# Resting phone ambient field (including internal speaker/chassis magnets) sits around 150-250 uT.
+# A neodymium magnet or strong external field brought near spikes the delta significantly above baseline (>= +150 uT delta or absolute >= 450 uT).
+WAND_DELTA_UT = 150.0
+WAND_ABS_THRESHOLD_UT = 450.0
 
 
 def read_hardware_mag() -> dict:
@@ -49,7 +51,7 @@ def read_hardware_mag() -> dict:
     if not os.path.exists(cmd):
         raise RuntimeError(f"Magnetometer read tool not found at {cmd}")
 
-    res = subprocess.run([cmd], input="{}", capture_output=True, text=True, timeout=5)
+    res = subprocess.run([cmd], input=b"{}\n", capture_output=True, text=True, timeout=5)
     if res.returncode != 0:
         raise RuntimeError(f"Magnetometer read failed: {res.stderr.strip() or res.stdout.strip()}")
 
@@ -62,8 +64,8 @@ def read_hardware_mag() -> dict:
 def calculate_heading_and_magnitude(raw_xyz: list[int | float]) -> tuple[float, float, str]:
     """Calculate total flux magnitude (uT) and 2D compass heading (0-360 deg, quadrant)."""
     x, y, z = raw_xyz[0], raw_xyz[1], raw_xyz[2]
-    # In AK09918 gain is 1000 => raw / 10 is approx uT (or raw units)
-    magnitude = math.sqrt(x * x + y * y + z * z) / 10.0
+    # In AK09918 raw_xyz is driver_raw with gain 1000 => raw / 1000.0 is exact microteslas (uT)
+    magnitude = math.sqrt(x * x + y * y + z * z) / 1000.0
 
     # 2D azimuth in degrees (0 = North, 90 = East, 180 = South, 270 = West)
     rad = math.atan2(y, x)
@@ -107,21 +109,32 @@ def run(dry_run: bool = False, state_file: str | None = None,
     emitted: list[str] = []
     prev_cardinal = state.get("cardinal")
     prev_wand = state.get("wand_active", False)
+    baseline_ut = state.get("baseline_ut")
 
-    wand_now = mag_ut >= WAND_THRESHOLD_UT
+    if baseline_ut is None:
+        state["baseline_ut"] = mag_ut
+        baseline_ut = mag_ut
+
+    delta_ut = mag_ut - float(baseline_ut)
+    wand_now = (delta_ut >= WAND_DELTA_UT) or (mag_ut >= WAND_ABS_THRESHOLD_UT)
 
     # Event 1: Magnetic wand / magnet hover detection
     if wand_now and not prev_wand:
         line = emit_line(
             sense, 1, "magnet", "wand",
-            fields={"mag_ut": mag_ut},
-            text=f"A magnet is hovering near me ({mag_ut} uT)",
+            fields={"mag_ut": mag_ut, "delta_ut": round(delta_ut, 1)},
+            text=f"A magnet is hovering near me ({mag_ut} uT, delta +{round(delta_ut, 1)} uT)",
             dry_run=dry_run,
         )
         emitted.append(line)
         state["wand_active"] = True
     elif not wand_now and prev_wand:
         state["wand_active"] = False
+        # Slowly adapt baseline towards resting field when wand leaves
+        state["baseline_ut"] = mag_ut
+    elif not wand_now:
+        # Exponential moving average of baseline resting field
+        state["baseline_ut"] = round(0.95 * float(baseline_ut) + 0.05 * mag_ut, 1)
 
     # Event 2: Cardinal compass heading transition
     if prev_cardinal is None:

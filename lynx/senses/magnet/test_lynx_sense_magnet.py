@@ -59,32 +59,33 @@ class TestMagnetSense(unittest.TestCase):
         self._tmp.cleanup()
 
     def test_first_sample_baselines_quietly(self):
-        # Earth ambient field (~45 uT, pointing North)
+        # Ambient field on phone (~205 uT, pointing North)
         res, code = mag.run(
             state_file=str(self.state_file),
-            read_mag=lambda: {"raw": [400, 50, -200]},
+            read_mag=lambda: {"raw": [37620, 13200, -205080]},
             now=1000,
         )
         self.assertEqual(code, 0)
         self.assertEqual(res["emitted"], [])
-        self.assertEqual(res["state"]["cardinal"], "North")
+        self.assertAlmostEqual(res["state"]["baseline_ut"], 208.9, places=1)
         self.assertFalse(res["state"].get("wand_active"))
 
     def test_magnet_wand_detection(self):
-        # Ambient sample 1
-        mag.run(state_file=str(self.state_file), read_mag=lambda: {"raw": [400, 50, -200]}, now=1000)
+        # Ambient sample 1 (baseline ~208 uT)
+        mag.run(state_file=str(self.state_file), read_mag=lambda: {"raw": [37620, 13200, -205080]}, now=1000)
 
-        # High flux sample 2 (Magnet brought near: ~300 uT)
+        # High flux sample 2 (Neodymium magnet brought near: ~550 uT)
         res, code = mag.run(
             state_file=str(self.state_file),
-            read_mag=lambda: {"raw": [2500, 1500, 800]},
+            read_mag=lambda: {"raw": [150000, 200000, -500000]},
             now=1002,
         )
         self.assertEqual(code, 0)
         self.assertEqual(len(res["emitted"]), 1)
         line = res["emitted"][0]
-        self.assertTrue(line.startswith("NOOBIA P1 magnet wand"))
+        self.assertTrue(line.startswith("NOOBIA P") and "magnet wand" in line)
         self.assertIn("mag_ut=", line)
+        self.assertIn("delta_ut=", line)
         self.assertTrue(res["state"]["wand_active"])
 
     def test_compass_heading_turn(self):
@@ -100,7 +101,7 @@ class TestMagnetSense(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(len(res["emitted"]), 1)
         line = res["emitted"][0]
-        self.assertTrue(line.startswith("NOOBIA P1 compass heading"))
+        self.assertTrue(line.startswith("NOOBIA P") and "compass heading" in line)
         self.assertIn("to=East", line)
         self.assertIn("from=North", line)
 

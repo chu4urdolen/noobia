@@ -86,6 +86,20 @@ class ExtendedSensesCase(unittest.TestCase):
         self.assertEqual(self.recorder.emits[1][0][1], "light")
         self.assertEqual(self.recorder.emits[1][0][2], "dark")
 
+    def test_light_self_caused_by_flashlight(self):
+        # Baseline dark
+        light.run(reader=lambda: {"raw": [1, 0, 0]})
+        
+        # Transition to bright with recent flashlight
+        os.environ["LYNX_FLASHLIGHT_RECENT"] = "1"
+        try:
+            res, code = light.run(reader=lambda: {"raw": [10, 0, 0]})
+            self.assertEqual(code, 0)
+            self.assertEqual(len(self.recorder.emits), 1)
+            self.assertEqual(self.recorder.emits[0][1]["fields"].get("cause"), "self")
+        finally:
+            os.environ.pop("LYNX_FLASHLIGHT_RECENT", None)
+
     def test_proximity_transitions(self):
         # Sample 1: Baseline (far)
         res, code = proximity.run(reader=lambda: {"raw": [0, 1023, 0]})

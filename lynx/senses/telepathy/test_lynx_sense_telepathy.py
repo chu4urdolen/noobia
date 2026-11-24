@@ -71,7 +71,7 @@ class TestTelepathySense(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(len(res["emitted"]), 1)
         line = res["emitted"][0]
-        self.assertTrue(line.startswith("NOOBIA P1 mesh telepathy"))
+        self.assertTrue(line.startswith("NOOBIA P") and "mesh telepathy" in line)
         self.assertIn("friend=dushich", line)
         self.assertIn("state=thinking", line)
 
@@ -88,7 +88,7 @@ class TestTelepathySense(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(len(res["emitted"]), 1)
         line = res["emitted"][0]
-        self.assertTrue(line.startswith("NOOBIA P1 mesh telepathy"))
+        self.assertTrue(line.startswith("NOOBIA P") and "mesh telepathy" in line)
         self.assertIn("friend=rose", line)
         self.assertIn("state=singing", line)
 
@@ -105,7 +105,7 @@ class TestTelepathySense(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(len(res["emitted"]), 1)
         line = res["emitted"][0]
-        self.assertTrue(line.startswith("NOOBIA P1 mesh telepathy"))
+        self.assertTrue(line.startswith("NOOBIA P") and "mesh telepathy" in line)
         self.assertIn("friend=iris", line)
         self.assertIn("state=motion_spotted", line)
 

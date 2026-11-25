@@ -25,7 +25,7 @@ the LNX-65/94 package preflight is recorded below.
 | 82 | NRP has one shared Nexus key, not per-Noob identity. | Design per-principal credentials and attribution without assuming separate Unix accounts. |
 | 83 | NRP cross-session replay test passes. Aigel signed-route freshness/idempotency is built in b9eb7d2/144dd1a but inactive. | Review and activate LNX-84 server packet after signed client. |
 | 84 | NRP rate limits and signed Aigel client/server packets built; server switch remains absent. | Reviews, signed worker install first, then Aigel switch/restart. |
-| 85 | DNS is plaintext. Gwyn verified that the router DHCP offer, Nexus static profile, and Lynx V50 script all specify unreachable `185.82.217.89` first, then `8.8.8.8` (#504). Musl queries both in parallel; Lynx lookups measured 21–53 ms. | Confirm intended DNS policy with Noob; prepare authenticated resolver and rollback without disrupting numeric-IP rescue. |
+| 85 | Gwyn replaced the dead resolver in Nexus profiles, Lynx's live resolver and V50 script with `8.8.8.8` and `1.1.1.1` (#509); live Lynx lookup took 28 ms. DNS remains plaintext, and the router still advertises the dead address to other clients. | Prepare authenticated resolver and rollback without disrupting numeric-IP rescue; Noob handles the router's DHCP setting. |
 | 86 | Wi-Fi key is already 0600 root:root; audit extension built, Gwyn ACCEPT (#487). | Dushich second review, then install on demand. |
 | 91 | Argus is powered off; Lynx security journal exists. | Define Argus intake contract and sync once Argus is available. |
 | 93 | **Assessment complete:** no public cellular/WAN endpoint yet (#481). | Reassess if a public endpoint appears. |

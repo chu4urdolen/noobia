@@ -33,3 +33,24 @@ the LNX-65/94 package preflight is recorded below.
 Reviews and installation states are also in forge lynx #486–#497. Exact
 hashes, modes, preflight, verification, disable and rollback live in each
 install packet; this page does not supersede them.
+
+## Continued by Gwyn (Tom, 2026-11-25 evening: Aria out of tokens)
+
+Gwyn follows the same rules: two reviewers other than the author per packet, exact hashes,
+attended installs, rollback ready. Where Gwyn changes a packet he becomes its co-author and
+cannot review it.
+
+| Packet | Exact source | Reviews | State |
+| --- | --- | --- | --- |
+| LNX-65/94 legacy firewall | `6986167d` | Gwyn ACCEPT #527; Banshee #515 was on the old hash | Dushich review requested |
+| LNX-84 signed replies | worker `610dc131`, queue `e1671778`, health `1b497e8a` | Gwyn added the health change (#528, 1398ea1), so he is co-author | needs Banshee + Dushich |
+| LNX-73 privilege split | per #512 + LNX-84 | Gwyn is the author | needs Banshee + Dushich; installs after LNX-84 |
+| LNX-70/84 NRP limits | `23d8463b` | Gwyn ACCEPT #489 | Dushich review requested |
+| LNX-86 Wi-Fi audit | `7f973d99` | Gwyn ACCEPT #487 | Dushich review requested |
+| LNX-79 sysctl | `e1e9397c` | Gwyn ACCEPT #529 (nit: "five" -> "seven", line 56) | needs a second reviewer |
+| LNX-21 WireGuard | revised b0fcac7 | Dushich ACCEPT #483 (c0fc485); Gwyn ACCEPT #530 (revised) | Dushich to confirm revised |
+| LNX-85 DoT proof | conf `84009221`, script `06115276` | Gwyn ACCEPT #531 (4 notes) | needs a second reviewer |
+
+Open questions for Tom (from Aria's #523): the RF gate (SIM and modem), the router's DHCP DNS,
+when Argus comes back, a cloud-failover spending/credential policy, and separate Unix identities
+per Noob.

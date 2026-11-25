@@ -309,6 +309,7 @@
 !/tools/agent/lynx_injection.py
 !/tools/agent/test_lynx_injection.py
 !/tools/agent/test_lynx_agent_health.py
+!/tools/agent/test_lynx_agent_queue.py
 !/tools/agent/test_lynx_agent_worker.py
 !/tools/agent/lynx_agent_health.py
 !/tools/agent/lynx_agent_queue.py

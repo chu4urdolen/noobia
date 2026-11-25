@@ -103,7 +103,7 @@ All senses are observational and classified as A.
 
 | ID | Feature task | Class | Owner |
 | --- | --- | --- | --- |
-| LNX-51 | Static IP or alternative persistent endpoint | O | **Aria** |
+| LNX-51 | Static IP or alternative persistent endpoint | O | **Aria** — done live: V50 boot sets `192.168.100.107/24`; boot log, address file, live interface and route agree (forge #507) |
 | LNX-52 | Cellular connection establishment at boot | I | **Aria** |
 | LNX-53 | Non-disruptive cellular health monitoring | I | **Aria** |
 | LNX-54 | Modem AT command permission enforcement | I | **Aria** |

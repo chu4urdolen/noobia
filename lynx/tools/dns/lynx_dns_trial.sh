@@ -7,6 +7,8 @@ CONFIG=${LYNX_DNS_CONFIG:-/usr/local/lib/noobia/dns/lynx-unbound-dot.conf}
 UNBOUND=${LYNX_DNS_UNBOUND:-unbound}
 CHECKCONF=${LYNX_DNS_CHECKCONF:-unbound-checkconf}
 DELAY=${LYNX_DNS_DELAY:-120}
+PROC=${LYNX_DNS_PROC:-/proc}
+DOT_PORT=${LYNX_DNS_DOT_PORT:-853}     # tests only; the phone always uses 853
 SCRIPT=$0
 
 locked() {
@@ -27,6 +29,24 @@ stop_own() {
     fi
 }
 
+# Evidence, not configuration (Dushich #543): the sockets of THIS unbound must show
+# a connection to the DoT port and none to plain DNS port 53 away from loopback.
+dot_proof() {
+    pid=$1
+    inodes=$(ls -l "$PROC/$pid/fd" 2>/dev/null | sed -n 's/.*socket:\[\([0-9]*\)\].*/\1/p' | tr '\n' ' ')
+    dot_hex=$(printf '%04X' "$DOT_PORT")
+    cat "$PROC/net/tcp" "$PROC/net/tcp6" "$PROC/net/udp" "$PROC/net/udp6" 2>/dev/null |
+    awk -v inodes=" $inodes " -v dot="$dot_hex" '
+        $1 ~ /^[0-9]+:$/ {
+            n = split($3, r, ":"); port = r[n]; ip = r[1]; ino = $10
+            mine = (ino != "0" && index(inodes, " " ino " ") > 0)
+            loop = (ip == "0100007F" || ip == "00000000000000000000000001000000")
+            if (mine && port == dot) d++
+            if (mine && port == "0035" && !loop) p++
+        }
+        END { printf "dot=%d plain=%d\n", d, p; exit !(d > 0 && p == 0) }'
+}
+
 restore_own() {
     stop_own || true
     rm -f "$STATE/pending" "$STATE/unbound.pid" "$STATE/timer.pid"
@@ -41,18 +61,36 @@ case ${1:-} in
     command -v "$UNBOUND" >/dev/null
     command -v "$CHECKCONF" >/dev/null
     "$CHECKCONF" "$CONFIG"
-    nohup "$UNBOUND" -d -c "$CONFIG" 9>&- </dev/null >"$STATE/unbound.log" 2>&1 &
-    echo "$!" > "$STATE/unbound.pid"
-    if ! timeout 12 nslookup example.com 127.0.0.1 >/dev/null 2>&1; then
-        restore_own
-        echo 'local authenticated resolver did not answer' >&2
-        exit 1
-    fi
+    # The timer starts before unbound, so an SSH drop right after this line
+    # can never leave the proof running (Gwyn #531).
     token="$(date +%s)-$$"
     printf '%s\n' "$token" > "$STATE/pending"
     nohup /bin/sh "$SCRIPT" _rollback "$token" 9>&- </dev/null >/dev/null 2>&1 &
     echo "$!" > "$STATE/timer.pid"
-    echo "local DoT proof active; auto-stop in ${DELAY}s"
+    nohup "$UNBOUND" -d -c "$CONFIG" 9>&- </dev/null >"$STATE/unbound.log" 2>&1 &
+    echo "$!" > "$STATE/unbound.pid"
+    # Wait for the listener instead of failing on the first try (Gwyn #531).
+    answered=0
+    for i in 1 2 3 4 5 6; do
+        if timeout 12 nslookup example.com 127.0.0.1 >/dev/null 2>&1; then answered=1; break; fi
+        sleep 1
+    done
+    if [ "$answered" != 1 ]; then
+        restore_own
+        echo 'local authenticated resolver did not answer' >&2
+        exit 1
+    fi
+    proven=0
+    for i in 1 2 3 4 5 6; do      # the TLS connection may still be opening: up to ~3 s
+        if proof=$(dot_proof "$(cat "$STATE/unbound.pid")"); then proven=1; break; fi
+        sleep 0.5
+    done
+    if [ "$proven" != 1 ]; then
+        restore_own
+        echo "no proof of DNS over TLS ($proof): need a connection to port $DOT_PORT and none to port 53" >&2
+        exit 1
+    fi
+    echo "local DoT proof active ($proof); auto-stop in ${DELAY}s"
     ;;
   _rollback)
     sleep "$DELAY"

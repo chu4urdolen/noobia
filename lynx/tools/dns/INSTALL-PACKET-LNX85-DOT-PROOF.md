@@ -10,12 +10,16 @@ power. No reboot or modem operation.
 | Nexus source | Lynx destination | SHA-256 | mode |
 | --- | --- | --- | --- |
 | `lynx/tools/dns/lynx-unbound-dot.conf` | `/usr/local/lib/noobia/dns/lynx-unbound-dot.conf` | `8400922128605d5b02e8d345beee869a87d59fd2a027083c93139c8f7da2436d` | 0644 |
-| `lynx/tools/dns/lynx_dns_trial.sh` | `/usr/local/sbin/lynx-dns-trial` | `061152760cb0412bd345c03dd82e9d632c564366888a67174fdd4b63b281fad1` | 0755 |
+| `lynx/tools/dns/lynx_dns_trial.sh` | `/usr/local/sbin/lynx-dns-trial` | `ca48539c630826d20e1a28db80d586092636abef4609bc4e044f24f8bdabff03` | 0755 |
 
 The config binds only `127.0.0.1:53`, allows loopback clients, and forwards
 to Quad9 `9.9.9.9` and `149.112.112.112` on TCP 853 with TLS name
-`dns.quad9.net` and the system CA bundle. `forward-first: no` disallows
-plaintext fallback. Quad9 lists these addresses and name in its [service
+`dns.quad9.net` and the system CA bundle. Two options together keep it TLS-only:
+`forward-tls-upstream: yes` makes "the queries to this forwarder use TLS for transport",
+and `forward-first: no` (Unbound's default) means a SERVFAIL from the forwarders is
+**not** retried by Unbound's own (plaintext) recursion; only `yes` would "fall back to
+less specific resolution" (unbound.conf manual, checked 2026-11-25). The manual
+documents no plaintext fallback for TLS forwarders. Quad9 lists these addresses and name in its [service
 documentation](https://docs.quad9.net/services/); the [Unbound
 manual](https://unbound.docs.nlnetlabs.nl/en/latest/manpages/unbound.conf.html)
 documents the `@853#name` and CA validation syntax. This is a proposed
@@ -69,9 +73,13 @@ Compare hashes/modes to the table. Run `unbound-checkconf
 starts a loopback Unbound process, proves a bounded query to it, and starts
 a Lynx-local 120-second timer that terminates only this process. Expect
 `local DoT proof active; auto-stop in 120s` and `status` = `pending`.
-During the window, make another bounded `nslookup example.com 127.0.0.1`;
-inspect `ss -nt` for Quad9 TCP 853, check no new plaintext 53 upstream
-traffic if packet capture is available, and recheck SSH/NRP. Record results
+During the window, make another bounded `nslookup example.com 127.0.0.1` and
+recheck SSH/NRP. **The DoT evidence is now mandatory and built into `enable`**
+(Dushich #543, Gwyn 2026-11-25). After the probe answers, the script reads this
+unbound's own sockets (`/proc/<pid>/fd` and `/proc/net/{tcp,udp}{,6}`). It requires at
+least one connection to port 853 and **no** socket to port 53 away from loopback.
+Otherwise it stops the process and exits 1. The success line prints
+`dot=N plain=0`; record it. Record results
 and timing. **Do not leave the proof running:** `lynx-dns-trial disable` or
 wait for timer, then require `status` = `off`, no loopback listener, and the
 original `/etc/resolv.conf` hash. The timer does not reboot or power down.
@@ -90,3 +98,12 @@ Offline verification: `sh -n lynx/tools/dns/lynx_dns_trial.sh` and
 (2/2). The fake resolver tests timer and manual disable; on-device
 `unbound-checkconf`, TLS connectivity, and traffic observation remain
 mandatory before concluding the proof.
+
+## Revision 2026-11-25 (Gwyn; Aria out of tokens)
+
+Script `ca48539c630826d20e1a28db80d586092636abef4609bc4e044f24f8bdabff03`. Changes:
+* the timer starts **before** unbound;
+* it waits up to 6 s for the listener;
+* the mandatory socket proof above.
+
+Config unchanged (`84009221`). Tests: 4/4 under `/bin/sh` (DoT proof passes, no-DoT and plaintext cases refused and cleaned up, timer and disable). Under BusyBox `sh` on Nexus, the shell's built-in `nslookup` replaces the test's fake one, so the attended on-device run is the real test of that path. Gwyn is now co-author: reviews needed from Dushich and Banshee.

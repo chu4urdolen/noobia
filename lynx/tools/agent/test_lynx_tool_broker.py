@@ -9,6 +9,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -101,6 +102,14 @@ class BrokerTest(unittest.TestCase):
     def test_missing_broker_is_an_honest_error(self):
         r = lynx_agent.broker_call("lynx_speech", {"text": "x"}, path=Path(self.tmp.name) / "none.sock", timeout=2)
         self.assertIn("broker unavailable", r["error"])
+
+    def test_unprivileged_catalog_fails_closed_when_broker_is_absent(self):
+        catalog = lynx_agent.Catalog(self.tools)
+        with patch.object(lynx_agent.os, "geteuid", return_value=1000), \
+             patch.object(lynx_agent, "BROKER", Path(self.tmp.name) / "none.sock"):
+            result = catalog.run("lynx_speech", {"text": "Hello"})
+        self.assertFalse(result["ok"])
+        self.assertIn("broker unavailable", result["error"])
 
 
 class WorkerTest(unittest.TestCase):

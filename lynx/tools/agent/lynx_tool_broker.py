@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""lynx-tool-broker: the only door from Lynx's mind to her root tools (LNX-73).
+"""lynx-tool-broker: catalogued root tool calls for the ordinary agent (LNX-73).
 
 Rose's backlog, P1 "Agent privilege isolation" (Gwyn, 2026-11-25).
 
 Lynx's agent reads words from outside (speech she hears, camera captions,
 network findings), so it must not run as root. With the broker:
 
-* `lynx-agent` runs as the unprivileged user `lynx-agent` (the worker starts
-  it through `setpriv`). It talks to Qwen and decides on tool calls.
+* `lynx-agent` runs as the unprivileged user `lynx-agent` (the worker drops
+  privileges with Python's subprocess credentials). It talks to Qwen and
+  decides on tool calls.
 * This broker runs as root and listens on a Unix socket only that user's
   group can reach. For each request it:
   - checks the caller's real uid from the kernel (SO_PEERCRED);
@@ -42,7 +43,7 @@ import threading
 import time
 
 TOOLS = Path(os.environ.get("LYNX_AGENT_TOOLS", "/usr/local/share/lynx/agent-tools"))
-SOCKET = Path(os.environ.get("LYNX_TOOL_BROKER", "/run/lynx/tool-broker.sock"))
+SOCKET = Path(os.environ.get("LYNX_TOOL_BROKER", "/run/lynx-agent/tool-broker.sock"))
 LOG = Path(os.environ.get("LYNX_TOOL_BROKER_LOG", "/var/log/lynx-tool-broker.jsonl"))
 NAME = re.compile(r"[a-z][a-z0-9_]{0,63}\Z")
 MAX_REQUEST = 16384

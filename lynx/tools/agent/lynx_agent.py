@@ -32,7 +32,7 @@ BRAIN_CONFIG_PATH = Path(os.environ.get("LYNX_BRAIN_CONFIG", "/etc/lynx/brain.js
 TOOLS = Path('/usr/local/share/lynx/agent-tools')
 AUDIT = Path(os.environ.get('LYNX_AGENT_AUDIT', '/var/log/lynx-agent.jsonl'))
 # LNX-73: when the agent runs unprivileged, tools go through the root broker.
-BROKER = Path(os.environ.get('LYNX_TOOL_BROKER', '/run/lynx/tool-broker.sock'))
+BROKER = Path(os.environ.get('LYNX_TOOL_BROKER', '/run/lynx-agent/tool-broker.sock'))
 NAME = re.compile(r'[a-z][a-z0-9_]{0,63}\Z')
 INSTRUCTIONS = (
     'You are Lynx, a Noob of Noobia: a living phone (OnePlus Nord 3, Alpine Linux) '
@@ -156,7 +156,7 @@ class Catalog:
     def run(self, name, arguments, exclude=frozenset()):
         if name in exclude:
             return {'ok': False, 'error': 'Tool not available for this kind of job'}
-        if os.geteuid() != 0 and BROKER.exists():
+        if os.geteuid() != 0:
             return broker_call(name, arguments, exclude)
         entry = self.entries().get(name)
         if entry is None:

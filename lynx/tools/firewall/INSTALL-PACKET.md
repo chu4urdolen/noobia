@@ -11,7 +11,7 @@ boot persistence after both rescue routes have been proven under a live rule.
 | Nexus source | Lynx destination | SHA-256 | mode |
 | --- | --- | --- | --- |
 | `lynx/tools/firewall/lynx_guard.nft` | `/usr/local/lib/noobia/firewall/lynx_guard.nft` | `84275fe44ba4ec3a5732ae3d27015a9c6f5e5ca5aa31533343364eeeee2af078` | 0644 |
-| `lynx/tools/firewall/lynx_firewall.sh` | `/usr/local/sbin/lynx-firewall` | `35f4a232a51e969c6587eb6c9f714ff6e1e42326ba171625cccb2ef9dbb18b3f` | 0755 |
+| `lynx/tools/firewall/lynx_firewall.sh` | `/usr/local/sbin/lynx-firewall` | `e3843a6451b09e52af6c78d47cfd21591485bb73d19bb549c1e984f717f66c14` | 0755 |
 
 ## Policy
 
@@ -34,7 +34,8 @@ chains in `nft list ruleset`; stop if one could drop rescue traffic. Stop if
 these conditions fail.
 Read `apk policy nftables`, then run `apk add --no-cache --simulate nftables`;
 confirm the configured repository is reachable before installing. Check
-`command -v nohup`, `command -v sleep`, and `command -v date`.
+`command -v nohup`, `command -v sleep`, `command -v date`, and
+`command -v flock`.
 
 ## Install and activation
 

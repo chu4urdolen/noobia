@@ -8,6 +8,17 @@ NFT=${LYNX_FIREWALL_NFT:-nft}
 DELAY=${LYNX_FIREWALL_DELAY:-120}
 SCRIPT=$(command -v "$0")
 
+# Serialize rule changes and confirmation so the timer cannot win a race at
+# the confirmation boundary. The timer sleeps before taking this lock.
+case ${1:-} in
+  enable|confirm|disable|_rollback_locked)
+    mkdir -p "$STATE"
+    chmod 700 "$STATE"
+    exec 9>"$STATE/lock"
+    flock -x 9
+    ;;
+esac
+
 case ${1:-} in
   enable)
     command -v "$NFT" >/dev/null || { echo 'nft unavailable' >&2; exit 1; }
@@ -16,15 +27,13 @@ case ${1:-} in
     if "$NFT" list table inet lynx_guard >/dev/null 2>&1; then
       echo 'lynx_guard already loaded; refuse to replace' >&2; exit 1
     fi
-    mkdir -p "$STATE"
-    chmod 700 "$STATE"
     if test -f "$STATE/pending"; then
       echo 'rollback already pending' >&2; exit 1
     fi
     # A local timer survives loss of SSH. Never flush anyone else's tables.
     token="$(date +%s)-$$"
     printf '%s\n' "$token" > "$STATE/pending"
-    nohup /bin/sh "$SCRIPT" _rollback "$token" </dev/null >/dev/null 2>&1 &
+    nohup /bin/sh "$SCRIPT" _rollback "$token" 9>&- </dev/null >/dev/null 2>&1 &
     echo "$!" > "$STATE/timer.pid"
     if ! "$NFT" -f "$RULES"; then
       rm -f "$STATE/pending"
@@ -36,6 +45,9 @@ case ${1:-} in
     ;;
   _rollback)
     sleep "$DELAY"
+    exec /bin/sh "$SCRIPT" _rollback_locked "${2:-}"
+    ;;
+  _rollback_locked)
     if test -f "$STATE/pending" && test "$(cat "$STATE/pending")" = "${2:-}"; then
       "$NFT" delete table inet lynx_guard >/dev/null 2>&1 || true
       rm -f "$STATE/pending" "$STATE/timer.pid"

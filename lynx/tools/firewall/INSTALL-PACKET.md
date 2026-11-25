@@ -61,7 +61,7 @@ confirm the configured repository is reachable before installing. Check
 
    Compare hashes with the table and modes with 644/755. Stop on any mismatch.
 3. On Lynx, run `nft -c -f /usr/local/lib/noobia/firewall/lynx_guard.nft`.
-   Expected: exit 0, no parse errors. Run `lynx-firewall enable`. Expected:
+   Expected: exit 0, no parse errors. Run `/usr/local/sbin/lynx-firewall enable`. Expected:
    `loaded; auto-revert in 120s unless confirmed` and `status` = `pending`.
    The Lynx-local timer removes only `inet lynx_guard` after 120 seconds if
    confirmation does not arrive. **Do not confirm from the original SSH
@@ -72,14 +72,14 @@ confirm the configured repository is reachable before installing. Check
    --assert-ready` over 2222; check the NRP health through its normal tool.
    Record each result and its timestamp. If any check fails, wait for local
    rollback and verify access again. Do not confirm.
-5. If every check passes, run `lynx-firewall confirm` from a **new** SSH
+5. If every check passes, run `/usr/local/sbin/lynx-firewall confirm` from a **new** SSH
    session before 120 seconds elapse. Expected: `confirmed; runtime rules
    retained until disable or reboot`; `status` = `active`. Recheck all three
    ports, Wi-Fi address, SSH, NRP, DHCP renewal behavior, and `lynx-board`.
 
 ## Disable and rollback
 
-`lynx-firewall disable` removes only `inet lynx_guard`, immediately. On a
+`/usr/local/sbin/lynx-firewall disable` removes only `inet lynx_guard`, immediately. On a
 lost link, wait at least 120 seconds and reconnect: the Lynx-local timer
 deletes that table unless confirmed. The timer never reboots or powers down
 Lynx. If the installed rules have been confirmed but behave badly later,

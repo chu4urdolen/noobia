@@ -195,8 +195,8 @@ def cmd_doctor() -> dict:
         # musl asks every server at once, so one dead server costs nothing while another
         # answers (measured 21-53 ms lookups on Lynx with one dead): a note, not a failure.
         ("dns", dns_ok, ("every server answers" if not dead else
-                         f"names resolve, but server(s) {', '.join(dead)} do not answer (set by hand "
-                         f"in /etc/resolv.conf)") if dns_ok else "no DNS server answers: names do not resolve"),
+                         f"names resolve, but server(s) {', '.join(dead)} do not answer (from the router's DHCP "
+                         f"settings, copied into /etc/resolv.conf)") if dns_ok else "no DNS server answers: names do not resolve"),
     ]
     first_bad = next((l for l in layers if not l[1]), None)
     d = nw.diagnose(obs)

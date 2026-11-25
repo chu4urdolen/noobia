@@ -102,12 +102,15 @@ First live run, 2026-11-25: **OK**: secrets protected; boot pins match
 ```
 kernel.kptr_restrict = 1
 kernel.dmesg_restrict = 1            # root (and the rescue tools) can still read dmesg
-kernel.unprivileged_bpf_disabled = 1
+kernel.unprivileged_bpf_disabled = 2
 net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.all.rp_filter = 2      # loose: keeps Wi-Fi + cellular routes working
 ```
 
 (`tcp_syncookies` and `yama.ptrace_scope` do not exist in this kernel.)
+Use value `2` for unprivileged BPF so an administrator can restore `0` during
+rollback. Value `1` cannot be cleared until reboot, per the
+[kernel sysctl documentation](https://www.kernel.org/doc/html/v5.13/admin-guide/sysctl/kernel.html#unprivileged-bpf-disabled).
 
 > **Never let `apk` upgrade `musl` or `openrc`.** The boot hand-off pins their
 > hashes: an upgrade means every boot is refused. Lynx's apk-tools 3.0.8 has no

@@ -18,7 +18,11 @@ DONE_DAYS=${TIDY_DONE_DAYS:-2}                # finished agent jobs kept 2 days
 JOBS=/var/lib/lynx-agent/jobs
 LOGS="/var/log/lynx-agent.jsonl /var/log/lynx-agent-worker.log /var/log/lynx-senses.log
       /var/log/lynx-bluetoothd.log /var/lib/noobia/lynx_thought.txt
-      /var/log/lynx-tidy.log /var/log/lynx-charge-guard.log /var/log/lynx-camera-sense.log"
+      /var/log/lynx-tidy.log /var/log/lynx-charge-guard.log /var/log/lynx-camera-sense.log
+      /run/lynx/alpine-dropbear-2222.log /run/lynx/dropbear.log"
+# The dropbear logs live in /run (RAM, 128 MiB) and grew ~0.8 MiB/h; dropbear holds
+# them with O_APPEND (fdinfo flags 0402001, checked 2026-11-25), so in-place
+# trimming is safe and SSH itself is never touched (Tom: leave 22 alone).
 
 # Files whose writers open them anew for every append: replaced atomically
 # (a reader such as the display never sees a half-written file). All other
@@ -34,7 +38,10 @@ trim() {
     # Keep whole lines: drop the first (partial) line of the kept tail.
     "$BB" tail -c "$KEEP_BYTES" "$f" | "$BB" sed '1d' > "$tmp" || { rm -f "$tmp"; return 0; }
     case " $ATOMIC " in
-        *" $f "*) chmod --reference="$f" "$tmp" 2>/dev/null; mv -f "$tmp" "$f" ;;
+        *" $f "*)   # BusyBox has no chmod --reference: copy mode and owner by hand
+            chmod "$("$BB" stat -c %a "$f")" "$tmp" 2>/dev/null
+            chown "$("$BB" stat -c %u:%g "$f")" "$tmp" 2>/dev/null
+            mv -f "$tmp" "$f" ;;
         *) cat "$tmp" > "$f" && rm -f "$tmp" ;;
     esac
     echo "LYNX_TIDY_TRIMMED $f from=$size to=$("$BB" stat -c %s "$f")"
@@ -60,7 +67,7 @@ once() {
 case "${1:-}" in
     --once) once ;;
     --watch)
-        trap 'rm -f /var/log/*.tidy.* /var/lib/noobia/*.tidy.* 2>/dev/null; exit 0' TERM INT
+        trap 'rm -f /var/log/*.tidy.* /var/lib/noobia/*.tidy.* /run/lynx/*.tidy.* 2>/dev/null; exit 0' TERM INT
         while :; do once; "$BB" sleep "$INTERVAL" & wait $!; done ;;
     *) echo 'Usage: lynx-tidy.sh --once|--watch' >&2; exit 2 ;;
 esac

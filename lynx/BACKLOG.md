@@ -29,26 +29,26 @@ Capability classes:
 | LNX-01 | SIM initialization and PIN management | O | **Aria** |
 | LNX-02 | Cellular registration and carrier configuration | O | **Aria** |
 | LNX-03 | Mobile internet, APN and IP configuration | O | **Aria** |
-| LNX-04 | Cellular radio measurements (RSRP, RSRQ, SINR, RSSI) | A | **Banshee** |
-| LNX-05 | Non-disruptive serving and neighboring cell discovery | A | **Banshee** |
-| LNX-06 | Cell handover monitoring | A | **Banshee** |
-| LNX-07 | LTE, 5G NSA and 5G SA identification | A | **Banshee** |
+| LNX-04 | Cellular radio measurements (RSRP, RSRQ, SINR, RSSI) | A | **Gwyn** (from Banshee) — built, waits for hardware: cell sense `signal.change` + `lynx-netintel cell`; needs a modem service writing /run/lynx/cell.json (modem md1 not booted; Aria's LNX-01..03) |
+| LNX-05 | Non-disruptive serving and neighboring cell discovery | A | **Gwyn** (from Banshee) — built, waits for hardware: cell sense `tower.discovered` (serving+neighbours); same provider |
+| LNX-06 | Cell handover monitoring | A | **Gwyn** (from Banshee) — built, waits for hardware: cell sense `handover`; same provider |
+| LNX-07 | LTE, 5G NSA and 5G SA identification | A | **Gwyn** (from Banshee) — built, waits for hardware: cell sense `technology.change`, `lynx-netintel cell` names LTE/5G NSA/SA; same provider |
 | LNX-08 | SMS interface | O | **Aria** |
 | LNX-09 | Voice telephony | O | **Aria** |
-| LNX-10 | GNSS positioning | A | **Banshee** |
-| LNX-11 | Cellular coverage mapping for Bee | A | **Banshee** |
-| LNX-12 | Cellular data usage monitoring | A | **Banshee** |
+| LNX-10 | GNSS positioning | A | **Gwyn** (from Banshee) — built, waits for hardware: location sense reads /run/lynx/gnss.json; no GNSS device node on Lynx yet |
+| LNX-11 | Cellular coverage mapping for Bee | A | **Gwyn** (from Banshee) — built, waits for hardware: coverage rows to /var/lib/noobia/cellmap.db (cell_obs, Bee-style) once fix + cell exist; Bee link = LNX-43 TODO |
+| LNX-12 | Cellular data usage monitoring | A | **Gwyn** (from Banshee) — done, live: ccmni byte counters, kept across reboots, `data.usage` every 100 MB, `lynx-netintel stats` |
 
 ### B. Advanced network intelligence
 
 | ID | Feature task | Class | Owner |
 | --- | --- | --- | --- |
-| LNX-13 | Authorized network topology discovery | A | **Banshee** |
-| LNX-14 | mDNS, SSDP and service discovery | A | **Banshee** |
-| LNX-15 | Traffic statistics and protocol classification | A | **Banshee** |
-| LNX-16 | Authorized vulnerability auditing | A | **Banshee** |
-| LNX-17 | Network anomaly detection | A | **Banshee** |
-| LNX-18 | Bluetooth and BLE discovery | A | **Banshee** |
+| LNX-13 | Authorized network topology discovery | A | **Gwyn** (from Banshee) — done, live: `lynx-netintel discover` (gateway, subnet, neighbours) |
+| LNX-14 | mDNS, SSDP and service discovery | A | **Gwyn** (from Banshee) — done, live: `lynx-netintel discover` mDNS + SSDP (found the Hue bridge) |
+| LNX-15 | Traffic statistics and protocol classification | A | **Gwyn** (from Banshee) — done, live: `lynx-netintel stats` (rates, TCP/UDP/ICMP counters, connections by service) |
+| LNX-16 | Authorized vulnerability auditing | A | **Gwyn** (from Banshee) — done, live: `lynx_net_diag vuln-check` fixed: remote targets were audited with Lynx's own netstat; now risky ports + SSH/HTTP banners |
+| LNX-17 | Network anomaly detection | A | **Gwyn** (from Banshee) — done, live: netwatch `anomaly` (gateway MAC, ARP conflict, DNS change, neighbour crowd) |
+| LNX-18 | Bluetooth and BLE discovery | A | **Gwyn** (from Banshee) — built (`lynx-netintel ble-scan`); BLOCKED: the controller refuses discovery (org.bluez.Error.InProgress) while the BLE GATT link advertises; for Aria's BT stack |
 | LNX-19 | WiFi and cellular routing configuration | O | **Aria** |
 | LNX-20 | Connection continuity and session recovery | I | **Aria** |
 | LNX-21 | Encrypted tunnel to Noobia | I | **Aria** |
@@ -61,17 +61,17 @@ Capability classes:
 
 | ID | Feature task | Sensory event | Owner |
 | --- | --- | --- | --- |
-| LNX-26 | Cell discovery | cell.tower.discovered | **Banshee** |
-| LNX-27 | Cell handover | cell.handover | **Banshee** |
-| LNX-28 | Cellular technology change | cell.technology.change | **Banshee** |
-| LNX-29 | Cellular signal change | cell.signal.change | **Banshee** |
-| LNX-30 | Bluetooth discovery | bluetooth.device.discovered | **Banshee** |
-| LNX-31 | Network topology change | network.topology.change | **Banshee** |
-| LNX-32 | Network anomaly | network.anomaly | **Banshee** |
-| LNX-33 | Routing change | network.route.change | **Banshee** |
-| LNX-34 | Geographical movement | location.change | **Banshee** |
-| LNX-35 | Connectivity quality change | network.quality.change | **Banshee** |
-| LNX-36 | Cellular registration change | cell.registration.change | **Banshee** |
+| LNX-26 | Cell discovery | cell.tower.discovered | **Gwyn** (from Banshee) — built, waits for hardware: cell `tower.discovered` |
+| LNX-27 | Cell handover | cell.handover | **Gwyn** (from Banshee) — built, waits for hardware: cell `handover` |
+| LNX-28 | Cellular technology change | cell.technology.change | **Gwyn** (from Banshee) — built, waits for hardware: cell `technology.change` |
+| LNX-29 | Cellular signal change | cell.signal.change | **Gwyn** (from Banshee) — built, waits for hardware: cell `signal.change` (RSRP bands, 2 samples) |
+| LNX-30 | Bluetooth discovery | bluetooth.device.discovered | **Gwyn** (from Banshee) — done, live: bluetooth sense `device.discovered`, passive (reads bluetoothd) |
+| LNX-31 | Network topology change | network.topology.change | **Gwyn** (from Banshee) — done, live: netwatch `topology.change` (roam, network, subnet) |
+| LNX-32 | Network anomaly | network.anomaly | **Gwyn** (from Banshee) — done, live: netwatch `anomaly`, journaled |
+| LNX-33 | Routing change | network.route.change | **Gwyn** (from Banshee) — done, live: netwatch `route.change` |
+| LNX-34 | Geographical movement | location.change | **Gwyn** (from Banshee) — built, waits for hardware: location `change` (> 50 m); needs GNSS |
+| LNX-35 | Connectivity quality change | network.quality.change | **Gwyn** (from Banshee) — done, live: netwatch `quality.change` good/fair/poor/down, confirmed over 2 samples |
+| LNX-36 | Cellular registration change | cell.registration.change | **Gwyn** (from Banshee) — built, waits for hardware: cell `registration.change` |
 
 All senses are observational and classified as A.
 
@@ -95,9 +95,9 @@ All senses are observational and classified as A.
 | LNX-45 | Offline event journal and synchronization | I | **Aria** |
 | LNX-46 | Remote inference failover | I | **Aria** |
 | LNX-47 | Reflex inference priority | I | **Gwyn** — measured (docs/LNX-47-REFLEX-PRIORITY). Tom 2026-11-25: for now Lynx runs while Dushich is not running; no model change |
-| LNX-48 | Noob communication discovery | A | **Banshee** |
-| LNX-49 | Connectivity failure diagnosis and reporting | A | **Banshee** |
-| LNX-50 | Radio capability registry | I | **Banshee** |
+| LNX-48 | Noob communication discovery | A | **Gwyn** (from Banshee) — done, live: `lynx-netintel discover`: Nexus's services + neighbours speaking NRP |
+| LNX-49 | Connectivity failure diagnosis and reporting | A | **Gwyn** (from Banshee) — done, live: `lynx-netintel doctor` (layers + each DNS server) and the why in `quality.change`; found: DNS 185.82.217.89 does not answer |
+| LNX-50 | Radio capability registry | I | **Gwyn** (from Banshee) — done, live: `lynx-netintel radios`, also /run/lynx/radios.json |
 
 ### F. Persistent cellular infrastructure
 
@@ -119,9 +119,9 @@ These tasks focus on threats originating from other phones and ordinary network-
 | ID | Feature task | Class | Owner |
 | --- | --- | --- | --- |
 | LNX-59 | Port scanning detection | I | **Banshee** (DONE: lynx_sense_security.py) |
-| LNX-60 | Service fingerprinting detection | I | **Banshee** |
+| LNX-60 | Service fingerprinting detection | I | **Gwyn** (from Banshee) — done, live: guard `probe.detected` (pre-auth SSH exits, closed-port reset bursts) |
 | LNX-61 | TCP/UDP flood detection | I | **Banshee** (DONE: lynx_sense_security.py) |
-| LNX-62 | Application-layer DoS protection | I | **Banshee** |
+| LNX-62 | Application-layer DoS protection | I | **Gwyn** (from Banshee) — covered: her only app-layer service is NRP (Aria's LNX-70/84 limits packet) + SSH (left alone, Tom); exhaustion perceived by LNX-103 |
 | LNX-63 | Exposed service vulnerability audit | O | **Gwyn** (DONE: lynx_exposure_audit.py) |
 | LNX-64 | Kernel vulnerability audit | O | **Gwyn** — done (config audit, kernel) |
 | LNX-65 | Stateful IPv4 and IPv6 firewall | I | **Aria** |
@@ -130,7 +130,7 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-68 | Cryptographic Nexus authentication | I | **Aria** |
 | LNX-69 | Agent prompt injection protection | I | **Gwyn** — done, live (5f5fad1) |
 | LNX-70 | Network resource exhaustion protection | I | **Aria** |
-| LNX-71 | Unauthorized configuration change detection | I | **Banshee** |
+| LNX-71 | Unauthorized configuration change detection | I | **Gwyn** (from Banshee) — done, live: guard `config.changed` (hashes; secrets only stat()ed); verified end to end |
 | LNX-72 | Filesystem integrity monitoring | I | **Banshee** (DONE: lynx_sense_security.py) |
 | LNX-73 | Agent privilege isolation | I | **Gwyn** — built; install packet for Aria (2026-11-25: BusyBox `setpriv` lacks `--reuid`, so the worker now drops privileges in Python; packet updated) |
 | LNX-74 | Security incident journal | I | **Banshee** (DONE: /var/log/lynx/security.jsonl) |
@@ -149,7 +149,7 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-87 | Security configuration audit tool | O | **Gwyn** — done (config audit); hardening for Aria |
 | LNX-88 | Read-only agent security diagnostic tool | A | **Gwyn** — done, live (lynx_security_status) |
 | LNX-89 | Authorized security regression testing suite | O | **Gwyn** — done (regression suite, 15/15) |
-| LNX-90 | Security event reporting to Aigel | I | **Banshee** |
+| LNX-90 | Security event reporting to Aigel | I | **Gwyn** (from Banshee) — covered by design: security lines ride the autonomy route to Aigel when Tom re-enables Aigel (signed replies = LNX-84); journal /var/log/lynx/security.jsonl meanwhile |
 | LNX-91 | Security incident synchronization with Argus | I | **Aria** |
 | LNX-92 | Cellular inbound reachability assessment | O | **Aria** |
 | LNX-93 | Upstream DDoS mitigation assessment | O | **Aria** |
@@ -165,9 +165,9 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-98 | Intrusion perception | security.intrusion.suspected | **Banshee** (DONE) |
 | LNX-99 | Integrity violation perception | security.integrity.changed | **Banshee** (DONE) |
 | LNX-100 | Prompt injection perception | security.prompt.injection.suspected | **Gwyn** — done, live |
-| LNX-101 | Untrusted endpoint perception | security.endpoint.untrusted | **Banshee** |
-| LNX-102 | Malicious message perception | security.message.suspicious | **Banshee** |
-| LNX-103 | Resource exhaustion perception | security.resource.exhaustion | **Banshee** |
+| LNX-101 | Untrusted endpoint perception | security.endpoint.untrusted | **Gwyn** (from Banshee) — done, live: guard `endpoint.untrusted` (/etc/lynx/trusted-endpoints.json) |
+| LNX-102 | Malicious message perception | security.message.suspicious | **Gwyn** (from Banshee) — done, live: `check_message` in the one door (control chars, floods, blobs, sneaky links) -> `security message.suspicious` |
+| LNX-103 | Resource exhaustion perception | security.resource.exhaustion | **Gwyn** (from Banshee) — done, live: guard `resource.exhaustion` / `resource.recovered` (memory, disks, RAM disks, handles, processes, load, TCP orphans) |
 
 All classified as A.
 

@@ -304,6 +304,7 @@ Lynx's code-writing personality. It is set up on its own now. The button that le
 | --- | --- | --- | --- |
 | `lynx_net_diag` | `action=net-ifaces|lan-sweep|wifi-recon|port-scan|vuln-check|ssl-audit|dns-audit|traceroute|packet-sample*, target, host, port, ports, domain, count, iface, fork` | 20 s | `net-ifaces`, `lan-sweep` (ARP neighbours), `wifi-recon` (APs nearby), `port-scan`, `vuln-check`, `ssl-audit`, `dns-audit`, `traceroute`, `packet-sample` (tcpdump). `fork:true` runs it in the background and the findings come back as sense lines. See Open Issues on scope. |
 | `lynx_cellular_diag` | `action=sim-check|modem-status|5g-bands|ccmni-stats|cell-recon|at-probe*, fork` | 18 s | `sim-check`, `modem-status`, `5g-bands`, `ccmni-stats`, `cell-recon`, `at-probe` (writes AT commands to the modem: treat as a physical action). `fork:true` as above. |
+| `lynx_netintel` | `action=stats|doctor|discover|radios|ble-scan|cell*, seconds` | 30 s | (Gwyn, 2026-11-25) `stats`: traffic, protocol counters, connections by service, mobile data. `doctor`: the first broken layer (Wi-Fi, address, route, gateway, Nexus, each DNS server). `discover`: gateway, neighbours, mDNS/SSDP services, reachable Noobs. `radios`: the radio registry (also `/run/lynx/radios.json`). `ble-scan`: a bounded Bluetooth scan (the controller currently refuses). `cell`: measurements from `/run/lynx/cell.json`. All gated by the tool policy. |
 
 ## 13. Every Sense
 
@@ -336,6 +337,25 @@ Source: `lynx/senses/<sense>/lynx_sense_<sense>.py`. Tests: `python3 -m unittest
 | **telepathy** | Nexus state: GPU busy (Dushich thinking), Rose audio, Iris motion, forge-db notes mentioning Lynx | 30 s | `mesh.telepathy friend=... state=...` | "Your friend dushich is thinking." |
 
 Every sense except touch also writes a routine `status.sample` line now and then; those never reach her as sentences.
+
+### Senses added 2026-11-25 (Gwyn, Rose's backlog, picked up from Banshee)
+
+All four run in `lynx-senses` every 30 s. They are written on a small kit, `senses/common/lynx_sense_kit.py` (observe, then detect), and they emit nothing on the first sample.
+
+| Sense | Events | What it watches |
+| --- | --- | --- |
+| guard (line name `security`) | `resource.exhaustion` / `resource.recovered`, `config.changed`, `endpoint.untrusted`, `probe.detected` | **Resources:** memory, every disk and RAM disk, file handles, processes, load per CPU, TCP orphans (alarm at 90/80 %, clear at 80/70 %; disks 90/85 %).<br>**Configuration:** 177 files are hashed, secrets only `stat()`ed, and the snapshot is kept in its own file.<br>**Endpoints:** peers connected to her ports that are not Nexus, herself, or in `/etc/lynx/trusted-endpoints.json`.<br>**Probes:** pre-auth SSH exits, bursts of resets to closed ports.<br>Every event is journaled. |
+| netwatch | `route.change`, `topology.change`, `quality.change`, `anomaly` | Gateway, address, BSSID/SSID, subnet; two pings to the gateway and one TCP connect to Nexus.<br>Quality changes are confirmed over 2 samples; poor or down says why.<br>Anomalies: the gateway's MAC changes, one MAC answers for the gateway and others, the DNS servers change, 10 or more new neighbours appear at once. |
+| cell (+ `location`) | `tower.discovered`, `handover`, `technology.change`, `signal.change`, `registration.change`, `data.usage`; `location change` | Reads `/run/lynx/cell.json` and `/run/lynx/gnss.json`, which a future modem or GNSS service writes. Contract in the module's docstring; a file older than 120 s counts as absent.<br>It never touches the modem (Rose's rules 1-3).<br>Data usage comes from the ccmni counters. Coverage rows go to `/var/lib/noobia/cellmap.db`. |
+| bluetooth | `device.discovered` | Passive: what bluetoothd already knows (D-Bus); no scan of its own. |
+
+LNX-102: the one door into her mind (`build_prompt`) also runs `check_message` before the injection filter. It removes control and escape characters, shortens floods, hides encoded blobs, flags links that hide where they go, and emits `security message.suspicious`.
+
+**Found on 2026-11-25:**
+* Her first DNS server, 185.82.217.89, does not answer, so lookups wait through its timeouts before 8.8.8.8 replies.
+* The BLE controller refuses discovery (`InProgress`) while the GATT link advertises.
+* `/run` is 56 % full: the SSH log in it is not rotated.
+* Banshee's S10 reported UDP client sockets as intrusions. Fixed.
 
 ## 14. The Senses DB (pattern store)
 

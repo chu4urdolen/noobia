@@ -57,6 +57,10 @@ can check them without opening code:
 | nexus (S8) | `nexus.unreachable` / `nexus.reachable` (P1) | TCP probe 192.168.100.106:8080 (env `NOOBIA_NEXUS_HOST`/`NOOBIA_NEXUS_PORT`) | 2 consecutive failures / 1 success |
 | hearing (S9) | `hearing.speech` / `hearing.sound` (P20) | Sound/speech heard when hearing toggle is enabled | Disabled by default to prevent audio spam |
 | security (S10) | `security.portscan.detected`, `security.authentication.failed`, `security.flood.detected`, `security.intrusion.suspected`, `security.integrity.changed` (P20) | Attack/anomaly indicator observed | Cooldowns 60-120s; incident journal /var/log/lynx/security.jsonl |
+| guard (S11, line `security`) | `resource.exhaustion`/`resource.recovered`, `config.changed`, `endpoint.untrusted`, `probe.detected` | LNX-103/71/101/60 (Gwyn) | state + change-only `config.json`; cooldowns 300-600 s; journaled |
+| netwatch (S12) | `route.change`, `topology.change`, `quality.change`, `anomaly` | LNX-33/31/35/49/32/17 (Gwyn) | quality confirmed over 2 samples |
+| cell (S13) + location | `tower.discovered`, `handover`, `technology.change`, `signal.change`, `registration.change`, `data.usage`; `location change` | LNX-04-07/10-12/26-29/34/36 (Gwyn); reads /run/lynx/cell.json + gnss.json | quiet (`source: none`) until a modem/GNSS service writes them |
+| bluetooth (S14) | `device.discovered` | LNX-30 (Gwyn), passive | first sight baselines |
 | wifi, power, hearing, security | `status.sample` (P0) | every 15th sample | P0 never closes a chunk: `trigger.py` triggers on `p >= 1` |
 
 Charging state: `lynx-status` (schema 2) has no charger field; state is

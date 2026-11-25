@@ -85,7 +85,7 @@ All senses are observational and classified as A.
 | LNX-40 | Bluetooth visualization | A | **Gwyn** — done (RADIO: Bluetooth) |
 | LNX-41 | Network topology visualization | A | **Gwyn** — done (RADIO: network map) |
 | LNX-42 | Live network activity visualization | A | **Gwyn** — done (RADIO: live traffic) |
-| LNX-43 | Bee's Singularity Map integration | I | **Gwyn** — Bee found (github `chu4urdolen/bee`: a BT-tethered NanoPi NEO Air 2 field agent; Wi-Fi + GPS into `singularity.db`, fog-circle map). Proposed: Lynx tethers Bee over BT, sends her GNSS fixes to Bee's `/gps`, shows Bee's map summary on RADIO. Blocked on Lynx GNSS (no fix yet) and Tom's go for the pairing |
+| LNX-43 | Bee's Singularity Map integration | I | **TODO** (Tom, 2026-11-25). Bee: BT-tethered NanoPi NEO Air 2 field agent, github `chu4urdolen/bee` (Wi-Fi + GPS into `singularity.db`, fog-circle map). Idea: Lynx tethers Bee, sends GNSS fixes to Bee's `/gps`, RADIO shows Bee's map summary. Needs Lynx GNSS first |
 
 ### E. Independent operation
 

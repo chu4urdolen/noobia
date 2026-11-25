@@ -277,15 +277,21 @@ All 44 live in `/usr/local/share/lynx/agent-tools/` as a manifest (`<name>.json`
 
 ### Her coder: Codex CLI (Gwyn, 2026-11-25)
 
-Lynx's code-writing personality. It is set up for people now; it becomes an agent tool later.
+Lynx's code-writing personality. It is set up on its own now. The button that lets Lynx or a person start it comes later, with Banshee's debug screen.
 
-* **What it is:** Codex CLI 0.167.0 (`/usr/local/libexec/lynx/codex`), thinking with Qwen `qwen3.8-27b` through the Nexus proxy (`:8080`, `wire_api = "responses"`).
-* **Who it runs as:** the unprivileged user `lynx-coder`, working in `/home/lynx-coder/work` (mode 700).
-* **Personality:** `/home/lynx-coder/.codex/AGENTS.md`, which also holds her rules (no reboot, no pinned files, no services, no scanning, no keys).
-* **Config:** `/home/lynx-coder/.codex/config.toml`. Source copies of both files are in `lynx/coder/`. The key file stays on the phone only.
-* **Start it:** as root on Lynx, `lynx-code` for an interactive session, or `lynx-code exec "task"` for one task.
-* **Sandbox:** none of Codex's own. The kernel has no user namespaces (`CONFIG_USER_NS` unset), so bubblewrap cannot start, and `sandbox_mode` is `danger-full-access`. The Unix user is the boundary: no root, no capabilities, other homes closed.
-* **Load:** it shares Qwen's single slot with everyone else. Use it while Dushich is idle.
+* **What it is:** Codex CLI 0.167.0 (`/usr/local/libexec/lynx/codex`), thinking with Qwen `qwen3.8-27b` through the Nexus proxy (`:8080`, Responses API).
+* **Who it runs as:** the user `lynx-coder`. Her home workshop is `/home/lynx-coder/work`.
+* **Completely free (Tom):** no approvals, no sandbox, and passwordless root through `sudo` (`/etc/sudoers.d/lynx-coder`).
+* **Personality:** `/home/lynx-coder/.codex/AGENTS.md`, which includes "Know your own body": reboots can brick her, the three boot files are pinned, and the rescue SSH ports stay open.
+* **Sources:** in `lynx/coder/`, with a README on how to hook it up. The key file stays on the phone.
+* **Start it (as root):**
+  * `lynx-code` for a conversation;
+  * `lynx-code exec "task"` for one task;
+  * `lynx-code exec --json "task"` for a JSON event stream (for a screen or a tool);
+  * `lynx-code exec resume --last "..."` to continue;
+  * `lynx-code app-server` to run it as a server.
+* **Package safety:** `sudo` 1.9.17 was added on its own. `musl` and `openrc` are pinned in `/etc/apk/world`, so even a root `apk upgrade` keeps them.
+* **Load:** it shares Qwen's single slot. Use it while Dushich is idle.
 
 ### Diagnostics (Banshee, 2026-11-24; CHAT only)
 

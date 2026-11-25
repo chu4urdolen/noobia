@@ -4,9 +4,9 @@ model = "qwen3.8-27b"
 model_provider = "nexus"
 model_context_window = 131072
 approval_policy = "never"
-# Lynx's kernel has no user namespaces (CONFIG_USER_NS unset), so Codex's bubblewrap
-# sandbox cannot start. The boundary is the Unix user: lynx-coder has no root, no
-# capabilities, and a 700 home. Rules for her are in AGENTS.md next to this file.
+# Tom 2026-11-25: completely free. No approvals, no sandbox (the kernel has no user
+# namespaces for bubblewrap anyway), and lynx-coder has passwordless sudo
+# (/etc/sudoers.d/lynx-coder). What keeps her alive is in AGENTS.md next to this file.
 sandbox_mode = "danger-full-access"
 check_for_update_on_startup = false
 

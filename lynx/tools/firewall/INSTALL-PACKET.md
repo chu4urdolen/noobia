@@ -39,9 +39,10 @@ confirm the configured repository is reachable before installing. Check
 
 ## Install and activation
 
-1. On Lynx, `apk add --no-cache nftables`. This is the only package change. Record exact
-   package version and `nft --version`. Do not enable the Alpine nftables
-   OpenRC service.
+1. On Lynx, `apk add --no-cache nftables`. The 2026-11-25 simulation on Lynx
+   resolves four packages: `gmp 6.3.0-r4`, `libnftnl 1.3.1-r0`, `nftables
+   1.1.6-r1`, and `nftables-openrc 1.1.6-r1`. Record exact installed versions
+   and `nft --version`. Do not enable the Alpine nftables OpenRC service.
 2. From `/noobia` on Nexus, use the pinned SSH identity and host key to stream
    each file (Lynx has no `scp` or SFTP server):
 

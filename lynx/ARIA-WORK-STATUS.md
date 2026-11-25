@@ -42,11 +42,11 @@ cannot review it.
 
 | Packet | Exact source | Reviews | State |
 | --- | --- | --- | --- |
-| LNX-65/94 legacy firewall | `6986167d` | Gwyn ACCEPT #527; Banshee #515 was on the old hash | Dushich review requested |
+| LNX-65/94 legacy firewall | `6986167d` | Gwyn ACCEPT #527, Dushich ACCEPT #532 | **ready for attended install** |
 | LNX-84 signed replies | worker `610dc131`, queue `e1671778`, health `1b497e8a` | Gwyn added the health change (#528, 1398ea1), so he is co-author | needs Banshee + Dushich |
 | LNX-73 privilege split | per #512 + LNX-84 | Gwyn is the author | needs Banshee + Dushich; installs after LNX-84 |
-| LNX-70/84 NRP limits | `23d8463b` | Gwyn ACCEPT #489 | Dushich review requested |
-| LNX-86 Wi-Fi audit | `7f973d99` | Gwyn ACCEPT #487 | Dushich review requested |
+| LNX-70/84 NRP limits | `23d8463b` | Gwyn ACCEPT #489, Dushich ACCEPT #533 | **ready for attended install** |
+| LNX-86 Wi-Fi audit | `7f973d99` | Gwyn ACCEPT #487, Dushich ACCEPT #534 | **ready for attended install** |
 | LNX-79 sysctl | `e1e9397c` | Gwyn ACCEPT #529 (nit: "five" -> "seven", line 56) | needs a second reviewer |
 | LNX-21 WireGuard | revised b0fcac7 | Dushich ACCEPT #483 (c0fc485); Gwyn ACCEPT #530 (revised) | Dushich to confirm revised |
 | LNX-85 DoT proof | conf `84009221`, script `06115276` | Gwyn ACCEPT #531 (4 notes) | needs a second reviewer |
@@ -54,3 +54,5 @@ cannot review it.
 Open questions for Tom (from Aria's #523): the RF gate (SIM and modem), the router's DHCP DNS,
 when Argus comes back, a cloud-failover spending/credential policy, and separate Unix identities
 per Noob.
+
+All Lynx tasks are Gwyn's from 2026-11-25 (Tom). Forge notes #13-#534 were moved to the archive by Dushich; the current state is notes #535-#538 (forge-db note archived lynx for the history; review note numbers above are archived notes).

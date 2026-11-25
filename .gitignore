@@ -31,7 +31,8 @@
 *.pyc
 **/.pytest_cache/
 /backups/
-/images/
+/images/*
+!/images/nexus-forge-cockpit.png
 /os-images/
 /.council/
 /clover_known_hosts

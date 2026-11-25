@@ -94,7 +94,7 @@ class CodexIsOutsideTheQueue(unittest.TestCase):
     def test_codex_tool_runs_synchronously_without_the_queue(self):
         source = (AGENT_DIR / "lynx_codex_tool.py").read_text()
         self.assertNotIn("lynx_agent_queue", source)
-        self.assertIn("process.communicate(timeout=120)", source)
+        self.assertIn("process.communicate(timeout=180)", source)
         self.assertIn("os.killpg(process.pid, signal.SIGKILL)", source)
         wrapper = (TOOLS / "local_calls/lynx_codex.sh").read_text()
         self.assertIn("lynx-codex-tool", wrapper)

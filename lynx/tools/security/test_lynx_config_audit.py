@@ -56,6 +56,11 @@ class ConfigAuditTest(unittest.TestCase):
         self.assertFalse(r["ok"])
         self.assertTrue({"secret-world-readable", "file-world-writable"} <= self.ids(r, "high"))
 
+    def test_wifi_credential_file_must_be_private(self):
+        self.put("etc/lynx/wpa_supplicant.conf", "network={...}", 0o644)
+        r = self.run_audit()
+        self.assertIn("secret-world-readable", self.ids(r, "high"))
+
     def test_group_readable_inference_key_only_for_lynx_agent(self):
         self.put("etc/lynx/nexus-inference.key", "k", 0o640)
         with mock.patch.object(a, "_group_name", lambda gid: "lynx-agent"):

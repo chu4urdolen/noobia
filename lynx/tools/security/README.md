@@ -86,8 +86,8 @@ rule 7 (authorized targets) and rule 10 (traceable):
 
 ## `lynx_config_audit.py` (LNX-87, LNX-64, LNX-76): secrets, integrity, kernel
 
-Read-only, on Lynx (`--text` or JSON; exit 1 on a high finding). Checks that key
-files, host keys and `authorized_keys` are not readable by others (the inference
+Read-only, on Lynx (`--text` or JSON; exit 1 on a high finding). Checks that the
+Wi-Fi credential file, key files, host keys and `authorized_keys` are not readable by others (the inference
 key may be group `lynx-agent` after LNX-73), that private logs are not
 world-readable, that nothing in her program and service folders is
 world-writable (one level, no recursive search), that the three files pinned by

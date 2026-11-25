@@ -27,7 +27,7 @@ import sys
 
 ROOT = Path(os.environ.get("LYNX_AUDIT_ROOT", "/"))
 
-SECRETS = ["etc/lynx/nexus-inference.key", "etc/lynx/nexus-voice.key", "etc/lynx/nrp-nexus.key",
+SECRETS = ["etc/lynx/wpa_supplicant.conf", "etc/lynx/nexus-inference.key", "etc/lynx/nexus-voice.key", "etc/lynx/nrp-nexus.key",
            "etc/lynx/openai.key", "etc/noobia/aigel-lynx.secret", "etc/dropbear/lynx_ed25519_host_key",
            "root/.ssh/authorized_keys"]
 GROUP_READABLE_OK = {"etc/lynx/nexus-inference.key": "lynx-agent"}   # LNX-73 privilege split

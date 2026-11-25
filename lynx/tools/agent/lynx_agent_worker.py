@@ -176,7 +176,8 @@ def run_job(queue, job_id, prompt):
                                   thought_size_after > thought_size_before)
         ok = current.returncode == 0 and not stopping
         text = (output if ok else errors or output).decode(errors='replace')[-8000:]
-        queue.finish(job_id, ok, text or ('Agent stopped' if stopping else 'No response'))
+        queue.finish(job_id, ok, text or ('Agent stopped' if stopping else 'No response'),
+                     reply_pending=bool(ok and text))
         print(json.dumps({'event': 'job_finished', 'job_id': job_id, 'ok': ok}), flush=True)
         if ok and text:
             clean_text = text.strip()
@@ -196,24 +197,34 @@ def run_job(queue, job_id, prompt):
                                 f.write(clean_thought + '\n')
                     except Exception:
                         pass
-            try:
-                payload = json.dumps({
-                    "host": "lynx",
-                    "job_id": job_id,
-                    "text": clean_text,
-                    "t": time.time(),
-                }).encode("utf-8")
-                req = urllib.request.Request(
-                    "http://192.168.100.106:112/api/v1/agent_response",
-                    data=payload,
-                    headers=agent_response_headers(payload),
-                )
-                with urllib.request.urlopen(req, timeout=3):
-                    pass
-            except Exception:
-                pass
     finally:
         current = None
+
+
+def deliver_replies(queue):
+    """Retry durable results; server deduplicates by job ID after ambiguous sends."""
+    try:
+        pending = queue.pending_replies(limit=2)
+    except (OSError, ValueError, QueueError) as exc:
+        print(json.dumps({"event": "reply_queue_error",
+                          "reason": type(exc).__name__}), flush=True)
+        return
+    for job_id, text in pending:
+        try:
+            payload = json.dumps({"host": "lynx", "job_id": job_id,
+                                  "text": text.strip(), "t": time.time()}).encode("utf-8")
+            req = urllib.request.Request(
+                "http://192.168.100.106:112/api/v1/agent_response",
+                data=payload, headers=agent_response_headers(payload))
+            with urllib.request.urlopen(req, timeout=3) as response:
+                if response.status != 200:
+                    raise RuntimeError("Aigel reply rejected")
+            queue.mark_reply_sent(job_id)
+        except (OSError, ValueError, RuntimeError, urllib.error.URLError,
+                QueueError) as exc:
+            print(json.dumps({"event": "reply_retry_pending", "job_id": job_id,
+                              "reason": type(exc).__name__}), flush=True)
+            break
 
 
 def main():
@@ -226,7 +237,11 @@ def main():
         except QueueError:
             print(json.dumps({'event': 'orphan_recovery_failed',
                               'job_id': orphan.stem}), flush=True)
+    next_reply_attempt = 0.0
     while not stopping:
+        if time.monotonic() >= next_reply_attempt:
+            deliver_replies(queue)
+            next_reply_attempt = time.monotonic() + 30
         if STOP.exists() or not any(ROOT.glob('*.pending')):
             time.sleep(2)
             continue

@@ -123,8 +123,9 @@ class JobQueue:
                 return path.stem, prompt
             return None
 
-    def finish(self, job_id, ok, text):
-        if not isinstance(ok, bool) or not isinstance(text, str) or len(text) > 8000:
+    def finish(self, job_id, ok, text, reply_pending=False):
+        if (not isinstance(ok, bool) or not isinstance(text, str) or len(text) > 8000
+                or not isinstance(reply_pending, bool)):
             raise QueueError("invalid job result")
         with self._locked():
             running = self._path(job_id, "running")
@@ -133,9 +134,40 @@ class JobQueue:
             done = self._path(job_id, "done")
             if done.exists() or done.is_symlink():
                 raise QueueError("job already finished")
-            self._write(done, {"ok": ok, "text": text, "finished_ns": time.time_ns()})
+            self._write(done, {"ok": ok, "text": text, "finished_ns": time.time_ns(),
+                               "reply_pending": reply_pending})
             running.unlink()
             self._sync_dir()
+
+    def pending_replies(self, limit=2):
+        """Read only opted-in completed results; old done files never replay."""
+        with self._locked():
+            replies = []
+            for path in sorted(self.root.glob("*.done")):
+                self._id(path.stem)
+                if not self._regular(path):
+                    raise QueueError("invalid done job file")
+                with path.open("r", encoding="utf-8") as stream:
+                    data = json.load(stream)
+                if data.get("reply_pending") is True:
+                    if not isinstance(data.get("text"), str):
+                        raise QueueError("invalid queued reply")
+                    replies.append((path.stem, data["text"]))
+                    if len(replies) >= limit:
+                        break
+            return replies
+
+    def mark_reply_sent(self, job_id):
+        with self._locked():
+            done = self._path(job_id, "done")
+            if not self._regular(done):
+                raise QueueError("job is not finished")
+            with done.open("r", encoding="utf-8") as stream:
+                data = json.load(stream)
+            if data.get("reply_pending") is True:
+                data["reply_pending"] = False
+                data["reply_sent_ns"] = time.time_ns()
+                self._write(done, data)
 
     def cancel(self, job_id):
         with self._locked():

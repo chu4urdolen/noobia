@@ -36,6 +36,36 @@ class WorkerTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 worker.agent_response_headers(body, key)
 
+    def test_completed_reply_survives_network_failure_and_retries_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            queue = JobQueue(root / 'jobs')
+            job_id = queue.create_job('a question')
+            queue.claim_next()
+            queue.finish(job_id, True, 'a private answer', reply_pending=True)
+            self.assertEqual(queue.pending_replies(), [(job_id, 'a private answer')])
+            with patch.object(worker.urllib.request, 'urlopen',
+                              side_effect=URLError('offline')), \
+                 patch.object(worker, 'agent_response_headers', return_value={}):
+                worker.deliver_replies(queue)
+            self.assertEqual(queue.pending_replies(), [(job_id, 'a private answer')])
+
+            class Accepted:
+                status = 200
+                def __enter__(self):
+                    return self
+                def __exit__(self, *_):
+                    return False
+
+            with patch.object(worker.urllib.request, 'urlopen',
+                              return_value=Accepted()) as send, \
+                 patch.object(worker, 'agent_response_headers', return_value={}):
+                worker.deliver_replies(JobQueue(root / 'jobs'))
+                self.assertEqual(send.call_count, 1)
+                worker.deliver_replies(queue)
+                self.assertEqual(send.call_count, 1)
+            self.assertEqual(queue.pending_replies(), [])
+
     def test_missing_agent_executable_finishes_job_without_crashing(self):
         with tempfile.TemporaryDirectory() as directory:
             queue = JobQueue(Path(directory) / 'jobs')

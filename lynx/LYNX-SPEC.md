@@ -275,6 +275,18 @@ All 44 live in `/usr/local/share/lynx/agent-tools/` as a manifest (`<name>.json`
 | `lynx_queue_health` | - | 5 s | Agent job queue counts, oldest pending age, stop state, file integrity; never reads prompts. |
 | `lynx_codex` | `prompt*, model=gpt-oss-20b*` | 130 s | One bounded coding task with Codex CLI as the unprivileged `lynx-coder` user in her own workspace (up to 130 s). Never offered to SENSE. |
 
+### Her coder: Codex CLI (Gwyn, 2026-11-25)
+
+Lynx's code-writing personality. It is set up for people now; it becomes an agent tool later.
+
+* **What it is:** Codex CLI 0.167.0 (`/usr/local/libexec/lynx/codex`), thinking with Qwen `qwen3.8-27b` through the Nexus proxy (`:8080`, `wire_api = "responses"`).
+* **Who it runs as:** the unprivileged user `lynx-coder`, working in `/home/lynx-coder/work` (mode 700).
+* **Personality:** `/home/lynx-coder/.codex/AGENTS.md`, which also holds her rules (no reboot, no pinned files, no services, no scanning, no keys).
+* **Config:** `/home/lynx-coder/.codex/config.toml`. Source copies of both files are in `lynx/coder/`. The key file stays on the phone only.
+* **Start it:** as root on Lynx, `lynx-code` for an interactive session, or `lynx-code exec "task"` for one task.
+* **Sandbox:** none of Codex's own. The kernel has no user namespaces (`CONFIG_USER_NS` unset), so bubblewrap cannot start, and `sandbox_mode` is `danger-full-access`. The Unix user is the boundary: no root, no capabilities, other homes closed.
+* **Load:** it shares Qwen's single slot with everyone else. Use it while Dushich is idle.
+
 ### Diagnostics (Banshee, 2026-11-24; CHAT only)
 
 | Tool | Arguments | Timeout | What it does |

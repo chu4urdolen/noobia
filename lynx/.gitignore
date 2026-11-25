@@ -9,6 +9,7 @@
 !/linux-port/
 !/senses/
 !/autonomy/
+!/coder/
 /tools/*
 !/tools/*.py
 !/tools/*.c

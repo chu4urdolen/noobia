@@ -1,0 +1,26 @@
+# Codex CLI config for Lynx's coder (/home/lynx-coder/.codex/config.toml).
+# The key file is NOT in git: it stays on the phone, mode 600, owner lynx-coder.
+model = "qwen3.8-27b"
+model_provider = "nexus"
+model_context_window = 131072
+approval_policy = "never"
+# Lynx's kernel has no user namespaces (CONFIG_USER_NS unset), so Codex's bubblewrap
+# sandbox cannot start. The boundary is the Unix user: lynx-coder has no root, no
+# capabilities, and a 700 home. Rules for her are in AGENTS.md next to this file.
+sandbox_mode = "danger-full-access"
+check_for_update_on_startup = false
+
+
+[shell_environment_policy]
+inherit = "core"
+ignore_default_excludes = false
+
+[model_providers.nexus]
+name = "Noobia Nexus"
+base_url = "http://192.168.100.106:8080/v1"
+wire_api = "responses"
+requires_openai_auth = false
+
+[model_providers.nexus.auth]
+command = "/bin/cat"
+args = ["/home/lynx-coder/.config/noobia/nexus.key"]

@@ -85,7 +85,7 @@ All senses are observational and classified as A.
 | LNX-40 | Bluetooth visualization | A | **Gwyn** — done (RADIO: Bluetooth) |
 | LNX-41 | Network topology visualization | A | **Gwyn** — done (RADIO: network map) |
 | LNX-42 | Live network activity visualization | A | **Gwyn** — done (RADIO: live traffic) |
-| LNX-43 | Bee's Singularity Map integration | I | **Gwyn** — blocked: Bee's identity and route not documented |
+| LNX-43 | Bee's Singularity Map integration | I | **Gwyn** — Bee found (github `chu4urdolen/bee`: a BT-tethered NanoPi NEO Air 2 field agent; Wi-Fi + GPS into `singularity.db`, fog-circle map). Proposed: Lynx tethers Bee over BT, sends her GNSS fixes to Bee's `/gps`, shows Bee's map summary on RADIO. Blocked on Lynx GNSS (no fix yet) and Tom's go for the pairing |
 
 ### E. Independent operation
 
@@ -94,7 +94,7 @@ All senses are observational and classified as A.
 | LNX-44 | On-device offline intelligence | I | **Aria** |
 | LNX-45 | Offline event journal and synchronization | I | **Aria** |
 | LNX-46 | Remote inference failover | I | **Aria** |
-| LNX-47 | Reflex inference priority | I | **Gwyn** — measured; decision needed (docs/LNX-47-REFLEX-PRIORITY) |
+| LNX-47 | Reflex inference priority | I | **Gwyn** — measured (docs/LNX-47-REFLEX-PRIORITY). Tom 2026-11-25: for now Lynx runs while Dushich is not running; no model change |
 | LNX-48 | Noob communication discovery | A | **Banshee** |
 | LNX-49 | Connectivity failure diagnosis and reporting | A | **Banshee** |
 | LNX-50 | Radio capability registry | I | **Banshee** |
@@ -132,7 +132,7 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-70 | Network resource exhaustion protection | I | **Aria** |
 | LNX-71 | Unauthorized configuration change detection | I | **Banshee** |
 | LNX-72 | Filesystem integrity monitoring | I | **Banshee** (DONE: lynx_sense_security.py) |
-| LNX-73 | Agent privilege isolation | I | **Gwyn** — built; install packet for Aria |
+| LNX-73 | Agent privilege isolation | I | **Gwyn** — built; install packet for Aria (2026-11-25: BusyBox `setpriv` lacks `--reuid`, so the worker now drops privileges in Python; packet updated) |
 | LNX-74 | Security incident journal | I | **Banshee** (DONE: /var/log/lynx/security.jsonl) |
 | LNX-75 | Security incident perception | A | **Gwyn** — covered: Banshee's S10 + LNX-100 + security status |
 | LNX-76 | Sensitive information exposure audit | O | **Gwyn** — done (config audit + repo scan) |

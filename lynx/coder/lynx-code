@@ -1,0 +1,18 @@
+#!/bin/sh
+# lynx-code: talk to Lynx's coder (Codex CLI on Qwen) as the unprivileged
+# lynx-coder user. Run it on Lynx as root (over SSH), e.g.:
+#   lynx-code                      interactive session in her workshop
+#   lynx-code exec "make a tiny clock script"   one task, then exit
+set -eu
+CODEX=/usr/local/libexec/lynx/codex
+WORK=/home/lynx-coder/work
+[ "$(id -u)" = 0 ] || { echo "lynx-code: run as root; it switches to lynx-coder" >&2; exit 2; }
+[ -x "$CODEX" ] || { echo "lynx-code: Codex binary missing at $CODEX" >&2; exit 1; }
+args=""
+for a in "$@"; do args="$args '$(printf '%s' "$a" | sed "s/'/'\\\\''/g")'"; done
+if [ "${1:-}" = exec ]; then
+    args="exec --skip-git-repo-check -C $WORK $(echo "$args" | sed "s/^ 'exec'//")"
+fi
+exec su -s /bin/sh lynx-coder -c "cd $WORK && exec env -i HOME=/home/lynx-coder \
+CODEX_HOME=/home/lynx-coder/.codex PATH=/usr/local/bin:/usr/bin:/bin TERM=${TERM:-xterm} \
+$CODEX $args"

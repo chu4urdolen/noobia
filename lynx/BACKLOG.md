@@ -51,7 +51,7 @@ Capability classes:
 | LNX-18 | Bluetooth and BLE discovery | A | **Gwyn** (from Banshee) — built (`lynx-netintel ble-scan`); BLOCKED: kernel mgmt Start Discovery returns 0x0D (invalid parameters) for LE and interleaved, 0x00 for BR/EDR; BlueZ shows it as InProgress. LE scanning through the custom H4 relay (lynx-bt-hciuart) needs Aria |
 | LNX-19 | WiFi and cellular routing configuration | O | **Gwyn** (from Aria, Tom 2026-11-25) |
 | LNX-20 | Connection continuity and session recovery | I | **Gwyn** (from Aria, Tom 2026-11-25) |
-| LNX-21 | Encrypted tunnel to Noobia | I | **Gwyn** (from Aria, Tom 2026-11-25) |
+| LNX-21 | Encrypted tunnel to Noobia | I | **Gwyn** (from Aria, Tom 2026-11-25) — done live 2026-11-25 23:58 (LAN trial, Tom attending): wg-lynx 10.77.0.2 <-> Nexus 10.77.0.1:51821, ping ~3 ms; runtime only (gone on reboot); persistence and routing Nexus traffic through it = later (LNX-56) |
 | LNX-22 | Direct Noob-to-Noob mesh communication | I | **Gwyn** (from Aria, Tom 2026-11-25) |
 | LNX-23 | Mobile hotspot configuration | O | **Gwyn** (from Aria, Tom 2026-11-25) |
 | LNX-24 | Bluetooth tethering configuration | O | **Gwyn** (from Aria, Tom 2026-11-25) |
@@ -138,7 +138,7 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-76 | Sensitive information exposure audit | O | **Gwyn** — done (config audit + repo scan) |
 | LNX-77 | Modem device-node access isolation | I | **Gwyn** (from Aria, Tom 2026-11-25) |
 | LNX-78 | Public network service exposure audit | O | **Gwyn** (DONE: lynx_exposure_audit.py) |
-| LNX-79 | Malformed packet protection | I | **Gwyn** (from Aria, Tom 2026-11-25) |
+| LNX-79 | Malformed packet protection | I | **Gwyn** (from Aria, Tom 2026-11-25) — done live 2026-11-25 23:50: 7 sysctls (kptr/dmesg restrict, bpf=2, redirects off all/default/wlan0, rp_filter=2), confirmed; runtime only; disable: lynx-sysctl-trial disable |
 | LNX-80 | Malicious SMS filtering | I | **Gwyn** (from Aria, Tom 2026-11-25) |
 | LNX-81 | Incoming call abuse protection | I | **Gwyn** (from Aria, Tom 2026-11-25) |
 | LNX-82 | Noob identity authentication | I | **Gwyn** (from Aria, Tom 2026-11-25) |

@@ -52,7 +52,7 @@ All registered services in `/etc/runlevels/default/` auto-start on boot:
 
 ### Hardware & Platform Daemons
 * **`lynx-noobd`**: NRP (Noobia Remote Protocol) daemon connecting local hardware sockets (`/run/lynx/noobd.sock`) to the Nexus LAN.
-* **`lynx-display`**: the portrait UI on the AMOLED (`/usr/local/bin/lynx-portrait-display`, source `lynx/tools/lynx_drm_dmabuf_pattern.c`): HOME / CHAT / INPUTS / OUTPUTS / STATUS pages, the POWER SAVING page with START, and on STATUS the AIGEL mode, POWER SAVE and two-tap SHUT DOWN buttons. *(Gwyn: not `lynx-console`.)*
+* **`lynx-display`**: the portrait UI on the AMOLED (`/usr/local/bin/lynx-portrait-display`, source `lynx/tools/lynx_drm_dmabuf_pattern.c`): HOME / CHAT / INPUTS / OUTPUTS / STATUS / RADIO / DEBUG pages, the POWER SAVING page with START, and on STATUS the AIGEL mode, DEBUG MODE, POWER SAVE and two-tap SHUT DOWN buttons. *(Gwyn: not `lynx-console`.)*
 * **`lynx-console`**: separate service; the shell console page (`/bin/ash` over `/run/lynx-console/control.sock`).
 * **`lynx-audio`**: ALSA sound subsystem and mixer initialization.
 * **`lynx-media`**: Local media playback server (`lynx-media serve`) for sound clips and visuals. *(Gwyn: NOT in the boot runlevel; started by START / `lynx-power-mode active`, like `lynx-bluetooth`.)*
@@ -141,9 +141,14 @@ Autonomous cellular auditing suite for the MediaTek M80 5G modem:
 
 ## 5. Power Modes & the START Screen
 
-* Mode file: `/var/lib/noobia/power-mode` - `active` or `saving <reason>`. Tool: `/usr/local/bin/lynx-power-mode active|saving [reason]|status` (source `lynx/linux-port/lynx-power-mode.sh`, lock `/run/lynx/power-mode.lock`).
+* Mode file: `/var/lib/noobia/power-mode` - `active`, `debug`, or `saving <reason>`. Tool: `/usr/local/bin/lynx-power-mode active|debug|saving [reason]|status` (source `lynx/linux-port/lynx-power-mode.sh`, lock `/run/lynx/power-mode.lock`).
 * **Boot mode** (`lynx-power-boot`): `active` when Lynx's services are in the default runlevel (true since 2026-11-25), otherwise `saving boot`. The display shows POWER SAVING with battery %, CPU temperature, the reason, and one **START** button.
 * **START** runs `lynx-power-mode active`: makes sure `lynx-media lynx-noobd` run (always on), starts `lynx-bluetooth lynx-agent-worker noobia-autonomyd lynx-senses lynx-camera-sense` and switches to HOME. **POWER SAVE** (STATUS page, between AIGEL and SHUT DOWN) stops them in reverse order and shows START. The display follows the mode file every second, whoever changed it.
+* **DEBUG MODE** (STATUS page button, or `lynx-power-mode debug`): stops all AI cognition services (`lynx-agent-worker` and `noobia-autonomyd`), while keeping all sensory services (`lynx-senses`, `lynx-camera-sense`, `lynx-radio`, `lynx-bluetooth`, `lynx-media`, `lynx-noobd`) running. Opens the 3-pane interactive Lab on the portrait display:
+  - **Pane 1 (Left):** Scrollable tool catalog (all 45 tools). Tapping a tool selects it.
+  - **Pane 2 (Right):** Selected tool arguments editor, preset buttons (`{} EMPTY`, `SAMPLE`, `CLEAR`), and `> TEST TOOL <` execution button.
+  - **Pane 3 (Bottom):** Live sensory and tool outputs feed with a mode toggle button between `MODE: RAW (PRE-REGEX DB)` (raw sense/tool output) and `MODE: REGEX DB (TRANSLATED)` (natural English sentences rendered through `patterns-lynx.json` / `patterns.json`).
+  - Top header has an `EXIT / RESUME (AI ON)` button to cleanly restore normal active AI mode.
 * Always on in both modes: Wi-Fi, SSH, display, logs, charging, watchers, heat recorder, NRP daemon. The Nexus camera keeper does not prepare the camera while she is in power saving.
 * **SHUT DOWN** needs two taps within 5 s (`openrc-shutdown --poweroff now`); it is a person's choice, never automatic.
 

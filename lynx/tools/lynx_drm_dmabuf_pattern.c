@@ -78,7 +78,7 @@ static bool read_power_saving(char *reason, size_t size)
 		fclose(f);
 	}
 	line[strcspn(line, "\r\n")] = '\0';
-	bool saving = strncmp(line, "active", 6) != 0;	/* missing file = saving */
+	bool saving = strncmp(line, "saving", 6) == 0;	/* only saving mode shows power save screen */
 	if (reason && size) {
 		const char *r = strncmp(line, "saving", 6) == 0 ? line + 6 : "";
 		while (*r == ' ')
@@ -516,7 +516,8 @@ enum lynx_page {
 	PAGE_STATUS,
 	PAGE_CONSOLE,
 	PAGE_POWER,	/* power saving: one START button (Tom, 2026-11-23) */
-	PAGE_RADIO	/* radios: Wi-Fi, traffic, network, cellular, Bluetooth (LNX-37) */
+	PAGE_RADIO,	/* radios: Wi-Fi, traffic, network, cellular, Bluetooth (LNX-37) */
+	PAGE_DEBUG	/* debug: AI stopped, tool catalog, args runner, service output toggle (Banshee, 2026-11-25) */
 };
 static char console_input[161];
 static size_t console_input_length;
@@ -1936,9 +1937,428 @@ static void paint_power_page(uint32_t *pixels, int capacity)
 	draw_text(pixels, "HER GUARDS STAY ON AND NEVER SHUT HER DOWN", 70, 1640, 4, muted);
 }
 
+/* =========================================================================
+ * LYNX DEBUG MODE (Banshee, 2026-11-25)
+ * AI services stopped; 3-pane interactive tool runner and senses output lab.
+ * ========================================================================= */
+#define DEBUG_TOOLS_FILE "/run/lynx/debug_tools.txt"
+#define DEBUG_RAW_FILE "/run/lynx/debug_raw.txt"
+#define DEBUG_TRANS_FILE "/run/lynx/debug_translated.txt"
+#define DEBUG_CMD_FILE "/run/lynx/debug_cmd.txt"
+
+struct debug_tool_entry {
+	char name[48];
+	char sample[160];
+	char desc[96];
+};
+static struct debug_tool_entry debug_tools[64];
+static unsigned int debug_tool_count = 0;
+static unsigned int debug_tool_selected = 0;
+static unsigned int debug_tool_scroll_offset = 0;
+static char debug_args_input[256] = "{}";
+static bool debug_output_mode = false; /* false = RAW (pre-regex), true = REGEX DB (translated) */
+static unsigned int debug_output_scroll_offset = 0;
+static char debug_status_msg[64] = "READY";
+static uint64_t debug_last_load_ms = 0;
+
+static void load_debug_tools(void)
+{
+	uint64_t now = monotonic_milliseconds();
+	if (debug_tool_count > 0 && now - debug_last_load_ms < 3000U)
+		return;
+	debug_last_load_ms = now;
+	FILE *f = fopen(DEBUG_TOOLS_FILE, "r");
+	if (!f) {
+		if (debug_tool_count == 0) {
+			const char *fallbacks[][3] = {
+				{ "lynx_battery_status", "{}", "Bounded read-only battery status" },
+				{ "lynx_thermal_status", "{}", "Bounded SoC & battery thermal status" },
+				{ "lynx_wifi_status", "{}", "Wi-Fi link state and signal status" },
+				{ "lynx_speech", "{\"text\": \"Hello Noobia\"}", "Speak words aloud through speaker" },
+				{ "lynx_media_play", "{\"kind\": \"sound\", \"item\": \"chime\"}", "Play sound clip" },
+				{ "lynx_haptic_pulse", "{\"duration_ms\": 50}", "Tactile haptic pulse" },
+				{ "lynx_flashlight_pulse", "{\"duration_ms\": 100}", "100 ms flashlight flash" },
+				{ "lynx_camera_photo", "{\"camera\": \"main\"}", "Capture photo from camera" },
+				{ "lynx_net_diag", "{\"action\": \"ping\", \"host\": \"192.168.100.106\"}", "Network diagnostic ping" },
+				{ "lynx_security_status", "{}", "Firewall and security audit status" },
+				{ "lynx_motion_read", "{\"choice\": \"gyro\"}", "Read 3-axis motion sensor" },
+				{ "lynx_light_read", "{}", "Read ambient optical light sensor" },
+				{ "lynx_proximity_read", "{}", "Read ultrasonic proximity sensor" },
+				{ "lynx_agent_health", "{}", "Health check of Lynx agent services" },
+			};
+			for (size_t i = 0; i < sizeof(fallbacks)/sizeof(fallbacks[0]); i++) {
+				snprintf(debug_tools[i].name, sizeof(debug_tools[i].name), "%s", fallbacks[i][0]);
+				snprintf(debug_tools[i].sample, sizeof(debug_tools[i].sample), "%s", fallbacks[i][1]);
+				snprintf(debug_tools[i].desc, sizeof(debug_tools[i].desc), "%s", fallbacks[i][2]);
+			}
+			debug_tool_count = sizeof(fallbacks)/sizeof(fallbacks[0]);
+		}
+		return;
+	}
+	char line[320];
+	unsigned int count = 0;
+	while (count < 64 && fgets(line, sizeof(line), f)) {
+		line[strcspn(line, "\r\n")] = 0;
+		if (!line[0]) continue;
+		char *p1 = strchr(line, '|');
+		if (!p1) continue;
+		*p1 = 0;
+		char *p2 = strchr(p1 + 1, '|');
+		if (!p2) continue;
+		*p2 = 0;
+		snprintf(debug_tools[count].name, sizeof(debug_tools[count].name), "%s", line);
+		snprintf(debug_tools[count].sample, sizeof(debug_tools[count].sample), "%s", p1 + 1);
+		snprintf(debug_tools[count].desc, sizeof(debug_tools[count].desc), "%s", p2 + 1);
+		count++;
+	}
+	fclose(f);
+	if (count > 0)
+		debug_tool_count = count;
+}
+
+static void send_debug_cmd(const char *cmd)
+{
+	FILE *f = fopen(DEBUG_CMD_FILE, "w");
+	if (f) {
+		fprintf(f, "%s\n", cmd);
+		fclose(f);
+	}
+}
+
+static void paint_debug(uint32_t *pixels)
+{
+	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa, teal = 0x0009dcc4;
+	const uint32_t amber = 0x00edb961;
+	const uint32_t panel_bg = 0x00101b26, panel_border = 0x00334e5b;
+
+	load_debug_tools();
+
+	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
+		pixels[i] = dark;
+
+	/* Top bar */
+	rectangle(pixels, 0, 0, WIDTH, 28, teal);
+	draw_text(pixels, "DEBUG MODE", 75, 145, 11, amber);
+	draw_text(pixels, "AI SERVICES STOPPED * TOOL & SENSE LAB", 75, 230, 3, teal);
+
+	/* Exit / Resume Button at top right (x: 950..1165, y: 120..220) */
+	rectangle(pixels, 950, 120, 215, 100, 0x002c1d38);
+	rectangle(pixels, 950, 120, 215, 3, 0x00d080ff);
+	rectangle(pixels, 950, 217, 215, 3, 0x00d080ff);
+	rectangle(pixels, 950, 120, 3, 100, 0x00d080ff);
+	rectangle(pixels, 1162, 120, 3, 100, 0x00d080ff);
+	draw_text(pixels, "RESUME", 985, 140, 4, 0x00e0a0ff);
+	draw_text(pixels, "AI ON", 1005, 180, 3, white);
+
+	rectangle(pixels, 75, 265, 1090, 4, teal);
+
+	/* =========================================================================
+	 * PANE 1: Tools Catalog (x: 55..565, y: 285..1245)
+	 * ========================================================================= */
+	rectangle(pixels, 55, 285, 510, 960, panel_bg);
+	rectangle(pixels, 55, 285, 510, 3, panel_border);
+	rectangle(pixels, 55, 1242, 510, 3, panel_border);
+	rectangle(pixels, 55, 285, 3, 960, panel_border);
+	rectangle(pixels, 562, 285, 3, 960, panel_border);
+
+	char p1_title[48];
+	snprintf(p1_title, sizeof(p1_title), "1. TOOLS (%u TOTAL)", debug_tool_count);
+	draw_text(pixels, p1_title, 75, 305, 4, teal);
+
+	/* Visible tools: up to 10 rows */
+	unsigned int visible_tools = 10;
+	unsigned int max_tool_scroll = debug_tool_count > visible_tools ? debug_tool_count - visible_tools : 0;
+	if (debug_tool_scroll_offset > max_tool_scroll)
+		debug_tool_scroll_offset = max_tool_scroll;
+
+	for (unsigned int i = 0; i < visible_tools; i++) {
+		unsigned int idx = debug_tool_scroll_offset + i;
+		if (idx >= debug_tool_count)
+			break;
+		bool is_sel = (idx == debug_tool_selected);
+		uint32_t bg = is_sel ? 0x000c2e2c : 0x00182635;
+		uint32_t bc = is_sel ? teal : 0x002c4052;
+		uint32_t tc = is_sel ? white : 0x00ccd6dd;
+
+		unsigned int by = 355 + i * 85;
+		rectangle(pixels, 70, by, 445, 76, bg);
+		rectangle(pixels, 70, by, 445, 2, bc);
+		rectangle(pixels, 70, by + 74, 445, 2, bc);
+		rectangle(pixels, 70, by, 2, 76, bc);
+		rectangle(pixels, 513, by, 2, 76, bc);
+
+		draw_text(pixels, debug_tools[idx].name, 85, by + 22, 3, tc);
+	}
+
+	/* Scrollbar for Pane 1: x: 525..555, y: 355..1205 */
+	unsigned int p1_sb_h = 850;
+	unsigned int p1_thumb = debug_tool_count > visible_tools ? p1_sb_h * visible_tools / debug_tool_count : p1_sb_h;
+	if (p1_thumb < 60) p1_thumb = 60;
+	unsigned int p1_pos = max_tool_scroll ? (p1_sb_h - p1_thumb) * debug_tool_scroll_offset / max_tool_scroll : 0;
+	rectangle(pixels, 525, 355, 30, p1_sb_h, 0x001d2d3d);
+	rectangle(pixels, 525, 355 + p1_pos, 30, p1_thumb, teal);
+
+	/* =========================================================================
+	 * PANE 2: Selected Tool & Arguments Runner (x: 585..1175, y: 285..1245)
+	 * ========================================================================= */
+	rectangle(pixels, 585, 285, 590, 960, panel_bg);
+	rectangle(pixels, 585, 285, 590, 3, panel_border);
+	rectangle(pixels, 585, 1242, 590, 3, panel_border);
+	rectangle(pixels, 585, 285, 3, 960, panel_border);
+	rectangle(pixels, 1172, 285, 3, 960, panel_border);
+
+	draw_text(pixels, "2. TOOL ARGS & RUNNER", 605, 305, 4, teal);
+
+	if (debug_tool_count > 0 && debug_tool_selected < debug_tool_count) {
+		const char *sel_name = debug_tools[debug_tool_selected].name;
+		draw_text(pixels, sel_name, 605, 365, 4, amber);
+		draw_text(pixels, debug_tools[debug_tool_selected].desc, 605, 420, 2, 0x008fa0b0);
+	}
+
+	draw_text(pixels, "ARGUMENTS (JSON):", 605, 480, 3, teal);
+
+	/* Args text area */
+	rectangle(pixels, 605, 520, 550, 140, 0x0009131d);
+	rectangle(pixels, 605, 520, 550, 2, teal);
+	rectangle(pixels, 605, 658, 550, 2, teal);
+	rectangle(pixels, 605, 520, 2, 140, teal);
+	rectangle(pixels, 1153, 520, 2, 140, teal);
+	draw_text(pixels, debug_args_input, 620, 565, 3, white);
+
+	/* Preset Buttons: [ {} EMPTY ] (605..775), [ SAMPLE ] (790..960), [ CLEAR ] (975..1155) */
+	rectangle(pixels, 605, 680, 170, 75, 0x001c2b38);
+	rectangle(pixels, 605, 680, 170, 2, 0x005ab0e0);
+	rectangle(pixels, 605, 753, 170, 2, 0x005ab0e0);
+	rectangle(pixels, 605, 680, 2, 75, 0x005ab0e0);
+	rectangle(pixels, 773, 680, 2, 75, 0x005ab0e0);
+	draw_text(pixels, "{} EMPTY", 630, 705, 3, 0x008fd0f5);
+
+	rectangle(pixels, 790, 680, 170, 75, 0x001c2b38);
+	rectangle(pixels, 790, 680, 170, 2, 0x005ab0e0);
+	rectangle(pixels, 790, 753, 170, 2, 0x005ab0e0);
+	rectangle(pixels, 790, 680, 2, 75, 0x005ab0e0);
+	rectangle(pixels, 958, 680, 2, 75, 0x005ab0e0);
+	draw_text(pixels, "SAMPLE", 825, 705, 3, 0x008fd0f5);
+
+	rectangle(pixels, 975, 680, 180, 75, 0x002c1b20);
+	rectangle(pixels, 975, 680, 180, 2, 0x00b05a5a);
+	rectangle(pixels, 975, 753, 180, 2, 0x00b05a5a);
+	rectangle(pixels, 975, 680, 2, 75, 0x00b05a5a);
+	rectangle(pixels, 1153, 680, 2, 75, 0x00b05a5a);
+	draw_text(pixels, "CLEAR", 1015, 705, 3, 0x00ff8d86);
+
+	/* RUN / TEST TOOL BUTTON (605..1155, y: 785..915) */
+	rectangle(pixels, 605, 785, 550, 130, 0x000e3a22);
+	rectangle(pixels, 605, 785, 550, 4, 0x002ecc71);
+	rectangle(pixels, 605, 911, 550, 4, 0x002ecc71);
+	rectangle(pixels, 605, 785, 4, 130, 0x002ecc71);
+	rectangle(pixels, 1151, 785, 4, 130, 0x002ecc71);
+	draw_text(pixels, "> TEST TOOL <", 705, 830, 5, 0x0055ff99);
+
+	/* Status Message */
+	draw_text(pixels, debug_status_msg, 605, 950, 3, amber);
+
+	/* =========================================================================
+	 * PANE 3: Outputs Feed & Mode Toggle (x: 55..1175, y: 1265..2510)
+	 * ========================================================================= */
+	rectangle(pixels, 55, 1265, 1120, 1245, panel_bg);
+	rectangle(pixels, 55, 1265, 1120, 3, panel_border);
+	rectangle(pixels, 55, 2507, 1120, 3, panel_border);
+	rectangle(pixels, 55, 1265, 3, 1245, panel_border);
+	rectangle(pixels, 1172, 1265, 3, 1245, panel_border);
+
+	draw_text(pixels, "3. SENSES & TOOLS OUTPUT", 75, 1290, 4, teal);
+
+	/* Mode Toggle Button: x: 520..1020, y: 1275..1345 */
+	uint32_t t_bg = debug_output_mode ? 0x00143820 : 0x001c2b38;
+	uint32_t t_bc = debug_output_mode ? 0x002ecc71 : 0x005ab0e0;
+	rectangle(pixels, 520, 1275, 500, 70, t_bg);
+	rectangle(pixels, 520, 1275, 500, 2, t_bc);
+	rectangle(pixels, 520, 1343, 500, 2, t_bc);
+	rectangle(pixels, 520, 1275, 2, 70, t_bc);
+	rectangle(pixels, 1018, 1275, 2, 70, t_bc);
+	if (debug_output_mode) {
+		draw_text(pixels, "MODE: REGEX DB (TRANSLATED)", 545, 1295, 3, 0x0070ff90);
+	} else {
+		draw_text(pixels, "MODE: RAW (PRE-REGEX DB)", 555, 1295, 3, 0x008fd0f5);
+	}
+
+	/* Clear Button: x: 1040..1155, y: 1275..1345 */
+	rectangle(pixels, 1040, 1275, 115, 70, 0x002c1b20);
+	rectangle(pixels, 1040, 1275, 115, 2, 0x00b05a5a);
+	rectangle(pixels, 1040, 1343, 115, 2, 0x00b05a5a);
+	rectangle(pixels, 1040, 1275, 2, 70, 0x00b05a5a);
+	rectangle(pixels, 1153, 1275, 2, 70, 0x00b05a5a);
+	draw_text(pixels, "CLR", 1075, 1295, 3, 0x00ff8d86);
+
+	/* Feed text rows */
+	const char *feed_file = debug_output_mode ? DEBUG_TRANS_FILE : DEBUG_RAW_FILE;
+	char feed_lines[64][140];
+	unsigned int feed_count = 0;
+	FILE *ff = fopen(feed_file, "r");
+	if (ff) {
+		char fline[256];
+		while (feed_count < 64 && fgets(fline, sizeof(fline), ff)) {
+			fline[strcspn(fline, "\r\n")] = 0;
+			if (!fline[0]) continue;
+			snprintf(feed_lines[feed_count], sizeof(feed_lines[feed_count]), "%.135s", fline);
+			feed_count++;
+		}
+		fclose(ff);
+	}
+
+	unsigned int visible_feed = 18;
+	unsigned int max_feed_scroll = feed_count > visible_feed ? feed_count - visible_feed : 0;
+	if (debug_output_scroll_offset > max_feed_scroll)
+		debug_output_scroll_offset = max_feed_scroll;
+
+	unsigned int first_feed = max_feed_scroll - debug_output_scroll_offset;
+	for (unsigned int i = 0; i < visible_feed; i++) {
+		unsigned int row = first_feed + i;
+		if (row >= feed_count)
+			break;
+		const char *txt = feed_lines[row];
+		uint32_t color = white;
+		if (strstr(txt, "[TOOL:"))
+			color = amber;
+		else if (strstr(txt, "[SENSE"))
+			color = teal;
+		else if (strstr(txt, "[DEBUG]"))
+			color = 0x00d080ff;
+
+		draw_text(pixels, txt, 75, 1370 + i * 62, 3, color);
+	}
+
+	/* Scrollbar for Pane 3 */
+	unsigned int p3_sb_h = 1110;
+	unsigned int p3_thumb = feed_count > visible_feed ? p3_sb_h * visible_feed / feed_count : p3_sb_h;
+	if (p3_thumb < 80) p3_thumb = 80;
+	unsigned int p3_pos = max_feed_scroll ? (p3_sb_h - p3_thumb) * (max_feed_scroll - debug_output_scroll_offset) / max_feed_scroll : 0;
+	rectangle(pixels, 1140, 1365, 25, p3_sb_h, 0x001d2d3d);
+	rectangle(pixels, 1140, 1365 + p3_pos, 25, p3_thumb, teal);
+
+	nav_buttons(pixels, PAGE_DEBUG);
+}
+
+static void debug_touch(int x, int y, enum lynx_page *target, bool *page_changed)
+{
+	/* Exit / Resume button (x: 950..1165, y: 120..220) */
+	if (x >= 950 && x < 1165 && y >= 120 && y < 220) {
+		haptic_tick(60);
+		run_power_mode("active", "");
+		printf("debug_exit_resume_active\n");
+		fflush(stdout);
+		*target = PAGE_STATUS;
+		*page_changed = true;
+		return;
+	}
+
+	/* Pane 1 (Tools List): x: 65..520, y: 355..1205 */
+	if (x >= 65 && x < 520 && y >= 355 && y < 1205) {
+		unsigned int row = (y - 355) / 85;
+		unsigned int idx = debug_tool_scroll_offset + row;
+		if (idx < debug_tool_count) {
+			debug_tool_selected = idx;
+			snprintf(debug_args_input, sizeof(debug_args_input), "%s", debug_tools[idx].sample);
+			snprintf(debug_status_msg, sizeof(debug_status_msg), "SELECTED: %s", debug_tools[idx].name);
+			haptic_tick(30);
+			*page_changed = true;
+		}
+		return;
+	}
+	/* Pane 1 Scrollbar */
+	if (x >= 520 && x < 565 && y >= 355 && y < 1245) {
+		unsigned int visible_tools = 10;
+		unsigned int max_tool_scroll = debug_tool_count > visible_tools ? debug_tool_count - visible_tools : 0;
+		if (max_tool_scroll > 0) {
+			if (y < 800) {
+				debug_tool_scroll_offset = debug_tool_scroll_offset >= 5 ? debug_tool_scroll_offset - 5 : 0;
+			} else {
+				debug_tool_scroll_offset += 5;
+				if (debug_tool_scroll_offset > max_tool_scroll)
+					debug_tool_scroll_offset = max_tool_scroll;
+			}
+			haptic_tick(25);
+			*page_changed = true;
+		}
+		return;
+	}
+
+	/* Pane 2: Buttons */
+	/* {} Empty button: x: 605..775, y: 680..760 */
+	if (x >= 605 && x < 775 && y >= 680 && y < 760) {
+		snprintf(debug_args_input, sizeof(debug_args_input), "{}");
+		haptic_tick(25);
+		*page_changed = true;
+		return;
+	}
+	/* Sample button: x: 790..960, y: 680..760 */
+	if (x >= 790 && x < 960 && y >= 680 && y < 760) {
+		if (debug_tool_selected < debug_tool_count)
+			snprintf(debug_args_input, sizeof(debug_args_input), "%s", debug_tools[debug_tool_selected].sample);
+		haptic_tick(25);
+		*page_changed = true;
+		return;
+	}
+	/* Clear button: x: 975..1155, y: 680..760 */
+	if (x >= 975 && x < 1155 && y >= 680 && y < 760) {
+		debug_args_input[0] = 0;
+		haptic_tick(25);
+		*page_changed = true;
+		return;
+	}
+	/* RUN BUTTON: x: 605..1155, y: 785..915 */
+	if (x >= 605 && x < 1155 && y >= 785 && y < 915) {
+		if (debug_tool_selected < debug_tool_count) {
+			const char *tname = debug_tools[debug_tool_selected].name;
+			const char *args = debug_args_input[0] ? debug_args_input : "{}";
+			char cmd[512];
+			snprintf(cmd, sizeof(cmd), "RUN %s %s", tname, args);
+			send_debug_cmd(cmd);
+			snprintf(debug_status_msg, sizeof(debug_status_msg), "EXECUTED %s", tname);
+			haptic_tick(65);
+			*page_changed = true;
+		}
+		return;
+	}
+
+	/* Pane 3: Mode Toggle Button: x: 520..1020, y: 1275..1345 */
+	if (x >= 520 && x < 1020 && y >= 1275 && y < 1345) {
+		debug_output_mode = !debug_output_mode;
+		haptic_tick(40);
+		*page_changed = true;
+		return;
+	}
+	/* Pane 3: Clear Button: x: 1040..1155, y: 1275..1345 */
+	if (x >= 1040 && x < 1155 && y >= 1275 && y < 1345) {
+		send_debug_cmd("CLEAR");
+		haptic_tick(35);
+		*page_changed = true;
+		return;
+	}
+	/* Pane 3: Scroll Area: x: 55..1175, y: 1370..2510 */
+	if (x >= 55 && x < 1175 && y >= 1370 && y < 2510) {
+		if (y < 1940) {
+			debug_output_scroll_offset += 4;
+		} else {
+			if (debug_output_scroll_offset >= 4)
+				debug_output_scroll_offset -= 4;
+			else
+				debug_output_scroll_offset = 0;
+		}
+		haptic_tick(20);
+		*page_changed = true;
+		return;
+	}
+}
+
 static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 			   const char *pose, int capacity)
 {
+	if (page == PAGE_DEBUG) {
+		paint_debug(pixels);
+		return 0;
+	}
 	if (page == PAGE_POWER) {
 		paint_power_page(pixels, capacity);
 		return 0;
@@ -2080,28 +2500,37 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 	uint32_t mode_bg = learning ? 0x003e2908 : 0x000c2e2c;
 	uint32_t mode_border = learning ? 0x00edb961 : 0x0009dcc4;
 	uint32_t mode_tc = learning ? 0x00edb961 : 0x0009dcc4;
-	/* Aigel mode (x 75..555), power saving (x 570..865), shut down (x 880..1165). */
-	rectangle(pixels, 75, 2405, 480, 95, mode_bg);
-	rectangle(pixels, 75, 2405, 480, 3, mode_border);
-	rectangle(pixels, 75, 2497, 480, 3, mode_border);
+	/* Four bottom buttons: Aigel mode (75..335), Debug mode (345..605), Power save (615..875), Shut down (885..1165). */
+	rectangle(pixels, 75, 2405, 260, 95, mode_bg);
+	rectangle(pixels, 75, 2405, 260, 3, mode_border);
+	rectangle(pixels, 75, 2497, 260, 3, mode_border);
 	rectangle(pixels, 75, 2405, 3, 95, mode_border);
-	rectangle(pixels, 552, 2405, 3, 95, mode_border);
+	rectangle(pixels, 332, 2405, 3, 95, mode_border);
 	if (learning) {
-		draw_text(pixels, "AIGEL: LEARNING", 92, 2418, 4, mode_tc);
-		draw_text(pixels, "TAP FOR NORMAL", 92, 2462, 4, white);
+		draw_text(pixels, "AIGEL: LEARN", 88, 2418, 3, mode_tc);
+		draw_text(pixels, "TAP NORMAL", 88, 2462, 3, white);
 	} else {
-		draw_text(pixels, "AIGEL: NORMAL", 92, 2418, 4, mode_tc);
-		draw_text(pixels, "TAP FOR LEARNING", 92, 2462, 4, white);
+		draw_text(pixels, "AIGEL: NORMAL", 88, 2418, 3, mode_tc);
+		draw_text(pixels, "TAP LEARN", 88, 2462, 3, white);
 	}
 
+	/* Debug Mode: stops AI services, opens 3-pane direct tool & senses lab (Banshee, 2026-11-25) */
+	rectangle(pixels, 345, 2405, 260, 95, 0x002c1d38);
+	rectangle(pixels, 345, 2405, 260, 3, 0x00d080ff);
+	rectangle(pixels, 345, 2497, 260, 3, 0x00d080ff);
+	rectangle(pixels, 345, 2405, 3, 95, 0x00d080ff);
+	rectangle(pixels, 602, 2405, 3, 95, 0x00d080ff);
+	draw_text(pixels, "DEBUG MODE", 365, 2418, 3, 0x00e0a0ff);
+	draw_text(pixels, "AI OFF * LAB", 365, 2462, 3, white);
+
 	/* Power saving: one tap stops everything non-essential (Tom, 2026-11-23). */
-	rectangle(pixels, 570, 2405, 295, 95, 0x00102a3a);
-	rectangle(pixels, 570, 2405, 295, 3, 0x005ab0e0);
-	rectangle(pixels, 570, 2497, 295, 3, 0x005ab0e0);
-	rectangle(pixels, 570, 2405, 3, 95, 0x005ab0e0);
-	rectangle(pixels, 862, 2405, 3, 95, 0x005ab0e0);
-	draw_text(pixels, "POWER SAVE", 590, 2418, 4, 0x008fd0f5);
-	draw_text(pixels, "SLEEP MODE", 590, 2462, 4, white);
+	rectangle(pixels, 615, 2405, 260, 95, 0x00102a3a);
+	rectangle(pixels, 615, 2405, 260, 3, 0x005ab0e0);
+	rectangle(pixels, 615, 2497, 260, 3, 0x005ab0e0);
+	rectangle(pixels, 615, 2405, 3, 95, 0x005ab0e0);
+	rectangle(pixels, 872, 2405, 3, 95, 0x005ab0e0);
+	draw_text(pixels, "POWER SAVE", 635, 2418, 3, 0x008fd0f5);
+	draw_text(pixels, "SLEEP MODE", 635, 2462, 3, white);
 
 	/* Shutdown: a person's choice, never automatic. First tap arms it for 5 s,
 	 * a second tap shuts Lynx down cleanly. */
@@ -2109,17 +2538,17 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 		     monotonic_milliseconds() < shutdown_armed_until_ms;
 	uint32_t sd_bg = armed ? 0x00501010 : 0x00241618;
 	uint32_t sd_border = armed ? 0x00ff5a5a : 0x00b05a5a;
-	rectangle(pixels, 880, 2405, 285, 95, sd_bg);
-	rectangle(pixels, 880, 2405, 285, 3, sd_border);
-	rectangle(pixels, 880, 2497, 285, 3, sd_border);
-	rectangle(pixels, 880, 2405, 3, 95, sd_border);
+	rectangle(pixels, 885, 2405, 280, 95, sd_bg);
+	rectangle(pixels, 885, 2405, 280, 3, sd_border);
+	rectangle(pixels, 885, 2497, 280, 3, sd_border);
+	rectangle(pixels, 885, 2405, 3, 95, sd_border);
 	rectangle(pixels, 1162, 2405, 3, 95, sd_border);
 	if (armed) {
-		draw_text(pixels, "TAP AGAIN", 900, 2418, 4, 0x00ffd0d0);
-		draw_text(pixels, "TO SHUT DOWN", 900, 2462, 3, white);
+		draw_text(pixels, "TAP AGAIN", 905, 2418, 3, 0x00ffd0d0);
+		draw_text(pixels, "TO SHUT DOWN", 905, 2462, 3, white);
 	} else {
-		draw_text(pixels, "SHUT DOWN", 900, 2418, 4, 0x00ff8a8a);
-		draw_text(pixels, "TAP TWICE", 900, 2462, 4, white);
+		draw_text(pixels, "SHUT DOWN", 905, 2418, 3, 0x00ff8a8a);
+		draw_text(pixels, "TAP TWICE", 905, 2462, 3, white);
 	}
 
 	nav_buttons(pixels, page);
@@ -2757,21 +3186,28 @@ static int run(const char *action, unsigned int seconds)
 								target = PAGE_CHAT;
 							}
 						} else if (page == PAGE_STATUS &&
-							   y >= 2400 && y < 2505 && x >= 75 && x < 555) {
+							   y >= 2400 && y < 2505 && x >= 75 && x < 335) {
 							toggle_aigel_mode();
 							page_changed = true;
 							haptic_tick(35);
 							printf("aigel_mode_toggled\n");
 							fflush(stdout);
 						} else if (page == PAGE_STATUS &&
-							   y >= 2400 && y < 2505 && x >= 570 && x < 865) {
+							   y >= 2400 && y < 2505 && x >= 345 && x < 605) {
+							haptic_tick(45);
+							run_power_mode("debug", "debug button");
+							printf("debug_mode_started\n");
+							fflush(stdout);
+							target = PAGE_DEBUG;
+						} else if (page == PAGE_STATUS &&
+							   y >= 2400 && y < 2505 && x >= 615 && x < 875) {
 							haptic_tick(60);
 							run_power_mode("saving", "power save button");
 							printf("power_saving\n");
 							fflush(stdout);
 							target = PAGE_POWER;
 						} else if (page == PAGE_STATUS &&
-							   y >= 2400 && y < 2505 && x >= 880 && x < 1165) {
+							   y >= 2400 && y < 2505 && x >= 885 && x < 1165) {
 							uint64_t now_sd = monotonic_milliseconds();
 							if (shutdown_armed_until_ms != 0 &&
 							    now_sd < shutdown_armed_until_ms) {
@@ -2792,6 +3228,8 @@ static int run(const char *action, unsigned int seconds)
 								fflush(stdout);
 							}
 							page_changed = true;
+						} else if (page == PAGE_DEBUG && y < 2550) {
+							debug_touch(x, y, &target, &page_changed);
 						} else if (page == PAGE_HOME && y < 2360) {
 							/* Tapped on portrait: trigger tactile tick and emit instant P1 sense (throttled to >= 5s) */
 							haptic_tick(25);
@@ -2924,7 +3362,7 @@ static int run(const char *action, unsigned int seconds)
 					next_frame = ((now_ms - scene_started) / 500U) %
 						     scene.count;
 			}
-			bool status_refresh = portrait && (page == PAGE_STATUS || page == PAGE_INPUTS || page == PAGE_OUTPUTS || page == PAGE_POWER || page == PAGE_RADIO) && lit &&
+			bool status_refresh = portrait && (page == PAGE_STATUS || page == PAGE_INPUTS || page == PAGE_OUTPUTS || page == PAGE_POWER || page == PAGE_RADIO || page == PAGE_DEBUG) && lit &&
 				now_ms - last_page_refresh >= 1000U;
 			unsigned int console_seq = page == PAGE_CONSOLE ?
 				console_sequence() : 0;
@@ -2982,7 +3420,7 @@ static int run(const char *action, unsigned int seconds)
 			shown_thought_mtime = thought_mtime;
 			shown_hearing_on = hearing_on;
 			page_changed = false;
-			if (page == PAGE_STATUS || page == PAGE_INPUTS || page == PAGE_OUTPUTS)
+			if (page == PAGE_STATUS || page == PAGE_INPUTS || page == PAGE_OUTPUTS || page == PAGE_DEBUG)
 				last_page_refresh = now_ms;
 			if (page == PAGE_CONSOLE)
 				shown_console_sequence = console_seq;
@@ -3086,6 +3524,8 @@ int main(int argc, char **argv)
 			return render_preview("", argv[3], PAGE_POWER);
 		if (!strcmp(argv[2], "radio"))
 			return render_preview("", argv[3], PAGE_RADIO);
+		if (!strcmp(argv[2], "debug"))
+			return render_preview("", argv[3], PAGE_DEBUG);
 		return 2;
 	}
 	if (argc == 3 && !strcmp(argv[1], "--preview-console-symbols")) {

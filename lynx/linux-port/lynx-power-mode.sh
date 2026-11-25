@@ -1,9 +1,10 @@
 #!/bin/sh
-# lynx-power-mode: Lynx's two modes (Tom, 2026-11-23).
+# lynx-power-mode: Lynx's modes (Tom, 2026-11-23; debug mode Banshee, 2026-11-25).
 #
 #   lynx-power-mode active            start everything that is "Lynx"
+#   lynx-power-mode debug             stop AI services; senses & tool lab stay active
 #   lynx-power-mode saving [REASON]   stop it all; the screen shows START
-#   lynx-power-mode status            print "active" or "saving <reason>"
+#   lynx-power-mode status            print "active", "debug" or "saving <reason>"
 #
 # Power saving is the boot default and where the guards send her when she is
 # too warm or her battery is low. Nothing here ever shuts Lynx down or
@@ -46,22 +47,44 @@ case "${1:-status}" in
     active)
         take_lock
         set_mode active
+        if [ -f /run/lynx/debug-helper.pid ]; then
+            kill "$(cat /run/lynx/debug-helper.pid 2>/dev/null)" 2>/dev/null || true
+            rm -f /run/lynx/debug-helper.pid
+        fi
         say "ACTIVE: starting $SERVICES"
         for s in $ALWAYS $SERVICES; do
             rc-service "$s" start >/dev/null 2>&1 || say "could not start $s"
         done
         say "ACTIVE: done" ;;
+    debug)
+        take_lock
+        set_mode debug
+        say "DEBUG: stopping AI services (worker, autonomyd); keeping senses active"
+        for s in lynx-agent-worker noobia-autonomyd; do
+            rc-service "$s" stop >/dev/null 2>&1 || say "could not stop $s"
+        done
+        for s in $ALWAYS lynx-bluetooth lynx-senses lynx-camera-sense lynx-radio; do
+            rc-service "$s" start >/dev/null 2>&1 || say "could not start $s"
+        done
+        if [ -x /usr/local/bin/lynx-debug-helper ]; then
+            /usr/local/bin/lynx-debug-helper --daemon >/dev/null 2>&1 || true
+        fi
+        say "DEBUG: done" ;;
     saving)
         shift
         reason=$(printf '%s' "${*:-manual}" | tr -cd 'A-Za-z0-9 .,:()%-' | cut -c1-60)
         case "$(current)" in saving*) set_mode "saving $reason"; say "already saving ($reason)"; exit 0;; esac
         take_lock
         set_mode "saving $reason"
+        if [ -f /run/lynx/debug-helper.pid ]; then
+            kill "$(cat /run/lynx/debug-helper.pid 2>/dev/null)" 2>/dev/null || true
+            rm -f /run/lynx/debug-helper.pid
+        fi
         say "SAVING ($reason): stopping services"
         for s in $(echo "$SERVICES" | tr ' ' '\n' | sed '1!G;h;$!d'); do
             rc-service "$s" stop >/dev/null 2>&1 || say "could not stop $s"
         done
         say "SAVING: done" ;;
     *)
-        echo "usage: lynx-power-mode active|saving [reason]|status" >&2; exit 2 ;;
+        echo "usage: lynx-power-mode active|debug|saving [reason]|status" >&2; exit 2 ;;
 esac

@@ -15,7 +15,9 @@ LAN-only risk of contract C4. Unknown host or bad credential is a
 401, which the client treats as final (no retry storm).
 Agent responses require a configured host credential; unsigned replies
 cannot appear in Aigel's People view once the private
-`require_signed_agent_replies` switch is present at service start.
+`require_signed_agent_replies` switch is present at service start. That mode
+also checks a five-minute timestamp window and remembers job IDs through
+service restarts to make a replay idempotent.
 
 Bounded: request body 256 KiB, 200 lines, 512 bytes per line,
 response 64 KiB. Inspectable: every request, decision, and refusal
@@ -41,6 +43,7 @@ import argparse
 import hashlib
 import hmac
 import json
+import math
 import os
 import threading
 import time
@@ -76,6 +79,8 @@ DEFAULT_SILENCE_S = 1800
 
 RECENT_PER_HOST = 20        # A4: history kept per host
 RECENT_LIMIT = 50           # A4: history returned on the status page
+REPLY_MAX_AGE_S = 300
+REPLY_ID_LIMIT = 4096
 
 
 def load_host_registry(path: str | Path) -> dict:
@@ -147,16 +152,36 @@ class AigelIntake:
         except (OSError, ValueError):
             return {}
 
-    def _save_state(self) -> None:
+    def _save_state(self, strict: bool = False) -> None:
         if not self.state_file:
+            if strict:
+                raise OSError("reply state file is not configured")
             return
+        tmp = self.state_file.with_suffix(".tmp")
         try:
             self.state_file.parent.mkdir(parents=True, exist_ok=True)
-            tmp = self.state_file.with_suffix(".tmp")
-            tmp.write_text(json.dumps(self._state, indent=1, sort_keys=True), encoding="utf-8")
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                os.fchmod(stream.fileno(), 0o600)
+                json.dump(self._state, stream, indent=1, sort_keys=True)
+                stream.flush()
+                if strict:
+                    os.fsync(stream.fileno())
             os.replace(tmp, self.state_file)
+            if strict:
+                dir_fd = os.open(self.state_file.parent, os.O_RDONLY | os.O_DIRECTORY)
+                try:
+                    os.fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
         except OSError:
-            pass  # state persistence is best-effort, never fatal
+            if strict:
+                raise
+        finally:
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     def _touch_host(self, host: str, decision: dict,
                     reason: str = "unknown", n_lines: int = 0,
@@ -185,6 +210,7 @@ class AigelIntake:
                 "chunks": int(entry.get("chunks", 0)) + 1,
                 "recent": history[-RECENT_PER_HOST:],
                 "agent_replies": entry.get("agent_replies", []),
+                "reply_ids": entry.get("reply_ids", {}),
             }
             if self.pattern_db and isinstance(decision.get("patterns"), list):
                 for pat in decision["patterns"]:
@@ -201,10 +227,25 @@ class AigelIntake:
         tools: list | None = None,
         job_id: str | None = None,
         t: float | None = None,
-    ) -> None:
+        dedupe: bool = False,
+    ) -> bool:
         with self._lock:
             now = float(t if t is not None else self.now_fn())
             entry = self._state.setdefault(host, {})
+            if dedupe:
+                arrival = self.now_fn()
+                ids = entry.get("reply_ids")
+                if not isinstance(ids, dict):
+                    ids = {}
+                ids = {key: seen for key, seen in ids.items()
+                       if isinstance(seen, (int, float)) and
+                       arrival - float(seen) <= REPLY_MAX_AGE_S}
+                if job_id in ids:
+                    return False
+                ids[str(job_id)] = arrival
+                if len(ids) > REPLY_ID_LIMIT:
+                    ids = dict(sorted(ids.items(), key=lambda item: item[1])[-REPLY_ID_LIMIT:])
+                entry["reply_ids"] = ids
             replies = entry.setdefault("agent_replies", [])
             clean_text = str(text).strip()[:1000]
             clean_tools = [str(x)[:64] for x in tools] if isinstance(tools, list) else []
@@ -215,8 +256,9 @@ class AigelIntake:
                 "job_id": str(job_id)[:64] if job_id else None,
             })
             entry["agent_replies"] = replies[-RECENT_PER_HOST:]
-            self._save_state()
+            self._save_state(strict=dedupe)
             self.log.write(f"agent_reply host={host} text={clean_text[:60]}")
+            return True
 
     def recent_agent_replies(self, limit: int = 20) -> list:
         with self._lock:
@@ -428,12 +470,26 @@ def make_handler(intake: AigelIntake, web: AigelWeb | None = None,
                     if not ok:
                         self._send(401, {"error": why})
                         return
+                    job_id = payload.get("job_id")
+                    t = payload.get("t")
+                    if not isinstance(job_id, str) or not job_id.isascii() or not (1 <= len(job_id) <= 64):
+                        self._send(400, {"error": "invalid job_id"})
+                        return
+                    if isinstance(t, bool) or not isinstance(t, (int, float)) or not math.isfinite(t) or abs(intake.now_fn() - t) > REPLY_MAX_AGE_S:
+                        self._send(400, {"error": "stale reply timestamp"})
+                        return
                 text = payload.get("text", "")
                 tools = payload.get("tools")
                 job_id = payload.get("job_id")
                 t = payload.get("t")
-                intake.record_agent_response(host, text, tools=tools, job_id=job_id, t=t)
-                code, obj = 200, {"status": "ok"}
+                try:
+                    fresh = intake.record_agent_response(host, text, tools=tools,
+                                                         job_id=job_id, t=t,
+                                                         dedupe=require_signed_agent_replies)
+                except OSError:
+                    self._send(503, {"error": "reply state unavailable"})
+                    return
+                code, obj = 200, {"status": "ok" if fresh else "duplicate"}
             else:
                 code, obj = intake.handle_chunk(raw, dict(self.headers))
             self._send(code, obj)

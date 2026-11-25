@@ -12,9 +12,11 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import urllib.error
 import urllib.parse
@@ -261,7 +263,7 @@ class DecisionTests(IntakeServerCase):
             "text": "A laptop, just sitting there — good, my eyes are sharp today. *purr*",
             "tools": ["lynx_haptic_pulse"],
             "job_id": "job123",
-            "t": 12345.0
+            "t": time.time()
         }).encode("utf-8")
         code, data = self.signed_post("/api/v1/agent_response", body)
         self.assertEqual(code, 200)
@@ -289,6 +291,35 @@ class DecisionTests(IntakeServerCase):
         self.assertEqual(code, 401)
         code, _ = self.signed_post("/api/v1/agent_response", b"x" * 262_145)
         self.assertEqual(code, 413)
+
+    def test_signed_reply_replay_is_idempotent_across_restart(self):
+        body = json.dumps({"host": "lynx", "job_id": "job-replay-1",
+                           "text": "once", "t": time.time()}).encode()
+        self.assertEqual(self.signed_post("/api/v1/agent_response", body)[1]["status"], "ok")
+        self.assertEqual(self.signed_post("/api/v1/agent_response", body)[1]["status"], "duplicate")
+        self.assertEqual(len(self.intake.recent_agent_replies()), 1)
+        restarted = AigelIntake(self.thinker, self.hosts, log=self.log,
+                                 state_file=self.state_file)
+        self.restart_server(restarted)
+        self.assertEqual(self.signed_post("/api/v1/agent_response", body)[1]["status"], "duplicate")
+        self.assertEqual(len(restarted.recent_agent_replies()), 1)
+
+    def test_signed_reply_rejects_stale_timestamp(self):
+        body = json.dumps({"host": "lynx", "job_id": "job-stale-1",
+                           "text": "old", "t": time.time() - 301}).encode()
+        code, obj = self.signed_post("/api/v1/agent_response", body)
+        self.assertEqual((code, obj), (400, {"error": "stale reply timestamp"}))
+        self.assertEqual(self.intake.recent_agent_replies(), [])
+
+    def test_signed_reply_does_not_ack_when_state_cannot_be_saved(self):
+        blocker = os.path.join(self.tmp.name, "not-a-directory")
+        with open(blocker, "w", encoding="utf-8") as stream:
+            stream.write("x")
+        self.intake.state_file = Path(blocker) / "state.json"
+        body = json.dumps({"host": "lynx", "job_id": "job-save-fail",
+                           "text": "unpersisted", "t": time.time()}).encode()
+        code, obj = self.signed_post("/api/v1/agent_response", body)
+        self.assertEqual((code, obj), (503, {"error": "reply state unavailable"}))
 
 
 class LivenessTests(IntakeServerCase):

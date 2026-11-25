@@ -29,6 +29,14 @@ class AuthTests(unittest.TestCase):
             auth.accept(envelope(KEY, bytes(32), 1, b"NRP/1 7 PING\n"))
         self.assertEqual(auth.highest_sequence, 0)
 
+    def test_frame_from_prior_connection_cannot_replay_after_restart(self):
+        earlier = Authenticator(KEY, CHALLENGE)
+        frame = envelope(KEY, CHALLENGE, 1, b"NRP/1 7 PING\n")
+        self.assertEqual(earlier.accept(frame), b"NRP/1 7 PING\n")
+        restarted = Authenticator(KEY, bytes(32))
+        with self.assertRaisesRegex(ValueError, "authentication failed"):
+            restarted.accept(frame)
+
     def test_frame_bounds_and_syntax(self):
         auth = Authenticator(KEY, CHALLENGE)
         for frame in (b"NRP/1 1 CALL HAPTIC_SET 1 0\n",

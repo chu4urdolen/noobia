@@ -43,7 +43,7 @@ NEW = b"""    lynx_stage STATIC_NOOBIA_IPV4
     # Set the rescue address before Dropbear and retain it through Alpine.
     $BB ifconfig "$wifi_interface" 192.168.100.107 netmask 255.255.255.0 up || return 144
     $BB ip route replace default via 192.168.100.1 dev "$wifi_interface" || return 144
-    printf 'nameserver 185.82.217.89\\nnameserver 8.8.8.8\\n' > /etc/resolv.conf || return 144
+    printf 'nameserver 8.8.8.8\\nnameserver 1.1.1.1\\n' > /etc/resolv.conf || return 144
     address=192.168.100.107
     printf '%s\\n' "$address" > /run/lynx/address || return 145
     log "LYNX_STATIC_NOOBIA_IP interface=$wifi_interface address=$address"

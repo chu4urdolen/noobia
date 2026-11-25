@@ -9,7 +9,7 @@ Verified on 2026-10-06 after a duplicate-address conflict with Syra.
 
 LAN profile: `Noobia MT7612U`, UUID `dfa26e16-06b4-4746-95fd-4ad3bbc57f63`.
 Gateway: `192.168.100.1`; route metric 100; automatic connection enabled.
-DNS: existing `185.82.217.89` and `8.8.8.8`.
+DNS: `8.8.8.8` and `1.1.1.1` (Tom, 2026-11-25; was `185.82.217.89`, a dead ITLDC hosting address the big router hands out by DHCP, and `8.8.8.8`).
 Cellular profile: UUID `26bbfc45-0a19-46ab-b28d-04bd8ceb53b9`, automatic
 connection enabled, DHCP route metric 602 at verification. Both adapters
 remained connected, and HTTPS was tested independently through each.

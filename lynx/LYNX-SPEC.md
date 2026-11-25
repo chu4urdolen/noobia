@@ -352,7 +352,7 @@ All four run in `lynx-senses` every 30 s. They are written on a small kit, `sens
 LNX-102: the one door into her mind (`build_prompt`) also runs `check_message` before the injection filter. It removes control and escape characters, shortens floods, hides encoded blobs, flags links that hide where they go, and emits `security message.suspicious`.
 
 **Found on 2026-11-25:**
-* The Noobia router's DHCP hands out DNS 185.82.217.89, which answers neither Lynx nor Nexus. musl asks both servers at once, so lookups stay fast (21-53 ms); only BusyBox `nslookup` waits.
+* DNS 185.82.217.89 (an ITLDC Sofia hosting address) is dead. It is not handed out by any router: it is set by hand in Nexus's "Noobia MT7612U" profile (manual IPv4) and copied into Lynx's `/etc/resolv.conf` by the V50 static-IP script. musl asks both servers at once, so lookups stay fast (21-53 ms); only BusyBox `nslookup` waits.
 * Bluetooth: classic (BR/EDR) discovery works, LE discovery is refused by the kernel (mgmt `0x0D`), and the stack restarts often on its own (median gap about 21 min).
 * `/run` was 56 % full: the SSH log in it was never trimmed. `lynx-tidy` now caps it at 1 MiB, hourly.
 * Banshee's S10 reported UDP client sockets as intrusions. Fixed.

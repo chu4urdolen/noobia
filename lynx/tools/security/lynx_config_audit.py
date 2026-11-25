@@ -125,7 +125,7 @@ def audit(root: Path = ROOT) -> dict:
     facts["boot_pins"] = pins
     finding("info", "pinned-packages",
             "musl and openrc are pinned by the boot hand-off: never let apk upgrade them "
-            "(apk add --no-upgrade; check 'apk version musl openrc' before any install)")
+            "(simulate version-pinned apk add; reject musl/openrc changes; verify pinned hashes)")
 
     # -- kernel (LNX-64)
     proc = root / "proc"

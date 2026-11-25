@@ -32,17 +32,23 @@ boot ID, `lynx-status --assert-ready`, `ip -4 -o addr show dev wlan0`, and
 and no `inet lynx_guard` table already exists. Inspect any other base input
 chains in `nft list ruleset`; stop if one could drop rescue traffic. Stop if
 these conditions fail.
-Read `apk policy nftables`, then run `apk add --no-cache --simulate nftables`;
-confirm the configured repository is reachable before installing. Check
+Read `apk policy nftables`, then run
+`apk add --no-cache --simulate 'nftables=1.1.6-r1'`; require exactly the four
+new packages listed below, with **no upgrade or removal**. Check the
+boot-pinned files with `sha256sum /lib/ld-musl-aarch64.so.1 /sbin/openrc-init`:
+expected hashes are `32377e6d71725bb019e9ff6d5e9f16b4d5156d6f2c36504191c2d6a7c4d4a44d`
+and `6180c8b047e41f2f5fdf581fa3e1a9835a6e2d0a4b3ceb3a60baf3f223217078`.
+Stop if either differs or the repository is unreachable. Check
 `command -v nohup`, `command -v sleep`, `command -v date`, and
 `command -v flock`.
 
 ## Install and activation
 
-1. On Lynx, `apk add --no-cache nftables`. The 2026-11-25 simulation on Lynx
+1. On Lynx, `apk add --no-cache 'nftables=1.1.6-r1'`. The 2026-11-25 simulation on Lynx
    resolves four packages: `gmp 6.3.0-r4`, `libnftnl 1.3.1-r0`, `nftables
    1.1.6-r1`, and `nftables-openrc 1.1.6-r1`. Record exact installed versions
-   and `nft --version`. Do not enable the Alpine nftables OpenRC service.
+   and `nft --version`. Recheck both boot-pinned hashes immediately after the
+   install; stop if either changed. Do not enable the Alpine nftables OpenRC service.
 2. From `/noobia` on Nexus, use the pinned SSH identity and host key to stream
    each file (Lynx has no `scp` or SFTP server):
 

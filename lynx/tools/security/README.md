@@ -110,8 +110,10 @@ net.ipv4.conf.all.rp_filter = 2      # loose: keeps Wi-Fi + cellular routes work
 (`tcp_syncookies` and `yama.ptrace_scope` do not exist in this kernel.)
 
 > **Never let `apk` upgrade `musl` or `openrc`.** The boot hand-off pins their
-> hashes: an upgrade means every boot is refused. Use `apk add --no-upgrade`, and
-> check `apk version musl openrc` before installing anything (e.g. `nftables`).
+> hashes: an upgrade means every boot is refused. Lynx's apk-tools 3.0.8 has no
+> `--no-upgrade` option. Simulate the exact version-pinned package transaction
+> with `apk add --simulate`, reject any plan that changes musl or OpenRC, and
+> check both pinned file hashes before and after installation.
 
 ## `repo_secret_scan.py` (LNX-76): the public repository
 

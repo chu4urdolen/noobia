@@ -134,40 +134,56 @@ class JobQueue:
             done = self._path(job_id, "done")
             if done.exists() or done.is_symlink():
                 raise QueueError("job already finished")
+            if reply_pending:
+                reply = self._path(job_id, "reply")
+                if reply.exists() or reply.is_symlink():
+                    raise QueueError("reply already queued")
+                # Tidy expires .done after two days; this private outbox stays
+                # until the signed Aigel route acknowledges the job ID.
+                self._write(reply, {"text": text, "created_ns": time.time_ns()})
             self._write(done, {"ok": ok, "text": text, "finished_ns": time.time_ns(),
                                "reply_pending": reply_pending})
             running.unlink()
             self._sync_dir()
 
     def pending_replies(self, limit=2):
-        """Read only opted-in completed results; old done files never replay."""
+        """Read the private outbox; old done files never replay."""
         with self._locked():
             replies = []
-            for path in sorted(self.root.glob("*.done")):
+            for path in sorted(self.root.glob("*.reply")):
                 self._id(path.stem)
                 if not self._regular(path):
-                    raise QueueError("invalid done job file")
-                with path.open("r", encoding="utf-8") as stream:
-                    data = json.load(stream)
-                if data.get("reply_pending") is True:
+                    os.replace(path, self._path(path.stem, "reply.bad"))
+                    self._sync_dir()
+                    raise QueueError("invalid reply quarantined")
+                try:
+                    with path.open("r", encoding="utf-8") as stream:
+                        data = json.load(stream)
                     if not isinstance(data.get("text"), str):
-                        raise QueueError("invalid queued reply")
-                    replies.append((path.stem, data["text"]))
-                    if len(replies) >= limit:
-                        break
+                        raise ValueError("invalid queued reply")
+                except (OSError, ValueError):
+                    os.replace(path, self._path(path.stem, "reply.bad"))
+                    self._sync_dir()
+                    raise QueueError("malformed reply quarantined") from None
+                replies.append((path.stem, data["text"]))
+                if len(replies) >= limit:
+                    break
             return replies
 
     def mark_reply_sent(self, job_id):
         with self._locked():
+            reply = self._path(job_id, "reply")
+            if not self._regular(reply):
+                raise QueueError("reply is not queued")
             done = self._path(job_id, "done")
-            if not self._regular(done):
-                raise QueueError("job is not finished")
-            with done.open("r", encoding="utf-8") as stream:
-                data = json.load(stream)
-            if data.get("reply_pending") is True:
+            if self._regular(done):
+                with done.open("r", encoding="utf-8") as stream:
+                    data = json.load(stream)
                 data["reply_pending"] = False
                 data["reply_sent_ns"] = time.time_ns()
                 self._write(done, data)
+            reply.unlink()
+            self._sync_dir()
 
     def cancel(self, job_id):
         with self._locked():

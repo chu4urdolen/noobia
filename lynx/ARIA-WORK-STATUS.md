@@ -10,7 +10,7 @@ the LNX-65/94 package preflight is recorded below.
 | --- | --- | --- |
 | 01–03, 08–09 | MD1 remains off under the RF NO-GO; no SIM inserted. | Physical RF gate, then attended modem and SIM work. |
 | 19, 52–58, 80–81, 92 | Cellular routing, boot, health, permissions, diagnostics, SMS/call handling and inbound reachability require a working modem path. | 01–03 and carrier connection first. |
-| 20, 45 | Durable Aigel reply retries now use opt-in `.done` records with fresh signed timestamps, 30-second backoff, and server job-ID deduplication; focused tests pass 13/13. | Two fresh reviews of the revised LNX-84 client packet, then attended installation and a natural-job delivery check. Wider offline event synchronization still remains. |
+| 20, 45 | Durable Aigel replies now use private `.reply` outbox files that survive tidy expiry of `.done`; malformed files are quarantined. The worker retries with fresh signed timestamps, 30-second backoff, and server job-ID deduplication; focused tests pass 14/14. | Gwyn and another Noob confirm revised LNX-84 client packet, then attended installation and a natural-job delivery check. Wider offline event synchronization still remains. |
 | 21 | WireGuard LAN trial packet reviewed by Dushich and Gwyn at c0fc485; Aria incorporated their notes in b0fcac7. | Reviewers confirm revised packet; attended network trial later. |
 | 22 | No direct Noob mesh is installed. | Establish 21, identify peers and consent, then packetize routes and identity. |
 | 23–24 | Hotspot and Bluetooth tethering are not configured. | Controlled radio trials with rollback after 01–03 for cellular sharing; Bluetooth may be tested separately. |

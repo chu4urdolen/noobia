@@ -9,7 +9,7 @@ the Lynx client **before** restarting Aigel with server enforcement.
 | Source | Destination | SHA-256 | mode |
 | --- | --- | --- | --- |
 | `lynx/tools/agent/lynx_agent_worker.py` | `/usr/local/bin/lynx-agent-worker` | `610dc131ca4e6f0cbcc33cdcea39a3b0efd9e306fc6a6463c7986d456aee1c6a` | 0755 root:root |
-| `lynx/tools/agent/lynx_agent_queue.py` | `/usr/local/bin/lynx_agent_queue.py` | `69d455d24599033a0ed594ea70c071b6c0321dbf2fcc7d15fa909f943f999e8e` | 0644 root:root |
+| `lynx/tools/agent/lynx_agent_queue.py` | `/usr/local/bin/lynx_agent_queue.py` | `e16717786a579e87be3e3198526504350776c108d90baa2b360c7da48b0e497c` | 0644 root:root |
 
 Current phone worker: `6a3d27cd19c4d86cce40f6acd4a1db6afe056707b5a5b56ba1b4578b7310da12`;
 current phone queue: `72bfc18c8e960f7213ca6e87efe1d3bcea0afccd1efb3928a8ca250e33c970b6`.
@@ -20,12 +20,16 @@ on 2026-11-25 without printing either key.
 This worker source also contains Gwyn's LNX-73 privilege-drop code. That code
 is inert while `LYNX_AGENT_USER` is unset; this packet does not set it or
 install the broker.
-The queue's existing durable `.done` records become the retry outbox. Only
-new successful results opt in; older records are not replayed. The worker
+The queue writes new successful results to private, fsynced `.reply` files
+before finalizing `.done`; older records are not replayed. Lynx tidy may
+expire `.done` after two days, but the reply file remains until Aigel
+acknowledges it. Malformed reply files are quarantined as `.reply.bad` so
+one cannot block the rest. The worker
 retries at most two records every 30 seconds with a fresh signed timestamp.
 After an ambiguous send, Aigel deduplicates by job ID. The queue fsyncs the
-reply-pending flag before the worker sends; it fsyncs the sent marker after
-HTTP 200. No extra service or boot change is required.
+outbox before the worker sends; it fsyncs removal after HTTP 200. No extra
+service or boot change is required. The phone's queue file is currently
+0600; this packet installs mode 0644, as the source module is not a secret.
 
 ## Preflight and install
 
@@ -45,7 +49,7 @@ lyssh() { ssh -p 2222 -o BatchMode=yes -o IdentitiesOnly=yes \
   root@192.168.100.107 "$@"; }
 lyssh 'umask 077; cat > /tmp/lynx-agent-worker.lnx84' < lynx/tools/agent/lynx_agent_worker.py
 lyssh 'umask 077; cat > /tmp/lynx_agent_queue.py.lnx84' < lynx/tools/agent/lynx_agent_queue.py
-lyssh 'set -eu; test ! -e /usr/local/bin/lynx-agent-worker.pre-lnx84; test ! -e /usr/local/bin/lynx_agent_queue.py.pre-lnx84; test "$(sha256sum /usr/local/bin/lynx-agent-worker | cut -d" " -f1)" = 6a3d27cd19c4d86cce40f6acd4a1db6afe056707b5a5b56ba1b4578b7310da12; test "$(sha256sum /usr/local/bin/lynx_agent_queue.py | cut -d" " -f1)" = 72bfc18c8e960f7213ca6e87efe1d3bcea0afccd1efb3928a8ca250e33c970b6; test "$(sha256sum /tmp/lynx-agent-worker.lnx84 | cut -d" " -f1)" = 610dc131ca4e6f0cbcc33cdcea39a3b0efd9e306fc6a6463c7986d456aee1c6a; test "$(sha256sum /tmp/lynx_agent_queue.py.lnx84 | cut -d" " -f1)" = 69d455d24599033a0ed594ea70c071b6c0321dbf2fcc7d15fa909f943f999e8e; cp -p /usr/local/bin/lynx-agent-worker /usr/local/bin/lynx-agent-worker.pre-lnx84; cp -p /usr/local/bin/lynx_agent_queue.py /usr/local/bin/lynx_agent_queue.py.pre-lnx84; install -m 644 /tmp/lynx_agent_queue.py.lnx84 /usr/local/bin/lynx_agent_queue.py; install -m 755 /tmp/lynx-agent-worker.lnx84 /usr/local/bin/lynx-agent-worker; rm /tmp/lynx-agent-worker.lnx84 /tmp/lynx_agent_queue.py.lnx84; if rc-service lynx-agent-worker status | grep -q started; then rc-service lynx-agent-worker restart; fi; rc-service lynx-agent-worker status || true'
+lyssh 'set -eu; test ! -e /usr/local/bin/lynx-agent-worker.pre-lnx84; test ! -e /usr/local/bin/lynx_agent_queue.py.pre-lnx84; test "$(sha256sum /usr/local/bin/lynx-agent-worker | cut -d" " -f1)" = 6a3d27cd19c4d86cce40f6acd4a1db6afe056707b5a5b56ba1b4578b7310da12; test "$(sha256sum /usr/local/bin/lynx_agent_queue.py | cut -d" " -f1)" = 72bfc18c8e960f7213ca6e87efe1d3bcea0afccd1efb3928a8ca250e33c970b6; test "$(sha256sum /tmp/lynx-agent-worker.lnx84 | cut -d" " -f1)" = 610dc131ca4e6f0cbcc33cdcea39a3b0efd9e306fc6a6463c7986d456aee1c6a; test "$(sha256sum /tmp/lynx_agent_queue.py.lnx84 | cut -d" " -f1)" = e16717786a579e87be3e3198526504350776c108d90baa2b360c7da48b0e497c; cp -p /usr/local/bin/lynx-agent-worker /usr/local/bin/lynx-agent-worker.pre-lnx84; cp -p /usr/local/bin/lynx_agent_queue.py /usr/local/bin/lynx_agent_queue.py.pre-lnx84; install -m 644 /tmp/lynx_agent_queue.py.lnx84 /usr/local/bin/lynx_agent_queue.py; install -m 755 /tmp/lynx-agent-worker.lnx84 /usr/local/bin/lynx-agent-worker; rm /tmp/lynx-agent-worker.lnx84 /tmp/lynx_agent_queue.py.lnx84; if rc-service lynx-agent-worker status | grep -q started; then rc-service lynx-agent-worker restart; fi; rc-service lynx-agent-worker status || true'
 ```
 
 Expected: service retains its preflight state (started in active mode, stopped
@@ -71,10 +75,11 @@ lyssh 'set -eu; test "$(sha256sum /usr/local/bin/lynx-agent-worker.pre-lnx84 | c
 
 Offline tests: `PYTHONPATH=lynx/tools/agent python3 -m unittest
 lynx/tools/agent/test_lynx_agent_queue.py
-lynx/tools/agent/test_lynx_agent_worker.py -q` (13 tests pass). A full agent
+lynx/tools/agent/test_lynx_agent_worker.py -q` (14 tests pass). A full agent
 directory run has four unrelated failures in active LNX-73/Gwyn catalog
 tests; do not treat those as evidence about this packet.
 
-Reviews: Gwyn #488 accepted the earlier signing-only worker packet. The
-queue/outbox addition changes both source hashes and needs two fresh
-independent reviews before installation.
+Reviews: Gwyn #518 accepted the earlier `.done` retry source but identified
+two durability concerns: tidy expiry and a poison file. Both are fixed by
+the separate `.reply` outbox at the new queue hash, which needs Gwyn and a
+second independent reviewer to confirm before installation.

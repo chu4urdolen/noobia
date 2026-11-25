@@ -49,6 +49,9 @@ class WorkerTest(unittest.TestCase):
                  patch.object(worker, 'agent_response_headers', return_value={}):
                 worker.deliver_replies(queue)
             self.assertEqual(queue.pending_replies(), [(job_id, 'a private answer')])
+            # lynx-tidy can expire .done after two days; the outbox survives.
+            (queue.root / (job_id + '.done')).unlink()
+            self.assertEqual(queue.pending_replies(), [(job_id, 'a private answer')])
 
             class Accepted:
                 status = 200
@@ -65,6 +68,18 @@ class WorkerTest(unittest.TestCase):
                 worker.deliver_replies(queue)
                 self.assertEqual(send.call_count, 1)
             self.assertEqual(queue.pending_replies(), [])
+
+    def test_bad_reply_is_quarantined_without_blocking_later_replies(self):
+        with tempfile.TemporaryDirectory() as directory:
+            queue = JobQueue(Path(directory) / 'jobs')
+            (queue.root / ('0' * 32 + '.reply')).write_text('{broken')
+            job_id = queue.create_job('next')
+            queue.claim_next()
+            queue.finish(job_id, True, 'next answer', reply_pending=True)
+            with self.assertRaisesRegex(Exception, 'malformed reply quarantined'):
+                queue.pending_replies()
+            self.assertTrue((queue.root / ('0' * 32 + '.reply.bad')).is_file())
+            self.assertEqual(queue.pending_replies(), [(job_id, 'next answer')])
 
     def test_missing_agent_executable_finishes_job_without_crashing(self):
         with tempfile.TemporaryDirectory() as directory:

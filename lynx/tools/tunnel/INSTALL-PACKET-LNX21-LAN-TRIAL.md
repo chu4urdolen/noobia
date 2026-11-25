@@ -4,7 +4,9 @@ Status: **candidate for two independent reviews; not installed**. Aria installs
 after Noob authorizes this named network change. This is a runtime-only LAN
 trial. It does not alter SSH 22/2222, NRP 4243, DNS, default routes, cellular,
 OpenRC, systemd startup, or boot partitions. No configuration is loaded at
-boot. LNX-56 (Wi-Fi-independent reachability) needs a later packet.
+boot. The one UFW allow rule is persistent until the rollback step, even if
+the runtime tunnel interface disappears. LNX-56 (Wi-Fi-independent
+reachability) needs a later packet.
 
 ## Verified starting point, 2026-11-25
 
@@ -28,7 +30,9 @@ enter Git, forge notes, transcripts, or receipts. The Nexus file lives in
 `/noobia/aria/private/lynx-wireguard/private.key` (0600, Aria) and the Lynx
 file in `/etc/lynx/wireguard/private.key` (0600, root). Both directories are
 0700. Public keys may be exchanged over the pinned SSH link and recorded in a
-private install receipt. Record SHA-256 of each **public** key and the modes
+private install receipt at
+`/noobia/aria/private/lynx-wireguard/receipt-20261125.txt` (0600, Aria).
+Record SHA-256 of each **public** key and the modes
 of both private key files in the receipt; do not record private key hashes or
 contents in shared notes. No static installed files require a source hash.
 
@@ -36,7 +40,9 @@ contents in shared notes. No static installed files require a source hash.
 
 Noob and Aria present; Lynx on stable power. Record wall time, Lynx boot ID,
 `lynx-status --assert-ready`, `ip -4 route` on both hosts, `ss -lun` for UDP
-51821, UFW status, and `ip link show wg-lynx` (expected absent). Verify pinned
+51821, UFW status, the Nexus `wlx40a5ef5f66f1` address, Lynx's current
+`nft list ruleset` (or record that nft is absent), and `ip link show wg-lynx`
+(expected absent). Verify pinned
 SSH on 22 and 2222 and NRP 4243 before and after. Stop if `wg-lynx` or UDP
 51821 is already in use, if the LAN addresses differ, or if a route to
 `10.77.0.0/30` exists. Simulate each package transaction immediately before
@@ -46,8 +52,9 @@ and after `apk add`; stop if either changes.
 
 ## Installation and trial
 
-1. Install Nexus `wireguard-tools` with `sudo -n apt-get install --yes
-   wireguard-tools`; install Lynx `wireguard-tools-wg=1.0.20260223-r0` with
+1. Install Nexus `wireguard-tools=1.0.20250521-1ubuntu1` with `sudo -n
+   env DEBIAN_FRONTEND=noninteractive apt-get install --yes`; install Lynx
+   `wireguard-tools-wg=1.0.20260223-r0` with
    `apk add --no-cache 'wireguard-tools-wg=1.0.20260223-r0'`. Do not enable a
    WireGuard service. Record package versions.
 2. Generate each private key locally, with `umask 077`, and derive the public
@@ -86,7 +93,7 @@ lyssh() { ssh -p 2222 -o BatchMode=yes -o IdentitiesOnly=yes \
   -o ConnectTimeout=5 -i /noobia/lynx/secrets/nexus_lynx_ed25519 \
   root@192.168.100.107 "$@"; }
 
-sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install --yes wireguard-tools
+sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install --yes wireguard-tools=1.0.20250521-1ubuntu1
 lyssh "apk add --no-cache 'wireguard-tools-wg=1.0.20260223-r0'"
 install -d -m 700 /noobia/aria/private/lynx-wireguard
 (umask 077; wg genkey > /noobia/aria/private/lynx-wireguard/private.key)

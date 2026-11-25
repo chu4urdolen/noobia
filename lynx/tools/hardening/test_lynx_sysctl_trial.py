@@ -71,6 +71,22 @@ class SysctlTrialTest(unittest.TestCase):
         self.assertEqual(self.run_trial("status").stdout.strip(), "pending")
         self.assertEqual(self.run_trial("disable").returncode, 0)
 
+    def test_restore_continues_after_one_key_fails_and_keeps_snapshot(self):
+        self.assertEqual(self.run_trial("enable").returncode, 0)
+        first_key = next(iter(trial.TARGETS))
+        (self.proc / first_key).unlink()
+        (self.proc / first_key).mkdir()
+        result = self.run_trial("disable")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(first_key, result.stderr)
+        self.assertEqual((self.proc / "kernel/dmesg_restrict").read_text().strip(),
+                         self.before["kernel/dmesg_restrict"])
+        self.assertTrue((self.state / "snapshot.json").exists())
+        (self.proc / first_key).rmdir()
+        (self.proc / first_key).write_text(trial.TARGETS[first_key] + "\n")
+        self.assertEqual(self.run_trial("disable").returncode, 0)
+        self.assertEqual(self.values(), self.before)
+
 
 if __name__ == "__main__":
     unittest.main()

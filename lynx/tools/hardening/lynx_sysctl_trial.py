@@ -19,6 +19,8 @@ TARGETS = {
     "kernel/dmesg_restrict": "1",
     "kernel/unprivileged_bpf_disabled": "2",  # 1 cannot be undone at runtime
     "net/ipv4/conf/all/accept_redirects": "0",
+    "net/ipv4/conf/default/accept_redirects": "0",
+    "net/ipv4/conf/wlan0/accept_redirects": "0",
     "net/ipv4/conf/all/rp_filter": "2",  # loose mode preserves multi-homed routes
 }
 
@@ -39,6 +41,18 @@ def read_values():
 def write_values(values):
     for key, value in values.items():
         (ROOT / key).write_text(str(value) + "\n")
+
+
+def restore_values(values):
+    """Try every original value even when one procfs write fails."""
+    errors = []
+    for key, value in values.items():
+        try:
+            (ROOT / key).write_text(str(value) + "\n")
+        except OSError as exc:
+            errors.append(f"{key}: {exc}")
+    if errors:
+        raise RuntimeError("restore incomplete: " + "; ".join(errors))
 
 
 def snapshot_path():
@@ -81,8 +95,11 @@ def enable():
             write_values(TARGETS)
             if read_values() != TARGETS:
                 raise RuntimeError("kernel did not retain the requested values")
-        except Exception:
-            write_values(before)
+        except Exception as exc:
+            try:
+                restore_values(before)
+            except RuntimeError as restore_error:
+                raise RuntimeError(f"apply failed ({exc}); {restore_error}; snapshot retained") from exc
             clear_state()
             raise
     print(f"pending; auto-rollback in {DELAY}s")
@@ -101,7 +118,7 @@ def confirm():
 def disable():
     with locked():
         if snapshot_path().exists():
-            write_values(load_snapshot())
+            restore_values(load_snapshot())
             clear_state()
         else:
             (STATE / "pending").unlink(missing_ok=True)
@@ -115,7 +132,7 @@ def rollback(token):
     with locked():
         pending = STATE / "pending"
         if pending.exists() and pending.read_text().strip() == token:
-            write_values(load_snapshot())
+            restore_values(load_snapshot())
             clear_state()
 
 

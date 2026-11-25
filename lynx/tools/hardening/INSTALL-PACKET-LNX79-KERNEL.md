@@ -3,34 +3,41 @@
 Status: **candidate, not installed**. Author/installer: Aria. Two Noobs other
 than Aria must review, and Noob authorizes the attended phone change. This
 runtime trial does not add a boot service, change routes, change SSH, touch
-the modem, or reboot. It applies five sysctls, with exact original values
+the modem, or reboot. It applies seven sysctls, with exact original values
 saved under `/run/lynx-sysctl-trial` (0700, root) and a Lynx-local 120-second
 automatic restore unless explicitly confirmed from a fresh SSH session.
 
 | Nexus source | Lynx destination | SHA-256 | mode |
 | --- | --- | --- | --- |
-| `lynx/tools/hardening/lynx_sysctl_trial.py` | `/usr/local/sbin/lynx-sysctl-trial` | `86e0c1e8094fa7d22aca75910b809073b67f5cef082411ce2dc7f5b09204bb46` | 0755 root:root |
+| `lynx/tools/hardening/lynx_sysctl_trial.py` | `/usr/local/sbin/lynx-sysctl-trial` | `e1e9397c0f6a63f9cedfdde167639141b7949d7e0f2df0a85dbebd1f9fb7f19f` | 0755 root:root |
 
 ## Policy and evidence
 
 Read-only Lynx baseline (2026-11-25): `kptr_restrict=0`, `dmesg_restrict=0`,
-`unprivileged_bpf_disabled=0`, `accept_redirects=1`, `rp_filter=0`. The trial
-requests respectively `1`, `1`, **`2`**, `0`, `2`. BPF value `2` disables
+`unprivileged_bpf_disabled=0`, `all/default/wlan0 accept_redirects=1`,
+`all rp_filter=0`. The trial requests respectively `1`, `1`, **`2`**,
+`0/0/0`, `2`. All three redirect values are needed for the active WLAN:
+with forwarding off, Linux accepts redirects if either `all` or that
+interface is enabled. Other presently inactive interfaces are outside this
+trial; inspect them before claiming system-wide redirect protection. BPF
+value `2` disables
 unprivileged BPF but can be restored to `0`; value `1` cannot be cleared
 until reboot, per the [kernel sysctl documentation](https://www.kernel.org/doc/html/v5.13/admin-guide/sysctl/kernel.html#unprivileged-bpf-disabled).
 `rp_filter=2` is loose mode for her future Wi-Fi/cellular paths. The script
-stops and restores original values if the kernel rejects any requested value.
+stops and attempts to restore every original value if the kernel rejects any
+requested value. A failed restore reports the failed paths and retains the
+snapshot for recovery.
 
 ## Preflight and install
 
 Noob and Aria present; Lynx on stable power. Record wall time, boot ID,
 battery/temperature, `lynx-status --assert-ready`, Wi-Fi address and default
 route, NRP 4243, and both rescue SSH ports. Run the 15-check security
-regression before and after. Confirm all five live sysctl values above;
+regression before and after. Confirm all seven live sysctl values above;
 `/usr/local/sbin/lynx-sysctl-trial` and `/run/lynx-sysctl-trial/snapshot.json`
 must be absent. Stop on a mismatch. Run the offline tests before copying:
 `python3 -m unittest discover -s lynx/tools/hardening -p 'test_*.py' -v`
-(four tests pass).
+(five tests pass).
 
 From `/noobia` on Nexus, after review and approval:
 

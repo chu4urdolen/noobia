@@ -7,6 +7,17 @@ from lynx_agent import Catalog, respond
 
 
 class AgentTest(unittest.TestCase):
+    """These cases exercise the direct (root) tool path. Since 5a36693 an
+    unprivileged agent always goes through the broker (fail closed), and the
+    tests run as an ordinary user on Nexus, so they run as root here."""
+
+    def setUp(self):
+        from unittest import mock
+        import lynx_agent
+        patcher = mock.patch.object(lynx_agent.os, "geteuid", lambda: 0)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_catalog_and_function_round_trip(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -192,13 +192,16 @@ def cmd_doctor() -> dict:
         ("gateway", obs["gw_loss"] < 100, f"{obs['gw_rtt']} ms, {obs['gw_loss']}% lost"),
         ("nexus", obs["nexus_ms"] is not None,
          f"{obs['nexus_ms']} ms" if obs["nexus_ms"] is not None else "no answer on 8080"),
-        ("dns", dns_ok and not dead, "every server answers" if dns_ok and not dead else
-         (f"server(s) {', '.join(dead)} do not answer" + ("; others do, so names resolve slowly"
-                                                         if dns_ok else "; names do not resolve"))),
+        # musl asks every server at once, so one dead server costs nothing while another
+        # answers (measured 21-53 ms lookups on Lynx with one dead): a note, not a failure.
+        ("dns", dns_ok, ("every server answers" if not dead else
+                         f"names resolve, but server(s) {', '.join(dead)} do not answer (the router's "
+                         f"DHCP hands them out)") if dns_ok else "no DNS server answers: names do not resolve"),
     ]
     first_bad = next((l for l in layers if not l[1]), None)
+    d = nw.diagnose(obs)
     say = (f"My connection is {q}. " + (f"First problem: {first_bad[0]} ({first_bad[2]}). "
-                                       if first_bad else "Every layer works. ") + nw.diagnose(obs) + ".")
+                                       if first_bad else "Every layer works. ") + d[:1].upper() + d[1:] + ".")
     return {"ok": True, "quality": q, "layers": [{"layer": n, "ok": o, "detail": d} for n, o, d in layers],
             "dns_servers": per_server, "say": say}
 

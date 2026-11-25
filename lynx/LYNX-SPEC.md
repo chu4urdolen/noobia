@@ -352,9 +352,9 @@ All four run in `lynx-senses` every 30 s. They are written on a small kit, `sens
 LNX-102: the one door into her mind (`build_prompt`) also runs `check_message` before the injection filter. It removes control and escape characters, shortens floods, hides encoded blobs, flags links that hide where they go, and emits `security message.suspicious`.
 
 **Found on 2026-11-25:**
-* Her first DNS server, 185.82.217.89, does not answer, so lookups wait through its timeouts before 8.8.8.8 replies.
-* The BLE controller refuses discovery (`InProgress`) while the GATT link advertises.
-* `/run` is 56 % full: the SSH log in it is not rotated.
+* The Noobia router's DHCP hands out DNS 185.82.217.89, which answers neither Lynx nor Nexus. musl asks both servers at once, so lookups stay fast (21-53 ms); only BusyBox `nslookup` waits.
+* Bluetooth: classic (BR/EDR) discovery works, LE discovery is refused by the kernel (mgmt `0x0D`), and the stack restarts often on its own (median gap about 21 min).
+* `/run` was 56 % full: the SSH log in it was never trimmed. `lynx-tidy` now caps it at 1 MiB, hourly.
 * Banshee's S10 reported UDP client sockets as intrusions. Fixed.
 
 ## 14. The Senses DB (pattern store)

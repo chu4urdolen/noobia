@@ -48,7 +48,7 @@ Capability classes:
 | LNX-15 | Traffic statistics and protocol classification | A | **Gwyn** (from Banshee) — done, live: `lynx-netintel stats` (rates, TCP/UDP/ICMP counters, connections by service) |
 | LNX-16 | Authorized vulnerability auditing | A | **Gwyn** (from Banshee) — done, live: `lynx_net_diag vuln-check` fixed: remote targets were audited with Lynx's own netstat; now risky ports + SSH/HTTP banners |
 | LNX-17 | Network anomaly detection | A | **Gwyn** (from Banshee) — done, live: netwatch `anomaly` (gateway MAC, ARP conflict, DNS change, neighbour crowd) |
-| LNX-18 | Bluetooth and BLE discovery | A | **Gwyn** (from Banshee) — built (`lynx-netintel ble-scan`); BLOCKED: the controller refuses discovery (org.bluez.Error.InProgress) while the BLE GATT link advertises; for Aria's BT stack |
+| LNX-18 | Bluetooth and BLE discovery | A | **Gwyn** (from Banshee) — built (`lynx-netintel ble-scan`); BLOCKED: kernel mgmt Start Discovery returns 0x0D (invalid parameters) for LE and interleaved, 0x00 for BR/EDR; BlueZ shows it as InProgress. LE scanning through the custom H4 relay (lynx-bt-hciuart) needs Aria |
 | LNX-19 | WiFi and cellular routing configuration | O | **Aria** |
 | LNX-20 | Connection continuity and session recovery | I | **Aria** |
 | LNX-21 | Encrypted tunnel to Noobia | I | **Aria** |

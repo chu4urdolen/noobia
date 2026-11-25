@@ -25,7 +25,7 @@ done after Noob deferred the live test.
 | 82 | NRP has one shared Nexus key, not per-Noob identity. | Design per-principal credentials and attribution without assuming separate Unix accounts. |
 | 83 | NRP cross-session replay test passes. Aigel signed-route freshness/idempotency is built in b9eb7d2/144dd1a but inactive. | Review and activate LNX-84 server packet after signed client. |
 | 84 | NRP rate limits and signed Aigel client/server packets built; server switch remains absent. | Reviews, signed worker install first, then Aigel switch/restart. |
-| 85 | DNS is plaintext; first configured resolver is dead (#494). | Choose authenticated resolver, prepare install and rollback, avoid disrupting numeric-IP rescue. |
+| 85 | DNS is plaintext. The router supplies an unreachable first resolver, but musl queries both in parallel and Lynx lookups measured 21–53 ms (#500). | Choose authenticated resolver, prepare install and rollback, avoid disrupting numeric-IP rescue. Router DNS policy belongs with Noob. |
 | 86 | Wi-Fi key is already 0600 root:root; audit extension built, Gwyn ACCEPT (#487). | Dushich second review, then install on demand. |
 | 91 | Argus is powered off; Lynx security journal exists. | Define Argus intake contract and sync once Argus is available. |
 | 93 | **Assessment complete:** no public cellular/WAN endpoint yet (#481). | Reassess if a public endpoint appears. |

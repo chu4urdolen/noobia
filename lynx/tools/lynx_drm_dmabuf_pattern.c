@@ -2074,23 +2074,14 @@ static void paint_debug(uint32_t *pixels)
 	draw_text(pixels, "AI SERVICES STOPPED * TOOL & SENSE LAB", 75, 230, 3, teal);
 
 	/* Top bar buttons */
-	/* SLEEP button (x: 720..925, y: 120..220) */
-	rectangle(pixels, 720, 120, 205, 100, 0x00102a3a);
-	rectangle(pixels, 720, 120, 205, 3, 0x005ab0e0);
-	rectangle(pixels, 720, 217, 205, 3, 0x005ab0e0);
-	rectangle(pixels, 720, 120, 3, 100, 0x005ab0e0);
-	rectangle(pixels, 922, 120, 3, 100, 0x005ab0e0);
-	draw_text(pixels, "SLEEP", 765, 140, 4, 0x008fd0f5);
-	draw_text(pixels, "POWER SAVE", 740, 180, 3, white);
-
-	/* Exit / Resume Button at top right (x: 950..1165, y: 120..220) */
-	rectangle(pixels, 950, 120, 215, 100, 0x002c1d38);
-	rectangle(pixels, 950, 120, 215, 3, 0x00d080ff);
-	rectangle(pixels, 950, 217, 215, 3, 0x00d080ff);
-	rectangle(pixels, 950, 120, 3, 100, 0x00d080ff);
-	rectangle(pixels, 1162, 120, 3, 100, 0x00d080ff);
-	draw_text(pixels, "RESUME", 985, 140, 4, 0x00e0a0ff);
-	draw_text(pixels, "AI ON", 1005, 180, 3, white);
+	/* SLEEP button at top right (x: 940..1165, y: 120..220) */
+	rectangle(pixels, 940, 120, 225, 100, 0x00102a3a);
+	rectangle(pixels, 940, 120, 225, 3, 0x005ab0e0);
+	rectangle(pixels, 940, 217, 225, 3, 0x005ab0e0);
+	rectangle(pixels, 940, 120, 3, 100, 0x005ab0e0);
+	rectangle(pixels, 1162, 120, 3, 100, 0x005ab0e0);
+	draw_text(pixels, "SLEEP", 995, 140, 4, 0x008fd0f5);
+	draw_text(pixels, "POWER SAVE", 970, 180, 3, white);
 
 	rectangle(pixels, 75, 265, 1090, 4, teal);
 
@@ -2301,24 +2292,13 @@ static void paint_debug(uint32_t *pixels)
 
 static void debug_touch(int x, int y, enum lynx_page *target, bool *page_changed)
 {
-	/* SLEEP button (x: 720..925, y: 120..220) */
-	if (x >= 710 && x < 935 && y >= 110 && y < 230) {
+	/* SLEEP button at top right (x: 940..1165, y: 120..220) */
+	if (x >= 930 && x < 1175 && y >= 110 && y < 230) {
 		haptic_tick(60);
 		run_power_mode("saving", "debug sleep button");
 		printf("debug_sleep_power_save\n");
 		fflush(stdout);
 		*target = PAGE_POWER;
-		*page_changed = true;
-		return;
-	}
-
-	/* Exit / Resume button (x: 950..1165, y: 120..220) */
-	if (x >= 940 && x < 1175 && y >= 110 && y < 230) {
-		haptic_tick(60);
-		run_power_mode("active", "");
-		printf("debug_exit_resume_active\n");
-		fflush(stdout);
-		*target = PAGE_STATUS;
 		*page_changed = true;
 		return;
 	}
@@ -3368,6 +3348,12 @@ static int run(const char *action, unsigned int seconds)
 							page_changed = true;
 						}
 						if (target != page) {
+							if (page == PAGE_DEBUG && target != PAGE_POWER) {
+								/* Leaving debug screen: automatically restore active AI mode */
+								run_power_mode("active", "");
+								printf("debug_exit_auto_resume_active\n");
+								fflush(stdout);
+							}
 							page = target;
 							page_changed = true;
 							printf("page=%s\n", page == PAGE_HOME ?
@@ -3375,7 +3361,9 @@ static int run(const char *action, unsigned int seconds)
 							       "chat" : page == PAGE_INPUTS ?
 							       "inputs" : page == PAGE_OUTPUTS ?
 							       "outputs" : page == PAGE_CONSOLE ?
-							       "console" : "status");
+							       "console" : page == PAGE_DEBUG ?
+							       "debug" : page == PAGE_POWER ?
+							       "power" : "status");
 							fflush(stdout);
 						}
 					}

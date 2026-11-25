@@ -39,6 +39,17 @@ differs from `192.168.100.107/24`, or either rescue SSH route fails.
    `apk add --no-cache --simulate 'iptables-legacy=1.8.13-r0'`. Require only
    `libip4tc`, `libip6tc`, and `iptables-legacy` at 1.8.13-r0, no upgrade or
    removal. These were the 2026-11-25 simulation result. Stop on repo error.
+   **Correction (Gwyn, attended install 2026-11-25 23:36):** `iptables-legacy`
+   ships only the binaries; the match extensions the rules need
+   (`/usr/lib/xtables/libxt_conntrack.so`, `libxt_multiport.so`, ...) are in the
+   `iptables` package. With `iptables-legacy` alone, `iptables-legacy -m conntrack -h`
+   says "Couldn't load match `conntrack'". Also simulate
+   `apk add --no-cache --simulate 'iptables=1.8.13-r0'`: it adds only `iptables`
+   and `iptables-openrc` at 1.8.13-r0 (simulated on Lynx 2026-11-25). Install it,
+   do **not** enable the `iptables` OpenRC service, recheck both pinned hashes,
+   and require that `-m conntrack -h` lists `--ctstate` and `-m multiport -h`
+   lists `--dports` before `enable`. `iptables-legacy` 1.8.13-r0 is already
+   installed (since 23:36); no rules were loaded.
 3. `sha256sum /lib/ld-musl-aarch64.so.1 /sbin/openrc-init` must match
    `32377e6d71725bb019e9ff6d5e9f16b4d5156d6f2c36504191c2d6a7c4d4a44d`
    and `6180c8b047e41f2f5fdf581fa3e1a9835a6e2d0a4b3ceb3a60baf3f223217078`.

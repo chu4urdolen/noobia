@@ -124,12 +124,12 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-62 | Application-layer DoS protection | I | **Gwyn** (from Banshee) — covered: her only app-layer service is NRP (Aria's LNX-70/84 limits packet) + SSH (left alone, Tom); exhaustion perceived by LNX-103 |
 | LNX-63 | Exposed service vulnerability audit | O | **Gwyn** (DONE: lynx_exposure_audit.py) |
 | LNX-64 | Kernel vulnerability audit | O | **Gwyn** — done (config audit, kernel) |
-| LNX-65 | Stateful IPv4 and IPv6 firewall | I | **Gwyn** (from Aria, Tom 2026-11-25) |
+| LNX-65 | Stateful IPv4 and IPv6 firewall | I | **Gwyn** (from Aria, Tom 2026-11-25) — done live 2026-11-25 23:45 (Tom attending): legacy iptables guard 6986167d, confirmed after new-session checks; runtime only (gone on reboot; boot persistence = later decision) |
 | LNX-66 | Network intrusion detection | I | **Banshee** (DONE: lynx_sense_security.py) |
 | LNX-67 | SSH brute-force protection | I | **Gwyn** (from Aria, Tom 2026-11-25) — done live: key-only Dropbear on 22/2222; S10 records failed auth (forge #464) |
 | LNX-68 | Cryptographic Nexus authentication | I | **Gwyn** (from Aria, Tom 2026-11-25) — done live: NRP HMAC challenge-response on 4243; key private (forge #467) |
 | LNX-69 | Agent prompt injection protection | I | **Gwyn** — done, live (5f5fad1) |
-| LNX-70 | Network resource exhaustion protection | I | **Gwyn** (from Aria, Tom 2026-11-25) |
+| LNX-70 | Network resource exhaustion protection | I | **Gwyn** (from Aria, Tom 2026-11-25) — done live 2026-11-25 23:37: lynx-noobd 23d8463b (16 clients, 10 s auth timeout measured 10.0 s, 10/s burst 30) |
 | LNX-71 | Unauthorized configuration change detection | I | **Gwyn** (from Banshee) — done, live: guard `config.changed` (hashes; secrets only stat()ed); verified end to end |
 | LNX-72 | Filesystem integrity monitoring | I | **Banshee** (DONE: lynx_sense_security.py) |
 | LNX-73 | Agent privilege isolation | I | **Gwyn** — built; install packet for Aria (2026-11-25: BusyBox `setpriv` lacks `--reuid`, so the worker now drops privileges in Python; packet updated) |
@@ -145,7 +145,7 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-83 | Replay attack protection | I | **Gwyn** (from Aria, Tom 2026-11-25) |
 | LNX-84 | API authentication and rate limiting | I | **Gwyn** (from Aria, Tom 2026-11-25) |
 | LNX-85 | DNS manipulation protection | I | **Gwyn** (from Aria, Tom 2026-11-25) |
-| LNX-86 | Network credential protection | I | **Gwyn** (from Aria, Tom 2026-11-25) |
+| LNX-86 | Network credential protection | I | **Gwyn** (from Aria, Tom 2026-11-25) — done live 2026-11-25 23:36: Wi-Fi credential in the config audit (7f973d99) |
 | LNX-87 | Security configuration audit tool | O | **Gwyn** — done (config audit); hardening for Aria |
 | LNX-88 | Read-only agent security diagnostic tool | A | **Gwyn** — done, live (lynx_security_status) |
 | LNX-89 | Authorized security regression testing suite | O | **Gwyn** — done (regression suite, 15/15) |
@@ -153,7 +153,7 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-91 | Security incident synchronization with Argus | I | **Gwyn** (from Aria, Tom 2026-11-25) |
 | LNX-92 | Cellular inbound reachability assessment | O | **Gwyn** (from Aria, Tom 2026-11-25) |
 | LNX-93 | Upstream DDoS mitigation assessment | O | **Gwyn** (from Aria, Tom 2026-11-25) — assessed: no public cellular/WAN endpoint yet; reassess if one is exposed (forge #481) |
-| LNX-94 | Firewall configuration rollback protection | I | **Gwyn** (from Aria, Tom 2026-11-25) |
+| LNX-94 | Firewall configuration rollback protection | I | **Gwyn** (from Aria, Tom 2026-11-25) — done live: 120 s Lynx-local rollback timer proven in tests; confirmed from a new session |
 
 ### H. Autonomous security senses
 

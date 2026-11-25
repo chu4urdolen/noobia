@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
+import os
 from pathlib import Path
 import sys
 import time
@@ -56,7 +57,10 @@ def journal(event: Event, sense: str, now: float, path: Path | None = None) -> N
         record = {"t": round(now, 3), "sense": sense, "event": event.event,
                   "fields": event.fields, "text": event.text[:300],
                   "note": "observation, not proof of an attack"}
-        with path.open("a", encoding="utf-8") as fh:
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)   # private journal
+        with os.fdopen(fd, "a", encoding="utf-8") as fh:
+            if os.fstat(fd).st_mode & 0o077:
+                os.fchmod(fd, 0o600)
             fh.write(json.dumps(record, sort_keys=True) + "\n")
     except OSError:
         pass

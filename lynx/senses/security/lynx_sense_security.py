@@ -242,7 +242,11 @@ def record_incident_journal(journal_path: str, event: str, fields: dict, text: s
             "text": text,
             "rule": "Rose Rule 10 (traceable)",
         }
-        with p.open("a", encoding="utf-8") as f:
+        # Private (Gwyn 2026-11-25): create 0600 and tighten an older 0644 journal.
+        fd = os.open(p, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        with os.fdopen(fd, "a", encoding="utf-8") as f:
+            if os.fstat(fd).st_mode & 0o077:
+                os.fchmod(fd, 0o600)
             f.write(json.dumps(record, sort_keys=True) + "\n")
     except OSError:
         pass

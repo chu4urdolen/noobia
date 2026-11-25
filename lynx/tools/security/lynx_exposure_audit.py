@@ -179,9 +179,9 @@ def audit(proc: Path = PROC, which=shutil.which, run=subprocess.run, sys_root: P
         listeners.append(item)
 
     if any(l["port"] == 22 for l in listeners) and any(l["port"] == 2222 for l in listeners):
-        finding("warn", "rescue-ssh-still-open",
-                "the early-boot rescue SSH (port 22) still listens next to Alpine SSH (2222): "
-                "a second door with the same key; close it after the hand-off, or keep it on purpose")
+        finding("info", "rescue-ssh-kept",
+                "the early-boot rescue SSH (port 22) listens next to Alpine SSH (2222) - kept on purpose "
+                "(Tom, 2026-11-25: never close the rescue ports); same key-only protections")
     fw = [t for t in ("nft", "iptables", "ip6tables") if which(t)]
     if not fw:
         finding("warn", "no-firewall", "no firewall tool installed (nft/iptables): nothing filters "

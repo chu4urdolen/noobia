@@ -27,7 +27,7 @@ Lynx exposure audit: OK - 3 listener(s), firewall: none
   tcp 192.168.100.107:2222 (LAN) Alpine SSH (dropbear)  password logins disabled; local and remote port forwarding disabled
   tcp 192.168.100.107:4243 (LAN) NRP daemon to Nexus (lynx-noobd)  only Nexus may connect; key-authenticated frames
   tcp 192.168.100.107:22   (LAN) early-boot rescue SSH (dropbear)  password logins disabled; port forwarding disabled
-  WARN: the early-boot rescue SSH (port 22) still listens next to Alpine SSH (2222)
+  INFO: the early-boot rescue SSH (port 22) listens next to Alpine SSH (2222) - kept on purpose
   WARN: no firewall tool installed (nft/iptables): every listener is reachable from the whole LAN
   INFO: loopback interface is down
   versions: dropbear v2026.91, Python 3.14.8, kernel 5.10.149-android12-9
@@ -46,10 +46,12 @@ A starting policy that follows Rose's rules (4: keep Noobia connected, 5: recove
   if Tom agrees.
 * **4243/tcp (NRP):** from Nexus 192.168.100.106 only (noobd already refuses others;
   the firewall makes it two locks).
-* **22/tcp (rescue SSH):** a decision for Tom. Either close it after the OpenRC
-  hand-off (one door), or allow it from Nexus only as a second way in.
+* **22/tcp (rescue SSH): always open, like 2222.** Tom, 2026-11-25: "Don't close rescue
+  ports!" It is the way back in when Alpine misbehaves; never filter it more tightly than 2222.
 * **Cellular interfaces:** nothing inbound until LNX-92 (inbound reachability) is assessed.
 * **Outbound:** allow (her senses and her brain live on Nexus).
+* **Rescue ports are never closed:** 22 and 2222 stay reachable from the Noobia LAN in every
+  rule set, including the defaults loaded at boot.
 * **Recoverable** (LNX-94): load rules with a timed automatic revert, e.g. revert
   after 120 s unless a confirmation over SSH arrives. A bad rule must never lock
   Nexus out of Lynx.

@@ -74,7 +74,7 @@ class AuditTest(unittest.TestCase):
         self.assertTrue(r["ok"], r["findings"])
         self.assertEqual({l["service"] for l in r["listeners"]},
                          {"Alpine SSH (dropbear)", "early-boot rescue SSH (dropbear)", "NRP daemon to Nexus (lynx-noobd)"})
-        self.assertEqual(self.ids(r), {"rescue-ssh-still-open", "no-firewall", "loopback-down"})
+        self.assertEqual(self.ids(r), {"rescue-ssh-kept", "no-firewall", "loopback-down"})
         self.assertIn("password logins disabled", r["listeners"][0]["protections"])
         self.assertEqual(r["versions"]["kernel"], "5.10.149-test")
 

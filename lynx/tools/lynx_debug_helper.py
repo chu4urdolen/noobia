@@ -48,13 +48,17 @@ SAMPLE_ARGS = {
     "lynx_speech": '{"text": "Hello Noobia"}',
     "lynx_media_play": '{"kind": "sound", "item": "chime"}',
     "lynx_media_stop": '{"kind": "sound"}',
-    "lynx_camera_photo": '{"camera": "main"}',
+    "lynx_camera_photo": '{}',
     "lynx_motion_read": '{"choice": "gyro"}',
-    "lynx_net_diag": '{"action": "ping", "host": "192.168.100.106"}',
-    "lynx_display_pose": '{"action": "set", "pose": "01_standing_smile"}',
-    "lynx_cellular_diag": '{"action": "status"}',
+    "lynx_net_diag": '{"action": "net-ifaces"}',
+    "lynx_netintel": '{"action": "stats"}',
+    "lynx_display_pose": '{"action": "status"}',
+    "lynx_cellular_diag": '{"action": "sim-check"}',
     "lynx_haptic_pulse": '{"duration_ms": 50}',
+    "lynx_haptic_stop": '{}',
     "lynx_flashlight_pulse": '{"duration_ms": 100}',
+    "lynx_flashlight_stop": '{}',
+    "lynx_codex": '{"prompt": "print(42)"}',
     "lynx_media_catalog": '{}',
     "lynx_battery_status": '{}',
     "lynx_thermal_status": '{}',
@@ -64,7 +68,9 @@ SAMPLE_ARGS = {
     "lynx_agent_health": '{}',
     "lynx_proximity_read": '{}',
     "lynx_light_read": '{}',
+    "lynx_magnetometer_read": '{}',
     "lynx_touch_status": '{}',
+    "lynx_touch_events": '{}',
     "lynx_sensorhub_status": '{}',
     "lynx_audio_status": '{}',
 }
@@ -161,13 +167,14 @@ def run_tool(name: str, args_json: str, tools_map: dict[str, dict]) -> tuple[str
 
     t0 = time.time()
     cmd = [script] if os.access(script, os.X_OK) else ["/bin/sh", script]
+    tool_timeout = 120 if name in ("lynx_codex", "lynx_camera_photo") else 30
     try:
         proc = subprocess.run(
             cmd,
             input=args_json,
             capture_output=True,
             text=True,
-            timeout=15,
+            timeout=tool_timeout,
             check=False,
         )
         elapsed = time.time() - t0
@@ -184,7 +191,7 @@ def run_tool(name: str, args_json: str, tools_map: dict[str, dict]) -> tuple[str
             trans_line = f"[TOOL: {name}] FAIL (exit {proc.returncode}): {preview}"
         return raw_line, trans_line
     except subprocess.TimeoutExpired:
-        msg = f"[TOOL: {name}] TIMEOUT after 15s"
+        msg = f"[TOOL: {name}] TIMEOUT after {tool_timeout}s"
         return msg, msg
     except Exception as exc:
         msg = f"[TOOL: {name}] ERROR: {exc}"

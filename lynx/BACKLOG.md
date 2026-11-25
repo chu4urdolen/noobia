@@ -126,8 +126,8 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-64 | Kernel vulnerability audit | O | **Gwyn** — done (config audit, kernel) |
 | LNX-65 | Stateful IPv4 and IPv6 firewall | I | **Aria** |
 | LNX-66 | Network intrusion detection | I | **Banshee** (DONE: lynx_sense_security.py) |
-| LNX-67 | SSH brute-force protection | I | **Aria** |
-| LNX-68 | Cryptographic Nexus authentication | I | **Aria** |
+| LNX-67 | SSH brute-force protection | I | **Aria** — done live: key-only Dropbear on 22/2222; S10 records failed auth (forge #464) |
+| LNX-68 | Cryptographic Nexus authentication | I | **Aria** — done live: NRP HMAC challenge-response on 4243; key private (forge #467) |
 | LNX-69 | Agent prompt injection protection | I | **Gwyn** — done, live (5f5fad1) |
 | LNX-70 | Network resource exhaustion protection | I | **Aria** |
 | LNX-71 | Unauthorized configuration change detection | I | **Gwyn** (from Banshee) — done, live: guard `config.changed` (hashes; secrets only stat()ed); verified end to end |
@@ -152,7 +152,7 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-90 | Security event reporting to Aigel | I | **Gwyn** (from Banshee) — covered by design: security lines ride the autonomy route to Aigel when Tom re-enables Aigel (signed replies = LNX-84); journal /var/log/lynx/security.jsonl meanwhile |
 | LNX-91 | Security incident synchronization with Argus | I | **Aria** |
 | LNX-92 | Cellular inbound reachability assessment | O | **Aria** |
-| LNX-93 | Upstream DDoS mitigation assessment | O | **Aria** |
+| LNX-93 | Upstream DDoS mitigation assessment | O | **Aria** — assessed: no public cellular/WAN endpoint yet; reassess if one is exposed (forge #481) |
 | LNX-94 | Firewall configuration rollback protection | I | **Aria** |
 
 ### H. Autonomous security senses

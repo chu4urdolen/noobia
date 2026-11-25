@@ -31,6 +31,24 @@ class ForgeDbTest(unittest.TestCase):
     def tearDown(self):
         self.folder.cleanup()
 
+    def test_note_archive_copies_up_to_an_id_once(self):
+        for text in ("first", "second", "third"):
+            self.assertEqual(run("note", "add", "Rose", text, "--by", "Gwyn")[0], 0)
+        code, out = run("--json", "note", "archive", "Rose", "--upto", "2", "--by", "Dushich")
+        self.assertEqual(code, 0)
+        got = json.loads(out)
+        self.assertEqual((got["copied"], got["archived_total"], got["last_id"]), (2, 2, 2))
+        code, out = run("--json", "note", "archive", "Rose", "--by", "Dushich")   # all; no duplicates
+        self.assertEqual(json.loads(out)["copied"], 1)
+        self.assertEqual(json.loads(out)["archived_total"], 3)
+        code, out = run("--json", "note", "archived", "Rose")
+        rows = json.loads(out)
+        self.assertEqual([r["note"] for r in rows], ["first", "second", "third"])
+        self.assertEqual({r["archived_by"] for r in rows}, {"Dushich"})
+        code, out = run("--json", "note", "list", "Rose")                         # a copy, not a move
+        self.assertEqual(len(json.loads(out)), 3)
+        self.assertEqual(run("note", "archive", "Nope", "--by", "D")[0], 2)
+
     def test_path_roundtrip_and_search(self):
         code, _ = run("path", "set", self.folder.name, "-k", "dir", "-o", "Gwyn",
                       "-d", "Scratch atlas folder", "-t", "temp", "--project", "Rose", "--by", "Gwyn")

@@ -81,6 +81,16 @@ CREATE TABLE IF NOT EXISTS project_notes (
     paths TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS project_notes_project ON project_notes(project_name, id);
+CREATE TABLE IF NOT EXISTS project_notes_archive (
+    id INTEGER PRIMARY KEY,
+    project_name TEXT NOT NULL,
+    author TEXT NOT NULL,
+    note TEXT NOT NULL,
+    paths TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL,
+    archived_at TEXT NOT NULL,
+    archived_by TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS project_notes_archive_project ON project_notes_archive(project_name, id);
 CREATE TABLE IF NOT EXISTS tags (
     name TEXT PRIMARY KEY,
     description TEXT NOT NULL,
@@ -439,6 +449,28 @@ def note_add(db, project, text, paths, by, agent=None) -> dict:
     return {**note, "warning": activity["message"]} if activity["conflict"] else note
 
 
+def note_archive(db, project: str, upto: int | None, by: str) -> dict:
+    """Copy a project's notes (up to note id `upto`) into project_notes_archive.
+
+    A copy, not a move (Tom, 2026-11-25): the notes stay where they are. Each
+    note keeps its original id, so archiving twice copies nothing new.
+    """
+    if not db.execute("SELECT 1 FROM projects WHERE project_name=?", (project,)).fetchone():
+        raise ValueError(f"Unknown project: {project}")
+    by = require(by, "--by", 80)
+    limit = upto if upto is not None else 2 ** 62
+    cursor = db.execute(
+        "INSERT OR IGNORE INTO project_notes_archive "
+        "(id, project_name, author, note, paths, created_at, archived_at, archived_by) "
+        "SELECT id, project_name, author, note, paths, created_at, ?, ? FROM project_notes "
+        "WHERE project_name=? AND id<=?", (now(), by, project, limit))
+    db.commit()
+    total = db.execute("SELECT COUNT(*), MIN(id), MAX(id) FROM project_notes_archive WHERE project_name=?",
+                       (project,)).fetchone()
+    return {"project": project, "copied": cursor.rowcount, "upto": upto,
+            "archived_total": total[0], "first_id": total[1], "last_id": total[2]}
+
+
 def project_view(db, name: str, notes: int) -> dict:
     row = db.execute("SELECT * FROM projects WHERE project_name=?", (name,)).fetchone()
     if not row:
@@ -593,6 +625,13 @@ def main(argv: list[str] | None = None) -> int:
     nl = na.add_parser("list")
     nl.add_argument("project")
     nl.add_argument("--limit", type=int, default=20)
+    nx = na.add_parser("archive", help="copy a project's notes (up to --upto ID) into the archive table")
+    nx.add_argument("project")
+    nx.add_argument("--upto", type=int, help="last note id to copy (default: all)")
+    nx.add_argument("--by", required=True)
+    nv = na.add_parser("archived", help="read a project's archived notes")
+    nv.add_argument("project")
+    nv.add_argument("--limit", type=int, default=20)
 
     c = sub.add_parser("changes", help="rows written since a UTC ISO time")
     c.add_argument("--since", required=True)
@@ -764,6 +803,12 @@ def main(argv: list[str] | None = None) -> int:
             result = f"removed tag #{name} ({removed} definition, {links} link(s))"
         elif args.cmd == "note" and args.action == "add":
             result = note_add(db, args.project, args.text, args.path, args.by, args.agent)
+        elif args.cmd == "note" and args.action == "archive":
+            result = note_archive(db, args.project, args.upto, args.by)
+        elif args.cmd == "note" and args.action == "archived":
+            result = [dict(r) for r in db.execute(
+                "SELECT * FROM (SELECT * FROM project_notes_archive WHERE project_name=? "
+                "ORDER BY id DESC LIMIT ?) ORDER BY id", (args.project, args.limit))]
         elif args.cmd == "note" and args.action == "list":
             result = [dict(r) for r in db.execute(
                 "SELECT * FROM (SELECT * FROM project_notes WHERE project_name=? ORDER BY id DESC LIMIT ?) "

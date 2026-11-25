@@ -1,7 +1,13 @@
 # LNX-65/94: Lynx runtime firewall, stage 1
 
-Status: candidate. **Do not install until two Noobs other than Aria have reviewed
-this packet and Noob has authorized the phone change.** Aria owns installation.
+Status: **NO-GO on the running kernel (2026-11-25)**. This reviewed nftables
+packet cannot activate because `CONFIG_NF_TABLES` is unset. With Noob's
+authorization Aria installed the pinned nftables packages, then stopped when
+`nft list ruleset` failed with `Invalid argument`. No rules were transferred
+or activated and no service was enabled. SSH and NRP remained reachable.
+Use a separately reviewed legacy iptables packet for this kernel. The
+historical candidate procedure below is retained as a receipt, not an
+instruction to retry it on this boot.
 No reboot, modem start, SIM trial, network reconfiguration, or boot persistence
 is part of this packet. The table disappears at reboot. A later packet may add
 boot persistence after both rescue routes have been proven under a live rule.

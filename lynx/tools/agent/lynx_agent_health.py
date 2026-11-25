@@ -12,6 +12,10 @@ import time
 ROOT = Path('/var/lib/lynx-agent/jobs')
 STOP = Path('/var/lib/lynx-agent/stop')
 JOB = re.compile(r'[0-9a-f]{32}\.(pending|running|done)\Z')
+# LNX-84 (Gwyn 2026-11-25): the signed-reply outbox (.reply) and its quarantine
+# (.reply.bad) are legitimate queue entries. They are checked for privacy but not
+# counted: lynx-noobd's queue_health_v1 contract accepts exactly the three counts.
+OUTBOX = re.compile(r'[0-9a-f]{32}\.reply(\.bad)?\Z')
 
 
 def snapshot(root=ROOT, stop=STOP, now=None, owner=None):
@@ -45,6 +49,8 @@ def snapshot(root=ROOT, stop=STOP, now=None, owner=None):
                             kind = match.group(1) if stat.S_ISREG(metadata.st_mode) else None
                             if kind:
                                 counts[kind] += 1
+                        elif OUTBOX.fullmatch(entry.name):
+                            kind = None
                         else:
                             kind = None
                             issues.add('unexpected_entry')

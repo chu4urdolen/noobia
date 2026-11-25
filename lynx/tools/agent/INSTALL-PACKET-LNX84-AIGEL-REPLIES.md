@@ -10,9 +10,14 @@ the Lynx client **before** restarting Aigel with server enforcement.
 | --- | --- | --- | --- |
 | `lynx/tools/agent/lynx_agent_worker.py` | `/usr/local/bin/lynx-agent-worker` | `610dc131ca4e6f0cbcc33cdcea39a3b0efd9e306fc6a6463c7986d456aee1c6a` | 0755 root:root |
 | `lynx/tools/agent/lynx_agent_queue.py` | `/usr/local/bin/lynx_agent_queue.py` | `e16717786a579e87be3e3198526504350776c108d90baa2b360c7da48b0e497c` | 0644 root:root |
+| `lynx/tools/agent/lynx_agent_health.py` | `/usr/local/bin/lynx-agent-health` | `1b497e8a5db44800b4f070c47e0e06f3e1344884a6e73eb18be008d7e5aab1b6` | 0755 root:root |
 
 Current phone worker: `6a3d27cd19c4d86cce40f6acd4a1db6afe056707b5a5b56ba1b4578b7310da12`;
-current phone queue: `72bfc18c8e960f7213ca6e87efe1d3bcea0afccd1efb3928a8ca250e33c970b6`.
+current phone queue: `72bfc18c8e960f7213ca6e87efe1d3bcea0afccd1efb3928a8ca250e33c970b6`;
+current phone health: `e13afb2391db0c710d892abe00a5e760fb732238a5cd7f33cff2fb6c72fe9e18`.
+The health file (added by Gwyn on 2026-11-25, Gwyn #528) accepts the new `.reply` and
+`.reply.bad` outbox entries as private queue files without counting them, so the
+queue_health_v1 counts that `lynx-noobd` validates stay exactly pending/running/done.
 Backups with suffix `.pre-lnx84` (both must not exist before install).
 The existing `/etc/noobia/aigel-lynx.secret` is used in place; no key is copied.
 The Lynx key and Aigel's registry entry matched in a challenge-response check
@@ -49,7 +54,8 @@ lyssh() { ssh -p 2222 -o BatchMode=yes -o IdentitiesOnly=yes \
   root@192.168.100.107 "$@"; }
 lyssh 'umask 077; cat > /tmp/lynx-agent-worker.lnx84' < lynx/tools/agent/lynx_agent_worker.py
 lyssh 'umask 077; cat > /tmp/lynx_agent_queue.py.lnx84' < lynx/tools/agent/lynx_agent_queue.py
-lyssh 'set -eu; test ! -e /usr/local/bin/lynx-agent-worker.pre-lnx84; test ! -e /usr/local/bin/lynx_agent_queue.py.pre-lnx84; test "$(sha256sum /usr/local/bin/lynx-agent-worker | cut -d" " -f1)" = 6a3d27cd19c4d86cce40f6acd4a1db6afe056707b5a5b56ba1b4578b7310da12; test "$(sha256sum /usr/local/bin/lynx_agent_queue.py | cut -d" " -f1)" = 72bfc18c8e960f7213ca6e87efe1d3bcea0afccd1efb3928a8ca250e33c970b6; test "$(sha256sum /tmp/lynx-agent-worker.lnx84 | cut -d" " -f1)" = 610dc131ca4e6f0cbcc33cdcea39a3b0efd9e306fc6a6463c7986d456aee1c6a; test "$(sha256sum /tmp/lynx_agent_queue.py.lnx84 | cut -d" " -f1)" = e16717786a579e87be3e3198526504350776c108d90baa2b360c7da48b0e497c; cp -p /usr/local/bin/lynx-agent-worker /usr/local/bin/lynx-agent-worker.pre-lnx84; cp -p /usr/local/bin/lynx_agent_queue.py /usr/local/bin/lynx_agent_queue.py.pre-lnx84; install -m 644 /tmp/lynx_agent_queue.py.lnx84 /usr/local/bin/lynx_agent_queue.py; install -m 755 /tmp/lynx-agent-worker.lnx84 /usr/local/bin/lynx-agent-worker; rm /tmp/lynx-agent-worker.lnx84 /tmp/lynx_agent_queue.py.lnx84; if rc-service lynx-agent-worker status | grep -q started; then rc-service lynx-agent-worker restart; fi; rc-service lynx-agent-worker status || true'
+lyssh 'umask 077; cat > /tmp/lynx-agent-health.lnx84' < lynx/tools/agent/lynx_agent_health.py
+lyssh 'set -eu; test ! -e /usr/local/bin/lynx-agent-worker.pre-lnx84; test ! -e /usr/local/bin/lynx_agent_queue.py.pre-lnx84; test ! -e /usr/local/bin/lynx-agent-health.pre-lnx84; test "$(sha256sum /usr/local/bin/lynx-agent-worker | cut -d" " -f1)" = 6a3d27cd19c4d86cce40f6acd4a1db6afe056707b5a5b56ba1b4578b7310da12; test "$(sha256sum /usr/local/bin/lynx_agent_queue.py | cut -d" " -f1)" = 72bfc18c8e960f7213ca6e87efe1d3bcea0afccd1efb3928a8ca250e33c970b6; test "$(sha256sum /tmp/lynx-agent-worker.lnx84 | cut -d" " -f1)" = 610dc131ca4e6f0cbcc33cdcea39a3b0efd9e306fc6a6463c7986d456aee1c6a; test "$(sha256sum /tmp/lynx_agent_queue.py.lnx84 | cut -d" " -f1)" = e16717786a579e87be3e3198526504350776c108d90baa2b360c7da48b0e497c; test "$(sha256sum /usr/local/bin/lynx-agent-health | cut -d" " -f1)" = e13afb2391db0c710d892abe00a5e760fb732238a5cd7f33cff2fb6c72fe9e18; test "$(sha256sum /tmp/lynx-agent-health.lnx84 | cut -d" " -f1)" = 1b497e8a5db44800b4f070c47e0e06f3e1344884a6e73eb18be008d7e5aab1b6; cp -p /usr/local/bin/lynx-agent-worker /usr/local/bin/lynx-agent-worker.pre-lnx84; cp -p /usr/local/bin/lynx_agent_queue.py /usr/local/bin/lynx_agent_queue.py.pre-lnx84; cp -p /usr/local/bin/lynx-agent-health /usr/local/bin/lynx-agent-health.pre-lnx84; install -m 755 /tmp/lynx-agent-health.lnx84 /usr/local/bin/lynx-agent-health; install -m 644 /tmp/lynx_agent_queue.py.lnx84 /usr/local/bin/lynx_agent_queue.py; install -m 755 /tmp/lynx-agent-worker.lnx84 /usr/local/bin/lynx-agent-worker; rm /tmp/lynx-agent-worker.lnx84 /tmp/lynx_agent_queue.py.lnx84 /tmp/lynx-agent-health.lnx84; if rc-service lynx-agent-worker status | grep -q started; then rc-service lynx-agent-worker restart; fi; rc-service lynx-agent-worker status || true'
 ```
 
 Expected: service retains its preflight state (started in active mode, stopped
@@ -70,7 +76,7 @@ The new Aigel server **must not be running** before this rollback, or it will
 reject unsigned replies. If it is running, roll back Aigel first.
 
 ```sh
-lyssh 'set -eu; test "$(sha256sum /usr/local/bin/lynx-agent-worker.pre-lnx84 | cut -d" " -f1)" = 6a3d27cd19c4d86cce40f6acd4a1db6afe056707b5a5b56ba1b4578b7310da12; test "$(sha256sum /usr/local/bin/lynx_agent_queue.py.pre-lnx84 | cut -d" " -f1)" = 72bfc18c8e960f7213ca6e87efe1d3bcea0afccd1efb3928a8ca250e33c970b6; cp -p /usr/local/bin/lynx_agent_queue.py.pre-lnx84 /usr/local/bin/lynx_agent_queue.py; cp -p /usr/local/bin/lynx-agent-worker.pre-lnx84 /usr/local/bin/lynx-agent-worker; if rc-service lynx-agent-worker status | grep -q started; then rc-service lynx-agent-worker restart; fi; rc-service lynx-agent-worker status || true'
+lyssh 'set -eu; test "$(sha256sum /usr/local/bin/lynx-agent-worker.pre-lnx84 | cut -d" " -f1)" = 6a3d27cd19c4d86cce40f6acd4a1db6afe056707b5a5b56ba1b4578b7310da12; test "$(sha256sum /usr/local/bin/lynx_agent_queue.py.pre-lnx84 | cut -d" " -f1)" = 72bfc18c8e960f7213ca6e87efe1d3bcea0afccd1efb3928a8ca250e33c970b6; cp -p /usr/local/bin/lynx_agent_queue.py.pre-lnx84 /usr/local/bin/lynx_agent_queue.py; test "$(sha256sum /usr/local/bin/lynx-agent-health.pre-lnx84 | cut -d" " -f1)" = e13afb2391db0c710d892abe00a5e760fb732238a5cd7f33cff2fb6c72fe9e18; cp -p /usr/local/bin/lynx-agent-health.pre-lnx84 /usr/local/bin/lynx-agent-health; cp -p /usr/local/bin/lynx-agent-worker.pre-lnx84 /usr/local/bin/lynx-agent-worker; if rc-service lynx-agent-worker status | grep -q started; then rc-service lynx-agent-worker restart; fi; rc-service lynx-agent-worker status || true'
 ```
 
 Offline tests: `PYTHONPATH=lynx/tools/agent python3 -m unittest
@@ -83,3 +89,7 @@ Reviews: Gwyn #518 accepted the earlier `.done` retry source but identified
 two durability concerns: tidy expiry and a poison file. Both are fixed by
 the separate `.reply` outbox at the new queue hash, which needs Gwyn and a
 second independent reviewer to confirm before installation.
+
+Gwyn #528 (2026-11-25): requested the health change above and made it himself because Aria is out of
+tokens, so Gwyn is now co-author of this packet. Required: two reviews by Noobs other than
+Aria and Gwyn (Banshee, Dushich) at worker `610dc131`, queue `e1671778`, health `1b497e8a`.

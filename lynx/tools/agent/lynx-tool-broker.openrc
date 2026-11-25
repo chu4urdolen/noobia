@@ -1,0 +1,21 @@
+#!/sbin/openrc-run
+# lynx-tool-broker (LNX-73): the root side of Lynx's privilege split. The
+# agent (user lynx-agent) asks it to run catalogued tools; nothing else.
+# Never reboots or powers anything off. Disable: rc-update del lynx-tool-broker
+# and unset LYNX_AGENT_USER for lynx-agent-worker (see the install packet).
+description="Lynx tool broker: runs catalogued agent tools for the unprivileged agent"
+command="/usr/bin/python3"
+command_args="/usr/local/libexec/lynx/lynx-tool-broker serve --group lynx-agent"
+command_background=true
+pidfile="/run/lynx/tool-broker.pid"
+output_log="/var/log/lynx-tool-broker.out"
+error_log="/var/log/lynx-tool-broker.out"
+
+depend() {
+    before lynx-agent-worker
+    after lynx-local-logs
+}
+
+start_pre() {
+    checkpath -d -m 0755 /run/lynx
+}

@@ -31,6 +31,18 @@ ROOT = Path('/var/lib/lynx-agent/jobs')
 STOP = Path('/var/lib/lynx-agent/stop')
 THOUGHT_PATH = Path('/var/lib/noobia/lynx_thought.txt')
 AGENT = '/usr/local/bin/lynx-agent'
+# LNX-73: run the agent as this unprivileged user (setpriv, all capabilities
+# dropped); its tools then go through lynx-tool-broker. Empty = as today (root).
+AGENT_USER = os.environ.get('LYNX_AGENT_USER', '')
+
+
+def agent_command(user=None):
+    user = AGENT_USER if user is None else user
+    base = ['/usr/bin/python3', AGENT, '--stdin']
+    if not user:
+        return base
+    return ['/bin/setpriv', '--reuid', user, '--regid', user, '--init-groups',
+            '--inh-caps=-all', '--bounding-set=-all', '--no-new-privs'] + base
 LOCAL = 'http://192.168.100.106:8080'
 LOCAL_KEY = Path('/etc/lynx/nexus-inference.key')
 CLOUD_KEY = Path('/etc/lynx/openai.key')
@@ -101,7 +113,7 @@ def run_job(queue, job_id, prompt):
             queue.finish(job_id, False, 'Agent stopped')
             return
         try:
-            current = subprocess.Popen(['/usr/bin/python3', AGENT, '--stdin'],
+            current = subprocess.Popen(agent_command(),
                                        stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE, start_new_session=True)
         except OSError:

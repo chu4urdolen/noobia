@@ -30,7 +30,9 @@ LOCAL_KEY = Path('/etc/lynx/nexus-inference.key')
 CLOUD_KEY = Path('/etc/lynx/openai.key')
 BRAIN_CONFIG_PATH = Path(os.environ.get("LYNX_BRAIN_CONFIG", "/etc/lynx/brain.json"))
 TOOLS = Path('/usr/local/share/lynx/agent-tools')
-AUDIT = Path('/var/log/lynx-agent.jsonl')
+AUDIT = Path(os.environ.get('LYNX_AGENT_AUDIT', '/var/log/lynx-agent.jsonl'))
+# LNX-73: when the agent runs unprivileged, tools go through the root broker.
+BROKER = Path(os.environ.get('LYNX_TOOL_BROKER', '/run/lynx/tool-broker.sock'))
 NAME = re.compile(r'[a-z][a-z0-9_]{0,63}\Z')
 INSTRUCTIONS = (
     'You are Lynx, a Noob of Noobia: a living phone (OnePlus Nord 3, Alpine Linux) '
@@ -154,6 +156,8 @@ class Catalog:
     def run(self, name, arguments, exclude=frozenset()):
         if name in exclude:
             return {'ok': False, 'error': 'Tool not available for this kind of job'}
+        if os.geteuid() != 0 and BROKER.exists():
+            return broker_call(name, arguments, exclude)
         entry = self.entries().get(name)
         if entry is None:
             return {'ok': False, 'error': 'Unknown tool'}
@@ -174,6 +178,29 @@ class Catalog:
                     'output': (result.stdout + result.stderr)[-8000:]}
         except (OSError, subprocess.TimeoutExpired):
             return {'ok': False, 'error': 'Tool unavailable or timed out'}
+
+
+def broker_call(name, arguments, exclude=frozenset(), path=None, timeout=200):
+    """Run one tool through lynx-tool-broker (LNX-73): one JSON line each way."""
+    import socket
+    request_line = json.dumps({'tool': name, 'args': arguments, 'exclude': sorted(exclude)}) + '\n'
+    data = b''
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as conn:
+        conn.settimeout(timeout)
+        try:
+            conn.connect(str(path or BROKER))
+            conn.sendall(request_line.encode())
+            while not data.endswith(b'\n'):
+                chunk = conn.recv(65536)
+                if not chunk:
+                    break
+                data += chunk
+        except OSError as exc:
+            return {'ok': False, 'error': 'tool broker unavailable: ' + type(exc).__name__}
+    try:
+        return json.loads(data.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        return {'ok': False, 'error': 'tool broker answered garbage'}
 
 
 def request(base, key, payload):

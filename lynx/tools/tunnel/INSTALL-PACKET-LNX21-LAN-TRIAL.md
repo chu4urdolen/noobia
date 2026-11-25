@@ -77,7 +77,8 @@ and after `apk add`; stop if either changes.
    hosts, `wg show wg-lynx latest-handshakes` must show a recent nonzero
    timestamp, and transfer counters must increase. Recheck both hosts' default
    routes (unchanged), Lynx SSH 22/2222 and NRP 4243 from Nexus, battery,
-   health, and the security regression suite (15/15 baseline). Record times.
+   health, and the security regression suite (all registered checks; 19/19
+   passed on Nexus on 2026-11-25). Record times.
 
 The following commands make the plan concrete. Run each group only after its
 preflight succeeds; replace nothing silently. The `lyssh` function uses the

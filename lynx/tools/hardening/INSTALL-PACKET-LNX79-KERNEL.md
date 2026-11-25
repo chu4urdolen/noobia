@@ -32,7 +32,7 @@ snapshot for recovery.
 
 Noob and Aria present; Lynx on stable power. Record wall time, boot ID,
 battery/temperature, `lynx-status --assert-ready`, Wi-Fi address and default
-route, NRP 4243, and both rescue SSH ports. Run the 15-check security
+route, NRP 4243, and both rescue SSH ports. Run all registered security
 regression before and after. Confirm all seven live sysctl values above;
 `/usr/local/sbin/lynx-sysctl-trial` and `/run/lynx-sysctl-trial/snapshot.json`
 must be absent. Stop on a mismatch. Run the offline tests before copying:
@@ -57,7 +57,7 @@ Expected hash matches the table; `enable` prints `pending; auto-rollback in
 values, the same Wi-Fi address and default route, signed NRP STATUS, and both
 SSH ports. Only then run `/usr/local/sbin/lynx-sysctl-trial confirm` from
 that second session within 120 seconds; expected `active until disable or
-reboot`. Re-run the 15-check security regression and record values.
+reboot`. Re-run the security regression and record its check count and values.
 
 ## Disable and rollback
 

@@ -167,7 +167,7 @@ def run_tool(name: str, args_json: str, tools_map: dict[str, dict]) -> tuple[str
 
     t0 = time.time()
     cmd = [script] if os.access(script, os.X_OK) else ["/bin/sh", script]
-    tool_timeout = 120 if name in ("lynx_codex", "lynx_camera_photo") else 30
+    tool_timeout = 180 if name == "lynx_codex" else (60 if name == "lynx_camera_photo" else 30)
     try:
         proc = subprocess.run(
             cmd,

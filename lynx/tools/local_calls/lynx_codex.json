@@ -12,7 +12,8 @@
       "model": {
         "type": "string",
         "enum": [
-          "gpt-oss-20b"
+          "gpt-oss-20b",
+          "qwen3.8-27b"
         ]
       }
     },
@@ -22,5 +23,5 @@
     ],
     "additionalProperties": false
   },
-  "timeout": 130
+  "timeout": 180
 }

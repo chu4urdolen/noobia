@@ -11,7 +11,7 @@ import time
 import unittest
 
 from lynx_ble_auth import envelope
-from lynx_noob_runtime import serve
+from lynx_noob_runtime import RemoteLimiter, serve
 
 
 KEY = bytes(range(32))
@@ -22,6 +22,54 @@ def line(stream):
 
 
 class AuthTransportTest(unittest.TestCase):
+    def test_remote_request_budget_refills_and_caps(self):
+        limiter = RemoteLimiter(rate=2, burst=3, now=0)
+        self.assertEqual([limiter.allow(now=0) for _ in range(4)],
+                         [True, True, True, False])
+        self.assertTrue(limiter.allow(now=0.5))
+        self.assertFalse(limiter.allow(now=0.5))
+        self.assertEqual(limiter.tokens, 0)
+        self.assertTrue(limiter.allow(now=10))
+        self.assertLessEqual(limiter.tokens, limiter.burst)
+
+    def test_unauthenticated_connections_are_bounded(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            key = root / "nexus.key"
+            key.write_bytes(KEY)
+            key.chmod(0o600)
+            local_path = root / "nrp.sock"
+            with socket.socket() as reserve:
+                reserve.bind(("127.0.0.1", 0))
+                port = reserve.getsockname()[1]
+            process = multiprocessing.Process(
+                target=serve, args=("127.0.0.1", port, "127.0.0.1",
+                                    str(local_path), os.getuid(), str(key)))
+            process.start()
+            clients = []
+            try:
+                deadline = time.monotonic() + 3
+                while not local_path.is_socket() and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                self.assertTrue(local_path.is_socket())
+                for _ in range(16):
+                    conn = socket.create_connection(("127.0.0.1", port), timeout=2)
+                    conn.settimeout(2)
+                    self.assertTrue(conn.recv(128).startswith(b"AUTH/1 CHALLENGE "))
+                    clients.append(conn)
+                with socket.create_connection(("127.0.0.1", port), timeout=2) as excess:
+                    excess.settimeout(2)
+                    self.assertEqual(excess.recv(128), b"")
+            finally:
+                for conn in clients:
+                    conn.close()
+                if process.is_alive():
+                    os.kill(process.pid, signal.SIGTERM)
+                process.join(3)
+                if process.is_alive():
+                    process.kill()
+                    process.join(2)
+
     def test_unauthenticated_tcp_cannot_issue_but_local_vm_is_shared(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)

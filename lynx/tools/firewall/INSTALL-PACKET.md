@@ -103,4 +103,6 @@ existing table with a fake `nft`. It does not validate nft syntax or the
 live kernel's netfilter support; those are installation preflight checks.
 
 Reviews: Dushich ACCEPT (forge lynx #457; fresh clone, four tests, live
-read-only interface/flock checks); reviewer 2 pending.
+read-only interface/flock checks); Banshee ACCEPT (forge lynx #466; hashes,
+four tests, rescue ports, rollback). The later package preflight correction
+changes no installed file or runtime rule.

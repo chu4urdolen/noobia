@@ -150,3 +150,11 @@ scanned), the installed injection filter neutralises an attack, and the
 rescue ports 22 and 2222 still listen. Exit 0 = all pass. 2026-11-25: 15/15.
 Run it after every security-relevant change, and before and after Aria's
 firewall install.
+
+## NRP request and connection limits (LNX-70/84, candidate)
+
+`lynx_noob_runtime.py` now caps remote TCP clients at 16, closes clients that
+do not answer the HMAC challenge within 10 seconds, and applies one shared
+10-request/s token bucket with a burst of 30 to authenticated remote requests.
+The root-local Unix socket is unaffected. This is a repo candidate only until
+its own install packet is reviewed and applied to Lynx.

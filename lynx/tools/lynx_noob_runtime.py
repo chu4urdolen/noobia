@@ -1370,6 +1370,29 @@ class Runtime:
         return head, numbers, text
 
 
+class RemoteLimiter:
+    """Bound authenticated Nexus request bursts across TCP connections."""
+
+    def __init__(self, rate=10.0, burst=30.0, now=None):
+        self.rate = rate
+        self.burst = burst
+        self.tokens = burst
+        self.updated = time.monotonic() if now is None else now
+
+    def allow(self, now=None):
+        now = time.monotonic() if now is None else now
+        self.tokens = min(self.burst, self.tokens + max(0.0, now - self.updated) * self.rate)
+        self.updated = now
+        if self.tokens < 1.0:
+            return False
+        self.tokens -= 1.0
+        return True
+
+
+MAX_REMOTE_CLIENTS = 16
+REMOTE_AUTH_TIMEOUT_S = 10
+
+
 def serve(host, port, peer, local_socket="", local_uid=0, nexus_key_file=""):
     nexus_key = load_key(nexus_key_file) if nexus_key_file else None
     runtime = Runtime()
@@ -1408,8 +1431,27 @@ def serve(host, port, peer, local_socket="", local_uid=0, nexus_key_file=""):
             selector.register(local_server, selectors.EVENT_READ)
         buffers = {}
         remote_auth = {}
+        remote_sockets = set()
+        auth_started = {}
+        remote_limiter = RemoteLimiter()
+
+        def close_conn(conn):
+            try:
+                selector.unregister(conn)
+            except KeyError:
+                pass
+            buffers.pop(conn, None)
+            remote_auth.pop(conn, None)
+            remote_sockets.discard(conn)
+            auth_started.pop(conn, None)
+            conn.close()
+
         while active:
             runtime.tick()
+            now = time.monotonic()
+            for conn, started in list(auth_started.items()):
+                if now - started > REMOTE_AUTH_TIMEOUT_S:
+                    close_conn(conn)
             while runtime.sequence.events:
                 event = ("NRP/1 0 EVENT " + runtime.sequence.events.popleft() + "\n").encode()
                 for conn in list(buffers):
@@ -1418,14 +1460,14 @@ def serve(host, port, peer, local_socket="", local_uid=0, nexus_key_file=""):
                     try:
                         conn.sendall(event)
                     except OSError:
-                        selector.unregister(conn)
-                        buffers.pop(conn, None)
-                        remote_auth.pop(conn, None)
-                        conn.close()
+                        close_conn(conn)
             for key, _ in selector.select(0.02):
                 if key.fileobj is server or key.fileobj is local_server:
                     conn, address = key.fileobj.accept()
                     if key.fileobj is server and peer != "*" and address[0] != peer:
+                        conn.close()
+                        continue
+                    if key.fileobj is server and len(remote_sockets) >= MAX_REMOTE_CLIENTS:
                         conn.close()
                         continue
                     if key.fileobj is local_server and \
@@ -1435,8 +1477,15 @@ def serve(host, port, peer, local_socket="", local_uid=0, nexus_key_file=""):
                         continue
                     if key.fileobj is server and nexus_key is not None:
                         auth = Authenticator(nexus_key, max_frame=4096)
-                        conn.sendall(auth.challenge_line())
+                        try:
+                            conn.sendall(auth.challenge_line())
+                        except OSError:
+                            conn.close()
+                            continue
                         remote_auth[conn] = auth
+                        auth_started[conn] = time.monotonic()
+                    if key.fileobj is server:
+                        remote_sockets.add(conn)
                     conn.setblocking(False)
                     buffers[conn] = b""
                     selector.register(conn, selectors.EVENT_READ)
@@ -1454,6 +1503,9 @@ def serve(host, port, peer, local_socket="", local_uid=0, nexus_key_file=""):
                         try:
                             if conn in remote_auth:
                                 line = remote_auth[conn].accept(line + b"\n").rstrip(b"\n")
+                                auth_started.pop(conn, None)
+                                if not remote_limiter.allow():
+                                    raise ConnectionError
                             request = line.decode("ascii").rstrip("\r")
                             answer = runtime.dispatch(request)
                         except ValueError as exc:
@@ -1462,10 +1514,7 @@ def serve(host, port, peer, local_socket="", local_uid=0, nexus_key_file=""):
                             answer = "NRP/1 0 ERR BAD_REQUEST non_ascii"
                         conn.sendall((answer + "\n").encode())
                 except (ConnectionError, OSError):
-                    selector.unregister(conn)
-                    buffers.pop(conn, None)
-                    remote_auth.pop(conn, None)
-                    conn.close()
+                    close_conn(conn)
         runtime.sequence.stop()
         runtime.cycle.stop()
         runtime.touch.close()

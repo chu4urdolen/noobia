@@ -1,0 +1,13 @@
+add table inet lynx_guard
+add chain inet lynx_guard input { type filter hook input priority 0; policy drop; }
+
+# Keep both SSH rescue routes reachable from every Noobia LAN address.
+add rule inet lynx_guard input iifname "wlan0" ip saddr 192.168.100.0/24 tcp dport { 22, 2222 } accept
+add rule inet lynx_guard input iifname "wlan0" ip saddr 192.168.100.106 tcp dport 4243 accept
+
+add rule inet lynx_guard input iifname "lo" accept
+add rule inet lynx_guard input ct state established,related accept
+add rule inet lynx_guard input iifname "wlan0" udp sport 67 udp dport 68 accept
+add rule inet lynx_guard input iifname "wlan0" udp sport 547 udp dport 546 accept
+add rule inet lynx_guard input iifname "wlan0" ip protocol icmp icmp type echo-request accept
+add rule inet lynx_guard input iifname "wlan0" icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-advert, nd-router-solicit, echo-request, echo-reply } accept

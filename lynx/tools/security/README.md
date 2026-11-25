@@ -42,8 +42,7 @@ A starting policy that follows Rose's rules (4: keep Noobia connected, 5: recove
 
 * **Inbound, default drop** on `wlan0` (and on the cellular `ccmni*` interfaces once
   they are up). Allow established/related traffic, ICMP echo and IPv6 neighbour discovery.
-* **2222/tcp (SSH):** from the Noobia LAN only (192.168.100.0/24). From Nexus only,
-  if Tom agrees.
+* **2222/tcp (SSH):** from the Noobia LAN (192.168.100.0/24).
 * **4243/tcp (NRP):** from Nexus 192.168.100.106 only (noobd already refuses others;
   the firewall makes it two locks).
 * **22/tcp (rescue SSH): always open, like 2222.** Tom, 2026-11-25: "Don't close rescue
@@ -57,3 +56,30 @@ A starting policy that follows Rose's rules (4: keep Noobia connected, 5: recove
   Nexus out of Lynx.
 * Lynx has no `nft` or `iptables` yet: the firewall packet must install `nftables`
   (Alpine package) first.
+
+## `lynx_tool_policy.py` (LNX-25): network tool authorization
+
+Every network tool asks `authorize(tool, action, target)` before acting. Rose's
+rule 7 (authorized targets) and rule 10 (traceable):
+
+| Action kind | Allowed |
+| --- | --- |
+| passive views: `net-ifaces`, `lan-sweep`, `wifi-recon` | always |
+| probing: `port-scan`, `vuln-check` | only Lynx herself and the Noobia LAN (192.168.100.0/24); a name that hides an outside address is refused |
+| path checks: `traceroute`, `dns-audit`, `ssl-audit` | Lynx, the LAN, and public addresses; private networks outside Noobia refused |
+| capture: `packet-sample` (tcpdump) | **off** until a person sets `"allow_packet_capture": true` (it records other people's traffic) |
+| anything else | refused |
+
+* Policy file (optional): `/etc/lynx/tool-policy.json`, for example
+  `{"authorized_networks": ["192.168.100.0/24"], "allow_packet_capture": false}`.
+  If it is broken, probing and capture are refused (fail closed).
+* Audit log: `/var/log/lynx-tool-policy.jsonl` (mode 600): time, tool, action,
+  target, resolved addresses, decision, reason. Never the tool's output.
+* Installed on Lynx at `/usr/local/lib/noobia/security/lynx_tool_policy.py`.
+  `lynx-net-diag` checks it before its lock and before forking, and exits 3 with
+  the reason when it refuses. Check a decision by hand:
+  `python3 /usr/local/lib/noobia/security/lynx_tool_policy.py check port-scan 8.8.8.8`.
+* `lynx_cellular_diag` needs no gate today: all its actions are read-only;
+  `at-probe` only checks that the AT channel exists.
+* Tests: `python3 -m unittest test_lynx_tool_policy` (8) here, and the gate tests
+  in `lynx/tools/net_diag` (run from `/noobia`).

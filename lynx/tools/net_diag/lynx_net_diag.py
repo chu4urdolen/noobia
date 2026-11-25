@@ -533,6 +533,31 @@ def run_diagnostic(action: str, args: argparse.Namespace) -> dict[str, Any]:
     return res
 
 
+def policy_target(action: str, args: argparse.Namespace) -> str | None:
+    """The address an action reaches, for the tool policy (LNX-25)."""
+    if action in ("port-scan", "vuln-check", "traceroute"):
+        return getattr(args, "target", None)
+    if action == "ssl-audit":
+        return getattr(args, "host", None)
+    if action == "dns-audit":
+        return getattr(args, "server", None) or getattr(args, "domain", None)
+    return None
+
+
+def authorized(action: str, args: argparse.Namespace) -> tuple[bool, str]:
+    """Ask lynx_tool_policy (Gwyn, LNX-25). Fail closed if it cannot be loaded."""
+    for extra in (Path(__file__).resolve().parent.parent / "security", Path("/usr/local/lib/noobia/security")):
+        if str(extra) not in sys.path:
+            sys.path.insert(0, str(extra))
+    try:
+        import lynx_tool_policy
+    except ImportError:
+        if action in ("net-ifaces", "lan-sweep", "wifi-recon"):
+            return True, "passive local view (policy module missing)"
+        return False, "tool policy module missing: refusing active network actions (fail closed)"
+    return lynx_tool_policy.authorize("lynx_net_diag", action, policy_target(action, args))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--fork", action="store_true", help="Fork diagnostic execution into the background")
@@ -572,6 +597,11 @@ def main():
 
     args = parser.parse_args()
     action = args.cmd
+    allowed, reason = authorized(action, args)
+    if not allowed:
+        print(json.dumps({"ok": False, "refused": True, "action": action, "reason": reason,
+                          "sentence": f"I did not run {action}: {reason}"}, indent=2))
+        sys.exit(3)
     lock = ActionLock(f"netdiag_{action}")
 
     # Check lock: She should not run two of the same forked tool at once

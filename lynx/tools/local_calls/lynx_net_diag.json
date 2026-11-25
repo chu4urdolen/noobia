@@ -1,12 +1,22 @@
 {
   "name": "lynx_net_diag",
-  "description": "Entity: Lynx. Network diagnostic and security audit toolkit: net-ifaces, lan-sweep, wifi-recon, port-scan, vuln-check, ssl-audit, dns-audit, traceroute, packet-sample. Supports background forked execution (fork: true) with findings streamed into senses.",
+  "description": "Entity: Lynx. Network diagnostic and security audit toolkit: net-ifaces, lan-sweep, wifi-recon, port-scan, vuln-check, ssl-audit, dns-audit, traceroute, packet-sample. Supports background forked execution (fork: true) with findings streamed into senses. Rules (LNX-25, enforced): port-scan and vuln-check only against yourself and the Noobia LAN (192.168.100.0/24); traceroute, dns-audit and ssl-audit may reach public addresses; packet-sample is refused unless a person allowed it, because it records other people's traffic. Every request is logged.",
   "inputSchema": {
     "type": "object",
     "properties": {
       "action": {
         "type": "string",
-        "enum": ["net-ifaces", "lan-sweep", "wifi-recon", "port-scan", "vuln-check", "ssl-audit", "dns-audit", "traceroute", "packet-sample"],
+        "enum": [
+          "net-ifaces",
+          "lan-sweep",
+          "wifi-recon",
+          "port-scan",
+          "vuln-check",
+          "ssl-audit",
+          "dns-audit",
+          "traceroute",
+          "packet-sample"
+        ],
         "description": "Diagnostic action to execute"
       },
       "target": {
@@ -42,7 +52,9 @@
         "description": "If true, forks execution into background immediately; findings stream into senses log"
       }
     },
-    "required": ["action"],
+    "required": [
+      "action"
+    ],
     "additionalProperties": false
   },
   "timeout": 20

@@ -102,5 +102,29 @@ BSS aa:bb:cc:dd:ee:ff(on wlan0)
                 lock2.release()
 
 
+
+class PolicyGateTest(unittest.TestCase):
+    """LNX-25: the policy is asked before the lock and the fork."""
+    def test_targets_per_action(self):
+        import argparse
+        ns = argparse.Namespace(target="192.168.100.106", host="example.org", server=None, domain="noobia.org")
+        self.assertEqual(diag.policy_target("port-scan", ns), "192.168.100.106")
+        self.assertEqual(diag.policy_target("ssl-audit", ns), "example.org")
+        self.assertEqual(diag.policy_target("dns-audit", ns), "noobia.org")
+        self.assertIsNone(diag.policy_target("lan-sweep", ns))
+
+    def test_outside_port_scan_is_refused_before_running(self):
+        import io, json, sys as _sys
+        from contextlib import redirect_stdout
+        with tempfile.TemporaryDirectory() as d, \
+             patch.dict("os.environ", {"LYNX_TOOL_POLICY_LOG": d + "/log.jsonl"}), \
+             patch.object(diag, "port_scan", side_effect=AssertionError("must not run")), \
+             patch.object(_sys, "argv", ["lynx-net-diag", "port-scan", "8.8.8.8"]):
+            out = io.StringIO()
+            with redirect_stdout(out), self.assertRaises(SystemExit) as stop:
+                diag.main()
+            self.assertEqual(stop.exception.code, 3)
+            self.assertTrue(json.loads(out.getvalue())["refused"])
+
 if __name__ == "__main__":
     unittest.main()

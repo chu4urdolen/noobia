@@ -13,7 +13,7 @@ set -u
 MODE_FILE=/var/lib/noobia/power-mode
 LOCK=/run/lynx/power-mode.lock
 # Started in order, stopped in reverse.
-SERVICES="lynx-bluetooth lynx-agent-worker noobia-autonomyd lynx-senses lynx-camera-sense"
+SERVICES="lynx-bluetooth lynx-agent-worker noobia-autonomyd lynx-senses lynx-camera-sense lynx-radio"
 # Always on in both modes. lynx-noobd (Nexus's line to her) NEEDS lynx-media, so
 # stopping media for power saving silently stopped noobd too (found 2026-11-25).
 ALWAYS="lynx-media lynx-noobd"

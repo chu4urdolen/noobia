@@ -111,6 +111,10 @@
 !/tools/camera_deps/fixtures/
 /tools/camera_deps/fixtures/*
 !/tools/camera_deps/fixtures/*.json
+!/tools/radio/
+/tools/radio/*
+!/tools/radio/*.py
+!/tools/radio/*.initd
 !/tools/security/
 /tools/security/*
 !/tools/security/*.py

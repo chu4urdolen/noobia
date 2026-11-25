@@ -1,0 +1,15 @@
+#!/sbin/openrc-run
+# lynx-radio (LNX-37-42): read-only radio snapshot for the RADIO screen page,
+# every 30 s into /run/lynx/radio.txt. No scans, no modem commands. Started by
+# START (lynx-power-mode active), stopped by POWER SAVE. Never reboots anything.
+description="Lynx radio snapshot for the RADIO page"
+command="/usr/bin/python3"
+command_args="/usr/local/lib/noobia/radio/lynx_radio_snapshot.py --loop --every 30"
+command_background=true
+pidfile="/run/lynx/lynx-radio.pid"
+output_log="/var/log/lynx-radio.log"
+error_log="/var/log/lynx-radio.log"
+
+depend() {
+    after lynx-wifi
+}

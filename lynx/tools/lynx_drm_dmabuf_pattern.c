@@ -515,7 +515,8 @@ enum lynx_page {
 	PAGE_OUTPUTS,
 	PAGE_STATUS,
 	PAGE_CONSOLE,
-	PAGE_POWER	/* power saving: one START button (Tom, 2026-11-23) */
+	PAGE_POWER,	/* power saving: one START button (Tom, 2026-11-23) */
+	PAGE_RADIO	/* radios: Wi-Fi, traffic, network, cellular, Bluetooth (LNX-37) */
 };
 static char console_input[161];
 static size_t console_input_length;
@@ -932,11 +933,13 @@ static void nav_buttons(uint32_t *pixels, enum lynx_page page)
 		unsigned int lx;
 		unsigned int scale;
 	} btns[] = {
-		{ PAGE_HOME,    40,  216, "HOME",    88,   5 },
-		{ PAGE_CHAT,    276, 216, "CHAT",    324,  5 },
-		{ PAGE_INPUTS,  512, 216, "INPUTS",  530,  5 },
-		{ PAGE_OUTPUTS, 748, 216, "OUTPUTS", 772,  4 },
-		{ PAGE_STATUS,  984, 216, "STATUS",  1002, 5 },
+		/* Six buttons since the RADIO page (Gwyn, 2026-11-25): 180 px, 16 px gaps. */
+		{ PAGE_HOME,    40,   180, "HOME",    70,   5 },
+		{ PAGE_CHAT,    236,  180, "CHAT",    266,  5 },
+		{ PAGE_INPUTS,  432,  180, "INPUTS",  450,  4 },
+		{ PAGE_OUTPUTS, 628,  180, "OUTPUTS", 634,  4 },
+		{ PAGE_RADIO,   824,  180, "RADIO",   839,  5 },
+		{ PAGE_STATUS,  1020, 180, "STATUS",  1038, 4 },
 	};
 
 	for (size_t i = 0; i < sizeof(btns)/sizeof(btns[0]); i++) {
@@ -1474,6 +1477,8 @@ static unsigned int inputs_scroll_offset = 0;
 static unsigned int inputs_line_count = 0;
 static unsigned int outputs_scroll_offset = 0;
 static unsigned int outputs_line_count = 0;
+static unsigned int radio_scroll_offset = 0;
+static unsigned int radio_line_count = 0;
 
 struct text_row {
 	char text[64];
@@ -1806,6 +1811,93 @@ static void paint_outputs(uint32_t *pixels)
 	rectangle(pixels, sb_x, sb_y + pos, 45, thumb, teal);
 }
 
+/* RADIO page (LNX-37-42): drawn from /run/lynx/radio.txt, written every ~30 s
+ * by lynx-radio-snapshot. Rows: "H|header", "W|text" (G green, A amber,
+ * R red, M muted), "B|<0-100>|label" (a bar). */
+#define RADIO_FILE "/run/lynx/radio.txt"
+static void paint_radio(uint32_t *pixels)
+{
+	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa, teal = 0x0009dcc4;
+	const uint32_t green = 0x002aa860, amber = 0x00edb961, red = 0x00e05a5a, gray = 0x007d94a5;
+
+	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
+		pixels[i] = dark;
+	rectangle(pixels, 0, 0, WIDTH, 28, teal);
+	draw_text(pixels, "RADIO", 85, 155, 13, white);
+	rectangle(pixels, 75, 300, 1090, 5, teal);
+	draw_text(pixels, "WI-FI, NETWORK, CELLULAR & BLUETOOTH", 85, 325, 4, teal);
+
+	struct text_row rows[128];
+	int bars[128];
+	unsigned int count = 0;
+	FILE *f = fopen(RADIO_FILE, "r");
+	char line[160];
+	while (f && count < 128 && fgets(line, sizeof(line), f)) {
+		line[strcspn(line, "\r\n")] = '\0';
+		if (strlen(line) < 2 || line[1] != '|')
+			continue;
+		char kind = line[0];
+		const char *text = line + 2;
+		int bar = -1;
+		uint32_t color = white;
+		if (kind == 'B') {
+			bar = atoi(text);
+			if (bar < 0) bar = 0;
+			if (bar > 100) bar = 100;
+			const char *label = strchr(text, '|');
+			text = label ? label + 1 : "";
+			color = bar >= 60 ? green : (bar >= 30 ? amber : red);
+		} else if (kind == 'G') color = green;
+		else if (kind == 'A') color = amber;
+		else if (kind == 'R') color = red;
+		else if (kind == 'M') color = gray;
+		else if (kind == 'H') color = teal;
+		unsigned int before = count;
+		add_scroll_row(rows, &count, 128, text, color, kind == 'H');
+		for (unsigned int k = before; k < count; k++)
+			bars[k] = k == before ? bar : -1;
+	}
+	if (f)
+		fclose(f);
+	if (count == 0) {
+		add_scroll_row(rows, &count, 128, "NO RADIO SNAPSHOT YET", amber, false);
+		bars[0] = -1;
+		add_scroll_row(rows, &count, 128, "(LYNX-RADIO STARTS WITH START)", gray, false);
+		bars[1] = -1;
+	}
+
+	const unsigned int line_h = 50;
+	const unsigned int visible_lines = 38;
+	radio_line_count = count;
+	unsigned int maximum = count > visible_lines ? count - visible_lines : 0;
+	if (radio_scroll_offset > maximum)
+		radio_scroll_offset = maximum;
+	unsigned int first = radio_scroll_offset;
+	unsigned int show_n = count - first < visible_lines ? count - first : visible_lines;
+	for (unsigned int i = 0; i < show_n; i++) {
+		unsigned int idx = first + i;
+		unsigned int y = 360 + i * line_h;
+		if (rows[idx].is_header) {
+			rectangle(pixels, 55, y, 1115, 42, 0x001a2735);
+			rectangle(pixels, 55, y, 1115, 2, teal);
+			draw_text(pixels, rows[idx].text, 65, y + 8, 4, rows[idx].color);
+		} else if (bars[idx] >= 0) {
+			/* bar 600 px wide at x=65, label to its right */
+			rectangle(pixels, 65, y + 8, 600, 30, 0x00223644);
+			rectangle(pixels, 65, y + 8, (unsigned int)(6 * bars[idx]), 30, rows[idx].color);
+			draw_text(pixels, rows[idx].text, 690, y + 8, 4, white);
+		} else {
+			draw_text(pixels, rows[idx].text, 65, y + 8, 4, rows[idx].color);
+		}
+	}
+	const unsigned int sb_x = 1180, sb_y = 360, sb_h = 2160;
+	unsigned int thumb = count > visible_lines ? sb_h * visible_lines / count : sb_h;
+	if (thumb < 120) thumb = 120;
+	unsigned int pos = maximum ? (sb_h - thumb) * radio_scroll_offset / maximum : 0;
+	rectangle(pixels, sb_x, sb_y, 45, sb_h, 0x00223644);
+	rectangle(pixels, sb_x, sb_y + pos, 45, thumb, teal);
+}
+
 static void paint_power_page(uint32_t *pixels, int capacity)
 {
 	const uint32_t dark = 0x000b1219, white = 0x00f5f8fa, muted = 0x007d94a5;
@@ -1849,6 +1941,11 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 {
 	if (page == PAGE_POWER) {
 		paint_power_page(pixels, capacity);
+		return 0;
+	}
+	if (page == PAGE_RADIO) {
+		paint_radio(pixels);
+		nav_buttons(pixels, page);
 		return 0;
 	}
 	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa;
@@ -2637,15 +2734,17 @@ static int run(const char *action, unsigned int seconds)
 								target = PAGE_HOME;
 							}
 						} else if (y >= 2550 && y < 2710) {
-							if (x >= 40 && x < 256)
+							if (x >= 40 && x < 220)
 								target = PAGE_HOME;
-							else if (x >= 276 && x < 492)
+							else if (x >= 236 && x < 416)
 								target = PAGE_CHAT;
-							else if (x >= 512 && x < 728)
+							else if (x >= 432 && x < 612)
 								target = PAGE_INPUTS;
-							else if (x >= 748 && x < 964)
+							else if (x >= 628 && x < 808)
 								target = PAGE_OUTPUTS;
-							else if (x >= 984 && x < 1200)
+							else if (x >= 824 && x < 1004)
+								target = PAGE_RADIO;
+							else if (x >= 1020 && x < 1200)
 								target = PAGE_STATUS;
 						} else if (page == PAGE_HOME &&
 							   y >= 2360 && y < 2490) {
@@ -2733,6 +2832,18 @@ static int run(const char *action, unsigned int seconds)
 								if (inputs_scroll_offset > max_s) inputs_scroll_offset = max_s;
 							}
 							page_changed = true;
+						} else if (page == PAGE_RADIO &&
+							   y >= 360 && y < 2530) {
+							unsigned int max_s = radio_line_count > 38 ? radio_line_count - 38 : 0;
+							if (x >= 1150)
+								radio_scroll_offset = max_s ? (y - 360) * max_s / 2159U : 0;
+							else if (y < 1400)
+								radio_scroll_offset = radio_scroll_offset >= 5 ? radio_scroll_offset - 5 : 0;
+							else if (radio_scroll_offset + 5 <= max_s)
+								radio_scroll_offset += 5;
+							else
+								radio_scroll_offset = max_s;
+							page_changed = true;
 						} else if (page == PAGE_OUTPUTS &&
 							   y >= 360 && y < 2530) {
 							if (x >= 1150) {
@@ -2813,7 +2924,7 @@ static int run(const char *action, unsigned int seconds)
 					next_frame = ((now_ms - scene_started) / 500U) %
 						     scene.count;
 			}
-			bool status_refresh = portrait && (page == PAGE_STATUS || page == PAGE_INPUTS || page == PAGE_OUTPUTS || page == PAGE_POWER) && lit &&
+			bool status_refresh = portrait && (page == PAGE_STATUS || page == PAGE_INPUTS || page == PAGE_OUTPUTS || page == PAGE_POWER || page == PAGE_RADIO) && lit &&
 				now_ms - last_page_refresh >= 1000U;
 			unsigned int console_seq = page == PAGE_CONSOLE ?
 				console_sequence() : 0;
@@ -2973,6 +3084,8 @@ int main(int argc, char **argv)
 			return render_preview("", argv[3], PAGE_STATUS);
 		if (!strcmp(argv[2], "power"))
 			return render_preview("", argv[3], PAGE_POWER);
+		if (!strcmp(argv[2], "radio"))
+			return render_preview("", argv[3], PAGE_RADIO);
 		return 2;
 	}
 	if (argc == 3 && !strcmp(argv[1], "--preview-console-symbols")) {

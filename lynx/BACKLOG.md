@@ -55,7 +55,7 @@ Capability classes:
 | LNX-22 | Direct Noob-to-Noob mesh communication | I | **Aria** |
 | LNX-23 | Mobile hotspot configuration | O | **Aria** |
 | LNX-24 | Bluetooth tethering configuration | O | **Aria** |
-| LNX-25 | Network tool authorization enforcement | I | **Gwyn** |
+| LNX-25 | Network tool authorization enforcement | I | **Gwyn** — done, live (b9e5f62) |
 
 ### C. Autonomous radio senses
 
@@ -79,13 +79,13 @@ All senses are observational and classified as A.
 
 | ID | Feature task | Class | Owner |
 | --- | --- | --- | --- |
-| LNX-37 | RADIO display page | A | **Gwyn** |
-| LNX-38 | WiFi visualization | A | **Gwyn** |
-| LNX-39 | Cellular visualization | A | **Gwyn** |
-| LNX-40 | Bluetooth visualization | A | **Gwyn** |
-| LNX-41 | Network topology visualization | A | **Gwyn** |
-| LNX-42 | Live network activity visualization | A | **Gwyn** |
-| LNX-43 | Bee's Singularity Map integration | I | **Gwyn** |
+| LNX-37 | RADIO display page | A | **Gwyn** — done, live: RADIO page |
+| LNX-38 | WiFi visualization | A | **Gwyn** — done (RADIO: networks around her) |
+| LNX-39 | Cellular visualization | A | **Gwyn** — done (RADIO: cellular) |
+| LNX-40 | Bluetooth visualization | A | **Gwyn** — done (RADIO: Bluetooth) |
+| LNX-41 | Network topology visualization | A | **Gwyn** — done (RADIO: network map) |
+| LNX-42 | Live network activity visualization | A | **Gwyn** — done (RADIO: live traffic) |
+| LNX-43 | Bee's Singularity Map integration | I | **Gwyn** — blocked: Bee's identity and route not documented |
 
 ### E. Independent operation
 
@@ -94,7 +94,7 @@ All senses are observational and classified as A.
 | LNX-44 | On-device offline intelligence | I | **Aria** |
 | LNX-45 | Offline event journal and synchronization | I | **Aria** |
 | LNX-46 | Remote inference failover | I | **Aria** |
-| LNX-47 | Reflex inference priority | I | **Gwyn** |
+| LNX-47 | Reflex inference priority | I | **Gwyn** — measured; decision needed (docs/LNX-47-REFLEX-PRIORITY) |
 | LNX-48 | Noob communication discovery | A | **Banshee** |
 | LNX-49 | Connectivity failure diagnosis and reporting | A | **Banshee** |
 | LNX-50 | Radio capability registry | I | **Banshee** |
@@ -123,19 +123,19 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-61 | TCP/UDP flood detection | I | **Banshee** (DONE: lynx_sense_security.py) |
 | LNX-62 | Application-layer DoS protection | I | **Banshee** |
 | LNX-63 | Exposed service vulnerability audit | O | **Gwyn** (DONE: lynx_exposure_audit.py) |
-| LNX-64 | Kernel vulnerability audit | O | **Gwyn** |
+| LNX-64 | Kernel vulnerability audit | O | **Gwyn** — done (config audit, kernel) |
 | LNX-65 | Stateful IPv4 and IPv6 firewall | I | **Aria** |
 | LNX-66 | Network intrusion detection | I | **Banshee** (DONE: lynx_sense_security.py) |
 | LNX-67 | SSH brute-force protection | I | **Aria** |
 | LNX-68 | Cryptographic Nexus authentication | I | **Aria** |
-| LNX-69 | Agent prompt injection protection | I | **Gwyn** |
+| LNX-69 | Agent prompt injection protection | I | **Gwyn** — done, live (5f5fad1) |
 | LNX-70 | Network resource exhaustion protection | I | **Aria** |
 | LNX-71 | Unauthorized configuration change detection | I | **Banshee** |
 | LNX-72 | Filesystem integrity monitoring | I | **Banshee** (DONE: lynx_sense_security.py) |
-| LNX-73 | Agent privilege isolation | I | **Gwyn** |
+| LNX-73 | Agent privilege isolation | I | **Gwyn** — built; install packet for Aria |
 | LNX-74 | Security incident journal | I | **Banshee** (DONE: /var/log/lynx/security.jsonl) |
-| LNX-75 | Security incident perception | A | **Gwyn** |
-| LNX-76 | Sensitive information exposure audit | O | **Gwyn** |
+| LNX-75 | Security incident perception | A | **Gwyn** — covered: Banshee's S10 + LNX-100 + security status |
+| LNX-76 | Sensitive information exposure audit | O | **Gwyn** — done (config audit + repo scan) |
 | LNX-77 | Modem device-node access isolation | I | **Aria** |
 | LNX-78 | Public network service exposure audit | O | **Gwyn** (DONE: lynx_exposure_audit.py) |
 | LNX-79 | Malformed packet protection | I | **Aria** |
@@ -146,9 +146,9 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-84 | API authentication and rate limiting | I | **Aria** |
 | LNX-85 | DNS manipulation protection | I | **Aria** |
 | LNX-86 | Network credential protection | I | **Aria** |
-| LNX-87 | Security configuration audit tool | O | **Gwyn** |
-| LNX-88 | Read-only agent security diagnostic tool | A | **Gwyn** |
-| LNX-89 | Authorized security regression testing suite | O | **Gwyn** |
+| LNX-87 | Security configuration audit tool | O | **Gwyn** — done (config audit); hardening for Aria |
+| LNX-88 | Read-only agent security diagnostic tool | A | **Gwyn** — done, live (lynx_security_status) |
+| LNX-89 | Authorized security regression testing suite | O | **Gwyn** — done (regression suite, 15/15) |
 | LNX-90 | Security event reporting to Aigel | I | **Banshee** |
 | LNX-91 | Security incident synchronization with Argus | I | **Aria** |
 | LNX-92 | Cellular inbound reachability assessment | O | **Aria** |
@@ -164,7 +164,7 @@ These tasks focus on threats originating from other phones and ordinary network-
 | LNX-97 | Flood attack perception | security.flood.detected | **Banshee** (DONE) |
 | LNX-98 | Intrusion perception | security.intrusion.suspected | **Banshee** (DONE) |
 | LNX-99 | Integrity violation perception | security.integrity.changed | **Banshee** (DONE) |
-| LNX-100 | Prompt injection perception | security.prompt.injection.suspected | **Gwyn** |
+| LNX-100 | Prompt injection perception | security.prompt.injection.suspected | **Gwyn** — done, live |
 | LNX-101 | Untrusted endpoint perception | security.endpoint.untrusted | **Banshee** |
 | LNX-102 | Malicious message perception | security.message.suspicious | **Banshee** |
 | LNX-103 | Resource exhaustion perception | security.resource.exhaustion | **Banshee** |

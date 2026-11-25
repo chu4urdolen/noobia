@@ -49,6 +49,33 @@ class ForgeDbTest(unittest.TestCase):
         self.assertEqual(len(json.loads(out)), 3)
         self.assertEqual(run("note", "archive", "Nope", "--by", "D")[0], 2)
 
+    def test_note_archive_move_leaves_only_newer_notes(self):
+        for text in ("old one", "old two", "current state"):
+            self.assertEqual(run("note", "add", "Rose", text, "--by", "Gwyn")[0], 0)
+        code, out = run("--json", "note", "archive", "Rose", "--upto", "2", "--move", "--by", "Dushich")
+        self.assertEqual(code, 0)
+        got = json.loads(out)
+        self.assertEqual((got["copied"], got["moved"], got["notes_left"]), (2, 2, 1))
+        code, out = run("--json", "note", "list", "Rose")
+        self.assertEqual([r["note"] for r in json.loads(out)], ["current state"])
+        code, out = run("--json", "note", "archived", "Rose")
+        self.assertEqual([r["note"] for r in json.loads(out)], ["old one", "old two"])
+        code, out = run("--json", "note", "archive", "Rose", "--upto", "2", "--move", "--by", "Dushich")
+        self.assertEqual((json.loads(out)["copied"], json.loads(out)["moved"]), (0, 0))   # idempotent
+
+    def test_note_archive_move_never_deletes_a_note_whose_copy_differs(self):
+        import sqlite3
+        run("note", "add", "Rose", "original", "--by", "Gwyn")
+        run("note", "archive", "Rose", "--by", "Dushich")                  # copy only
+        con = sqlite3.connect(forge_db.DB)
+        con.execute("UPDATE project_notes SET note='edited after copy' WHERE project_name='Rose'")
+        con.commit()
+        con.close()
+        code, out = run("--json", "note", "archive", "Rose", "--move", "--by", "Dushich")
+        self.assertEqual(json.loads(out)["moved"], 0)
+        code, out = run("--json", "note", "list", "Rose")
+        self.assertEqual([r["note"] for r in json.loads(out)], ["edited after copy"])
+
     def test_path_roundtrip_and_search(self):
         code, _ = run("path", "set", self.folder.name, "-k", "dir", "-o", "Gwyn",
                       "-d", "Scratch atlas folder", "-t", "temp", "--project", "Rose", "--by", "Gwyn")

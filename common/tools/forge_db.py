@@ -449,11 +449,16 @@ def note_add(db, project, text, paths, by, agent=None) -> dict:
     return {**note, "warning": activity["message"]} if activity["conflict"] else note
 
 
-def note_archive(db, project: str, upto: int | None, by: str) -> dict:
+def note_archive(db, project: str, upto: int | None, by: str, move: bool = False) -> dict:
     """Copy a project's notes (up to note id `upto`) into project_notes_archive.
 
-    A copy, not a move (Tom, 2026-11-25): the notes stay where they are. Each
+    A copy by default (Tom, 2026-11-25): the notes stay where they are. Each
     note keeps its original id, so archiving twice copies nothing new.
+
+    With move=True (Tom, 2026-11-25 evening: "leave only the current state"),
+    the same transaction then deletes from project_notes exactly the notes whose
+    archived copy matches them field for field, plus their search vectors.
+    Nothing is deleted that is not safely in the archive.
     """
     if not db.execute("SELECT 1 FROM projects WHERE project_name=?", (project,)).fetchone():
         raise ValueError(f"Unknown project: {project}")
@@ -464,11 +469,28 @@ def note_archive(db, project: str, upto: int | None, by: str) -> dict:
         "(id, project_name, author, note, paths, created_at, archived_at, archived_by) "
         "SELECT id, project_name, author, note, paths, created_at, ?, ? FROM project_notes "
         "WHERE project_name=? AND id<=?", (now(), by, project, limit))
+    copied = cursor.rowcount
+    moved = 0
+    if move:
+        ids = [r[0] for r in db.execute(
+            "SELECT n.id FROM project_notes n JOIN project_notes_archive a ON a.id=n.id "
+            "WHERE n.project_name=? AND n.id<=? AND a.project_name=n.project_name "
+            "AND a.author IS n.author AND a.note IS n.note AND a.paths IS n.paths "
+            "AND a.created_at IS n.created_at", (project, limit))]
+        for i in range(0, len(ids), 500):
+            chunk = ids[i:i + 500]
+            marks = ",".join("?" * len(chunk))
+            db.execute(f"DELETE FROM project_notes WHERE id IN ({marks})", chunk)
+            db.execute(f"DELETE FROM embeddings WHERE source='note' AND key IN ({marks})",
+                       [str(x) for x in chunk])
+        moved = len(ids)
     db.commit()
     total = db.execute("SELECT COUNT(*), MIN(id), MAX(id) FROM project_notes_archive WHERE project_name=?",
                        (project,)).fetchone()
-    return {"project": project, "copied": cursor.rowcount, "upto": upto,
-            "archived_total": total[0], "first_id": total[1], "last_id": total[2]}
+    left = db.execute("SELECT COUNT(*) FROM project_notes WHERE project_name=?", (project,)).fetchone()[0]
+    return {"project": project, "copied": copied, "moved": moved, "upto": upto,
+            "archived_total": total[0], "first_id": total[1], "last_id": total[2],
+            "notes_left": left}
 
 
 def project_view(db, name: str, notes: int) -> dict:
@@ -628,6 +650,8 @@ def main(argv: list[str] | None = None) -> int:
     nx = na.add_parser("archive", help="copy a project's notes (up to --upto ID) into the archive table")
     nx.add_argument("project")
     nx.add_argument("--upto", type=int, help="last note id to copy (default: all)")
+    nx.add_argument("--move", action="store_true",
+                    help="also remove the archived notes from the project (only exact copies)")
     nx.add_argument("--by", required=True)
     nv = na.add_parser("archived", help="read a project's archived notes")
     nv.add_argument("project")
@@ -804,7 +828,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd == "note" and args.action == "add":
             result = note_add(db, args.project, args.text, args.path, args.by, args.agent)
         elif args.cmd == "note" and args.action == "archive":
-            result = note_archive(db, args.project, args.upto, args.by)
+            result = note_archive(db, args.project, args.upto, args.by, move=args.move)
         elif args.cmd == "note" and args.action == "archived":
             result = [dict(r) for r in db.execute(
                 "SELECT * FROM (SELECT * FROM project_notes_archive WHERE project_name=? "

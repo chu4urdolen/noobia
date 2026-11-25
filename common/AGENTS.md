@@ -464,6 +464,7 @@ forge-db project get Lynx                    # description, its paths, recent no
 forge-db project touch Lynx --for Aria --by Aria   # starting work; exit 3 = another agent is active
 forge-db note add Lynx "V53 boots; USB console still unproven" --path /noobia/lynx --by Aria
 forge-db note archive lynx --upto 446 --by Dushich   # copy notes (<= id) to project_notes_archive
+forge-db note archive lynx --upto 530 --move --by Dushich   # move: archive, then keep only newer notes
 forge-db note archived lynx --limit 50       # read the archive (notes stay in place too)
 forge-db path check --prefix /noobia/lynx    # flag recorded paths that vanished
 forge-db path hit /noobia/rose/rose_composer --by Gwyn   # a found path was right: count it

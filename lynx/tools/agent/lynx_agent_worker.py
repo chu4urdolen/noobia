@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Single supervised worker for private Lynx agent jobs."""
 
+import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
@@ -63,6 +65,18 @@ def agent_privileges(user=None):
 LOCAL = 'http://192.168.100.106:8080'
 LOCAL_KEY = Path('/etc/lynx/nexus-inference.key')
 CLOUD_KEY = Path('/etc/lynx/openai.key')
+AIGEL_KEY = Path('/etc/noobia/aigel-lynx.secret')
+
+
+def agent_response_headers(payload: bytes, key_path: Path = AIGEL_KEY) -> dict:
+    """Sign the exact response body with Lynx's existing Aigel host key."""
+    secret = key_path.read_text(encoding='utf-8').strip()
+    if not secret:
+        raise ValueError('Aigel host key is empty')
+    signature = hmac.new(secret.encode('utf-8'), payload, hashlib.sha256).hexdigest()
+    return {'Content-Type': 'application/json', 'X-Noobia-Signature': signature}
+
+
 current = None
 stopping = False
 
@@ -192,7 +206,7 @@ def run_job(queue, job_id, prompt):
                 req = urllib.request.Request(
                     "http://192.168.100.106:112/api/v1/agent_response",
                     data=payload,
-                    headers={"Content-Type": "application/json"},
+                    headers=agent_response_headers(payload),
                 )
                 with urllib.request.urlopen(req, timeout=3):
                     pass

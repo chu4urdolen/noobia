@@ -13,6 +13,8 @@ host registry (never in Git, ``aigel/private/intake_hosts.json``).
 A host that configures no credential is accepted - the documented
 LAN-only risk of contract C4. Unknown host or bad credential is a
 401, which the client treats as final (no retry storm).
+Agent responses require a configured host credential; unsigned replies
+cannot appear in Aigel's People view.
 
 Bounded: request body 256 KiB, 200 lines, 512 bytes per line,
 response 64 KiB. Inspectable: every request, decision, and refusal
@@ -391,6 +393,10 @@ def make_handler(intake: AigelIntake, web: AigelWeb | None = None):
             if length < 0:
                 self._send(400, {"error": "bad Content-Length"})
                 return
+            if length > MAX_BODY_BYTES:
+                self.close_connection = True
+                self._send(413, {"error": "body too large"})
+                return
             raw = self._read_body(length)
             if path == "/api/v1/chat":
                 if web is None:
@@ -407,8 +413,16 @@ def make_handler(intake: AigelIntake, web: AigelWeb | None = None):
                     self._send(400, {"error": "not an object"})
                     return
                 host = payload.get("host")
-                if not host or not isinstance(host, str):
+                if not isinstance(host, str) or not host.isascii() or not (1 <= len(host) <= 32):
                     self._send(400, {"error": "missing host"})
+                    return
+                entry = intake.hosts.get(host)
+                if entry is None or not (entry.get("hmac_secret") or entry.get("bearer")):
+                    self._send(401, {"error": "host credential required"})
+                    return
+                ok, why = intake.check_auth(host, raw, dict(self.headers))
+                if not ok:
+                    self._send(401, {"error": why})
                     return
                 text = payload.get("text", "")
                 tools = payload.get("tools")

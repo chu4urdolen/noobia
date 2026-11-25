@@ -1,5 +1,7 @@
 """Offline integration of Lynx's private queue with its one-shot worker."""
 
+import hashlib
+import hmac
 from pathlib import Path
 import multiprocessing
 import os
@@ -22,6 +24,18 @@ def run_stoppable_job(queue_root, agent, job):
 
 
 class WorkerTest(unittest.TestCase):
+    def test_agent_response_uses_existing_host_key(self):
+        with tempfile.TemporaryDirectory() as directory:
+            key = Path(directory) / 'aigel.key'
+            key.write_text('test-secret\n')
+            body = b'{"host":"lynx","text":"hello"}'
+            headers = worker.agent_response_headers(body, key)
+            self.assertEqual(headers['X-Noobia-Signature'],
+                             hmac.new(b'test-secret', body, hashlib.sha256).hexdigest())
+            key.write_text('')
+            with self.assertRaises(ValueError):
+                worker.agent_response_headers(body, key)
+
     def test_missing_agent_executable_finishes_job_without_crashing(self):
         with tempfile.TemporaryDirectory() as directory:
             queue = JobQueue(Path(directory) / 'jobs')

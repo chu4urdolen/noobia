@@ -253,12 +253,9 @@ class DecisionTests(IntakeServerCase):
             "job_id": "job123",
             "t": 12345.0
         }).encode("utf-8")
-        req = urllib.request.Request(f"{self.base}/api/v1/agent_response", data=body,
-                                     headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req) as resp:
-            self.assertEqual(resp.status, 200)
-            data = json.loads(resp.read().decode())
-            self.assertEqual(data.get("status"), "ok")
+        code, data = self.signed_post("/api/v1/agent_response", body)
+        self.assertEqual(code, 200)
+        self.assertEqual(data.get("status"), "ok")
 
         with urllib.request.urlopen(f"{self.base}/api/v1/status") as resp:
             st = json.loads(resp.read().decode())
@@ -267,6 +264,21 @@ class DecisionTests(IntakeServerCase):
             self.assertEqual(st["agent_replies"][0]["host"], "lynx")
             self.assertIn("sharp today", st["agent_replies"][0]["text"])
             self.assertEqual(st["agent_replies"][0]["tools"], ["lynx_haptic_pulse"])
+
+    def test_agent_response_rejects_unsigned_and_wrong_key(self):
+        body = json.dumps({"host": "lynx", "text": "spoof"}).encode()
+        code, _ = self.signed_post("/api/v1/agent_response", body, secret=None)
+        self.assertEqual(code, 401)
+        code, _ = self.signed_post("/api/v1/agent_response", body, secret="wrong")
+        self.assertEqual(code, 401)
+        self.assertEqual(self.intake.status_body()["agent_replies"], [])
+
+    def test_agent_response_rejects_unknown_host_and_oversized_body(self):
+        body = json.dumps({"host": "intruder", "text": "spoof"}).encode()
+        code, _ = self.signed_post("/api/v1/agent_response", body)
+        self.assertEqual(code, 401)
+        code, _ = self.signed_post("/api/v1/agent_response", b"x" * 262_145)
+        self.assertEqual(code, 413)
 
 
 class LivenessTests(IntakeServerCase):

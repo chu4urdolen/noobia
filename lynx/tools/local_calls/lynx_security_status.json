@@ -1,0 +1,6 @@
+{
+  "name": "lynx_security_status",
+  "description": "Entity: Lynx. Your own security check-up, read-only: which network doors are open and how they are protected, whether your keys and boot files are safe, kernel hardening, and the last day's refused network-tool requests, refused tool calls, prompt-injection attempts and security incidents. Changes nothing. Use it when someone asks whether you are safe.",
+  "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false},
+  "timeout": 20
+}

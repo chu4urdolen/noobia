@@ -167,7 +167,8 @@ class LynxAdapter(agent_link.Adapter):
         running = sum(1 for _ in self.jobs.glob("*.running")) if self.jobs.is_dir() else 0
         if pending >= self.max_pending:
             raise AgentBusy(f"{pending} jobs already pending ({running} running)")
-        job_id = JobQueue(self.jobs).create_job(build_prompt(message))
+        prompt = build_prompt(message)   # once: it also reports injection attempts (LNX-100)
+        job_id = JobQueue(self.jobs).create_job(prompt)
         self.last_job_id = job_id
         for p in ("/usr/local/lib/noobia/autonomy", "/usr/local/lib/noobia/lynx", "/noobia/lynx/tools"):
             if p not in sys.path:
@@ -178,7 +179,7 @@ class LynxAdapter(agent_link.Adapter):
                 "job_id": job_id,
                 "kind": incoming_kind,
                 "pattern_id": pattern_id,
-                "prompt": build_prompt(message),
+                "prompt": prompt,
             })
         except Exception:
             pass

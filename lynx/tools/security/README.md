@@ -83,3 +83,54 @@ rule 7 (authorized targets) and rule 10 (traceable):
   `at-probe` only checks that the AT channel exists.
 * Tests: `python3 -m unittest test_lynx_tool_policy` (8) here, and the gate tests
   in `lynx/tools/net_diag` (run from `/noobia`).
+
+## `lynx_config_audit.py` (LNX-87, LNX-64, LNX-76): secrets, integrity, kernel
+
+Read-only, on Lynx (`--text` or JSON; exit 1 on a high finding). Checks that key
+files, host keys and `authorized_keys` are not readable by others (the inference
+key may be group `lynx-agent` after LNX-73), that private logs are not
+world-readable, that nothing in her program and service folders is
+world-writable (one level, no recursive search), that the three files pinned by
+the boot hand-off match their pins, and the kernel hardening sysctls.
+
+First live run, 2026-11-25: **OK**: secrets protected; boot pins match
+(openrc-init, musl, lynx-health); kernel 5.10.149-android12-9; no SELinux.
+
+**Hardening for Aria (LNX-87, install with the firewall packet):**
+`/etc/sysctl.d/90-lynx-hardening.conf`, applied at boot:
+
+```
+kernel.kptr_restrict = 1
+kernel.dmesg_restrict = 1            # root (and the rescue tools) can still read dmesg
+kernel.unprivileged_bpf_disabled = 1
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.all.rp_filter = 2      # loose: keeps Wi-Fi + cellular routes working
+```
+
+(`tcp_syncookies` and `yama.ptrace_scope` do not exist in this kernel.)
+
+> **Never let `apk` upgrade `musl` or `openrc`.** The boot hand-off pins their
+> hashes: an upgrade means every boot is refused. Use `apk add --no-upgrade`, and
+> check `apk version musl openrc` before installing anything (e.g. `nftables`).
+
+## `repo_secret_scan.py` (LNX-76): the public repository
+
+Runs on Nexus over the files Git tracks, which is what GitHub publishes:
+`python3 lynx/tools/security/repo_secret_scan.py [--term WORD ...]`.
+It looks for private keys, provider tokens, literal password/secret/key
+assignments (skipping placeholders and unit-test fixtures), and private terms
+given at run time (never stored). Every hit is masked.
+
+2026-11-25: no keys or tokens. Two old findings remain for Tom to decide: the
+Lolth spider-bot firmware carries the robot's default Wi-Fi AP password
+(`lolth/firmware/*/0.SpiderBot/webserver.cpp`), and five Argus scripts and
+units contain the Pi's home-folder user name.
+
+## `lynx_security_status.py` (LNX-88): her own check-up
+
+An agent tool, `lynx_security_status` (read-only, no arguments), so Lynx can
+answer "are you safe?" from facts. It covers the doors open to the network,
+serious findings and things to improve, the boot pins, and the last day's
+network-tool refusals, broker refusals, prompt-injection attempts and incidents
+from Banshee's journal (`/var/log/lynx/security.jsonl`). Installed:
+`/usr/local/lib/noobia/security/` plus the tool in her catalogue.

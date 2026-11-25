@@ -475,7 +475,12 @@ def make_handler(intake: AigelIntake, web: AigelWeb | None = None,
                     if not isinstance(job_id, str) or not job_id.isascii() or not (1 <= len(job_id) <= 64):
                         self._send(400, {"error": "invalid job_id"})
                         return
-                    if isinstance(t, bool) or not isinstance(t, (int, float)) or not math.isfinite(t) or abs(intake.now_fn() - t) > REPLY_MAX_AGE_S:
+                    try:
+                        timestamp = float(t) if not isinstance(t, bool) else float("nan")
+                        fresh_timestamp = math.isfinite(timestamp) and abs(intake.now_fn() - timestamp) <= REPLY_MAX_AGE_S
+                    except (TypeError, ValueError, OverflowError):
+                        fresh_timestamp = False
+                    if not fresh_timestamp:
                         self._send(400, {"error": "stale reply timestamp"})
                         return
                 text = payload.get("text", "")

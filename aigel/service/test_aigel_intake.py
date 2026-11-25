@@ -310,6 +310,10 @@ class DecisionTests(IntakeServerCase):
         code, obj = self.signed_post("/api/v1/agent_response", body)
         self.assertEqual((code, obj), (400, {"error": "stale reply timestamp"}))
         self.assertEqual(self.intake.recent_agent_replies(), [])
+        huge = json.dumps({"host": "lynx", "job_id": "job-huge",
+                           "text": "bad", "t": 10 ** 1000}).encode()
+        code, obj = self.signed_post("/api/v1/agent_response", huge)
+        self.assertEqual((code, obj), (400, {"error": "stale reply timestamp"}))
 
     def test_signed_reply_does_not_ack_when_state_cannot_be_saved(self):
         blocker = os.path.join(self.tmp.name, "not-a-directory")

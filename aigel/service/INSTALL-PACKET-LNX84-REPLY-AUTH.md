@@ -5,7 +5,7 @@ review this packet. Install only after the signed Lynx worker packet has been
 installed and verified, with Noob's approval for the service restart.
 
 Source `aigel/service/aigel_intake.py`, SHA-256
-`0688ac8e037458edb395333f82128d55352d845fd82a4cced2e0c25d968ac4c5`,
+`443eb220c196020f162b435f739d9a3ba070cee9251cacb32a6e8f2b78dba9d1`,
 mode unchanged. The prior source is commit `3ec299e45337f6c6d139a5ff16b6d399dc60f156`,
 SHA-256 `e697b6fe61f6a4a462d0bd78a81022775d20b414dec210ce3f6b605d31012e2c`.
 `aigel_intake.service` executes

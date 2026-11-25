@@ -56,7 +56,8 @@ can check them without opening code:
 | power (S4) | `power.charging.change` (P5) | signed gauge current crosses ±50 mA deadband | — |
 | nexus (S8) | `nexus.unreachable` / `nexus.reachable` (P1) | TCP probe 192.168.100.106:8080 (env `NOOBIA_NEXUS_HOST`/`NOOBIA_NEXUS_PORT`) | 2 consecutive failures / 1 success |
 | hearing (S9) | `hearing.speech` / `hearing.sound` (P20) | Sound/speech heard when hearing toggle is enabled | Disabled by default to prevent audio spam |
-| wifi, power, hearing | `status.sample` (P0) | every 15th sample | P0 never closes a chunk: `trigger.py` triggers on `p >= 1` |
+| security (S10) | `security.portscan.detected`, `security.authentication.failed`, `security.flood.detected`, `security.intrusion.suspected`, `security.integrity.changed` (P20) | Attack/anomaly indicator observed | Cooldowns 60-120s; incident journal /var/log/lynx/security.jsonl |
+| wifi, power, hearing, security | `status.sample` (P0) | every 15th sample | P0 never closes a chunk: `trigger.py` triggers on `p >= 1` |
 
 Charging state: `lynx-status` (schema 2) has no charger field; state is
 derived from `battery.current_mA_signed` (≥ +50 mA charging, ≤ -50 mA

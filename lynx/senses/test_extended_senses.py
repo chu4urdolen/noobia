@@ -28,6 +28,7 @@ light = _load("lynx_sense_light", "light/lynx_sense_light.py")
 proximity = _load("lynx_sense_proximity", "proximity/lynx_sense_proximity.py")
 network = _load("lynx_sense_network", "network/lynx_sense_network.py")
 hearing = _load("lynx_sense_hearing", "hearing/lynx_sense_hearing.py")
+security = _load("lynx_sense_security", "security/lynx_sense_security.py")
 
 
 def _real_sense_module():
@@ -58,7 +59,7 @@ class ExtendedSensesCase(unittest.TestCase):
         os.environ["NOOBIA_AUTONOMY_DIR"] = str(AUTONOMY_DIR)
         os.environ["NOOBIA_SENSES_STATE_DIR"] = str(self.state_dir)
         self.recorder = RecordingSense(_real_sense_module())
-        for mod in (lib, light, proximity, network, hearing):
+        for mod in (lib, light, proximity, network, hearing, security):
             mod.import_sense = lambda: self.recorder
 
     def tearDown(self):
@@ -163,6 +164,27 @@ class ExtendedSensesCase(unittest.TestCase):
         self.assertEqual(len(self.recorder.emits), 1)
         self.assertEqual(self.recorder.emits[0][0][1], "hearing")
         self.assertEqual(self.recorder.emits[0][0][2], "sound.heard")
+
+    def test_security_sense_integration(self):
+        journal_file = str(self.state_dir / "security.jsonl")
+        unexpected_sockets = [
+            {"proto": "tcp", "ip": "192.168.100.107", "port": 2222, "inode": "1001"},
+            {"proto": "tcp", "ip": "0.0.0.0", "port": 9999, "inode": "2002"},
+        ]
+        res, code = security.run(
+            now=1000,
+            journal_file=journal_file,
+            dropbear_logs=[],
+            socket_reader=lambda: unexpected_sockets,
+            rate_reader=lambda: {},
+            auth_reader=lambda l, o: ([], o),
+            hash_reader=lambda: {},
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(res["emitted_count"], 1)
+        self.assertEqual(self.recorder.emits[0][0][1], "security")
+        self.assertEqual(self.recorder.emits[0][0][2], "intrusion.suspected")
+        self.assertEqual(int(self.recorder.emits[0][1]["fields"]["port"]), 9999)
 
 
 if __name__ == "__main__":

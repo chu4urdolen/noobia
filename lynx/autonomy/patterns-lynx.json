@@ -1123,6 +1123,111 @@
    "hits": 0,
    "origin": "gwyn",
    "regex": "\\| (?P<summary>.+)$"
+  },
+  {
+   "id": "security-portscan",
+   "match": {
+    "sense": "security",
+    "event": "portscan.detected"
+   },
+   "template": "A port scan was detected from {source_ip} (targeted {port_count} ports).",
+   "message": "A port scan was detected on your network.",
+   "to_noob": true,
+   "cooldown_s": 60,
+   "examples": {
+    "must": [
+     "NOOBIA P20 security portscan.detected source_ip=192.168.100.50 port_count=12 | port scan detected from 192.168.100.50"
+    ],
+    "must_not": [
+     "NOOBIA P0 security status.sample listeners=3 | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "security-auth-fail",
+   "match": {
+    "sense": "security",
+    "event": "authentication.failed"
+   },
+   "template": "Someone failed to authenticate to {service} from {source_ip} ({attempts} failed attempts).",
+   "message": "An authentication failure was detected.",
+   "to_noob": true,
+   "cooldown_s": 60,
+   "examples": {
+    "must": [
+     "NOOBIA P20 security authentication.failed service=ssh source_ip=192.168.100.50 attempts=3 user=root | SSH authentication failure from 192.168.100.50 (3 attempts)"
+    ],
+    "must_not": [
+     "NOOBIA P0 security status.sample listeners=3 | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "security-flood",
+   "match": {
+    "sense": "security",
+    "event": "flood.detected"
+   },
+   "template": "High network packet surge detected on {iface} ({pps} packets/sec).",
+   "message": "High network traffic surge detected.",
+   "to_noob": true,
+   "cooldown_s": 60,
+   "examples": {
+    "must": [
+     "NOOBIA P20 security flood.detected iface=wlan0 pps=2500 mbps=15.2 | High network packet surge on wlan0 (2500 pps)"
+    ],
+    "must_not": [
+     "NOOBIA P0 security status.sample listeners=3 | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "security-intrusion",
+   "match": {
+    "sense": "security",
+    "event": "intrusion.suspected"
+   },
+   "template": "Unexpected network listener detected on port {port}/{proto}!",
+   "message": "An unexpected network listener was detected.",
+   "to_noob": true,
+   "cooldown_s": 120,
+   "examples": {
+    "must": [
+     "NOOBIA P20 security intrusion.suspected port=8088 proto=tcp addr=0.0.0.0 | Unexpected network listener detected on port 8088/tcp"
+    ],
+    "must_not": [
+     "NOOBIA P0 security status.sample listeners=3 | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
+  },
+  {
+   "id": "security-integrity",
+   "match": {
+    "sense": "security",
+    "event": "integrity.changed"
+   },
+   "template": "System file integrity change detected in {path}!",
+   "message": "A system file was modified.",
+   "to_noob": true,
+   "cooldown_s": 120,
+   "examples": {
+    "must": [
+     "NOOBIA P20 security integrity.changed path=/etc/passwd | System file integrity change detected in /etc/passwd"
+    ],
+    "must_not": [
+     "NOOBIA P0 security status.sample listeners=3 | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "gwyn"
   }
  ],
  "archive": []

@@ -118,26 +118,26 @@ These tasks focus on threats originating from other phones and ordinary network-
 
 | ID | Feature task | Class | Owner |
 | --- | --- | --- | --- |
-| LNX-59 | Port scanning detection | I | **Banshee** |
+| LNX-59 | Port scanning detection | I | **Banshee** (DONE: lynx_sense_security.py) |
 | LNX-60 | Service fingerprinting detection | I | **Banshee** |
-| LNX-61 | TCP/UDP flood detection | I | **Banshee** |
+| LNX-61 | TCP/UDP flood detection | I | **Banshee** (DONE: lynx_sense_security.py) |
 | LNX-62 | Application-layer DoS protection | I | **Banshee** |
-| LNX-63 | Exposed service vulnerability audit | O | **Gwyn** |
+| LNX-63 | Exposed service vulnerability audit | O | **Gwyn** (DONE: lynx_exposure_audit.py) |
 | LNX-64 | Kernel vulnerability audit | O | **Gwyn** |
 | LNX-65 | Stateful IPv4 and IPv6 firewall | I | **Aria** |
-| LNX-66 | Network intrusion detection | I | **Banshee** |
+| LNX-66 | Network intrusion detection | I | **Banshee** (DONE: lynx_sense_security.py) |
 | LNX-67 | SSH brute-force protection | I | **Aria** |
 | LNX-68 | Cryptographic Nexus authentication | I | **Aria** |
 | LNX-69 | Agent prompt injection protection | I | **Gwyn** |
 | LNX-70 | Network resource exhaustion protection | I | **Aria** |
 | LNX-71 | Unauthorized configuration change detection | I | **Banshee** |
-| LNX-72 | Filesystem integrity monitoring | I | **Banshee** |
+| LNX-72 | Filesystem integrity monitoring | I | **Banshee** (DONE: lynx_sense_security.py) |
 | LNX-73 | Agent privilege isolation | I | **Gwyn** |
-| LNX-74 | Security incident journal | I | **Banshee** |
+| LNX-74 | Security incident journal | I | **Banshee** (DONE: /var/log/lynx/security.jsonl) |
 | LNX-75 | Security incident perception | A | **Gwyn** |
 | LNX-76 | Sensitive information exposure audit | O | **Gwyn** |
 | LNX-77 | Modem device-node access isolation | I | **Aria** |
-| LNX-78 | Public network service exposure audit | O | **Gwyn** |
+| LNX-78 | Public network service exposure audit | O | **Gwyn** (DONE: lynx_exposure_audit.py) |
 | LNX-79 | Malformed packet protection | I | **Aria** |
 | LNX-80 | Malicious SMS filtering | I | **Aria** |
 | LNX-81 | Incoming call abuse protection | I | **Aria** |
@@ -159,11 +159,11 @@ These tasks focus on threats originating from other phones and ordinary network-
 
 | ID | Feature task | Sensory event | Owner |
 | --- | --- | --- | --- |
-| LNX-95 | Port scan perception | security.portscan.detected | **Banshee** |
-| LNX-96 | Authentication failure perception | security.authentication.failed | **Banshee** |
-| LNX-97 | Flood attack perception | security.flood.detected | **Banshee** |
-| LNX-98 | Intrusion perception | security.intrusion.suspected | **Banshee** |
-| LNX-99 | Integrity violation perception | security.integrity.changed | **Banshee** |
+| LNX-95 | Port scan perception | security.portscan.detected | **Banshee** (DONE) |
+| LNX-96 | Authentication failure perception | security.authentication.failed | **Banshee** (DONE) |
+| LNX-97 | Flood attack perception | security.flood.detected | **Banshee** (DONE) |
+| LNX-98 | Intrusion perception | security.intrusion.suspected | **Banshee** (DONE) |
+| LNX-99 | Integrity violation perception | security.integrity.changed | **Banshee** (DONE) |
 | LNX-100 | Prompt injection perception | security.prompt.injection.suspected | **Gwyn** |
 | LNX-101 | Untrusted endpoint perception | security.endpoint.untrusted | **Banshee** |
 | LNX-102 | Malicious message perception | security.message.suspicious | **Banshee** |

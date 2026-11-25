@@ -80,6 +80,7 @@ def load_senses():
         "slider": load_optional("lynx_sense_slider", "slider/lynx_sense_slider.py"),
         "magnet": load_optional("lynx_sense_magnet", "magnet/lynx_sense_magnet.py"),
         "telepathy": load_optional("lynx_sense_telepathy", "telepathy/lynx_sense_telepathy.py"),
+        "security": load_optional("lynx_sense_security", "security/lynx_sense_security.py"),
         # camera: separate service lynx-camera-sense (see lynx_sense_camera.py --loop)
     }
     return senses
@@ -148,7 +149,7 @@ def run_loop(*args, **kwargs) -> int:
                     call(name, senses[name].run)
             last_fast = now
         if now - last_sample >= SAMPLE_EVERY_S:
-            for name in ("wifi", "power", "nexus", "network", "telepathy"):
+            for name in ("wifi", "power", "nexus", "network", "telepathy", "security"):
                 if senses.get(name):
                     call(name, senses[name].run)
             last_sample = now

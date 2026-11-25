@@ -99,5 +99,25 @@ class AuditTest(unittest.TestCase):
         self.assertIn("no firewall tool", text)
 
 
+class WireGuardListenerTest(unittest.TestCase):
+    """LNX-21: WireGuard's kernel UDP socket is known, not an unexpected listener."""
+
+    def test_wireguard_socket_is_info_and_unknown_udp_stays_high(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            f = FakeLynx(Path(d))
+            row = lambda port, inode: (f"   0: {hexaddr('0.0.0.0', port)} 00000000:0000 07 "
+                                       f"00000000:00000000 00:00000000 00000000 0 0 {inode} 1\n")
+            (f.proc / "net" / "udp").write_text(HEADER + row(54127, 9001) + row(40000, 9002))
+            def run(argv, **k):
+                out = "wg-lynx\t54127\n" if argv[:2] == ["wg", "show"] else "Dropbear v2025.88"
+                return type("R", (), {"stdout": out, "stderr": ""})()
+            r = a.audit(f.proc, which=lambda t: "/usr/bin/wg" if t == "wg" else None, run=run, sys_root=f.sys)
+        ids = {x["id"]: x["level"] for x in r["findings"]}
+        self.assertEqual(ids.get("wireguard-listener:54127"), "info")
+        self.assertNotIn("unexpected-listener:udp:54127", ids)
+        self.assertEqual(ids.get("unexpected-listener:udp:40000"), "high")
+
+
 if __name__ == "__main__":
     unittest.main()

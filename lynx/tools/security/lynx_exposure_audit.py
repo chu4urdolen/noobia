@@ -146,8 +146,25 @@ def versions(run=subprocess.run, proc: Path = PROC) -> dict:
     return out
 
 
+def wireguard_ports(which=shutil.which, run=subprocess.run) -> dict:
+    """port -> interface for WireGuard's kernel sockets (they have no owning pid)."""
+    if not which("wg"):
+        return {}
+    try:
+        out = run(["wg", "show", "all", "listen-port"], capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    ports = {}
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[1].isdigit() and parts[1] != "0":
+            ports[int(parts[1])] = parts[0]
+    return ports
+
+
 def audit(proc: Path = PROC, which=shutil.which, run=subprocess.run, sys_root: Path = SYS) -> dict:
     socks = sockets(proc)
+    wg = wireguard_ports(which, run)
     who = owners(proc)
     listeners, findings = [], []
 
@@ -161,6 +178,15 @@ def audit(proc: Path = PROC, which=shutil.which, run=subprocess.run, sys_root: P
         item = {"proto": s["proto"], "address": s["address"], "port": s["port"], "scope": scope(s["address"]),
                 "pid": o["pid"], "program": prog}
         exp = EXPECTED.get(key)
+        if s["proto"].startswith("udp") and o["pid"] is None and s["port"] in wg:
+            # LNX-21 (Gwyn 2026-11-25): a WireGuard kernel socket answers only peers whose
+            # public key it holds; anything else is silently ignored.
+            item["service"] = f"WireGuard ({wg[s['port']]}, kernel)"
+            item["protections"] = ["only configured peers' keys are answered"]
+            finding("info", f"wireguard-listener:{s['port']}",
+                    f"WireGuard {wg[s['port']]} listens on udp {s['port']} (key-authenticated; kernel socket)")
+            listeners.append(item)
+            continue
         if exp and re.search(exp[1], prog):
             item["service"] = exp[0]
             missing = [opt for opt in exp[2] if opt not in o["cmdline"]]

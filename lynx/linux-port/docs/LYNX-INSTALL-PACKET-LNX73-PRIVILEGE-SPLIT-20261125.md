@@ -8,7 +8,7 @@
 
 `lynx-agent` reads words from outside: speech she hears, camera captions, network findings and chat. Today it runs as **root**, so a prompt that tricks Qwen can make root do whatever any tool can. After this packet:
 
-* the agent runs as the unprivileged user **`lynx-agent`** (`setpriv`, all capabilities dropped, `no_new_privs`);
+* the agent runs as the unprivileged user **`lynx-agent`** (the worker drops root itself in Python: `setgroups([])`, `setgid`, `setuid`, `no_new_privs`; a non-zero uid has no capabilities);
 * its tools run through **`lynx-tool-broker`** (root). The broker checks the caller's uid with SO_PEERCRED, runs **only** catalogued tools, checks the arguments against each tool's schema, and logs every call to `/var/log/lynx-tool-broker.jsonl` (no arguments or output).
 
 ## Files
@@ -29,7 +29,8 @@ cat /var/lib/noobia/power-mode                  # any mode is fine
 rc-service lynx-agent-worker status             # note whether it is running
 getent passwd lynx-agent || echo absent         # expect: absent
 stat -c '%a %U:%G %n' /etc/lynx/nexus-inference.key /var/log/lynx-agent.jsonl /usr/local/share/lynx/agent
-ls /bin/setpriv                                 # BusyBox has no sudo; setpriv is required
+python3 -c 'import sys; print(sys.version_info >= (3, 9))'   # True (Popen user=/extra_groups=)
+# NOTE: BusyBox setpriv has no --reuid (found 2026-11-25), so neither the worker nor this packet uses it
 ```
 
 ## Install
@@ -57,11 +58,16 @@ rc-service lynx-agent-worker status | grep -q started && rc-service lynx-agent-w
 
 ```sh
 ls -l /run/lynx/tool-broker.sock            # srw-rw----  root lynx-agent
-setpriv --reuid lynx-agent --regid lynx-agent --init-groups python3 -c \
-  'import sys; sys.path.insert(0,"/usr/local/bin"); import importlib.util as u; \
-   s=u.spec_from_file_location("a","/usr/local/bin/lynx-agent"); m=u.module_from_spec(s); s.loader.exec_module(m); \
-   print(m.broker_call("lynx_haptic_status", {}))'         # {"ok": true, ...}
-setpriv --reuid lynx-agent --regid lynx-agent --init-groups cat /etc/shadow   # Permission denied
+cat > /tmp/lnx73-check.py <<'EOF'
+import importlib.util as u
+s = u.spec_from_file_location("a", "/usr/local/bin/lynx-agent")
+m = u.module_from_spec(s); s.loader.exec_module(m)
+print(m.broker_call("lynx_haptic_status", {}))
+EOF
+chmod 644 /tmp/lnx73-check.py
+su -s /bin/sh lynx-agent -c 'python3 /tmp/lnx73-check.py'   # {"ok": true, ...}
+rm /tmp/lnx73-check.py
+su -s /bin/sh lynx-agent -c 'cat /etc/shadow'   # Permission denied
 tail -2 /var/log/lynx-tool-broker.jsonl     # {"uid": <lynx-agent>, "tool": "lynx_haptic_status", "ok": true, ...}
 ```
 

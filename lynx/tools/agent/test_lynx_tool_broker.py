@@ -105,14 +105,22 @@ class BrokerTest(unittest.TestCase):
 
 class WorkerTest(unittest.TestCase):
     def test_agent_runs_unprivileged_when_a_user_is_set(self):
-        self.assertEqual(w.agent_command(""), ["/usr/bin/python3", w.AGENT, "--stdin"])
-        cmd = w.agent_command("lynx-agent")
-        self.assertEqual(cmd[0], "/bin/setpriv")
-        for flag in ("--reuid", "--regid", "--init-groups", "--inh-caps=-all", "--bounding-set=-all",
-                     "--no-new-privs"):
-            self.assertIn(flag, cmd)
-        self.assertEqual(cmd[-3:], ["/usr/bin/python3", w.AGENT, "--stdin"])
+        self.assertEqual(w.agent_command(), ["/usr/bin/python3", w.AGENT, "--stdin"])
+        self.assertEqual(w.agent_privileges(""), {})
+        import pwd
+        me = pwd.getpwuid(os.getuid()).pw_name if os.getuid() else "nobody"
+        kw = w.agent_privileges(me)
+        self.assertEqual(kw["user"], pwd.getpwnam(me).pw_uid)
+        self.assertEqual(kw["extra_groups"], [])
+        self.assertIs(kw["preexec_fn"], w._no_new_privs)
+        with self.assertRaises(ValueError):
+            w.agent_privileges("root")
 
+    def test_no_new_privs_really_applies(self):
+        import subprocess, sys
+        r = subprocess.run([sys.executable, "-c", "print(open('/proc/self/status').read())"],
+                           capture_output=True, text=True, preexec_fn=w._no_new_privs)
+        self.assertIn("NoNewPrivs:\t1", r.stdout)
 
 if __name__ == "__main__":
     unittest.main()

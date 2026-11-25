@@ -31,18 +31,35 @@ ROOT = Path('/var/lib/lynx-agent/jobs')
 STOP = Path('/var/lib/lynx-agent/stop')
 THOUGHT_PATH = Path('/var/lib/noobia/lynx_thought.txt')
 AGENT = '/usr/local/bin/lynx-agent'
-# LNX-73: run the agent as this unprivileged user (setpriv, all capabilities
-# dropped); its tools then go through lynx-tool-broker. Empty = as today (root).
+# LNX-73: run the agent as this unprivileged user (all capabilities gone,
+# no_new_privs); its tools then go through lynx-tool-broker. Empty = as today
+# (root). BusyBox setpriv has no --reuid, so Python drops the privileges itself.
 AGENT_USER = os.environ.get('LYNX_AGENT_USER', '')
+PR_SET_NO_NEW_PRIVS = 38
 
 
 def agent_command(user=None):
+    return ['/usr/bin/python3', AGENT, '--stdin']
+
+
+def _no_new_privs():
+    import ctypes
+    if ctypes.CDLL(None, use_errno=True).prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), 'prctl(NO_NEW_PRIVS) failed')
+
+
+def agent_privileges(user=None):
+    """Popen arguments that run the agent as USER: setgroups([]), setgid, setuid.
+    A root process that switches to a non-zero uid loses every capability."""
+    import pwd
     user = AGENT_USER if user is None else user
-    base = ['/usr/bin/python3', AGENT, '--stdin']
     if not user:
-        return base
-    return ['/bin/setpriv', '--reuid', user, '--regid', user, '--init-groups',
-            '--inh-caps=-all', '--bounding-set=-all', '--no-new-privs'] + base
+        return {}
+    pw = pwd.getpwnam(user)
+    if pw.pw_uid == 0:
+        raise ValueError('LYNX_AGENT_USER must not be root')
+    return {'user': pw.pw_uid, 'group': pw.pw_gid, 'extra_groups': [],
+            'preexec_fn': _no_new_privs}
 LOCAL = 'http://192.168.100.106:8080'
 LOCAL_KEY = Path('/etc/lynx/nexus-inference.key')
 CLOUD_KEY = Path('/etc/lynx/openai.key')
@@ -115,8 +132,9 @@ def run_job(queue, job_id, prompt):
         try:
             current = subprocess.Popen(agent_command(),
                                        stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                       stderr=subprocess.PIPE, start_new_session=True)
-        except OSError:
+                                       stderr=subprocess.PIPE, start_new_session=True,
+                                       **agent_privileges())
+        except (OSError, KeyError, ValueError, subprocess.SubprocessError):
             queue.finish(job_id, False, 'Agent executable unavailable')
             print(json.dumps({'event': 'job_finished', 'job_id': job_id,
                               'ok': False, 'reason': 'executable_unavailable'}), flush=True)

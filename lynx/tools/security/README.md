@@ -134,3 +134,14 @@ serious findings and things to improve, the boot pins, and the last day's
 network-tool refusals, broker refusals, prompt-injection attempts and incidents
 from Banshee's journal (`/var/log/lynx/security.jsonl`). Installed:
 `/usr/local/lib/noobia/security/` plus the tool in her catalogue.
+
+## `run_security_regression.py` (LNX-89): one command re-proves it all
+
+On Nexus: `python3 lynx/tools/security/run_security_regression.py` (`--offline` skips Lynx).
+It runs the 8 security test suites, then 7 read-only checks on Lynx: no high
+audit finding, boot pins match, the policy refuses an internet port-scan,
+allows one of Nexus and refuses packet capture (decisions only; nothing is
+scanned), the installed injection filter neutralises an attack, and the
+rescue ports 22 and 2222 still listen. Exit 0 = all pass. 2026-11-25: 15/15.
+Run it after every security-relevant change, and before and after Aria's
+firewall install.

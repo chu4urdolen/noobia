@@ -23,7 +23,9 @@ import lynx_config_audit  # noqa: E402
 import lynx_exposure_audit  # noqa: E402
 
 LOGS = {
-    "network tool refusals": (Path("/var/log/lynx-tool-policy.jsonl"), lambda r: r.get("allowed") is False),
+    # "cli" decisions are people and the regression suite checking the policy, not her tools.
+    "network tool refusals": (Path("/var/log/lynx-tool-policy.jsonl"),
+                              lambda r: r.get("allowed") is False and r.get("tool") != "cli"),
     "tool broker refusals": (Path("/var/log/lynx-tool-broker.jsonl"), lambda r: r.get("ok") is False),
     "security incidents (journal)": (Path("/var/log/lynx/security.jsonl"), lambda r: True),
 }

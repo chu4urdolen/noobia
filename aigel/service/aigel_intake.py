@@ -14,7 +14,8 @@ A host that configures no credential is accepted - the documented
 LAN-only risk of contract C4. Unknown host or bad credential is a
 401, which the client treats as final (no retry storm).
 Agent responses require a configured host credential; unsigned replies
-cannot appear in Aigel's People view.
+cannot appear in Aigel's People view once the private
+`require_signed_agent_replies` switch is present at service start.
 
 Bounded: request body 256 KiB, 200 lines, 512 bytes per line,
 response 64 KiB. Inspectable: every request, decision, and refusal
@@ -65,6 +66,7 @@ NOOBIA = os.environ.get("NOOBIA", "/noobia")
 DEFAULT_HOSTS = NOOBIA + "/aigel/private/intake_hosts.json"
 DEFAULT_STATE = NOOBIA + "/aigel/private/intake_state.json"
 DEFAULT_PATTERN_DB = NOOBIA + "/aigel/private/patterns.db"
+REPLY_AUTH_SWITCH = NOOBIA + "/aigel/private/require_signed_agent_replies"
 
 MAX_BODY_BYTES = 262_144     # 256 KiB
 MAX_LINES = 200
@@ -348,7 +350,8 @@ class AigelIntake:
         return body
 
 
-def make_handler(intake: AigelIntake, web: AigelWeb | None = None):
+def make_handler(intake: AigelIntake, web: AigelWeb | None = None,
+                 require_signed_agent_replies: bool = False):
     class Handler(BaseHTTPRequestHandler):
         server_version = "Aigel/0.2"
         protocol_version = "HTTP/1.1"
@@ -416,14 +419,15 @@ def make_handler(intake: AigelIntake, web: AigelWeb | None = None):
                 if not isinstance(host, str) or not host.isascii() or not (1 <= len(host) <= 32):
                     self._send(400, {"error": "missing host"})
                     return
-                entry = intake.hosts.get(host)
-                if entry is None or not (entry.get("hmac_secret") or entry.get("bearer")):
-                    self._send(401, {"error": "host credential required"})
-                    return
-                ok, why = intake.check_auth(host, raw, dict(self.headers))
-                if not ok:
-                    self._send(401, {"error": why})
-                    return
+                if require_signed_agent_replies:
+                    entry = intake.hosts.get(host)
+                    if entry is None or not (entry.get("hmac_secret") or entry.get("bearer")):
+                        self._send(401, {"error": "host credential required"})
+                        return
+                    ok, why = intake.check_auth(host, raw, dict(self.headers))
+                    if not ok:
+                        self._send(401, {"error": why})
+                        return
                 text = payload.get("text", "")
                 tools = payload.get("tools")
                 job_id = payload.get("job_id")
@@ -507,7 +511,9 @@ def main() -> int:
     log = ViewLogger("noobia-aigel", file_dir=args.view_dir, force_file=args.force_file_log)
     intake = AigelIntake(thinker, hosts, log=log, state_file=args.state)
     web = AigelWeb(intake, log, chat_token=args.chat_token or None)
-    httpd = ThreadingHTTPServer((args.bind, args.port), make_handler(intake, web))
+    reply_auth = Path(REPLY_AUTH_SWITCH).exists()
+    httpd = ThreadingHTTPServer((args.bind, args.port),
+                               make_handler(intake, web, require_signed_agent_replies=reply_auth))
     log.write(f"aigel intake listening on {args.bind}:{args.port} hosts={sorted(hosts)}")
     print(f"aigel: listening on http://{args.bind}:{args.port} ({len(hosts)} registered hosts)")
     try:

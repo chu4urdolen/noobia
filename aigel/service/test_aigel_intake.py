@@ -59,6 +59,8 @@ def reply(decision="quiet", message=None, note="saw it"):
 
 
 class IntakeServerCase(unittest.TestCase):
+    reply_auth_enabled = False
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -73,7 +75,8 @@ class IntakeServerCase(unittest.TestCase):
         self.thinker = AigelThinker(llm=FakeLLM([reply("message", "A cat appeared in front of you")]))
         self.intake = AigelIntake(self.thinker, self.hosts, log=self.log,
                                   state_file=self.state_file)
-        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self.intake))
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(
+            self.intake, require_signed_agent_replies=self.reply_auth_enabled))
         self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
         self.thread.start()
         self.addCleanup(self.httpd.server_close)
@@ -82,7 +85,8 @@ class IntakeServerCase(unittest.TestCase):
     def restart_server(self, intake) -> None:
         self.httpd.server_close()
         self.thread.join(timeout=2)
-        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(intake))
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(
+            intake, require_signed_agent_replies=self.reply_auth_enabled))
         self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
         self.thread.start()
         self.addCleanup(self.httpd.server_close)
@@ -111,6 +115,11 @@ class IntakeServerCase(unittest.TestCase):
 
 
 class AuthTests(IntakeServerCase):
+    def test_reply_auth_switch_off_preserves_existing_client(self):
+        body = json.dumps({"host": "lynx", "text": "legacy reply"}).encode()
+        code, obj = self.signed_post("/api/v1/agent_response", body, secret=None)
+        self.assertEqual((code, obj), (200, {"status": "ok"}))
+
     def test_valid_hmac_accepted(self):
         body = json.dumps({"host": "lynx", "chunk_reason": "PRIORITY", "lines": LINES}).encode()
         code, obj = self.signed_post("/api/v1/chunk", body)
@@ -189,6 +198,7 @@ class BoundsTests(IntakeServerCase):
 
 
 class DecisionTests(IntakeServerCase):
+    reply_auth_enabled = True
     def test_reply_is_the_decision_and_state_is_updated(self):
         body = json.dumps({"host": "lynx", "chunk_reason": "PRIORITY", "lines": LINES}).encode()
         code, obj = self.signed_post("/api/v1/chunk", body)

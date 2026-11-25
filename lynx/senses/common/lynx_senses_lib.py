@@ -158,7 +158,9 @@ def state_path(sense: str, override: str | None = None) -> Path:
 VOLATILE_STATE_KEYS = frozenset({"samples", "t", "last_ts", "last_raw", "queued", "dropped",
                                  "last_cap", "last_soc_mC", "temp_check_t",
                                  "tilts", "still_since",    # motion gesture history (RAM)
-                                 "quiet_rms"})              # hearing: the room's usual level
+                                 "quiet_rms",               # hearing: the room's usual level
+                                 "resets", "dropbear_offsets",   # guard: counters, log offsets
+                                 "rates", "counters_at"})   # netwatch/netstats: per-sample counters
 STATE_FLUSH_S = 60.0
 _STATE_CACHE: dict = {}   # str(path) -> (data, last disk write monotonic, written stable view)
 

@@ -126,5 +126,33 @@ class PolicyGateTest(unittest.TestCase):
             self.assertEqual(stop.exception.code, 3)
             self.assertTrue(json.loads(out.getvalue())["refused"])
 
+class RemoteAuditTest(unittest.TestCase):
+    """LNX-16: a remote target is checked remotely, not with Lynx's own netstat."""
+
+    def test_remote_audit_reads_the_targets_banners(self):
+        import socket, threading
+        from unittest import mock
+        srv = socket.socket(); srv.bind(("127.0.0.2", 0)); srv.listen(4)
+        port = srv.getsockname()[1]
+
+        def serve():
+            for _ in range(2):
+                try:
+                    c, _ = srv.accept()
+                    c.sendall(b"SSH-2.0-OpenSSH_8.2p1\r\n"); c.close()
+                except OSError:
+                    return
+        threading.Thread(target=serve, daemon=True).start()
+        mod = diag
+        with mock.patch.object(mod, "AUDIT_PORTS", [port]), \
+                mock.patch.object(mod, "RISKY_PORTS", {port: "Telnet (plaintext)"}):
+            r = mod.vuln_check("127.0.0.2")
+        srv.close()
+        self.assertEqual(r["target"], "127.0.0.2")
+        self.assertIn(port, r["open_ports"])
+        self.assertTrue(any("Telnet" in x for x in r["risks"]))
+        self.assertNotIn("listening_ports", r)
+
+
 if __name__ == "__main__":
     unittest.main()

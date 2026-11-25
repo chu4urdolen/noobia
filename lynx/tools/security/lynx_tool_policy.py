@@ -44,8 +44,11 @@ DEFAULTS = {
     "self_addresses": ["127.0.0.0/8", "::1/128", "192.168.100.107/32"],
     "allow_packet_capture": False,
 }
-PASSIVE = {"net-ifaces", "lan-sweep", "wifi-recon"}
-PROBING = {"port-scan", "vuln-check"}
+# Passive views of her own state, plus link-local discovery that by its nature never
+# leaves the LAN (mDNS/SSDP multicast, a bounded Bluetooth scan) - Gwyn 2026-11-25.
+PASSIVE = {"net-ifaces", "lan-sweep", "wifi-recon", "traffic-stats", "radios", "cell-status",
+           "net-doctor", "service-discovery", "ble-scan"}
+PROBING = {"port-scan", "vuln-check", "noob-discovery"}
 PATH_CHECKS = {"traceroute", "dns-audit", "ssl-audit"}
 CAPTURE = {"packet-sample"}
 

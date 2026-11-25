@@ -68,5 +68,24 @@ class AdapterTest(unittest.TestCase):
         self.assertNotIn("Ignore", kw["text"], "the perception line never echoes the attack")
 
 
+class MessageCheckTest(unittest.TestCase):
+    """LNX-102 malicious message perception."""
+
+    def test_kinds(self):
+        import base64, os as _os
+        cases = {"hi \x1b[2J\x1b[31mred": "control", "ha" * 60: "flood",
+                 "x " + base64.b64encode(_os.urandom(150)).decode(): "encoded",
+                 "see http://admin@10.0.0.1/": "link", "y" * 5000: "flood"}
+        for text, kind in cases.items():
+            self.assertIn(kind, inj.check_message(text)[1], text[:30])
+
+    def test_clean_text_untouched(self):
+        for t in ("Tom said hello.", "Café, naïve — résumé", "my IP is 192.168.100.107"):
+            self.assertEqual(inj.check_message(t), (t, []))
+
+    def test_control_removed(self):
+        self.assertEqual(inj.check_message("a\x1b[31mb\u202ec")[0], "abc")
+
+
 if __name__ == "__main__":
     unittest.main()

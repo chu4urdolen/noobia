@@ -338,3 +338,9 @@
 !/tools/local_calls/lynx_cellular_diag.sh
 !/tools/stream_logger.py
 
+# Gwyn 2026-11-25: network and radio intelligence (Rose's backlog, from Banshee)
+!/tools/netintel/
+/tools/netintel/*
+!/tools/netintel/*.py
+!/tools/local_calls/lynx_netintel.json
+!/tools/local_calls/lynx_netintel.sh

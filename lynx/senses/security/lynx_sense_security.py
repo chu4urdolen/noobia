@@ -86,6 +86,13 @@ def read_listening_sockets(proc_dir: str | Path = DEFAULT_PROC_DIR) -> list[dict
     """Parse /proc/net/tcp and /proc/net/tcp6 for listening sockets."""
     proc = Path(proc_dir)
     results = []
+    # Gwyn 2026-11-25: a UDP socket that is connected, or bound to a port in the
+    # kernel's ephemeral range, is a client (a DNS lookup, an mDNS query), not a
+    # listener; reporting those raised false "intrusion.suspected" lines.
+    try:
+        lo, hi = map(int, (proc / "sys/net/ipv4/ip_local_port_range").read_text().split()[:2])
+    except (OSError, ValueError):
+        lo, hi = 32768, 60999
     for proto in ("tcp", "tcp6", "udp", "udp6"):
         table = proc / "net" / proto
         if not table.exists():
@@ -105,6 +112,9 @@ def read_listening_sockets(proc_dir: str | Path = DEFAULT_PROC_DIR) -> list[dict
             try:
                 ip, port = _hex_to_ip_port(local, is_v6)
                 if proto.startswith("udp") and port == 0:
+                    continue
+                if proto.startswith("udp") and (lo <= port <= hi or
+                                                not cols[2].split(":")[0].strip("0") == ""):
                     continue
                 results.append({
                     "proto": "tcp" if proto.startswith("tcp") else "udp",

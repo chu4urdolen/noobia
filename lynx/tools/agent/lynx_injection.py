@@ -17,6 +17,12 @@ captions, network findings. This module is applied there:
   says it is not an instruction; the other sentences stay as they are.
 * The caller emits `security prompt.injection.suspected` (LNX-100) so she
   perceives the attempt. Nothing else happens: no retaliation (rule 9).
+* `check_message(text)` (LNX-102, malicious message perception) catches messages
+  that are harmful without being orders: terminal escape and control characters
+  (removed), floods of repeated text (shortened), long encoded blobs (replaced by
+  a short note), and links that hide where they go (user@host, raw IP or
+  punycode hosts; kept but flagged). The caller emits
+  `security message.suspicious`.
 """
 from __future__ import annotations
 
@@ -64,3 +70,32 @@ def inspect(text: str) -> tuple[str, list[dict]]:
         else:
             out.append(scrub(sentence))
     return " ".join(s for s in out if s), findings
+
+
+# -- LNX-102: malicious messages ---------------------------------------------------
+CONTROL = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b.|"
+                     r"[\x00-\x08\x0b-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2066-\u2069]")
+FLOOD = re.compile(r"(.{1,12}?)\1{24,}", re.S)
+BLOB = re.compile(r"(?<![A-Za-z0-9+/=])(?:[A-Za-z0-9+/]{120,}={0,2}|(?:[0-9a-fA-F]{2}){80,})(?![A-Za-z0-9+/=])")
+SNEAKY_URL = re.compile(r"\b[a-z][a-z0-9+.-]{1,10}://(?:[^\s/@]+@|(?:\d{1,3}\.){3}\d{1,3}\b|[^\s/]*xn--)", re.I)
+MAX_MESSAGE = 4000
+
+
+def check_message(text: str) -> tuple[str, list[str]]:
+    """(cleaned text, kinds) for LNX-102. Kinds: control, flood, encoded, link, oversize."""
+    t, kinds = str(text), []
+    if CONTROL.search(t):
+        kinds.append("control")
+        t = CONTROL.sub("", t)
+    if FLOOD.search(t):
+        kinds.append("flood")
+        t = FLOOD.sub(lambda m: m.group(1) * 3 + f" [repeated {len(m.group(0)) // max(1, len(m.group(1)))} times]", t)
+    if BLOB.search(t):
+        kinds.append("encoded")
+        t = BLOB.sub(lambda m: f"[encoded data, {len(m.group(0))} characters, not shown]", t)
+    if SNEAKY_URL.search(t):
+        kinds.append("link")
+    if len(t) > MAX_MESSAGE:
+        kinds.append("oversize")
+        t = t[:MAX_MESSAGE] + " [message cut]"
+    return t, kinds

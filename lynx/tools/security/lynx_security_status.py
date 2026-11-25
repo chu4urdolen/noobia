@@ -71,8 +71,9 @@ def status(now: float | None = None) -> dict:
     config = lynx_config_audit.audit()
     counts = {name: count_jsonl(path, keep, since) for name, (path, keep) in LOGS.items()}
     # Injection attempts are sense lines (no timestamps in a parseable form): count the recent tail.
-    counts["prompt injection attempts (recent log)"] = sum(
-        1 for l in tail_lines(SYSLOG) if "prompt.injection.suspected" in l and "noobia-sense" in l)
+    counts["prompt injection or malicious messages (recent log)"] = sum(
+        1 for l in tail_lines(SYSLOG) if "noobia-sense" in l and
+        ("prompt.injection.suspected" in l or "message.suspicious" in l))
     high = [f for f in exposure["findings"] + config["findings"] if f["level"] == "high"]
     warn = [f for f in exposure["findings"] + config["findings"] if f["level"] == "warn"]
     return {"ok": not high, "listeners": [f"{l['service']} on port {l['port']}" for l in exposure["listeners"]],

@@ -271,9 +271,60 @@ def port_scan(target: str, ports: str = "22,80,443,112,5050,8080,11434") -> dict
 # ----------------------------------------------------------------------
 # 5. Security Posture & Vulnerability Audit (vuln-check)
 # ----------------------------------------------------------------------
+# LNX-16 (Gwyn 2026-11-25): a remote target used to be audited with Lynx's own
+# netstat, so it reported her ports as the target's. Remote targets now get a
+# bounded connect check of well-known risky ports plus SSH/HTTP banners.
+RISKY_PORTS = {21: "FTP (plaintext)", 23: "Telnet (plaintext)", 25: "SMTP", 80: "HTTP (plaintext)",
+               110: "POP3 (plaintext)", 139: "NetBIOS/SMB", 445: "SMB", 1883: "MQTT (often no auth)",
+               2375: "Docker API (no TLS)", 3306: "MySQL", 3389: "RDP", 5432: "PostgreSQL",
+               5900: "VNC", 6379: "Redis (often no auth)", 8080: "HTTP alt", 9200: "Elasticsearch",
+               11211: "memcached", 11434: "Ollama API", 27017: "MongoDB"}
+AUDIT_PORTS = sorted(set(RISKY_PORTS) | {22, 443})
+
+
+def _banner(target: str, port: int, timeout: float = 1.0) -> str:
+    try:
+        with socket.create_connection((target, port), timeout=timeout) as c:
+            c.settimeout(timeout)
+            if port in (80, 8080, 11434, 9200):
+                c.sendall(f"HEAD / HTTP/1.0\r\nHost: {target}\r\n\r\n".encode())
+            try:
+                data = c.recv(512).decode("ascii", "replace")
+            except socket.timeout:
+                data = ""
+    except OSError:
+        return ""
+    server = re.search(r"^Server:\s*(.+)$", data, re.M | re.I)
+    first = data.splitlines()[0] if data else "open"
+    text = server.group(1) if server else first
+    return "".join(ch for ch in text if 32 <= ord(ch) < 127)[:60] or "open"
+
+
+def remote_audit(target: str) -> dict[str, Any]:
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+        res = dict(zip(AUDIT_PORTS, ex.map(lambda p: _banner(target, p), AUDIT_PORTS)))
+    open_ports = {p: b for p, b in res.items() if b}
+    risks = [f"{RISKY_PORTS[p]} open on port {p} ({b})" for p, b in open_ports.items() if p in RISKY_PORTS]
+    ssh = open_ports.get(22, "")
+    m = re.search(r"OpenSSH_(\d+)\.(\d+)", ssh)
+    if m and (int(m.group(1)), int(m.group(2))) < (9, 8):
+        risks.append(f"SSH is {ssh}: older than OpenSSH 9.8 (regreSSHion CVE-2024-6387 era); check patches")
+    if re.search(r"dropbear_(20(1\d|20|21))", ssh, re.I):
+        risks.append(f"SSH is {ssh}: an old Dropbear release")
+    sentence = (f"Audit of {target}: {len(open_ports)} of {len(AUDIT_PORTS)} well-known ports open"
+                + (f"; {len(risks)} worth a look: {'; '.join(risks[:4])}." if risks else "; nothing risky found."))
+    return {"ok": True, "action": "vuln-check", "target": target, "open_ports": open_ports,
+            "risks": risks, "clean": not risks, "sentence": sentence,
+            "note": "a bounded connect check of well-known ports, not a full scan; "
+                    "observations, not proof (rule 8)"}
+
+
 def vuln_check(target: str = "127.0.0.1") -> dict[str, Any]:
     findings = []
     is_local = target in ("127.0.0.1", "localhost", "192.168.100.107", "::1")
+    if not is_local:
+        return remote_audit(target)
 
     # 1. Check open listeners via netstat / ss
     listeners = []

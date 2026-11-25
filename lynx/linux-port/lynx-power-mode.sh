@@ -67,7 +67,9 @@ case "${1:-status}" in
             rc-service "$s" start >/dev/null 2>&1 || say "could not start $s"
         done
         if [ -x /usr/local/bin/lynx-debug-helper ]; then
-            /usr/local/bin/lynx-debug-helper --daemon >/dev/null 2>&1 || true
+            if ! [ -s /run/lynx/debug-helper.pid ] || ! kill -0 "$(cat /run/lynx/debug-helper.pid 2>/dev/null)" 2>/dev/null; then
+                nohup /usr/local/bin/lynx-debug-helper --daemon </dev/null >/dev/null 2>&1 &
+            fi
         fi
         say "DEBUG: done" ;;
     saving)

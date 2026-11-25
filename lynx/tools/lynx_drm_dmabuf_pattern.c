@@ -1961,6 +1961,38 @@ static unsigned int debug_output_scroll_offset = 0;
 static char debug_status_msg[64] = "READY";
 static uint64_t debug_last_load_ms = 0;
 
+static unsigned int wrap_text_lines(const char *src, int max_chars,
+				    char out_lines[][128], unsigned int max_lines)
+{
+	if (!src || !src[0] || max_lines == 0)
+		return 0;
+	unsigned int count = 0;
+	const char *p = src;
+	size_t rem = strlen(p);
+	while (rem > 0 && count < max_lines) {
+		while (*p == ' ') {
+			p++;
+			rem--;
+		}
+		if (rem == 0)
+			break;
+
+		int split = (int)rem <= max_chars ? (int)rem : max_chars;
+		if (split < (int)rem) {
+			int s = split;
+			while (s > 0 && p[s] != ' ')
+				s--;
+			if (s > 0)
+				split = s;
+		}
+		snprintf(out_lines[count], 128, "%.*s", split, p);
+		count++;
+		p += split;
+		rem -= (size_t)split;
+	}
+	return count;
+}
+
 static void load_debug_tools(void)
 {
 	uint64_t now = monotonic_milliseconds();
@@ -2041,6 +2073,16 @@ static void paint_debug(uint32_t *pixels)
 	draw_text(pixels, "DEBUG MODE", 75, 145, 11, amber);
 	draw_text(pixels, "AI SERVICES STOPPED * TOOL & SENSE LAB", 75, 230, 3, teal);
 
+	/* Top bar buttons */
+	/* SLEEP button (x: 720..925, y: 120..220) */
+	rectangle(pixels, 720, 120, 205, 100, 0x00102a3a);
+	rectangle(pixels, 720, 120, 205, 3, 0x005ab0e0);
+	rectangle(pixels, 720, 217, 205, 3, 0x005ab0e0);
+	rectangle(pixels, 720, 120, 3, 100, 0x005ab0e0);
+	rectangle(pixels, 922, 120, 3, 100, 0x005ab0e0);
+	draw_text(pixels, "SLEEP", 765, 140, 4, 0x008fd0f5);
+	draw_text(pixels, "POWER SAVE", 740, 180, 3, white);
+
 	/* Exit / Resume Button at top right (x: 950..1165, y: 120..220) */
 	rectangle(pixels, 950, 120, 215, 100, 0x002c1d38);
 	rectangle(pixels, 950, 120, 215, 3, 0x00d080ff);
@@ -2112,18 +2154,27 @@ static void paint_debug(uint32_t *pixels)
 	if (debug_tool_count > 0 && debug_tool_selected < debug_tool_count) {
 		const char *sel_name = debug_tools[debug_tool_selected].name;
 		draw_text(pixels, sel_name, 605, 365, 4, amber);
-		draw_text(pixels, debug_tools[debug_tool_selected].desc, 605, 420, 2, 0x008fa0b0);
+		char desc_lines[4][128];
+		unsigned int n_desc = wrap_text_lines(debug_tools[debug_tool_selected].desc, 44, desc_lines, 4);
+		for (unsigned int d = 0; d < n_desc && d < 2; d++) {
+			draw_text(pixels, desc_lines[d], 605, 415 + d * 25, 2, 0x008fa0b0);
+		}
 	}
 
 	draw_text(pixels, "ARGUMENTS (JSON):", 605, 480, 3, teal);
 
-	/* Args text area */
+	/* Args text area with multi-line wrapping */
 	rectangle(pixels, 605, 520, 550, 140, 0x0009131d);
 	rectangle(pixels, 605, 520, 550, 2, teal);
 	rectangle(pixels, 605, 658, 550, 2, teal);
 	rectangle(pixels, 605, 520, 2, 140, teal);
 	rectangle(pixels, 1153, 520, 2, 140, teal);
-	draw_text(pixels, debug_args_input, 620, 565, 3, white);
+
+	char args_lines[6][128];
+	unsigned int n_args = wrap_text_lines(debug_args_input, 28, args_lines, 6);
+	for (unsigned int a = 0; a < n_args && a < 4; a++) {
+		draw_text(pixels, args_lines[a], 620, 535 + a * 30, 3, white);
+	}
 
 	/* Preset Buttons: [ {} EMPTY ] (605..775), [ SAMPLE ] (790..960), [ CLEAR ] (975..1155) */
 	rectangle(pixels, 605, 680, 170, 75, 0x001c2b38);
@@ -2191,47 +2242,55 @@ static void paint_debug(uint32_t *pixels)
 	rectangle(pixels, 1153, 1275, 2, 70, 0x00b05a5a);
 	draw_text(pixels, "CLR", 1075, 1295, 3, 0x00ff8d86);
 
-	/* Feed text rows */
+	/* Feed text rows with multi-line word wrapping */
 	const char *feed_file = debug_output_mode ? DEBUG_TRANS_FILE : DEBUG_RAW_FILE;
-	char feed_lines[64][140];
-	unsigned int feed_count = 0;
+	struct {
+		char text[64];
+		uint32_t color;
+	} wrapped_feed[256];
+	unsigned int wrapped_count = 0;
+
 	FILE *ff = fopen(feed_file, "r");
 	if (ff) {
 		char fline[256];
-		while (feed_count < 64 && fgets(fline, sizeof(fline), ff)) {
+		while (fgets(fline, sizeof(fline), ff)) {
 			fline[strcspn(fline, "\r\n")] = 0;
 			if (!fline[0]) continue;
-			snprintf(feed_lines[feed_count], sizeof(feed_lines[feed_count]), "%.135s", fline);
-			feed_count++;
+			uint32_t color = white;
+			if (strstr(fline, "[TOOL:"))
+				color = amber;
+			else if (strstr(fline, "[SENSE"))
+				color = teal;
+			else if (strstr(fline, "[DEBUG]"))
+				color = 0x00d080ff;
+
+			char sub_lines[8][128];
+			unsigned int n_sub = wrap_text_lines(fline, 56, sub_lines, 8);
+			for (unsigned int s = 0; s < n_sub && wrapped_count < 256; s++) {
+				snprintf(wrapped_feed[wrapped_count].text, sizeof(wrapped_feed[wrapped_count].text), "%s", sub_lines[s]);
+				wrapped_feed[wrapped_count].color = color;
+				wrapped_count++;
+			}
 		}
 		fclose(ff);
 	}
 
-	unsigned int visible_feed = 18;
-	unsigned int max_feed_scroll = feed_count > visible_feed ? feed_count - visible_feed : 0;
+	unsigned int visible_feed = 31;
+	unsigned int max_feed_scroll = wrapped_count > visible_feed ? wrapped_count - visible_feed : 0;
 	if (debug_output_scroll_offset > max_feed_scroll)
 		debug_output_scroll_offset = max_feed_scroll;
 
 	unsigned int first_feed = max_feed_scroll - debug_output_scroll_offset;
 	for (unsigned int i = 0; i < visible_feed; i++) {
 		unsigned int row = first_feed + i;
-		if (row >= feed_count)
+		if (row >= wrapped_count)
 			break;
-		const char *txt = feed_lines[row];
-		uint32_t color = white;
-		if (strstr(txt, "[TOOL:"))
-			color = amber;
-		else if (strstr(txt, "[SENSE"))
-			color = teal;
-		else if (strstr(txt, "[DEBUG]"))
-			color = 0x00d080ff;
-
-		draw_text(pixels, txt, 75, 1370 + i * 62, 3, color);
+		draw_text(pixels, wrapped_feed[row].text, 75, 1370 + i * 36, 3, wrapped_feed[row].color);
 	}
 
 	/* Scrollbar for Pane 3 */
 	unsigned int p3_sb_h = 1110;
-	unsigned int p3_thumb = feed_count > visible_feed ? p3_sb_h * visible_feed / feed_count : p3_sb_h;
+	unsigned int p3_thumb = wrapped_count > visible_feed ? p3_sb_h * visible_feed / wrapped_count : p3_sb_h;
 	if (p3_thumb < 80) p3_thumb = 80;
 	unsigned int p3_pos = max_feed_scroll ? (p3_sb_h - p3_thumb) * (max_feed_scroll - debug_output_scroll_offset) / max_feed_scroll : 0;
 	rectangle(pixels, 1140, 1365, 25, p3_sb_h, 0x001d2d3d);
@@ -2242,8 +2301,19 @@ static void paint_debug(uint32_t *pixels)
 
 static void debug_touch(int x, int y, enum lynx_page *target, bool *page_changed)
 {
+	/* SLEEP button (x: 720..925, y: 120..220) */
+	if (x >= 710 && x < 935 && y >= 110 && y < 230) {
+		haptic_tick(60);
+		run_power_mode("saving", "debug sleep button");
+		printf("debug_sleep_power_save\n");
+		fflush(stdout);
+		*target = PAGE_POWER;
+		*page_changed = true;
+		return;
+	}
+
 	/* Exit / Resume button (x: 950..1165, y: 120..220) */
-	if (x >= 950 && x < 1165 && y >= 120 && y < 220) {
+	if (x >= 940 && x < 1175 && y >= 110 && y < 230) {
 		haptic_tick(60);
 		run_power_mode("active", "");
 		printf("debug_exit_resume_active\n");
@@ -3186,28 +3256,28 @@ static int run(const char *action, unsigned int seconds)
 								target = PAGE_CHAT;
 							}
 						} else if (page == PAGE_STATUS &&
-							   y >= 2400 && y < 2505 && x >= 75 && x < 335) {
+							   y >= 2380 && y < 2525 && x >= 50 && x < 340) {
 							toggle_aigel_mode();
 							page_changed = true;
 							haptic_tick(35);
 							printf("aigel_mode_toggled\n");
 							fflush(stdout);
 						} else if (page == PAGE_STATUS &&
-							   y >= 2400 && y < 2505 && x >= 345 && x < 605) {
+							   y >= 2380 && y < 2525 && x >= 340 && x < 610) {
 							haptic_tick(45);
 							run_power_mode("debug", "debug button");
 							printf("debug_mode_started\n");
 							fflush(stdout);
 							target = PAGE_DEBUG;
 						} else if (page == PAGE_STATUS &&
-							   y >= 2400 && y < 2505 && x >= 615 && x < 875) {
+							   y >= 2380 && y < 2525 && x >= 610 && x < 880) {
 							haptic_tick(60);
 							run_power_mode("saving", "power save button");
 							printf("power_saving\n");
 							fflush(stdout);
 							target = PAGE_POWER;
 						} else if (page == PAGE_STATUS &&
-							   y >= 2400 && y < 2505 && x >= 885 && x < 1165) {
+							   y >= 2380 && y < 2525 && x >= 880 && x < 1180) {
 							uint64_t now_sd = monotonic_milliseconds();
 							if (shutdown_armed_until_ms != 0 &&
 							    now_sd < shutdown_armed_until_ms) {

@@ -44,22 +44,24 @@ case ${1:-} in
     nohup /bin/sh "$SCRIPT" _rollback "$token" 9>&- </dev/null >/dev/null 2>&1 &
     echo "$!" > "$STATE/timer.pid"
     if ! (
-        "$IPT" -w 2 -N "$CHAIN"
-        "$IP6T" -w 2 -N "$CHAIN"
-        "$IPT" -w 2 -A "$CHAIN" -i lo -j ACCEPT
-        "$IPT" -w 2 -A "$CHAIN" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-        "$IPT" -w 2 -A "$CHAIN" -i wlan0 -s 192.168.100.0/24 -p tcp -m multiport --dports 22,2222 -j ACCEPT
-        "$IPT" -w 2 -A "$CHAIN" -i wlan0 -s 192.168.100.106 -p tcp --dport 4243 -j ACCEPT
-        "$IPT" -w 2 -A "$CHAIN" -i wlan0 -p udp --sport 67 --dport 68 -j ACCEPT
-        "$IPT" -w 2 -A "$CHAIN" -i wlan0 -p icmp --icmp-type echo-request -j ACCEPT
-        "$IPT" -w 2 -A "$CHAIN" -j DROP
-        "$IP6T" -w 2 -A "$CHAIN" -i lo -j ACCEPT
-        "$IP6T" -w 2 -A "$CHAIN" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-        "$IP6T" -w 2 -A "$CHAIN" -i wlan0 -p udp --sport 547 --dport 546 -j ACCEPT
-        "$IP6T" -w 2 -A "$CHAIN" -i wlan0 -p ipv6-icmp -j ACCEPT
-        "$IP6T" -w 2 -A "$CHAIN" -j DROP
-        "$IPT" -w 2 -I INPUT 1 -j "$CHAIN"
-        "$IP6T" -w 2 -I INPUT 1 -j "$CHAIN"
+        # Explicit exits are required: set -e is ignored inside an if condition.
+        "$IPT" -w 2 -N "$CHAIN" || exit 1
+        "$IP6T" -w 2 -N "$CHAIN" || exit 1
+        "$IPT" -w 2 -A "$CHAIN" -i lo -j ACCEPT || exit 1
+        "$IPT" -w 2 -A "$CHAIN" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT || exit 1
+        "$IPT" -w 2 -A "$CHAIN" -i wlan0 -s 192.168.100.0/24 -p tcp -m multiport --dports 22,2222 -j ACCEPT || exit 1
+        "$IPT" -w 2 -A "$CHAIN" -i wlan0 -s 192.168.100.106 -p tcp --dport 4243 -j ACCEPT || exit 1
+        "$IPT" -w 2 -A "$CHAIN" -i wlan0 -p udp --sport 67 --dport 68 -j ACCEPT || exit 1
+        "$IPT" -w 2 -A "$CHAIN" -i wlan0 -s 192.168.100.0/24 -p udp -m multiport --sports 5353,1900 -j ACCEPT || exit 1
+        "$IPT" -w 2 -A "$CHAIN" -i wlan0 -p icmp --icmp-type echo-request -j ACCEPT || exit 1
+        "$IPT" -w 2 -A "$CHAIN" -j DROP || exit 1
+        "$IP6T" -w 2 -A "$CHAIN" -i lo -j ACCEPT || exit 1
+        "$IP6T" -w 2 -A "$CHAIN" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT || exit 1
+        "$IP6T" -w 2 -A "$CHAIN" -i wlan0 -p udp --sport 547 --dport 546 -j ACCEPT || exit 1
+        "$IP6T" -w 2 -A "$CHAIN" -i wlan0 -p ipv6-icmp -j ACCEPT || exit 1
+        "$IP6T" -w 2 -A "$CHAIN" -j DROP || exit 1
+        "$IPT" -w 2 -I INPUT 1 -j "$CHAIN" || exit 1
+        "$IP6T" -w 2 -I INPUT 1 -j "$CHAIN" || exit 1
     ); then
         remove_own
         rm -f "$STATE/pending" "$STATE/timer.pid"

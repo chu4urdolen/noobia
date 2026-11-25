@@ -17,6 +17,7 @@ action = args[0] if args else ''
 if action == '-N': state['chain'] = True
 elif action == '-A':
     if not state['chain']: sys.exit(1)
+    if os.environ.get('FAKE_FAIL_MIDDLE') and '--ctstate' in args and 'ip6' not in sys.argv[0]: sys.exit(1)
     state['rules'].append(args[2:])
 elif action == '-I':
     if os.environ.get('FAKE_FAIL_IPV6') and 'ip6' in sys.argv[0]: sys.exit(1)
@@ -72,6 +73,11 @@ class LegacyFirewallTests(unittest.TestCase):
 
     def test_partial_insert_failure_removes_both(self):
         self.env["FAKE_FAIL_IPV6"] = "1"
+        self.assertNotEqual(self.call("enable").returncode, 0)
+        self.assertEqual(self.call("status").stdout.strip(), "off")
+
+    def test_middle_rule_failure_never_installs_jump(self):
+        self.env["FAKE_FAIL_MIDDLE"] = "1"
         self.assertNotEqual(self.call("enable").returncode, 0)
         self.assertEqual(self.call("status").stdout.strip(), "off")
 

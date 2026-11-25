@@ -8,14 +8,17 @@ The nftables packages are already installed but inactive.
 
 | Nexus source | Lynx destination | SHA-256 | mode |
 | --- | --- | --- | --- |
-| `lynx/tools/firewall/lynx_firewall_legacy.sh` | `/usr/local/sbin/lynx-firewall-legacy` | `d0cf5113bfed565906a3c6d31916161b17c126383fe77cc9271bd5239399e6e2` | 0755 |
+| `lynx/tools/firewall/lynx_firewall_legacy.sh` | `/usr/local/sbin/lynx-firewall-legacy` | `6986167dc7ad3d0e38a1d37843190e4eb0023e37f8ff6b335eee242ed76567ee` | 0755 |
 
 The script creates only `LYNX_GUARD` chains in the legacy IPv4 and IPv6
 filter tables and jumps to them from INPUT position 1. It never flushes
 INPUT, changes a built-in policy, or touches OUTPUT/FORWARD. It accepts
 loopback and established traffic, LAN SSH 22/2222 from the whole
 `192.168.100.0/24`, NRP 4243 from Nexus `192.168.100.106`, DHCP replies,
-IPv4 echo requests and IPv6 ICMP on wlan0; other unsolicited input drops.
+IPv4 echo requests and IPv6 ICMP on wlan0. Unicast mDNS/SSDP replies from
+LAN source ports 5353/1900 are also allowed for `lynx-netintel discover`;
+these ports are source-port spoofable on the LAN, so this is a deliberate
+LAN trust exception. Other unsolicited input drops.
 This is a runtime rule set only. A 120-second Lynx-local timer removes the
 two jumps and chains unless Aria confirms from a **new** SSH session.
 
@@ -88,6 +91,11 @@ inspection.
 ## Independent offline check
 
 `python3 -m unittest discover -s lynx/tools/firewall -p 'test_lynx_firewall_legacy.py' -v`
-passed 3/3 on 2026-11-25. `sh -n lynx/tools/firewall/lynx_firewall_legacy.sh`
+passed 4/4 on 2026-11-25. `sh -n lynx/tools/firewall/lynx_firewall_legacy.sh`
 passed. Fake legacy executables exercise timer expiry, confirm/disable, and
-partial IPv6 insertion failure; they do not prove live kernel acceptance.
+middle-rule and partial IPv6 insertion failures; they do not prove live
+kernel acceptance. Gwyn #517 blocked the earlier hash because an intermediate
+rule failure was masked by POSIX `set -e` suppression in an `if` condition.
+Every activation command now has an explicit failure exit, and the new test
+reproduces that case. Banshee #515 accepted the earlier hash; **both reviewers
+must re-review this revision before installation**.

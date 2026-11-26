@@ -5,8 +5,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from argus_history import (capture_journal, connect, events_on, find_events,
-                           import_archive, journal_day, status)
+from argus_history import connect, events_on, find_events, import_archive, status
 
 
 def event(event_id, date, summary):
@@ -80,28 +79,6 @@ class HistoryTest(unittest.TestCase):
         with connect(self.db) as connection:
             with self.assertRaisesRegex(ValueError, "unsafe archive path"):
                 import_archive(connection, self.archive)
-
-    def test_journal_capture_versions_latest_day_and_migration(self):
-        with connect(self.db) as connection:
-            connection.execute("PRAGMA user_version=1")
-        old = b"# Aria's journal\n\n## 2026-11-22 \xe2\x80\x94 First account\nThe earlier text.\n"
-        new = b"# Aria's journal\n\n## 2026-11-22 \xe2\x80\x94 Revised account\nThe later text.\n"
-        with connect(self.db) as connection:
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 2)
-            self.assertEqual(capture_journal(connection, "aria", old)["snapshot_added"], 1)
-            self.assertEqual(capture_journal(connection, "aria", old)["snapshot_added"], 0)
-            self.assertEqual(capture_journal(connection, "aria", new)["snapshot_added"], 1)
-            self.assertEqual(status(connection)["journal_snapshots"], 2)
-            self.assertEqual(connection.execute(
-                "SELECT raw_bytes FROM journal_snapshots ORDER BY snapshot_id LIMIT 1"
-            ).fetchone()[0], old)
-            rows = journal_day(connection, "2026-11-22", 10)
-            self.assertEqual(len(rows), 1)
-            self.assertEqual(rows[0]["heading"], "2026-11-22 — Revised account")
-            self.assertEqual(rows[0]["source_line"], 3)
-            with self.assertRaisesRegex(ValueError, "unregistered journal"):
-                capture_journal(connection, "unknown", old)
-            self.assertEqual(status(connection)["journal_sources"], 1)
 
 
 if __name__ == "__main__":

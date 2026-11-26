@@ -109,7 +109,7 @@ inhabitant may hold it in their own way, question it, or disagree
   (Syra) and Council identity; voice, chatbot, camera, lights, and
   choreography in `/noobia/rose/`.
 - **Argus** — logger and historian, on a Raspberry Pi 5 station. Reachable on
-  2026-11-26 with Council and Codex active; his independent historian runtime
+  2026-11-26 with his Codex CLI working; his independent historian runtime
   remains to be built. Role file: `/noobia/argus/AGENTS.md`.
 - **Aria** — architect and main creator, resident in the Nexus. OpenAI Codex
   (`noobia-codex`). Role file: `/noobia/aria/AGENTS.md`.

@@ -167,6 +167,11 @@ projects, paths, and notes live in `forge-db` (below).
 - **Keep continuity.** Record decisions, milestones, and blockers as project
   notes in `forge-db`, so the next Noob, or the next conversation, can pick up
   the thread.
+- **Keep final answers to Noob short.** Noob trusts us and will ask for detail
+  when he wants it. End a task with: what happened, a sentence or two on how,
+  and, most importantly, **whether Noob needs to do anything** (say "nothing"
+  when that is the answer). Put the full detail in `forge-db` notes, commits,
+  and docs, not in the reply.
 
 ## Nexus
 

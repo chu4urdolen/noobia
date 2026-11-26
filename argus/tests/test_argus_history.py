@@ -1,3 +1,4 @@
+import base64
 import json
 from pathlib import Path
 import sys
@@ -6,7 +7,8 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from argus_history import (build_ledger, capture_forge, connect, events_on,
-                           find_events, forge_notes_on, import_archive, ledger_on, status)
+                           find_events, forge_notes_on, import_archive, ledger_on,
+                           compact_line, source_record, status)
 
 
 def event(event_id, date, summary):
@@ -23,6 +25,9 @@ def event(event_id, date, summary):
 
 
 class HistoryTest(unittest.TestCase):
+    def test_compact_line_marks_truncation(self):
+        self.assertEqual(compact_line("abcdefgh", 5), "abcd…")
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -47,6 +52,10 @@ class HistoryTest(unittest.TestCase):
             self.assertEqual(import_archive(connection, self.archive)["records_added"], 0)
             self.assertEqual(len(events_on(connection, "2026-08-23", 100)), 1)
             self.assertEqual(events_on(connection, "2026-08-23", 100)[0]["source_line"], 1)
+            cited = events_on(connection, "2026-08-23", 100)[0]
+            recovered = source_record(connection, "archive", str(cited["record_id"]), cited["sha256"])
+            self.assertEqual(base64.b64decode(recovered["raw_line_base64"]),
+                             original.splitlines(keepends=True)[0])
             self.assertEqual(connection.execute(
                 "SELECT raw_bytes FROM file_snapshots ORDER BY snapshot_id LIMIT 1"
             ).fetchone()[0], original)
@@ -89,7 +98,8 @@ class HistoryTest(unittest.TestCase):
                 "paths": [], "projects": [],
                 "notes": [{"id": number, "project_name": "argus", "author": "Aria",
                            "created_at": "2026-11-25T22:30:00+00:00",
-                           "note": f"Forge note {number}", "paths": []}
+                           "note": f"Forge note {number}",
+                           "paths": '["/noobia/argus"]'}
                           for number in note_ids],
             }).encode()
 
@@ -106,6 +116,11 @@ class HistoryTest(unittest.TestCase):
             self.assertEqual(len(forge_notes_on(connection, "2026-11-25")), 0)
             self.assertEqual(forge_notes_on(connection, "2026-11-26")[0]["local_time"],
                              "00:30")
+            self.assertEqual(forge_notes_on(connection, "2026-11-26")[0]["paths"],
+                             ["/noobia/argus"])
+            cited = forge_notes_on(connection, "2026-11-26")[0]
+            recovered = source_record(connection, "forge", cited["stable_key"], cited["sha256"])
+            self.assertEqual(recovered["record"]["note"], "Forge note 1")
             self.assertEqual(build_ledger(connection, "2026-11-26")["version"], 1)
             self.assertTrue(build_ledger(connection, "2026-11-26")["reused"])
             self.assertIn("An archive event", ledger_on(connection, "2026-11-26")["markdown"])

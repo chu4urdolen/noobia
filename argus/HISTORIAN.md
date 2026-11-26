@@ -31,7 +31,7 @@ python3 /noobia/argus/tools/argus_client.py job-result JOB_ID
 python3 /noobia/argus/tools/argus_client.py ledger 2026-11-26
 ```
 
-The Nexus `noobia` MCP server exposes `argus_status`, `argus_collect_day`, `argus_daily_ledger`, `argus_job_status`, and `argus_job_result`. `argus_collect_day` transfers the Forge feed and queues archive import followed by ledger construction; its returned ledger job ID is polled separately. The route uses local MCP stdio plus pinned SSH to the Pi; no Argus LAN listener is opened. Journals remain paused, and Council is out of scope.
+The Nexus `noobia` MCP server exposes `argus_status`, `argus_collect_day`, `argus_daily_ledger`, `argus_job_status`, `argus_job_result`, `argus_events_on`, `argus_find_events`, `argus_forge_notes_on`, and `argus_source_record`. The three search tools return source-backed historical records in pages of at most 100, with `next_offset` when more are available; Forge notes can be filtered by exact project or actor. `argus_source_record` retrieves an exact cited archive line (base64) or Forge row by its key and SHA-256. `argus_collect_day` transfers the Forge feed and queues archive import followed by ledger construction; its returned ledger job ID is polled separately. The route uses local MCP stdio plus pinned SSH to the Pi; no Argus LAN listener is opened. Journals remain paused, and Council is out of scope.
 
 On 2026-11-26, the inclusive Forge export contained 1,016 source rows, including 572 notes. A real collection request completed both jobs, with no duplicate archive records, and reused the 2026-11-26 ledger version 2 (24 Forge notes). The local Argus and Forge tests passed. There is no automatic schedule or narrative synthesis yet.
 

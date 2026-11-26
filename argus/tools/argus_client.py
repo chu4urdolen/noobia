@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 from zoneinfo import ZoneInfo
@@ -24,9 +25,10 @@ def remote(tool, command, *arguments):
     if tool not in ("history", "jobs"):
         raise ValueError("invalid Argus tool")
     script = HISTORY if tool == "history" else JOBS
+    remote_command = " ".join(shlex.quote(str(part)) for part in
+                              ("python3", str(script), command, *arguments))
     argv = ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
-            "-o", "ConnectTimeout=5", "argus", "python3", str(script), command,
-            *arguments]
+            "-o", "ConnectTimeout=5", "argus", remote_command]
     try:
         outcome = subprocess.run(argv, capture_output=True, text=True, timeout=20, check=False)
     except subprocess.TimeoutExpired as error:
@@ -49,7 +51,28 @@ def valid_date(value):
     return value
 
 
-def call(action, *, date=None, job_id=None):
+def safe_filter(value, field):
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value or len(value) > 200 or "\n" in value:
+        raise ValueError(f"{field} must be 1..200 single-line characters")
+    return value
+
+
+def valid_offset(value):
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 1_000_000:
+        raise ValueError("offset must be 0..1000000")
+    return value
+
+
+def page(rows, offset):
+    if not isinstance(rows, list):
+        raise ValueError("Argus returned invalid page")
+    return {"items": rows[:100], "next_offset": offset + 100 if len(rows) > 100 else None}
+
+
+def call(action, *, date=None, job_id=None, query=None, project=None, actor=None,
+         offset=0, kind=None, key=None, sha256=None):
     if action == "status":
         return {"history": remote("history", "status"), "jobs": remote("jobs", "health")}
     if action == "collect-day":
@@ -61,6 +84,32 @@ def call(action, *, date=None, job_id=None):
                 "job": ledger}
     if action == "ledger":
         return remote("history", "ledger", valid_date(date))
+    if action == "events-on":
+        offset = valid_offset(offset)
+        return page(remote("history", "events-on", valid_date(date), "--limit", "101",
+                           "--offset", str(offset)), offset)
+    if action == "find-events":
+        offset = valid_offset(offset)
+        if query is None:
+            raise ValueError("query is required")
+        return page(remote("history", "find", safe_filter(query, "query"), "--limit", "101",
+                           "--offset", str(offset)), offset)
+    if action == "forge-notes-on":
+        offset = valid_offset(offset)
+        arguments = [valid_date(date), "--limit", "101", "--offset", str(offset)]
+        if project is not None:
+            arguments += ["--project", safe_filter(project, "project")]
+        if actor is not None:
+            arguments += ["--actor", safe_filter(actor, "actor")]
+        return page(remote("history", "forge-notes-on", *arguments), offset)
+    if action == "source-record":
+        if kind not in ("archive", "forge"):
+            raise ValueError("source kind must be archive or forge")
+        if not isinstance(key, str) or not key or len(key) > 500:
+            raise ValueError("invalid source key")
+        if not isinstance(sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", sha256):
+            raise ValueError("invalid source SHA-256")
+        return remote("history", "source-record", kind, key, sha256)
     if action in ("job-status", "job-result"):
         if not isinstance(job_id, str) or not JOB_ID.fullmatch(job_id):
             raise ValueError("invalid job ID")
@@ -76,13 +125,35 @@ def main(argv=None):
     collect.add_argument("--date")
     ledger = actions.add_parser("ledger")
     ledger.add_argument("date")
+    events = actions.add_parser("events-on")
+    events.add_argument("date")
+    events.add_argument("--offset", type=int, default=0)
+    find = actions.add_parser("find-events")
+    find.add_argument("query")
+    find.add_argument("--offset", type=int, default=0)
+    notes = actions.add_parser("forge-notes-on")
+    notes.add_argument("date")
+    notes.add_argument("--project")
+    notes.add_argument("--actor")
+    notes.add_argument("--offset", type=int, default=0)
+    source = actions.add_parser("source-record")
+    source.add_argument("kind", choices=("archive", "forge"))
+    source.add_argument("key")
+    source.add_argument("sha256")
     for name in ("job-status", "job-result"):
         item = actions.add_parser(name)
         item.add_argument("job_id")
     args = parser.parse_args(argv)
     try:
         print(json.dumps(call(args.action, date=getattr(args, "date", None),
-                              job_id=getattr(args, "job_id", None)), ensure_ascii=False,
+                              job_id=getattr(args, "job_id", None),
+                              query=getattr(args, "query", None),
+                              project=getattr(args, "project", None),
+                              actor=getattr(args, "actor", None),
+                              offset=getattr(args, "offset", 0),
+                              kind=getattr(args, "kind", None),
+                              key=getattr(args, "key", None),
+                              sha256=getattr(args, "sha256", None)), ensure_ascii=False,
                          sort_keys=True))
         return 0
     except (OSError, ValueError) as error:

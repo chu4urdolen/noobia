@@ -2,6 +2,7 @@
 """Argus's append-only local evidence index for his existing event archive."""
 
 import argparse
+import base64
 from contextlib import closing
 import hashlib
 import json
@@ -216,14 +217,14 @@ def import_archive(connection, archive_root):
     return {"files_seen": len(files), "snapshots_added": snapshots, "records_added": records}
 
 
-def events_on(connection, date, limit):
+def events_on(connection, date, limit, offset=0):
     datetime.strptime(date, "%Y-%m-%d")
     rows = connection.execute(
         "SELECT e.event_id,e.event_date,e.recorded_at,e.event_type,e.title,e.summary,"
         "e.participants_json,r.record_id,r.source_path,r.first_line,r.line_sha256 "
         "FROM events e JOIN raw_records r USING(record_id) WHERE e.event_date=? "
-        "ORDER BY e.event_id,r.record_id LIMIT ?",
-        (date, limit),
+        "ORDER BY e.event_id,r.record_id LIMIT ? OFFSET ?",
+        (date, limit, offset),
     ).fetchall()
     return [dict(event_id=row[0], event_date=row[1], recorded_at=row[2],
                  event_type=row[3], title=row[4], summary=row[5],
@@ -231,7 +232,7 @@ def events_on(connection, date, limit):
                  source_path=row[8], source_line=row[9], sha256=row[10]) for row in rows]
 
 
-def find_events(connection, query, limit):
+def find_events(connection, query, limit, offset=0):
     if not query.strip():
         raise ValueError("query must not be empty")
     needle = "%" + query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
@@ -241,8 +242,8 @@ def find_events(connection, query, limit):
         "FROM events e JOIN raw_records r USING(record_id) "
         "WHERE e.event_id LIKE ? ESCAPE '\\' OR e.title LIKE ? ESCAPE '\\' "
         "OR e.summary LIKE ? ESCAPE '\\' OR e.participants_json LIKE ? ESCAPE '\\' "
-        "ORDER BY e.event_date,e.event_id,r.record_id LIMIT ?",
-        (needle, needle, needle, needle, limit),
+        "ORDER BY e.event_date,e.event_id,r.record_id LIMIT ? OFFSET ?",
+        (needle, needle, needle, needle, limit, offset),
     ).fetchall()
     return [dict(event_id=row[0], event_date=row[1], recorded_at=row[2],
                  event_type=row[3], title=row[4], summary=row[5],
@@ -299,6 +300,12 @@ def forge_notes_on(connection, date):
     result = []
     for key, digest, occurred_at, project, actor, raw_json in rows:
         raw = json.loads(raw_json)
+        paths = raw.get("paths", [])
+        if isinstance(paths, str):
+            try:
+                paths = json.loads(paths)
+            except json.JSONDecodeError:
+                paths = []
         result.append({
             "stable_key": key,
             "sha256": digest,
@@ -307,13 +314,14 @@ def forge_notes_on(connection, date):
             "project": project,
             "actor": actor,
             "text": str(raw.get("note", "")),
-            "paths": raw.get("paths", []),
+            "paths": paths if isinstance(paths, list) else [],
         })
     return result
 
 
 def compact_line(value, limit=500):
-    return " ".join(str(value).split())[:limit]
+    normalized = " ".join(str(value).split())
+    return normalized if len(normalized) <= limit else normalized[:limit - 1] + "…"
 
 
 def build_ledger(connection, date):
@@ -377,6 +385,45 @@ def ledger_on(connection, date):
             "created_at": row[2], "markdown": row[3]}
 
 
+def source_record(connection, kind, key, digest):
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise ValueError("sha256 must be 64 lowercase hex characters")
+    if kind == "archive":
+        if not re.fullmatch(r"[1-9][0-9]*", key):
+            raise ValueError("archive key must be a positive record ID")
+        row = connection.execute(
+            "SELECT r.source_path,r.first_line,r.line_sha256,s.raw_bytes,s.file_sha256 "
+            "FROM raw_records r JOIN file_snapshots s ON s.snapshot_id=r.first_snapshot_id "
+            "WHERE r.record_id=? AND r.line_sha256=?", (int(key), digest),
+        ).fetchone()
+        if row is None:
+            raise ValueError("source record not found")
+        line = row[3].splitlines(keepends=True)[row[1] - 1]
+        if hashlib.sha256(line).hexdigest() != digest:
+            raise ValueError("archive source hash mismatch")
+        return {"kind": "archive", "record_id": int(key), "source_path": row[0],
+                "line_number": row[1], "sha256": digest, "file_sha256": row[4],
+                "raw_line_base64": base64.b64encode(line).decode("ascii")}
+    if kind == "forge":
+        if not key or len(key) > 500:
+            raise ValueError("invalid Forge source key")
+        row = connection.execute(
+            "SELECT f.raw_json,e.sha256 FROM forge_records f "
+            "JOIN forge_exports e ON e.export_id=f.first_export_id "
+            "WHERE f.stable_key=? AND f.content_sha256=?", (key, digest),
+        ).fetchone()
+        if row is None:
+            raise ValueError("source record not found")
+        raw = json.loads(row[0])
+        canonical = json.dumps(raw, ensure_ascii=False, sort_keys=True,
+                               separators=(",", ":")).encode("utf-8")
+        if hashlib.sha256(canonical).hexdigest() != digest:
+            raise ValueError("Forge source hash mismatch")
+        return {"kind": "forge", "stable_key": key, "sha256": digest,
+                "export_sha256": row[1], "record": raw}
+    raise ValueError("source kind must be archive or forge")
+
+
 def status(connection):
     captures = [value for value in (
         connection.execute("SELECT MAX(captured_at) FROM file_snapshots").fetchone()[0],
@@ -403,35 +450,59 @@ def main(argv=None):
     query = sub.add_parser("events-on")
     query.add_argument("date")
     query.add_argument("--limit", type=int, default=100)
+    query.add_argument("--offset", type=int, default=0)
     search = sub.add_parser("find")
     search.add_argument("query")
     search.add_argument("--limit", type=int, default=100)
+    search.add_argument("--offset", type=int, default=0)
+    notes_query = sub.add_parser("forge-notes-on")
+    notes_query.add_argument("date")
+    notes_query.add_argument("--project")
+    notes_query.add_argument("--actor")
+    notes_query.add_argument("--limit", type=int, default=100)
+    notes_query.add_argument("--offset", type=int, default=0)
     forge = sub.add_parser("capture-forge")
     forge.add_argument("--since", default="1970-01-01T00:00:00+00:00")
     build = sub.add_parser("build-ledger")
     build.add_argument("date")
     ledger = sub.add_parser("ledger")
     ledger.add_argument("date")
+    source = sub.add_parser("source-record")
+    source.add_argument("kind", choices=("archive", "forge"))
+    source.add_argument("key")
+    source.add_argument("sha256")
     sub.add_parser("status")
     args = parser.parse_args(argv)
     try:
         if args.command in ("events-on", "find") and not 1 <= args.limit <= 1000:
             raise ValueError("limit must be 1..1000")
+        if args.command == "forge-notes-on" and not 1 <= args.limit <= 1000:
+            raise ValueError("limit must be 1..1000")
+        if args.command in ("events-on", "find", "forge-notes-on") and not 0 <= args.offset <= 1_000_000:
+            raise ValueError("offset must be 0..1000000")
         with closing(connect(args.db)) as connection, connection:
             if args.command == "init":
                 result = {"db": str(args.db), "schema": 2}
             elif args.command == "import-archive":
                 result = import_archive(connection, args.archive_root)
             elif args.command == "events-on":
-                result = events_on(connection, args.date, args.limit)
+                result = events_on(connection, args.date, args.limit, args.offset)
             elif args.command == "find":
-                result = find_events(connection, args.query, args.limit)
+                result = find_events(connection, args.query, args.limit, args.offset)
+            elif args.command == "forge-notes-on":
+                notes = forge_notes_on(connection, args.date)
+                result = [note for note in notes
+                          if (args.project is None or note["project"] == args.project)
+                          and (args.actor is None or note["actor"] == args.actor)]
+                result = result[args.offset:args.offset + args.limit]
             elif args.command == "capture-forge":
                 result = capture_forge(connection, sys.stdin.buffer.read(MAX_FEED_BYTES + 1), args.since)
             elif args.command == "build-ledger":
                 result = build_ledger(connection, args.date)
             elif args.command == "ledger":
                 result = ledger_on(connection, args.date)
+            elif args.command == "source-record":
+                result = source_record(connection, args.kind, args.key, args.sha256)
             else:
                 result = status(connection)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))

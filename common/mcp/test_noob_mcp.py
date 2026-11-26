@@ -65,6 +65,9 @@ class TestNoobMCPServer(unittest.TestCase):
         self.assertIn("iris_camera_capture", tool_names)
         self.assertIn("argus_collect_day", tool_names)
         self.assertIn("argus_daily_ledger", tool_names)
+        self.assertIn("argus_find_events", tool_names)
+        self.assertIn("argus_forge_notes_on", tool_names)
+        self.assertIn("argus_source_record", tool_names)
 
     def test_argus_tool_routes_to_bounded_client(self):
         with patch("noob_mcp.handle_argus", return_value='{"job_id":"x"}') as route:

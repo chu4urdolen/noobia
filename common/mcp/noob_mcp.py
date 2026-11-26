@@ -148,11 +148,16 @@ def iris_nrp_command(command: str, timeout: float = 12.0) -> str:
 
 def handle_argus(action: str, args: Dict[str, Any]) -> str:
     """Use the authenticated Nexus-to-Argus client; no LAN listener is exposed."""
-    if action not in ("status", "collect-day", "ledger", "job-status", "job-result"):
+    if action not in ("status", "collect-day", "ledger", "job-status", "job-result",
+                      "events-on", "find-events", "forge-notes-on", "source-record"):
         raise ValueError("invalid Argus action")
     sys.path.insert(0, str(ARGUS_TOOLS))
     from argus_client import call
-    return json.dumps(call(action, date=args.get("date"), job_id=args.get("job_id")),
+    return json.dumps(call(action, date=args.get("date"), job_id=args.get("job_id"),
+                           query=args.get("query"), project=args.get("project"),
+                           actor=args.get("actor"), offset=args.get("offset", 0),
+                           kind=args.get("kind"), key=args.get("key"),
+                           sha256=args.get("sha256")),
                       ensure_ascii=False)
 
 def _parse_nrp_payload(reply: str) -> Dict[str, Any]:
@@ -389,6 +394,37 @@ BUILTIN_TOOLS: List[Tuple[Dict[str, Any], Callable[[Dict[str, Any]], str]]] = [
          "inputSchema": {"type": "object", "properties": {"job_id": {"type": "string"}},
                          "required": ["job_id"], "additionalProperties": False}},
         lambda args: handle_argus("job-result", args),
+    ),
+    (
+        {"name": "argus_events_on", "description": "Entity: Argus. Read source-backed archive events for a date.",
+         "inputSchema": {"type": "object", "properties": {"date": {"type": "string"},
+                                                  "offset": {"type": "integer", "minimum": 0}},
+                         "required": ["date"], "additionalProperties": False}},
+        lambda args: handle_argus("events-on", args),
+    ),
+    (
+        {"name": "argus_find_events", "description": "Entity: Argus. Search historical archive events by ID, title, summary, or participant.",
+         "inputSchema": {"type": "object", "properties": {"query": {"type": "string"},
+                                                  "offset": {"type": "integer", "minimum": 0}},
+                         "required": ["query"], "additionalProperties": False}},
+        lambda args: handle_argus("find-events", args),
+    ),
+    (
+        {"name": "argus_forge_notes_on", "description": "Entity: Argus. Read source-backed Forge notes for a local date, optionally filtered by project or actor.",
+         "inputSchema": {"type": "object", "properties": {"date": {"type": "string"},
+                                                  "project": {"type": "string"},
+                                                  "actor": {"type": "string"},
+                                                  "offset": {"type": "integer", "minimum": 0}},
+                         "required": ["date"], "additionalProperties": False}},
+        lambda args: handle_argus("forge-notes-on", args),
+    ),
+    (
+        {"name": "argus_source_record", "description": "Entity: Argus. Inspect an exact cited archive or Forge source record by key and SHA-256.",
+         "inputSchema": {"type": "object", "properties": {"kind": {"type": "string", "enum": ["archive", "forge"]},
+                                                  "key": {"type": "string"},
+                                                  "sha256": {"type": "string"}},
+                         "required": ["kind", "key", "sha256"], "additionalProperties": False}},
+        lambda args: handle_argus("source-record", args),
     ),
     # Lynx Tools
     (

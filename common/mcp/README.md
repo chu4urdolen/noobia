@@ -109,6 +109,11 @@ Noobia tools natively adopt the Model Context Protocol:
 - `argus_collect_day`: Sync Forge evidence, then queue archive import and a dated ledger; returns job IDs.
 - `argus_daily_ledger`: Read the latest versioned evidence ledger for a local date.
 - `argus_job_status`, `argus_job_result`: Inspect a named job.
+- `argus_events_on`, `argus_find_events`: Query source-backed archive events by date or text.
+- `argus_forge_notes_on`: Query a local day's Forge notes, optionally by exact project or actor.
+- `argus_source_record`: Inspect an exact cited source record using its key and SHA-256.
+
+The three query tools return up to 100 `items` and a `next_offset` for another page.
 
 These use the local stdio MCP server and the bounded client in `argus/tools/argus_client.py`.
 They do not open a listener on Argus. Journal collection and Council calls are not part of these tools.

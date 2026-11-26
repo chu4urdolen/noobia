@@ -1,4 +1,5 @@
 import sys
+from types import SimpleNamespace
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -24,4 +25,26 @@ class ArgusClientTest(unittest.TestCase):
                 argus_client.call("job-result", job_id="abc; reboot")
             with self.assertRaises(ValueError):
                 argus_client.call("ledger", date="2026-11-26; reboot")
+            remote.assert_not_called()
+
+    def test_remote_query_is_shell_quoted(self):
+        completed = SimpleNamespace(returncode=0, stdout="[]", stderr="")
+        with patch.object(argus_client.subprocess, "run", return_value=completed) as run:
+            self.assertEqual(argus_client.call("find-events", query="Argus; whoami"),
+                             {"items": [], "next_offset": None})
+        remote_command = run.call_args.args[0][-1]
+        self.assertIn("'Argus; whoami'", remote_command)
+
+    def test_page_has_explicit_continuation(self):
+        with patch.object(argus_client, "remote", return_value=list(range(101))) as remote:
+            result = argus_client.call("events-on", date="2026-11-26", offset=200)
+        self.assertEqual(len(result["items"]), 100)
+        self.assertEqual(result["next_offset"], 300)
+        remote.assert_called_once_with("history", "events-on", "2026-11-26",
+                                       "--limit", "101", "--offset", "200")
+
+    def test_source_lookup_requires_exact_hash(self):
+        with patch.object(argus_client, "remote") as remote:
+            with self.assertRaisesRegex(ValueError, "SHA-256"):
+                argus_client.call("source-record", kind="forge", key="note:1", sha256="short")
             remote.assert_not_called()

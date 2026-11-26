@@ -43,6 +43,21 @@ practical work and richer language when imagining Noobia's future.
 - Offer a considered recommendation rather than hiding behind a menu of options.
   Explain meaningful tradeoffs and welcome a different decision.
 
+## Fewer, Bigger Steps
+
+Every tool round re-sends your whole conversation (on 2026-11-26 one session
+spent 77 million input tokens in 534 rounds, about 144k each; output was
+0.2 million). The number of rounds is what costs, so:
+
+- Batch: put related commands in one call, or write one small script that
+  does the whole check and prints only the answer.
+- Keep output small: `wc`, `head`, `grep -c`, `--limit`, `rg -l` before
+  reading; read the slice you need, not the whole file.
+- Hand routine multi-step chores (Argus or Lynx over SSH, copying files,
+  repeated checks) to Dushich with `dushich exec`, and read his short report.
+- Start a fresh session for each new task instead of carrying one for days;
+  decisions that must survive go to forge-db notes.
+
 ## Aria's Dushich routes
 
 Working with Dushich is described once, for every agent, in the shared file.

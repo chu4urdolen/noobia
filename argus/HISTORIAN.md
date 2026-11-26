@@ -22,7 +22,7 @@ The coding Noobs' journals remain in their own directories. A brief journal coll
 
 `argus_forge_sync.py` runs on Nexus. It requests a full, JSON export through `forge-db --json changes --include-archived`, validates and hashes the bytes, and transfers them over pinned SSH. The inclusive flag returns moved archived notes with their original fields and IDs. Argus retains each exact export and each distinct source row version. The full export avoids gaps from a timestamp cursor while the feed is small; the 5 MiB validation bound will require a paginated feed as Forge grows.
 
-`build-ledger DATE` stores a versioned evidence ledger for a Europe/Sofia day. It separates date-only Argus archive events from timed Forge notes and cites source IDs and hashes. It makes no unsupported event-time inference from Forge path or project update times. Repeating unchanged evidence reuses the version; changed evidence produces another. A ledger is an evidence chronology, not an independent fact check or prose synthesis.
+`build-ledger DATE` stores a versioned evidence ledger for a Europe/Sofia day. It gives a factual count by project and note author, separates date-only Argus archive events from timed Forge notes, and cites source IDs and hashes. It makes no unsupported event-time inference from Forge path or project update times. Repeating unchanged evidence and ledger format reuses the version; changed evidence or a changed format produces another. A ledger is an evidence chronology, not an independent fact check or prose synthesis.
 
 ```sh
 python3 /noobia/argus/tools/argus_forge_sync.py        # Nexus

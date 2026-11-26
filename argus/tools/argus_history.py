@@ -3,6 +3,7 @@
 
 import argparse
 import base64
+from collections import Counter
 from contextlib import closing
 import hashlib
 import json
@@ -20,6 +21,7 @@ from argus_forge_feed import MAX_FEED_BYTES, aware_utc, parse_feed
 NOOBIA = Path(os.environ.get("NOOBIA", "/noobia"))
 DEFAULT_DB = NOOBIA / "argus/data/history.sqlite3"
 DEFAULT_ARCHIVE = NOOBIA / "archive"
+LEDGER_FORMAT_VERSION = 2
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS file_snapshots (
@@ -332,7 +334,9 @@ def build_ledger(connection, date):
                        for item in archive] +
                       [("forge", item["stable_key"], item["sha256"])
                        for item in notes])
-    source_digest = hashlib.sha256(json.dumps(evidence, separators=(",", ":")).encode()).hexdigest()
+    source_digest = hashlib.sha256(json.dumps(
+        {"format_version": LEDGER_FORMAT_VERSION, "evidence": evidence},
+        separators=(",", ":"), sort_keys=True).encode()).hexdigest()
     existing = connection.execute(
         "SELECT version FROM daily_ledgers WHERE local_date=? AND source_digest=?",
         (date, source_digest),
@@ -341,7 +345,20 @@ def build_ledger(connection, date):
         return {"date": date, "version": existing[0], "reused": True,
                 "archive_events": len(archive), "forge_notes": len(notes)}
     lines = [f"# Noobia evidence ledger — {date}", "", "Times are Europe/Sofia."
-             " Source statements are recorded as evidence, not independently confirmed facts.", ""]
+             " Source statements are recorded as evidence, not independently confirmed facts.",
+             f"Ledger format: {LEDGER_FORMAT_VERSION}.", ""]
+    projects = Counter(item["project"] or "unspecified" for item in notes)
+    actors = Counter(item["actor"] or "unknown" for item in notes)
+    lines.extend(("## Evidence overview",
+                  f"- {len(archive)} explicitly dated archive event(s); "
+                  f"{len(notes)} timed Forge note(s)."))
+    if projects:
+        lines.append("- Projects represented: " + ", ".join(
+            f"{compact_line(name, 80)} ({count})" for name, count in sorted(projects.items())) + ".")
+    if actors:
+        lines.append("- Note authors: " + ", ".join(
+            f"{compact_line(name, 60)} ({count})" for name, count in sorted(actors.items())) + ".")
+    lines.append("")
     lines.append("## Date-only archive events")
     for item in archive:
         lines.append(f"- **{compact_line(item['title'] or item['event_type'], 120)}**: "

@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from argus_history import (build_ledger, capture_forge, connect, events_on,
@@ -124,6 +125,8 @@ class HistoryTest(unittest.TestCase):
             self.assertEqual(build_ledger(connection, "2026-11-26")["version"], 1)
             self.assertTrue(build_ledger(connection, "2026-11-26")["reused"])
             self.assertIn("An archive event", ledger_on(connection, "2026-11-26")["markdown"])
+            self.assertIn("Ledger format: 2", ledger_on(connection, "2026-11-26")["markdown"])
+            self.assertIn("Projects represented: argus (1)", ledger_on(connection, "2026-11-26")["markdown"])
             capture_forge(connection, feed([1, 2]), "1970-01-01T00:00:00+00:00")
             self.assertEqual(build_ledger(connection, "2026-11-26")["version"], 2)
             self.assertEqual(status(connection)["ledgers"], 2)
@@ -151,6 +154,13 @@ class HistoryTest(unittest.TestCase):
                 capture_forge(connection, malformed, "1970-01-01T00:00:00+00:00")
             self.assertEqual(status(connection)["forge_exports"], 0)
             self.assertEqual(status(connection)["forge_records"], 0)
+
+    def test_ledger_format_change_keeps_prior_version(self):
+        with connect(self.db) as connection:
+            with patch("argus_history.LEDGER_FORMAT_VERSION", 1):
+                self.assertEqual(build_ledger(connection, "2026-11-26")["version"], 1)
+            self.assertEqual(build_ledger(connection, "2026-11-26")["version"], 2)
+            self.assertEqual(status(connection)["ledgers"], 2)
 
 
 if __name__ == "__main__":

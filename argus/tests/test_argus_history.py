@@ -140,6 +140,18 @@ class HistoryTest(unittest.TestCase):
             self.assertEqual(result["forge_notes"], 125)
             self.assertIn("Forge note:125", ledger_on(connection, "2026-11-26")["markdown"])
 
+    def test_rejected_forge_feed_keeps_history_empty(self):
+        malformed = json.dumps({"paths": [], "projects": [], "notes": [
+            {"id": 1, "project_name": "argus", "author": "Aria",
+             "created_at": "2026-11-26T12:00:00+00:00", "note": "valid"},
+            {"id": 2, "project_name": "argus", "author": "Aria",
+             "created_at": "missing timezone", "note": "invalid"}]}).encode()
+        with connect(self.db) as connection:
+            with self.assertRaisesRegex(ValueError, "ISO timestamp"):
+                capture_forge(connection, malformed, "1970-01-01T00:00:00+00:00")
+            self.assertEqual(status(connection)["forge_exports"], 0)
+            self.assertEqual(status(connection)["forge_records"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

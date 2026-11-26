@@ -22,3 +22,6 @@ exposes authenticated Argus status, collection, ledger, and job tools over pinne
 SSH. A verified off-device backup lives in Argus's ignored private area on Nexus.
 Journal collection is paused until the coding Noobs have continuity features;
 Council work is outside this historian slice.
+
+For a live conversation, [Argus's tmux launcher](../../argus/SESSION.md) keeps
+one Codex terminal alive across SSH disconnects and can resume a saved session.

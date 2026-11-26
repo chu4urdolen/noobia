@@ -1,0 +1,48 @@
+#!/bin/sh
+# Keep one interactive Argus Codex session attached to a durable tmux terminal.
+set -eu
+
+NOOBIA_ROOT=${NOOBIA:-/noobia}
+SESSION=argus-codex
+CODEX_BIN=/home/argus/.local/bin/codex
+
+if [ ! -x "$CODEX_BIN" ]; then
+    printf 'Argus Codex CLI is missing: %s\n' "$CODEX_BIN" >&2
+    exit 1
+fi
+if ! command -v tmux >/dev/null 2>&1; then
+    printf 'tmux is not installed on Argus\n' >&2
+    exit 1
+fi
+
+action=${1:-attach}
+case "$action" in
+    status)
+        if tmux has-session -t "$SESSION" 2>/dev/null; then
+            printf 'Argus session: running (%s)\n' "$SESSION"
+        else
+            printf 'Argus session: stopped\n'
+        fi
+        exit 0
+        ;;
+    start|attach|resume)
+        ;;
+    *)
+        printf 'usage: %s [start|attach|resume|status]\n' "$0" >&2
+        exit 2
+        ;;
+esac
+
+if ! tmux has-session -t "$SESSION" 2>/dev/null; then
+    if [ "$action" = resume ]; then
+        command_line="exec $CODEX_BIN resume --last -s danger-full-access -a never"
+    else
+        command_line="exec $CODEX_BIN -s danger-full-access -a never"
+    fi
+    tmux new-session -d -s "$SESSION" -c "$NOOBIA_ROOT/argus" "$command_line"
+fi
+
+if [ "$action" = attach ] || [ "$action" = resume ]; then
+    exec tmux attach-session -t "$SESSION"
+fi
+printf 'Argus session: running (%s)\n' "$SESSION"

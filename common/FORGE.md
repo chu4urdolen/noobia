@@ -128,15 +128,33 @@ Git.
    opens the 2×2 window. For each quadrant it attaches to the agent's running
    tmux session if one exists (`noobia-aria-*`, `noobia-banshee-*`,
    `noobia-gwyn-*`, `noobia-dushich-solo-*`). Otherwise it starts the agent's
-   launcher. Dushich's quadrant first waits up to 20 seconds for Ollama to
-   answer on `127.0.0.1:11434`. A terminal whose agent exits displays a clean
-   reconnect card with a respawn action (or auto-restarts after 2 seconds on error).
+   launcher. Dushich's quadrant runs
+   [`nexus_forge/solo_pane.sh`](nexus_forge/solo_pane.sh), which never leaves
+   the pane dead: if Solo fails to start it shows the error and retries after
+   5, 10, 20 and 40 seconds, then waits for Enter; when Solo ends normally it
+   waits for Enter too. The Solo launcher waits up to 60 seconds for Ollama
+   and up to 120 seconds for Codex's prompt on a cold boot. If Codex is alive
+   but slow, the launcher keeps the session rather than killing it. Failures
+   go to `dushich/solo/private/launch.log`. Any other terminal whose agent
+   exits displays a reconnect card with a respawn action (or auto-restarts
+   after 2 seconds on error).
    - **Quadrant Zoom:** Double-click any quadrant header, click the `⛶` button,
      or press `Ctrl+Shift+Z` or `F11` to expand any quadrant to full-window.
      Press `Ctrl+Shift+Z` or `Escape` to return to the 2×2 grid.
    - **Token Quota Badge:** A live hourly/weekly percentage remaining badge (`H/W: %/%`
      for cloud agents, `Local: 100%` for Dushich) sits directly above Rose on
      each avatar sidebar.
+   - **Dushich Status Line:** Under the token badge, one line says what Dushich
+     is doing for that quadrant's agent, refreshed every 4 seconds from
+     [`common/dushich/status.py`](dushich/status.py) (`dushich-status` on the
+     command line): `task`, `answering`, `reading` (mirroring the transcript),
+     `exploring`, `summarizing` or `working` in green; `queued #N` (behind
+     another agent's job: Qwen serves one request at a time), `loading` (Qwen
+     not yet in VRAM) or `needs <agent>` (last handoff blocked, < 12 h) in
+     amber; `idle · busy` (busy only for others) in blue; `idle` in gray;
+     `offline` (Ollama down) in red. The Solo quadrant shows `Helpers: N jobs`.
+     It reads `/proc` and Ollama's `/api/ps` only; queue order is estimated
+     from process start times.
    - **Configuration & Installer:** Customize quadrants with `--config` or
      `~/.config/nexus-forge/config.json`. Set up dependencies, provision local
      Dushich configs, and put Noobia's commands on `PATH` using `./install.sh`

@@ -77,9 +77,16 @@ fi
 [[ -x "$codex" ]] || { echo "Dushich Codex CLI is missing (run: common/runtime/install.sh codex)" >&2; exit 1; }
 [[ -f "$home/config.toml" ]] || { echo "Solo Dushich config is missing: $home/config.toml" >&2; exit 1; }
 [[ -r "$home/AGENTS.md" ]] || { echo "Solo Dushich instructions are missing: $home/AGENTS.md" >&2; exit 1; }
-/usr/bin/curl --fail --silent --max-time 3 http://127.0.0.1:11434/api/version >/dev/null || {
-    echo "Local Ollama is unavailable on http://127.0.0.1:11434" >&2; exit 1;
-}
+# Right after boot Ollama may still be starting: wait for it (bounded) instead of failing at once.
+ollama_wait="${NOOBIA_OLLAMA_WAIT:-60}"
+for ((waited = 0; ; waited += 2)); do
+    /usr/bin/curl --fail --silent --max-time 2 http://127.0.0.1:11434/api/version >/dev/null && break
+    if (( waited >= ollama_wait )); then
+        echo "Local Ollama is unavailable on http://127.0.0.1:11434 (waited ${ollama_wait}s)" >&2; exit 1
+    fi
+    (( waited == 0 )) && echo "Waiting for local Ollama (up to ${ollama_wait}s)..." >&2
+    sleep 2
+done
 
 if [[ $# -gt 0 ]]; then
     [[ $# -eq 2 && "$1" == resume && "$2" =~ ^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$ ]] || {

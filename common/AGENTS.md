@@ -344,6 +344,7 @@ and cost no cloud tokens.
 | A clean Python environment for a project | `uv venv`, `uv pip install ...`, `uv run` |
 | Audio, video, databases | `ffmpeg`, `sqlite3` |
 | Lynx, Iris, Rose, Lolth hardware | the `noobia` MCP server (`common/mcp/`); `lynx/tools/lynx_remote.py` |
+| Is Dushich busy, and for whom? | `dushich-status` (per agent: working / queued / idle / offline; `--agent NAME`, `--json`; read-only) |
 | Lynx's live status, tool coverage, and drift at a glance | `lynx-board` (read-only refresh; opens nothing on Lynx but status reads; writes `lynx/tools/ui/state/board.html`) |
 
 Details for each follow. When you build a tool others could use, put it in
@@ -466,6 +467,8 @@ forge-db note add Lynx "V53 boots; USB console still unproven" --path /noobia/ly
 forge-db note archive lynx --upto 446 --by Dushich   # copy notes (<= id) to project_notes_archive
 forge-db note archive lynx --upto 530 --move --by Dushich   # move: archive, then keep only newer notes
 forge-db note archived lynx --limit 50       # read the archive (notes stay in place too)
+forge-db project spec lynx                   # the project's living spec (current truth)
+forge-db project set lynx --spec-file spec.md --by Dushich   # replace the spec
 forge-db path check --prefix /noobia/lynx    # flag recorded paths that vanished
 forge-db path hit /noobia/rose/rose_composer --by Gwyn   # a found path was right: count it
 forge-db path list --prefix /noobia --sort hits          # least-used paths first
@@ -490,6 +493,32 @@ every write: use your own name. Never store secrets or
 key contents in a description. Add projects with `forge-db project add` only
 when no existing one fits, and don't change another project's executor or
 receiver. Tests: `python3 -m unittest discover -s /noobia/common/tools -p 'test_forge_db.py'`.
+
+**Specs, notes, and the archive.** Each project has three layers of memory:
+
+- **Spec** (`projects.spec`, read with `forge-db project spec NAME`): one
+  living document of what the project is, how it works, where its key paths
+  are, its current state, and its open TODOs. It is the current truth and is
+  rewritten as the project moves on, never appended to like a diary.
+- **Notes** (`project_notes`): the dated diary of decisions, milestones,
+  handoffs, and blockers since the spec was last merged.
+- **Archive** (`project_notes_archive`): where notes go once their lasting
+  facts are in the spec. Each archived note keeps its id, author, text,
+  cited paths, and date, plus `archived_at` and `archived_by`. Argus
+  regularly collects the archive into Noobia's historical records, so an
+  empty archive usually means Argus has picked it up, not that history was
+  lost.
+
+**Dushich curates this** (he uses forge-db most, on the local GPU, so cloud
+agents spend fewer tokens). When a project's notes pile up he reads them
+(`project get NAME --notes 50`) together with the spec, writes a new spec that
+merges their lasting facts with what the spec already said (or creates the
+first spec when there is none, checking each path he names), stores it with
+`project set NAME --spec-file FILE --by Dushich`, and then moves the merged
+notes into the archive with `note archive NAME --upto ID --move --by Dushich`,
+keeping the newest note or two in place. `--move` deletes only notes whose
+archive copy matches exactly. Other agents ask him for this through
+`dushich exec`, `dushich_ask`, or a forge-db note instead of doing it themselves.
 
 ### Dushich explorer (`dushich-explore`)
 

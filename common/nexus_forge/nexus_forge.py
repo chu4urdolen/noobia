@@ -54,6 +54,33 @@ from avatar_pane import (
 )
 from dushich_window import compute_sidebar_layout, is_dushich_helper_working
 
+# Dushich helper status (common/dushich/status.py): optional, so a broken or
+# missing module only blanks the status line and never stops the Forge.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dushich"))
+try:
+    import status as dushich_status
+except Exception:  # noqa: BLE001
+    dushich_status = None
+
+# Status-line colours by level (see dushich_status.agent_state).
+DUSHICH_LEVEL_COLORS = {
+    "busy": (0.25, 0.85, 0.4),       # green: working for this agent
+    "wait": (0.95, 0.72, 0.25),      # amber: queued, loading, or blocked on review
+    "error": (0.95, 0.40, 0.35),     # red: Ollama offline
+    "idle_busy": (0.45, 0.60, 0.80),  # soft blue: idle here, busy for others
+    "idle": (0.55, 0.60, 0.66),      # dim gray
+}
+
+
+def resolve_dushich_line(agent: str) -> dict:
+    """The helper status line under the token badge; never raises."""
+    if dushich_status is None or not agent:
+        return {"text": "", "level": "idle"}
+    try:
+        return dushich_status.status_line(agent)
+    except Exception:  # noqa: BLE001
+        return {"text": "Dushich: ?", "level": "idle"}
+
 # ---------------------------------------------------------------------------
 # GUI imports are optional at import time so the pure data table (and the
 # headless --self-test helpers) can be imported without a display connection.
@@ -114,7 +141,7 @@ DEFAULT_QUADRANTS = {
         "command": [
             "/bin/bash",
             "-lc",
-            "for _ in $(seq 1 40); do /usr/bin/curl -fsS --max-time 1 http://127.0.0.1:11434/api/version >/dev/null 2>&1 && break; sleep 0.5; done; s=$(tmux -Ldushich-clean list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-dushich-solo-.*:0$/{print $1; exit}'); if [ -n \"$s\" ]; then exec tmux -Ldushich-clean attach-session -t \"$s\"; fi; NOOBIA_DUSHICH_NO_GUI=1 exec ${NOOBIA:-/noobia}/dushich/solo/launch --no-gui",
+            "exec ${NOOBIA:-/noobia}/common/nexus_forge/solo_pane.sh",
         ],
     },
     "top_right": {
@@ -635,6 +662,7 @@ if _GI_AVAILABLE:
 
             # Token badge resolution
             self.token_badge = resolve_token_badge(self.agent, self.explicit_badge)
+            self.dushich_line = resolve_dushich_line(self.agent)
 
             # ---- header bar -----------------------------------------------
             self.header_event = Gtk.EventBox()
@@ -943,6 +971,10 @@ if _GI_AVAILABLE:
                 if new_badge != self.token_badge:
                     self.token_badge = new_badge
                     changed = True
+                new_line = resolve_dushich_line(self.agent)
+                if new_line != self.dushich_line:
+                    self.dushich_line = new_line
+                    changed = True
 
             self.tick += 1
             if changed:
@@ -1021,6 +1053,26 @@ if _GI_AVAILABLE:
 
                     y += badge_h
                     bottom_h -= badge_h
+
+                # Dushich helper status line right under the token badge
+                line_text = (self.dushich_line or {}).get("text", "")
+                line_h = 16 if line_text and bottom_h >= 32 else 0
+                if line_h > 0:
+                    cr.save()
+                    line_layout = PangoCairo.create_layout(cr)
+                    line_layout.set_font_description(Pango.FontDescription("Monospace 7"))
+                    line_layout.set_width((width - 8) * Pango.SCALE)
+                    line_layout.set_ellipsize(Pango.EllipsizeMode.END)
+                    line_layout.set_text(line_text, -1)
+                    _, extents = line_layout.get_pixel_extents()
+                    cr.set_source_rgb(*DUSHICH_LEVEL_COLORS.get(
+                        self.dushich_line.get("level"), DUSHICH_LEVEL_COLORS["idle"]))
+                    cr.move_to(max(4, (width - extents.width) // 2),
+                               y + max(0, (line_h - extents.height) // 2))
+                    PangoCairo.show_layout(cr, line_layout)
+                    cr.restore()
+                    y += line_h
+                    bottom_h -= line_h
 
                 if bottom_h > 0 and ROSE_PATH.exists():
                     rose = self._get_pixbuf(
@@ -1212,6 +1264,15 @@ def _verify_token_badge() -> None:
     assert resolve_token_badge("UnknownAgent") == "H/W: --% / --%"
 
 
+def _verify_dushich_line() -> None:
+    assert dushich_status is not None, "common/dushich/status.py did not import"
+    for agent in ("Aria", "Banshee", "Gwyn", "Dushich"):
+        line = resolve_dushich_line(agent)
+        assert line["text"].startswith(("Dushich: ", "Helpers: ")), line
+        assert line["level"] in DUSHICH_LEVEL_COLORS, line
+    assert resolve_dushich_line("")["text"] == ""
+
+
 def _verify_config_loader() -> None:
     # Empty / none returns default
     quads = build_quadrants_table(None)
@@ -1250,6 +1311,7 @@ def _self_test(args: argparse.Namespace) -> int:
     _verify_quadrants()
     _verify_layout()
     _verify_token_badge()
+    _verify_dushich_line()
     _verify_config_loader()
 
     pics = Path(args.pics_dir)

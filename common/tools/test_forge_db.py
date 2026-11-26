@@ -232,6 +232,23 @@ class ForgeDbProjectSetTest(ForgeDbTest):
         self.assertEqual(run("project", "set", "Rose", "--by", "D")[0], 2)
         self.assertEqual(run("project", "set", "Nope", "--hardware-ready", "--by", "D")[0], 2)
 
+    def test_spec_set_from_text_and_file_then_read(self):
+        code, out = run("project", "spec", "Rose")
+        self.assertEqual((code, out.strip()), (0, "Rose has no spec yet"))
+        self.assertIn("spec: none yet", run("project", "get", "Rose")[1])
+        self.assertEqual(run("project", "set", "Rose", "--spec", "Voice and lights.", "--by", "Dushich")[0], 0)
+        code, out = run("project", "spec", "Rose")
+        self.assertEqual(code, 0)
+        self.assertIn("by Dushich", out)
+        self.assertIn("Voice and lights.", out)
+        spec_file = Path(self.folder.name) / "spec.md"
+        spec_file.write_text("# Rose\nCurrent state: singing.\n", encoding="utf-8")
+        self.assertEqual(run("project", "set", "Rose", "--spec-file", str(spec_file), "--by", "Dushich")[0], 0)
+        self.assertIn("Current state: singing.", run("project", "spec", "Rose")[1])
+        self.assertIn("spec: 30 chars", run("project", "get", "Rose")[1])
+        self.assertEqual(run("project", "spec", "Nope")[0], 2)
+        self.assertEqual(run("project", "set", "Rose", "--spec-file", "/nonexistent/x", "--by", "D")[0], 2)
+
 
 class ForgeDbColumnRemovalTest(ForgeDbTest):
     """Older atlases that still carry conversation_id lose it on open."""

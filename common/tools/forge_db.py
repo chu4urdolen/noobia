@@ -121,7 +121,8 @@ def now() -> str:
 ADDED_COLUMNS = {  # columns newer than the first atlases; added in place
     "nexus_paths": (("hit_count", "INTEGER NOT NULL DEFAULT 0"), ("last_hit_at", "TEXT"),
                     ("last_hit_by", "TEXT")),
-    "projects": (("last_modified", "TEXT"), ("modified_for", "TEXT")),
+    "projects": (("last_modified", "TEXT"), ("modified_for", "TEXT"),
+                 ("spec", "TEXT"), ("spec_updated_at", "TEXT"), ("spec_updated_by", "TEXT")),
 }
 REMOVED_COLUMNS = {  # columns older atlases still carry; dropped in place
     "projects": ("conversation_id",),
@@ -274,7 +275,9 @@ def entry_text(source: str, row: sqlite3.Row, tags: list[str] = ()) -> str:
         return f"{row['path']} ({row['kind']}, {row['owner'] or 'shared'}): {row['description']} {row['tags']}{marks}"
     if source == "note":
         return f"Note on {row['project_name']} by {row['author']}: {row['note']}"
-    return f"Project {row['project_name']} ({row['executor']} for {row['receiver']}): {row['description'] or ''}{marks}"
+    spec = row["spec"] if "spec" in row.keys() and row["spec"] else ""
+    return (f"Project {row['project_name']} ({row['executor']} for {row['receiver']}): {row['description'] or ''}{marks}"
+            + (f"\nSpec: {spec[:1500]}" if spec else ""))
 
 
 def all_entries(db: sqlite3.Connection) -> list[tuple[str, str, str]]:
@@ -538,6 +541,12 @@ def render(value) -> str:
                  f"{'' if value['hardware_ready'] else ' (hardware not ready)'}: {value['description'] or ''}{marks}"
                  + (f" [last worked on {ago(value['last_modified'])} for {value['modified_for']}]"
                     if value.get("last_modified") and value.get("modified_for") else "")]
+        if value.get("spec"):
+            lines.append(f"  spec: {len(value['spec'])} chars, updated {value.get('spec_updated_at') or '?'}"
+                         f" by {value.get('spec_updated_by') or '?'} (read: forge-db project spec "
+                         f"{value['project_name']})")
+        elif "paths" in value:
+            lines.append(f"  spec: none yet (write: forge-db project set {value['project_name']} --spec-file FILE)")
         if "paths" in value:
             lines += ["  paths:"] + [f"    {p['path']} [{p['kind']}] {p['description']}" for p in value["paths"]]
             lines += ["  notes:"] + [f"    {render(n)}" for n in value["notes"]]
@@ -606,7 +615,12 @@ def main(argv: list[str] | None = None) -> int:
     hw.add_argument("--no-hardware-ready", dest="hardware_ready", action="store_false", default=None,
                     help="the project's hardware is not ready yet")
     js.add_argument("--description", "-d", help="replace the project description")
+    sp = js.add_mutually_exclusive_group()
+    sp.add_argument("--spec", help="replace the project's spec (its living current state and design)")
+    sp.add_argument("--spec-file", help="replace the project's spec with this file's text")
     js.add_argument("--by", required=True)
+    jsp = ja.add_parser("spec", help="print a project's spec")
+    jsp.add_argument("name")
     jt = ja.add_parser("touch", help="record that you are working on a project for an agent; "
                                      f"exit 3 if another agent worked on it in the last {ACTIVE_HOURS} h")
     jt.add_argument("name")
@@ -740,8 +754,10 @@ def main(argv: list[str] | None = None) -> int:
             result = project_view(db, args.name, 0)
         elif args.cmd == "project" and args.action == "set":
             require(args.by, "--by", 80)
-            if args.hardware_ready is None and not args.description:
-                raise ValueError("Nothing to set: pass --hardware-ready, --no-hardware-ready, or --description")
+            spec = Path(args.spec_file).read_text(encoding="utf-8") if args.spec_file else args.spec
+            if args.hardware_ready is None and not args.description and spec is None:
+                raise ValueError("Nothing to set: pass --hardware-ready, --no-hardware-ready, "
+                                 "--description, --spec, or --spec-file")
             if not db.execute("SELECT 1 FROM projects WHERE project_name=?", (args.name,)).fetchone():
                 raise ValueError(f"Unknown project: {args.name}")
             if args.hardware_ready is not None:
@@ -750,9 +766,20 @@ def main(argv: list[str] | None = None) -> int:
             if args.description:
                 db.execute("UPDATE projects SET description=? WHERE project_name=?",
                            (require(args.description, "--description"), args.name))
+            if spec is not None:
+                db.execute("UPDATE projects SET spec=?, spec_updated_at=?, spec_updated_by=? "
+                           "WHERE project_name=?", (require(spec, "--spec", 60000), now(), args.by, args.name))
             db.commit()
             refresh_embeddings(db, [("project", args.name)])
             result = project_view(db, args.name, 0)
+        elif args.cmd == "project" and args.action == "spec":
+            row = db.execute("SELECT spec, spec_updated_at, spec_updated_by FROM projects "
+                             "WHERE project_name=?", (args.name,)).fetchone()
+            if not row:
+                raise ValueError(f"Unknown project: {args.name}")
+            result = (dict(row) if args.json else
+                      (f"# {args.name} spec (updated {row['spec_updated_at']} by {row['spec_updated_by']})\n"
+                       f"{row['spec']}" if row["spec"] else f"{args.name} has no spec yet"))
         elif args.cmd == "project" and args.action == "touch":
             require(args.by, "--by", 80)
             result = project_touch(db, args.name, args.agent, args.together)

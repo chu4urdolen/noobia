@@ -18,6 +18,31 @@ NOOBIA = os.environ.get("NOOBIA", "/noobia")
 UUID = re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
 PREFIX = 'noobia-dushich-solo-'
 REGISTRY = Path(NOOBIA + '/dushich/solo/private/conversations.json')
+LOG = Path(NOOBIA + '/dushich/solo/private/launch.log')
+# A cold boot (GPU loading, Codex refreshing plugins) can take far longer than a warm start.
+START_TIMEOUT = float(os.environ.get('NOOBIA_DUSHICH_START_TIMEOUT', '120'))
+FAILED_MARK = 'Solo Codex failed to start'
+
+
+def log(message: str) -> None:
+    """Append one line to the private launch log; never let logging break a launch."""
+    try:
+        LOG.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        with LOG.open('a', encoding='utf-8') as stream:
+            stream.write(time.strftime('%Y-%m-%dT%H:%M:%S%z ') + message.replace('\n', ' | ') + '\n')
+    except OSError:
+        pass
+
+
+def alive(session: str) -> bool:
+    return run('tmux', '-L', 'dushich-clean', 'has-session', '-t', session, check=False).returncode == 0
+
+
+def solo_command(*extra: str) -> str:
+    """Pane command: on failure keep the error on screen so the launcher can read and report it."""
+    tail = ' '.join(extra)
+    return (f'{NOOBIA}/dushich/solo/codex-solo {tail} || {{ c=$?; '
+            f"printf '\\n{FAILED_MARK} (exit %s).\\n' \"$c\"; sleep 120; exit \"$c\"; }}")
 
 
 def registered() -> list[str]:
@@ -73,13 +98,18 @@ def screen_id(screen: str) -> str | None:
 
 
 def wait_for_id(session: str) -> str:
-    deadline = time.monotonic() + 20
+    deadline = time.monotonic() + START_TIMEOUT
     while time.monotonic() < deadline:
         try:
             screen = capture(session)
         except subprocess.CalledProcessError:
+            if not alive(session):
+                raise RuntimeError('Solo Codex session vanished during startup')
             time.sleep(.2)
             continue
+        if FAILED_MARK in screen:
+            last = ' | '.join(line for line in screen.strip().splitlines()[-6:] if line.strip())
+            raise RuntimeError('codex-solo failed: ' + last)
         if 'Ask Codex to do anything' in screen:
             break
         if 'Update available' in screen:
@@ -88,7 +118,7 @@ def wait_for_id(session: str) -> str:
             continue
         time.sleep(.2)
     else:
-        raise RuntimeError('Dushich prompt did not appear')
+        raise TimeoutError(f'Dushich prompt did not appear within {START_TIMEOUT:.0f}s')
     run('tmux', '-L', 'dushich-clean', 'send-keys', '-l', '-t', session + ':0.0', '--', '/status')
     time.sleep(.2)
     for _ in range(2):
@@ -142,28 +172,40 @@ def main() -> int:
         session = PREFIX + args.resume
         if run('tmux', '-L', 'dushich-clean', 'has-session', '-t', session, check=False).returncode:
             run('tmux', '-L', 'dushich-clean', 'new-session', '-d', '-s', session, '-n', 'workshop',
-                '-c', NOOBIA,
-                f'exec {NOOBIA}/dushich/solo/codex-solo resume {args.resume}')
+                '-c', NOOBIA, solo_command('resume', args.resume))
         if not no_gui:
             ensure_avatar_pane(session)
     else:
         session = PREFIX + uuid4().hex[:8]
         run('tmux', '-L', 'dushich-clean', 'new-session', '-d', '-s', session, '-n', 'workshop',
-            '-c', NOOBIA, f'exec {NOOBIA}/dushich/solo/codex-solo')
+            '-c', NOOBIA, solo_command())
         try:
             ident = wait_for_id(session)
             named = PREFIX + ident
             run('tmux', '-L', 'dushich-clean', 'rename-session', '-t', session, named)
             session = named
             register(ident)
-            if not no_gui:
-                ensure_avatar_pane(session)
-        except Exception:
+            log('started ' + session)
+        except TimeoutError as exc:
+            # Codex is running but slow or showing a dialog: keep it rather than
+            # killing a live mind. The session stays usable, just unregistered.
+            if not alive(session):
+                log(f'failed: {exc}; session gone')
+                raise RuntimeError(str(exc)) from exc
+            log(f'kept {session} unregistered: {exc}')
+            print(f'Solo Dushich launcher: {exc}; keeping {session} open (not registered for --resume)',
+                  file=sys.stderr)
+        except Exception as exc:
+            log(f'failed: {exc}')
             run('tmux', '-L', 'dushich-clean', 'kill-session', '-t', session, check=False)
             raise
+        if not no_gui:
+            ensure_avatar_pane(session)
     if args.detached:
         print('Solo Dushich session ready: ' + session)
-        print(f'Reattach: {NOOBIA}/dushich/solo/launch --attach ' + session.removeprefix(PREFIX))
+        ident = session.removeprefix(PREFIX)
+        print(f'Reattach: {NOOBIA}/dushich/solo/launch --attach {ident}' if UUID.fullmatch(ident)
+              else f'Reattach: tmux -L dushich-clean attach-session -t {session}')
     elif not no_gui and (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')
           or Path(f'/run/user/{os.getuid()}/wayland-0').exists()):
         run('tmux', '-L', 'dushich-clean', 'kill-pane', '-t', session + ':0.1', check=False)

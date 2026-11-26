@@ -335,7 +335,7 @@ setup_config() {
       "command": [
         "/bin/bash",
         "-lc",
-        "s=\$(tmux -Ldushich-clean list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null | awk -F: '/^noobia-dushich-solo-.*:0\$/{print \$1; exit}'); if [ -n \"\$s\" ]; then exec tmux -Ldushich-clean attach-session -t \"\$s\"; fi; exec \${NOOBIA:-$NOOBIA_DIR}/dushich/solo/launch --no-gui"
+        "exec \${NOOBIA:-$NOOBIA_DIR}/common/nexus_forge/solo_pane.sh"
       ]
     },
     "top_right": {

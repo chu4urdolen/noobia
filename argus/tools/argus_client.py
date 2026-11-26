@@ -51,6 +51,20 @@ def valid_date(value):
     return value
 
 
+def worker_service():
+    command = ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+               "-o", "ConnectTimeout=5", "argus", "systemctl", "show",
+               "argus-historian-worker.service", "--no-pager", "--property=ActiveState",
+               "--property=SubState", "--property=UnitFileState", "--property=NRestarts"]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=10, check=False)
+    except subprocess.TimeoutExpired as error:
+        raise ValueError("Argus worker status timed out") from error
+    if result.returncode:
+        raise ValueError(result.stderr.strip()[:300] or "Argus worker status failed")
+    return dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+
+
 def safe_filter(value, field):
     if value is None:
         return None
@@ -74,7 +88,8 @@ def page(rows, offset):
 def call(action, *, date=None, job_id=None, query=None, project=None, actor=None,
          offset=0, kind=None, key=None, sha256=None):
     if action == "status":
-        return {"history": remote("history", "status"), "jobs": remote("jobs", "health")}
+        return {"history": remote("history", "status"), "jobs": remote("jobs", "health"),
+                "worker": worker_service()}
     if action == "collect-day":
         date = valid_date(date)
         exported = sync("1970-01-01T00:00:00+00:00")

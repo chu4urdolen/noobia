@@ -11,6 +11,9 @@ service, and archive state. His recovered [role file](../../argus/AGENTS.md)
 and [Rose's backlog](../../argus/ARGUS_BACKLOG_v2.md) are the starting points
 for the historian build.
 
+The [current historian handoff](../../argus/STATUS-2026-11-27.md) records the
+latest evidence counts, backup verification, Dushich review, and remaining work.
+
 The [historian evidence index](../../argus/HISTORIAN.md) runs on Argus's Pi. It
 preserves the original archive, exact Forge exports including moved archived
 notes, and versioned daily evidence ledgers. The [named-job worker](../../argus/JOBS.md)

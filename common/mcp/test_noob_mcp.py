@@ -63,6 +63,15 @@ class TestNoobMCPServer(unittest.TestCase):
         self.assertIn("lynx_motion_read", tool_names)
         self.assertIn("iris_ping", tool_names)
         self.assertIn("iris_camera_capture", tool_names)
+        self.assertIn("argus_collect_day", tool_names)
+        self.assertIn("argus_daily_ledger", tool_names)
+
+    def test_argus_tool_routes_to_bounded_client(self):
+        with patch("noob_mcp.handle_argus", return_value='{"job_id":"x"}') as route:
+            text, is_error = self.server.call_tool("argus_job_result", {"job_id": "a" * 32})
+        self.assertFalse(is_error)
+        self.assertEqual(json.loads(text), {"job_id": "x"})
+        route.assert_called_once_with("job-result", {"job_id": "a" * 32})
 
     def test_unknown_method(self):
         req = {"jsonrpc": "2.0", "id": 3, "method": "nonexistent/method", "params": {}}

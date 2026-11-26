@@ -104,6 +104,15 @@ Noobia tools natively adopt the Model Context Protocol:
 - `iris_time_now`: Monotonic millisecond counter.
 - `iris_raw_nrp`: Execute an arbitrary bounded NRP/1 command.
 
+### Argus historian tools (pinned SSH from Nexus)
+- `argus_status`: Read evidence and job counts.
+- `argus_collect_day`: Sync Forge evidence, then queue archive import and a dated ledger; returns job IDs.
+- `argus_daily_ledger`: Read the latest versioned evidence ledger for a local date.
+- `argus_job_status`, `argus_job_result`: Inspect a named job.
+
+These use the local stdio MCP server and the bounded client in `argus/tools/argus_client.py`.
+They do not open a listener on Argus. Journal collection and Council calls are not part of these tools.
+
 ## Configuration
 
 ### Antigravity (`~/.gemini/config/mcp_config.json`)

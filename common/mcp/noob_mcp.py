@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Noobia MCP Server - Model Context Protocol for Noobia devices (Lynx, Iris, Rose).
+"""Noobia MCP Server - Model Context Protocol for Noobia devices and Argus.
 
 Standardizes remote and local access across Noobia hardware:
 - Replaces home-grown DIY json-stdin manifests and custom wrappers with standard MCP tools.
@@ -25,6 +25,7 @@ ROOT = Path("/noobia")
 LYNX_TOOLS = ROOT / "lynx" / "tools"
 IRIS_TOOLS = ROOT / "iris" / "tools"
 ROSE_CALLS = ROOT / "rose" / "calls"
+ARGUS_TOOLS = Path(os.environ.get("NOOBIA", "/noobia")) / "argus" / "tools"
 LOCAL_CALLS = LYNX_TOOLS / "local_calls"
 
 # Regex pattern for valid tool names
@@ -144,6 +145,15 @@ def iris_nrp_command(command: str, timeout: float = 12.0) -> str:
 # -----------------------------------------------------------------------------
 # Built-In MCP Tool Handlers
 # -----------------------------------------------------------------------------
+
+def handle_argus(action: str, args: Dict[str, Any]) -> str:
+    """Use the authenticated Nexus-to-Argus client; no LAN listener is exposed."""
+    if action not in ("status", "collect-day", "ledger", "job-status", "job-result"):
+        raise ValueError("invalid Argus action")
+    sys.path.insert(0, str(ARGUS_TOOLS))
+    from argus_client import call
+    return json.dumps(call(action, date=args.get("date"), job_id=args.get("job_id")),
+                      ensure_ascii=False)
 
 def _parse_nrp_payload(reply: str) -> Dict[str, Any]:
     """Parse standard NRP/1 reply into structured dict."""
@@ -352,6 +362,34 @@ def handle_iris_raw_nrp(args: Dict[str, Any]) -> str:
 # -----------------------------------------------------------------------------
 
 BUILTIN_TOOLS: List[Tuple[Dict[str, Any], Callable[[Dict[str, Any]], str]]] = [
+    (
+        {"name": "argus_status", "description": "Entity: Argus. Read historian evidence and job health.",
+         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
+        lambda args: handle_argus("status", args),
+    ),
+    (
+        {"name": "argus_collect_day", "description": "Entity: Argus. Sync Forge evidence and queue a dated ledger; returns a job ID.",
+         "inputSchema": {"type": "object", "properties": {"date": {"type": "string", "description": "Europe/Sofia date, YYYY-MM-DD; defaults to today"}}, "additionalProperties": False}},
+        lambda args: handle_argus("collect-day", args),
+    ),
+    (
+        {"name": "argus_daily_ledger", "description": "Entity: Argus. Read the latest evidence ledger for a date.",
+         "inputSchema": {"type": "object", "properties": {"date": {"type": "string"}},
+                         "required": ["date"], "additionalProperties": False}},
+        lambda args: handle_argus("ledger", args),
+    ),
+    (
+        {"name": "argus_job_status", "description": "Entity: Argus. Read a named historian job state.",
+         "inputSchema": {"type": "object", "properties": {"job_id": {"type": "string"}},
+                         "required": ["job_id"], "additionalProperties": False}},
+        lambda args: handle_argus("job-status", args),
+    ),
+    (
+        {"name": "argus_job_result", "description": "Entity: Argus. Read a completed historian job result.",
+         "inputSchema": {"type": "object", "properties": {"job_id": {"type": "string"}},
+                         "required": ["job_id"], "additionalProperties": False}},
+        lambda args: handle_argus("job-result", args),
+    ),
     # Lynx Tools
     (
         {

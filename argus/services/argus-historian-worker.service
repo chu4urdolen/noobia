@@ -1,0 +1,23 @@
+[Unit]
+Description=Argus historian named-job worker
+After=local-fs.target
+ConditionPathIsDirectory=/noobia/argus/data
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=argus
+Group=argus
+WorkingDirectory=/noobia/argus
+ExecStart=/usr/bin/python3 /noobia/argus/tools/argus_jobs.py worker
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/noobia/argus/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

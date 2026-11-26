@@ -63,6 +63,18 @@ class ForgeDbTest(unittest.TestCase):
         code, out = run("--json", "note", "archive", "Rose", "--upto", "2", "--move", "--by", "Dushich")
         self.assertEqual((json.loads(out)["copied"], json.loads(out)["moved"]), (0, 0))   # idempotent
 
+    def test_changes_can_include_moved_archived_notes_once(self):
+        for value in ("old", "current"):
+            self.assertEqual(run("note", "add", "Rose", value, "--by", "Gwyn")[0], 0)
+        self.assertEqual(run("note", "archive", "Rose", "--upto", "1", "--move", "--by", "Dushich")[0], 0)
+        _, ordinary = run("--json", "changes", "--since", "2000-01-01")
+        self.assertEqual([row["note"] for row in json.loads(ordinary)["notes"]], ["current"])
+        _, inclusive = run("--json", "changes", "--since", "2000-01-01", "--include-archived")
+        notes = json.loads(inclusive)["notes"]
+        self.assertEqual([row["note"] for row in notes], ["old", "current"])
+        self.assertEqual([row["id"] for row in notes], [1, 2])
+        self.assertNotIn("archived_at", notes[0])
+
     def test_note_archive_move_never_deletes_a_note_whose_copy_differs(self):
         import sqlite3
         run("note", "add", "Rose", "original", "--by", "Gwyn")

@@ -2,6 +2,7 @@
 """Argus's append-only local evidence index for his existing event archive."""
 
 import argparse
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -9,7 +10,10 @@ from pathlib import Path
 import re
 import sqlite3
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+from argus_forge_feed import MAX_FEED_BYTES, aware_utc, parse_feed
 
 
 NOOBIA = Path(os.environ.get("NOOBIA", "/noobia"))
@@ -53,6 +57,44 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS events_date_idx ON events(event_date, event_id);
 CREATE INDEX IF NOT EXISTS events_id_idx ON events(event_id);
+CREATE TABLE IF NOT EXISTS forge_exports (
+    export_id INTEGER PRIMARY KEY,
+    sha256 TEXT NOT NULL UNIQUE,
+    since_utc TEXT NOT NULL,
+    captured_at TEXT NOT NULL,
+    raw_bytes BLOB NOT NULL
+);
+CREATE TABLE IF NOT EXISTS forge_records (
+    stable_key TEXT NOT NULL,
+    content_sha256 TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    occurred_at TEXT,
+    observed_at TEXT,
+    project TEXT,
+    actor TEXT,
+    raw_json TEXT NOT NULL,
+    first_export_id INTEGER NOT NULL REFERENCES forge_exports(export_id),
+    PRIMARY KEY(stable_key,content_sha256)
+);
+CREATE INDEX IF NOT EXISTS forge_records_time_idx ON forge_records(kind,occurred_at);
+CREATE TABLE IF NOT EXISTS forge_export_records (
+    export_id INTEGER NOT NULL REFERENCES forge_exports(export_id),
+    stable_key TEXT NOT NULL,
+    content_sha256 TEXT NOT NULL,
+    PRIMARY KEY(export_id,stable_key),
+    FOREIGN KEY(stable_key,content_sha256) REFERENCES forge_records(stable_key,content_sha256)
+);
+CREATE TABLE IF NOT EXISTS daily_ledgers (
+    ledger_id INTEGER PRIMARY KEY,
+    local_date TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    source_digest TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    markdown TEXT NOT NULL,
+    UNIQUE(local_date,version),
+    UNIQUE(local_date,source_digest)
+);
 """
 
 
@@ -71,12 +113,12 @@ def connect(db_path):
     connection.execute("PRAGMA foreign_keys=ON")
     connection.execute("PRAGMA journal_mode=WAL")
     version = connection.execute("PRAGMA user_version").fetchone()[0]
-    if version not in (0, 1):
+    if version not in (0, 1, 2):
         connection.close()
         raise ValueError(f"unsupported history schema version: {version}")
     connection.executescript(SCHEMA)
-    if version == 0:
-        connection.execute("PRAGMA user_version=1")
+    if version < 2:
+        connection.execute("PRAGMA user_version=2")
     return connection
 
 
@@ -208,12 +250,146 @@ def find_events(connection, query, limit):
                  source_path=row[8], source_line=row[9], sha256=row[10]) for row in rows]
 
 
+def capture_forge(connection, data, since):
+    since_utc = aware_utc(since, "since")
+    if since_utc is None:
+        raise ValueError("since is required")
+    digest, records = parse_feed(data)
+    if connection.execute("SELECT 1 FROM forge_exports WHERE sha256=?", (digest,)).fetchone():
+        return {"sha256": digest, "snapshot_added": 0, "records_added": 0}
+    with connection:
+        cursor = connection.execute(
+            "INSERT INTO forge_exports(sha256,since_utc,captured_at,raw_bytes) VALUES(?,?,?,?)",
+            (digest, since_utc, now_utc(), data),
+        )
+        export_id = cursor.lastrowid
+        added = 0
+        for record in records:
+            cursor = connection.execute(
+                "INSERT OR IGNORE INTO forge_records(stable_key,content_sha256,kind,source_id,"
+                "occurred_at,observed_at,project,actor,raw_json,first_export_id) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (record["stable_key"], record["content_sha256"], record["kind"],
+                 record["source_id"], record["occurred_at"], record["observed_at"],
+                 record["project"], record["actor"],
+                 json.dumps(record["raw_record"], ensure_ascii=False, sort_keys=True),
+                 export_id),
+            )
+            added += cursor.rowcount
+            connection.execute(
+                "INSERT INTO forge_export_records(export_id,stable_key,content_sha256) VALUES(?,?,?)",
+                (export_id, record["stable_key"], record["content_sha256"]),
+            )
+    return {"sha256": digest, "snapshot_added": 1, "records_added": added,
+            "rows_seen": len(records)}
+
+
+def forge_notes_on(connection, date):
+    day = datetime.strptime(date, "%Y-%m-%d").date()
+    sofia = ZoneInfo("Europe/Sofia")
+    start = datetime.combine(day, datetime.min.time(), sofia).astimezone(timezone.utc)
+    end = datetime.combine(day + timedelta(days=1), datetime.min.time(), sofia).astimezone(timezone.utc)
+    rows = connection.execute(
+        "SELECT f.stable_key,f.content_sha256,f.occurred_at,f.project,f.actor,f.raw_json "
+        "FROM forge_records f WHERE f.kind='note' AND f.occurred_at>=? AND f.occurred_at<? "
+        "AND f.first_export_id=(SELECT MAX(f2.first_export_id) FROM forge_records f2 "
+        "WHERE f2.stable_key=f.stable_key) ORDER BY f.occurred_at,f.stable_key",
+        (start.isoformat(timespec="seconds"), end.isoformat(timespec="seconds")),
+    ).fetchall()
+    result = []
+    for key, digest, occurred_at, project, actor, raw_json in rows:
+        raw = json.loads(raw_json)
+        result.append({
+            "stable_key": key,
+            "sha256": digest,
+            "occurred_at": occurred_at,
+            "local_time": datetime.fromisoformat(occurred_at).astimezone(sofia).strftime("%H:%M"),
+            "project": project,
+            "actor": actor,
+            "text": str(raw.get("note", "")),
+            "paths": raw.get("paths", []),
+        })
+    return result
+
+
+def compact_line(value, limit=500):
+    return " ".join(str(value).split())[:limit]
+
+
+def build_ledger(connection, date):
+    datetime.strptime(date, "%Y-%m-%d")
+    archive = events_on(connection, date, 1_000_000_000)
+    notes = forge_notes_on(connection, date)
+    evidence = sorted([("archive", str(item["record_id"]), item["sha256"])
+                       for item in archive] +
+                      [("forge", item["stable_key"], item["sha256"])
+                       for item in notes])
+    source_digest = hashlib.sha256(json.dumps(evidence, separators=(",", ":")).encode()).hexdigest()
+    existing = connection.execute(
+        "SELECT version FROM daily_ledgers WHERE local_date=? AND source_digest=?",
+        (date, source_digest),
+    ).fetchone()
+    if existing:
+        return {"date": date, "version": existing[0], "reused": True,
+                "archive_events": len(archive), "forge_notes": len(notes)}
+    lines = [f"# Noobia evidence ledger — {date}", "", "Times are Europe/Sofia."
+             " Source statements are recorded as evidence, not independently confirmed facts.", ""]
+    lines.append("## Date-only archive events")
+    for item in archive:
+        lines.append(f"- **{compact_line(item['title'] or item['event_type'], 120)}**: "
+                     f"{compact_line(item['summary'])} "
+                     f"[Argus {item['event_id']}, {item['source_path']}:{item['source_line']}, "
+                     f"sha256:{item['sha256']}]")
+    if not archive:
+        lines.append("- No explicitly dated Argus archive events captured.")
+    lines.extend(("", "## Timed Forge notes"))
+    for item in notes:
+        lines.append(f"- **{item['local_time']} — {compact_line(item['actor'] or 'unknown', 60)} "
+                     f"on {compact_line(item['project'] or 'unspecified', 80)}**: "
+                     f"{compact_line(item['text'])} "
+                     f"[Forge {item['stable_key']}, sha256:{item['sha256']}]")
+    if not notes:
+        lines.append("- No Forge notes captured for this local day.")
+    markdown = "\n".join(lines) + "\n"
+    if len(markdown.encode("utf-8")) > 5 * 1024 * 1024:
+        raise ValueError("ledger exceeds 5 MiB")
+    with connection:
+        next_version = connection.execute(
+            "SELECT COALESCE(MAX(version),0)+1 FROM daily_ledgers WHERE local_date=?", (date,)
+        ).fetchone()[0]
+        connection.execute(
+            "INSERT INTO daily_ledgers(local_date,version,source_digest,created_at,markdown) "
+            "VALUES(?,?,?,?,?)", (date, next_version, source_digest, now_utc(), markdown),
+        )
+    return {"date": date, "version": next_version, "reused": False,
+            "archive_events": len(archive), "forge_notes": len(notes)}
+
+
+def ledger_on(connection, date):
+    datetime.strptime(date, "%Y-%m-%d")
+    row = connection.execute(
+        "SELECT version,source_digest,created_at,markdown FROM daily_ledgers "
+        "WHERE local_date=? ORDER BY version DESC LIMIT 1", (date,)
+    ).fetchone()
+    if row is None:
+        raise ValueError(f"no ledger for {date}")
+    return {"date": date, "version": row[0], "source_digest": row[1],
+            "created_at": row[2], "markdown": row[3]}
+
+
 def status(connection):
+    captures = [value for value in (
+        connection.execute("SELECT MAX(captured_at) FROM file_snapshots").fetchone()[0],
+        connection.execute("SELECT MAX(captured_at) FROM forge_exports").fetchone()[0],
+    ) if value is not None]
     return {
         "snapshots": connection.execute("SELECT COUNT(*) FROM file_snapshots").fetchone()[0],
         "raw_records": connection.execute("SELECT COUNT(*) FROM raw_records").fetchone()[0],
         "events": connection.execute("SELECT COUNT(*) FROM events").fetchone()[0],
-        "last_capture_utc": connection.execute("SELECT MAX(captured_at) FROM file_snapshots").fetchone()[0],
+        "forge_exports": connection.execute("SELECT COUNT(*) FROM forge_exports").fetchone()[0],
+        "forge_records": connection.execute("SELECT COUNT(*) FROM forge_records").fetchone()[0],
+        "ledgers": connection.execute("SELECT COUNT(*) FROM daily_ledgers").fetchone()[0],
+        "last_capture_utc": max(captures, default=None),
     }
 
 
@@ -230,20 +406,32 @@ def main(argv=None):
     search = sub.add_parser("find")
     search.add_argument("query")
     search.add_argument("--limit", type=int, default=100)
+    forge = sub.add_parser("capture-forge")
+    forge.add_argument("--since", default="1970-01-01T00:00:00+00:00")
+    build = sub.add_parser("build-ledger")
+    build.add_argument("date")
+    ledger = sub.add_parser("ledger")
+    ledger.add_argument("date")
     sub.add_parser("status")
     args = parser.parse_args(argv)
     try:
         if args.command in ("events-on", "find") and not 1 <= args.limit <= 1000:
             raise ValueError("limit must be 1..1000")
-        with connect(args.db) as connection:
+        with closing(connect(args.db)) as connection, connection:
             if args.command == "init":
-                result = {"db": str(args.db), "schema": 1}
+                result = {"db": str(args.db), "schema": 2}
             elif args.command == "import-archive":
                 result = import_archive(connection, args.archive_root)
             elif args.command == "events-on":
                 result = events_on(connection, args.date, args.limit)
             elif args.command == "find":
                 result = find_events(connection, args.query, args.limit)
+            elif args.command == "capture-forge":
+                result = capture_forge(connection, sys.stdin.buffer.read(MAX_FEED_BYTES + 1), args.since)
+            elif args.command == "build-ledger":
+                result = build_ledger(connection, args.date)
+            elif args.command == "ledger":
+                result = ledger_on(connection, args.date)
             else:
                 result = status(connection)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))

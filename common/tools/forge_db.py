@@ -673,6 +673,8 @@ def main(argv: list[str] | None = None) -> int:
 
     c = sub.add_parser("changes", help="rows written since a UTC ISO time")
     c.add_argument("--since", required=True)
+    c.add_argument("--include-archived", action="store_true",
+                   help="include notes moved to the archive, preserving their original fields")
     sub.add_parser("embed", help="refresh meaning-search vectors")
     sub.add_parser("stats")
 
@@ -865,12 +867,19 @@ def main(argv: list[str] | None = None) -> int:
                 "SELECT * FROM (SELECT * FROM project_notes WHERE project_name=? ORDER BY id DESC LIMIT ?) "
                 "ORDER BY id", (args.project, args.limit))]
         elif args.cmd == "changes":
+            notes = [dict(r) for r in db.execute(
+                "SELECT * FROM project_notes WHERE created_at>=? ORDER BY id", (args.since,))]
+            if args.include_archived:
+                notes += [dict(r) for r in db.execute(
+                    "SELECT id,project_name,author,note,paths,created_at "
+                    "FROM project_notes_archive WHERE created_at>=? "
+                    "AND id NOT IN (SELECT id FROM project_notes) ORDER BY id", (args.since,))]
+                notes.sort(key=lambda row: row["id"])
             result = {"paths": [dict(r) for r in db.execute(
                           "SELECT * FROM nexus_paths WHERE updated_at>=? ORDER BY updated_at", (args.since,))],
                       "projects": [dict(r) for r in db.execute(
                           "SELECT * FROM projects WHERE last_modified>=? ORDER BY last_modified", (args.since,))],
-                      "notes": [dict(r) for r in db.execute(
-                          "SELECT * FROM project_notes WHERE created_at>=? ORDER BY id", (args.since,))]}
+                      "notes": notes}
             if not args.json:
                 result = result["projects"] + result["paths"] + result["notes"]
         elif args.cmd == "embed":

@@ -11,5 +11,11 @@ service, and archive state. His recovered [role file](../../argus/AGENTS.md)
 and [Rose's backlog](../../argus/ARGUS_BACKLOG_v2.md) are the starting points
 for the historian build.
 
-The first [local historical index](../../argus/HISTORIAN.md) now runs on Argus's
-Pi and indexes his existing event archive without changing its originals.
+The [historian evidence index](../../argus/HISTORIAN.md) runs on Argus's Pi. It
+preserves the original archive, exact Forge exports including moved archived
+notes, and versioned daily evidence ledgers. The [named-job worker](../../argus/JOBS.md)
+handles archive import and ledger construction on demand. The Nexus MCP server
+exposes authenticated Argus status, collection, ledger, and job tools over pinned
+SSH. A verified off-device backup lives in Argus's ignored private area on Nexus.
+Journal collection is paused until the coding Noobs have continuity features;
+Council work is outside this historian slice.

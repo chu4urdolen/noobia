@@ -13,6 +13,15 @@ import tempfile
 NOOBIA = Path(os.environ.get("NOOBIA", "/noobia"))
 SOURCES = {"history": NOOBIA / "argus/data/history.sqlite3",
            "jobs": NOOBIA / "argus/data/jobs.sqlite3"}
+STATION_FILES = {
+    "station/AGENTS-root.md": NOOBIA / "AGENTS.md",
+    "station/AGENTS-argus.md": NOOBIA / "argus/AGENTS.md",
+    "station/AGENTS-common.md": NOOBIA / "common/AGENTS.md",
+    "station/launch": NOOBIA / "argus/launch",
+    "station/desktop-items-HDMI-A-1.conf": Path("/home/argus/.config/pcmanfm/default/desktop-items-HDMI-A-1.conf"),
+    "station/Argus.png": NOOBIA / "pics/Argus/Argus.png",
+    "station/argus-historian-worker.service": Path("/etc/systemd/system/argus-historian-worker.service"),
+}
 
 
 def stream_database(name):
@@ -40,12 +49,25 @@ def stream_archive():
         tar.add(archive, arcname="archive", recursive=True)
 
 
+def stream_station():
+    with tarfile.open(fileobj=sys.stdout.buffer, mode="w|") as tar:
+        for name, source in STATION_FILES.items():
+            if not source.is_file() or source.is_symlink():
+                raise ValueError(f"station file unavailable: {source}")
+            tar.add(source, arcname=name, recursive=False)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", choices=("history", "jobs", "archive"))
+    parser.add_argument("source", choices=("history", "jobs", "archive", "station"))
     args = parser.parse_args()
     try:
-        stream_archive() if args.source == "archive" else stream_database(args.source)
+        if args.source == "archive":
+            stream_archive()
+        elif args.source == "station":
+            stream_station()
+        else:
+            stream_database(args.source)
         return 0
     except (OSError, sqlite3.Error, ValueError) as error:
         print(f"argus-backup-source: {error}", file=sys.stderr)

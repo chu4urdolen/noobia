@@ -17,8 +17,13 @@ import tempfile
 NOOBIA = Path(os.environ.get("NOOBIA", "/noobia"))
 DESTINATION = NOOBIA / "argus/private/backups"
 REMOTE = NOOBIA / "argus/tools/argus_backup_source.py"
-FILES = {"history": "history.sqlite3", "jobs": "jobs.sqlite3",
-         "archive": "archive.tar"}
+REQUIRED_FILES = {"history": "history.sqlite3", "jobs": "jobs.sqlite3",
+                  "archive": "archive.tar"}
+FILES = {**REQUIRED_FILES, "station": "station.tar"}
+STATION_MEMBERS = {"station/AGENTS-root.md", "station/AGENTS-argus.md",
+                   "station/AGENTS-common.md", "station/launch",
+                   "station/desktop-items-HDMI-A-1.conf", "station/Argus.png",
+                   "station/argus-historian-worker.service"}
 
 
 def digest(path):
@@ -31,7 +36,8 @@ def digest(path):
 
 def check_snapshot(folder):
     manifest = json.loads((folder / "manifest.json").read_text())
-    if set(manifest["files"]) != set(FILES.values()):
+    file_set = set(manifest["files"])
+    if file_set not in (set(REQUIRED_FILES.values()), set(FILES.values())):
         raise ValueError("backup manifest file set is incomplete")
     for name, expected in manifest["files"].items():
         path = folder / name
@@ -71,9 +77,20 @@ def check_snapshot(folder):
                     raise ValueError("archive restore count mismatch")
     if archive_events == 0:
         raise ValueError("archive backup contains no event files")
+    station_files = 0
+    if FILES["station"] in file_set:
+        with tarfile.open(folder / FILES["station"], "r:") as tar:
+            members = tar.getmembers()
+            if {member.name for member in members} != STATION_MEMBERS or any(
+                    not member.isfile() or member.issym() or member.islnk() for member in members):
+                raise ValueError("station backup members are incomplete or unsafe")
+            if any(not tar.extractfile(member).read(1) for member in members):
+                raise ValueError("station backup contains an empty file")
+            station_files = len(members)
     return {"backup": str(folder), "sqlite_integrity": integrity,
             "archive_event_files": archive_events,
             "restored_archive_records": restored["records_added"],
+            "station_files": station_files,
             "sha256": {name: info["sha256"] for name, info in manifest["files"].items()}}
 
 

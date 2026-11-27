@@ -157,17 +157,32 @@ class LynxAdapter(agent_link.Adapter):
                 continue
         return False
 
+    def _mark_events_ignored(self, event_ids, reason):
+        if not event_ids:
+            return
+        try:
+            for p in ("/usr/local/lib/noobia/autonomy", "/noobia/common/autonomy"):
+                if p not in sys.path:
+                    sys.path.insert(0, p)
+            from events import EventStore
+            es = EventStore("/var/lib/noobia/autonomy/events.db", noob_name="lynx")
+            for eid in event_ids:
+                es.mark_ignored(eid, reason)
+        except Exception:
+            pass
+
     def _send(self, message):
         if self.stop.exists():
             raise AgentBusy(f"agent worker stopped ({self.stop})")
+        event_ids = message.get("event_ids", [])
         if self._is_redundant_with_running(message):
             self.last_job_id = None
+            self.last_suppression = {"reason": "duplicate_of_running"}
+            self._mark_events_ignored(event_ids, "duplicate_of_running")
             return
         now = time.time()
         incoming_kind = str(message.get("kind", "")).lower()
         incoming_text = str(message.get("text", "")).lower()
-        # Ranker messages are kind "observation" with templated text ("Someone
-        # tapped your screen."), so recognise touch by its pattern id too.
         pattern_id = str(message.get("pattern_id") or "").lower()
         is_touch = ("touch" in incoming_kind or "touch" in incoming_text
                     or pattern_id.startswith("touch"))
@@ -178,6 +193,8 @@ class LynxAdapter(agent_link.Adapter):
                     last_t = float(last_touch_file.read_text(encoding="utf-8").strip())
                     if now - last_t < 5.0:
                         self.last_job_id = None
+                        self.last_suppression = {"reason": "touch_debounce"}
+                        self._mark_events_ignored(event_ids, "touch_debounce")
                         return
             except Exception:
                 pass
@@ -186,7 +203,7 @@ class LynxAdapter(agent_link.Adapter):
         if pending >= self.max_pending:
             raise AgentBusy(f"{pending} jobs already pending ({running} running)")
         prompt = build_prompt(message)   # once: it also reports injection attempts (LNX-100)
-        job_id = JobQueue(self.jobs).create_job(prompt)
+        job_id = JobQueue(self.jobs).create_job(prompt, event_ids=event_ids)
         self.last_job_id = job_id
         for p in ("/usr/local/lib/noobia/autonomy", "/usr/local/lib/noobia/lynx", "/noobia/lynx/tools"):
             if p not in sys.path:

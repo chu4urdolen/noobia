@@ -36,6 +36,7 @@ MAX_EVIDENCE_BYTES = 512
 SOURCES = ("ranker", "aigel")
 KINDS = ("observation", "alert", "speech")
 FIELDS = {"v", "id", "host", "time", "source", "kind", "text", "evidence", "pattern_id"}
+OPTIONAL_FIELDS = {"event_ids"}
 HOST = re.compile(r"[a-z0-9][a-z0-9_-]{0,31}\Z")
 MSG_ID = re.compile(r"[0-9a-f]{32}\Z")
 TIME = "%Y-%m-%dT%H:%M:%SZ"
@@ -47,7 +48,7 @@ class MessageError(ValueError):
     pass
 
 
-def make_message(host, source, kind, text, evidence=(), pattern_id=None, now=None):
+def make_message(host, source, kind, text, evidence=(), pattern_id=None, now=None, event_ids=None):
     """Build and validate a message. ``now`` is a UTC datetime (tests)."""
     message = {
         "v": SCHEMA_VERSION,
@@ -60,14 +61,23 @@ def make_message(host, source, kind, text, evidence=(), pattern_id=None, now=Non
         "evidence": list(evidence),
         "pattern_id": pattern_id,
     }
+    if event_ids:
+        message["event_ids"] = list(event_ids)
     validate(message)
     return message
 
 
 def validate(message):
     """Raise MessageError unless ``message`` follows schema v1 exactly."""
-    if not isinstance(message, dict) or set(message) != FIELDS:
-        raise MessageError(f"message needs exactly the fields {sorted(FIELDS)}")
+    if not isinstance(message, dict):
+        raise MessageError("message must be a dict")
+    keys = set(message.keys())
+    if not (FIELDS.issubset(keys) and keys.issubset(FIELDS | OPTIONAL_FIELDS)):
+        raise MessageError(f"message needs exactly the fields {sorted(FIELDS)} (optional: {sorted(OPTIONAL_FIELDS)})")
+    if "event_ids" in message:
+        eids = message["event_ids"]
+        if not isinstance(eids, list) or not all(isinstance(e, str) for e in eids):
+            raise MessageError("event_ids must be a list of string IDs")
     if message["v"] != SCHEMA_VERSION:
         raise MessageError("unsupported schema version")
     if not isinstance(message["id"], str) or not MSG_ID.match(message["id"]):

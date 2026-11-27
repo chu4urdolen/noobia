@@ -78,7 +78,7 @@ class JobQueue:
         except FileNotFoundError:
             return False
 
-    def create_job(self, prompt):
+    def create_job(self, prompt, event_ids=None):
         if not isinstance(prompt, str) or not 1 <= len(prompt.encode("utf-8")) <= 8000:
             raise QueueError("prompt must be 1..8000 UTF-8 bytes")
         with self._locked():
@@ -88,8 +88,22 @@ class JobQueue:
                    self._path(job_id, suffix).is_symlink()
                    for suffix in ("pending", "running", "done")):
                 raise QueueError("job ID collision")
-            self._write(path, {"prompt": prompt, "created_ns": time.time_ns()})
+            payload = {"prompt": prompt, "created_ns": time.time_ns()}
+            if event_ids:
+                payload["event_ids"] = list(event_ids)
+            self._write(path, payload)
             return job_id
+
+    def get_event_ids(self, job_id):
+        for suffix in ("running", "pending", "done"):
+            p = self._path(job_id, suffix)
+            if p.exists():
+                try:
+                    with p.open("r", encoding="utf-8") as stream:
+                        return json.load(stream).get("event_ids", [])
+                except Exception:
+                    pass
+        return []
 
     def claim_next(self, max_pending_age_s=None, max_sense_age_s=None):
         with self._locked():
@@ -134,6 +148,12 @@ class JobQueue:
             done = self._path(job_id, "done")
             if done.exists() or done.is_symlink():
                 raise QueueError("job already finished")
+            event_ids = []
+            try:
+                with running.open("r", encoding="utf-8") as stream:
+                    event_ids = json.load(stream).get("event_ids", [])
+            except Exception:
+                pass
             if reply_pending:
                 reply = self._path(job_id, "reply")
                 if reply.exists() or reply.is_symlink():
@@ -141,8 +161,11 @@ class JobQueue:
                 # Tidy expires .done after two days; this private outbox stays
                 # until the signed Aigel route acknowledges the job ID.
                 self._write(reply, {"text": text, "created_ns": time.time_ns()})
-            self._write(done, {"ok": ok, "text": text, "finished_ns": time.time_ns(),
-                               "reply_pending": reply_pending})
+            done_payload = {"ok": ok, "text": text, "finished_ns": time.time_ns(),
+                            "reply_pending": reply_pending}
+            if event_ids:
+                done_payload["event_ids"] = event_ids
+            self._write(done, done_payload)
             running.unlink()
             self._sync_dir()
 

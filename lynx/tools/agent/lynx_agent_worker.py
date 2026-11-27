@@ -176,9 +176,20 @@ def run_job(queue, job_id, prompt):
                                   thought_size_after > thought_size_before)
         ok = current.returncode == 0 and not stopping
         text = (output if ok else errors or output).decode(errors='replace')[-8000:]
+        eids = queue.get_event_ids(job_id)
         queue.finish(job_id, ok, text or ('Agent stopped' if stopping else 'No response'),
                      reply_pending=bool(ok and text))
-        print(json.dumps({'event': 'job_finished', 'job_id': job_id, 'ok': ok}), flush=True)
+        if eids:
+            try:
+                for p in ('/usr/local/lib/noobia/autonomy', '/noobia/common/autonomy'):
+                    if p not in sys.path:
+                        sys.path.insert(0, p)
+                from events import EventStore
+                es = EventStore('/var/lib/noobia/autonomy/events.db', noob_name='lynx')
+                es.ack(eids)
+            except Exception:
+                pass
+        print(json.dumps({'event': 'job_finished', 'job_id': job_id, 'ok': ok, 'event_ids': eids}), flush=True)
         if ok and text:
             clean_text = text.strip()
             # If a tool (like lynx_speech) already recorded Lynx's spoken thought during this

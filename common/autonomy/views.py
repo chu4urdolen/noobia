@@ -262,6 +262,7 @@ class ViewReader:
     def _read_new_file(self) -> list[str]:
         if not self.log_file.exists():
             return []
+        matched = []
         try:
             st = self.log_file.stat()
             size = st.st_size
@@ -269,6 +270,25 @@ class ViewReader:
 
             # F4: detect rotation by inode change as well as shrink
             if self._file_inode is not None and inode != self._file_inode:
+                # NA-11: follow .0 on inode change so unread tail before rotation is never lost
+                rotated = self.log_file.with_name(self.log_file.name + ".0")
+                if rotated.exists():
+                    try:
+                        rst = rotated.stat()
+                        if rst.st_ino == self._file_inode:
+                            with open(rotated, "rb") as rf:
+                                rf.seek(self._file_offset)
+                                rot_chunk = rf.read()
+                            if rot_chunk:
+                                last_nl = rot_chunk.rfind(b"\n")
+                                if last_nl != -1:
+                                    rot_lines = rot_chunk[:last_nl + 1].decode("utf-8", errors="replace").splitlines()
+                                    for raw in rot_lines:
+                                        payload = self.parse_syslog_line(raw)
+                                        if payload is not None:
+                                            matched.append(payload)
+                    except OSError:
+                        pass
                 self._file_offset = 0
             elif size < self._file_offset:
                 self._file_offset = 0
@@ -280,12 +300,12 @@ class ViewReader:
                 chunk = f.read()
 
             if not chunk:
-                return []
+                return matched
 
             # F1: SPLIT LINES - consume only up to the last newline
             last_nl = chunk.rfind(b"\n")
             if last_nl == -1:
-                return []
+                return matched
 
             consumed = chunk[:last_nl + 1]
             self._file_offset += len(consumed)
@@ -295,7 +315,6 @@ class ViewReader:
         except OSError:
             return []
 
-        matched = []
         for raw in new_lines:
             payload = self.parse_syslog_line(raw)
             if payload is not None:
@@ -315,12 +334,31 @@ class ViewReader:
     def _read_new_tagged_file(self, src_set: set[str]) -> list[tuple[str, str]]:
         if not self.log_file.exists():
             return []
+        matched = []
         try:
             st = self.log_file.stat()
             size = st.st_size
             inode = st.st_ino
 
             if self._tagged_file_inode is not None and inode != self._tagged_file_inode:
+                rotated = self.log_file.with_name(self.log_file.name + ".0")
+                if rotated.exists():
+                    try:
+                        rst = rotated.stat()
+                        if rst.st_ino == self._tagged_file_inode:
+                            with open(rotated, "rb") as rf:
+                                rf.seek(self._tagged_file_offset)
+                                rot_chunk = rf.read()
+                            if rot_chunk:
+                                last_nl = rot_chunk.rfind(b"\n")
+                                if last_nl != -1:
+                                    rot_lines = rot_chunk[:last_nl + 1].decode("utf-8", errors="replace").splitlines()
+                                    for raw in rot_lines:
+                                        res = self.parse_tagged_line(raw, src_set)
+                                        if res is not None:
+                                            matched.append(res)
+                    except OSError:
+                        pass
                 self._tagged_file_offset = 0
             elif size < self._tagged_file_offset:
                 self._tagged_file_offset = 0
@@ -331,11 +369,11 @@ class ViewReader:
                 chunk = f.read()
 
             if not chunk:
-                return []
+                return matched
 
             last_nl = chunk.rfind(b"\n")
             if last_nl == -1:
-                return []
+                return matched
 
             consumed = chunk[:last_nl + 1]
             self._tagged_file_offset += len(consumed)
@@ -345,7 +383,6 @@ class ViewReader:
         except OSError:
             return []
 
-        matched = []
         for raw in new_lines:
             res = self.parse_tagged_line(raw, src_set)
             if res is not None:

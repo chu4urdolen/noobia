@@ -166,6 +166,15 @@ class Daemon:
                                       start_at_end=bool(view.get("start_at_end", True)))
         self.reader = reader
 
+        ev_cfg = config.get("events", {})
+        ev_db = ev_cfg.get("db_path", "/var/lib/noobia/autonomy/events.db")
+        self.event_store = None
+        try:
+            import events
+            self.event_store = events.EventStore(ev_db, noob_name=config.get("host", "lynx"))
+        except Exception as exc:
+            self.log(f"autonomyd events store not initialized: {exc}")
+
         r = config.get("ranker", {})
         store_file = r.get("store_file")
         caps = {"store_capacity": int(r.get("store_capacity", 200)),
@@ -216,7 +225,7 @@ class Daemon:
             is_busy=is_busy)
         h = config.get("harness", {})
         self.harness = harness_mod.Harness(
-            host=config["host"], read_new=self.reader.read_new, chunker=chunker,
+            host=config["host"], read_new=self._read_new_and_capture, chunker=chunker,
             client=client, adapter=adapter, ranker=self.ranker, emit=self.emit, log=self.log,
             on_priority_rules=self._accept_rules,
             validate_pattern=lambda p: ranker_mod.validate_pattern(p, self.ranker.corpus),
@@ -229,6 +238,16 @@ class Daemon:
             async_aigel=bool(h.get("async_aigel", False)))
         self.interval_s = float(config.get("interval_s", 1.0))
         self._dirty = False
+
+    def _read_new_and_capture(self):
+        lines = self.reader.read_new()
+        if self.event_store and lines:
+            for line in lines:
+                try:
+                    self.event_store.capture(line, origin=self.config.get("host", "lynx"))
+                except Exception:
+                    pass
+        return lines
 
     def _heartbeat_fields(self):
         if not self.prioritizer:

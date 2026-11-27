@@ -498,3 +498,48 @@ Lynx's route to inference.
 | Nexus detection service (Coral) | `common/autonomy/services/detect/` | Banshee |
 | Lynx web page | `lynx/web/` | Banshee |
 | Installs on Lynx | install packets | Aria |
+
+---
+
+## 8. Contracts v0.3 (Universal for Linux & ESP32 Noobs)
+
+### 8.1 Event ID Format and State Lifecycle
+Every raw observation receives a durable, globally unique identifier before any transformation:
+- Format: `<noob>-<boot_id_or_hash>-<seq>` (e.g. `lynx-e8a2-00000042`) or SHA256 content-hash + nanosecond timestamp.
+- State Lifecycle:
+  - `captured`: Persisted to SQLite WAL store (`events.db`) immediately upon receipt from logging stream.
+  - `ignored`: Explicitly suppressed by a defined rule (e.g., touch debounce, deduplication of running action). Carries `reason`.
+  - `unresolved`: Retained when no regex pattern matches and Aigel is pending or disabled. Never silently dropped.
+  - `delivered`: Dispatched inside an aggregated sensory window to the Noob agent.
+  - `acked`: Acknowledged by the agent worker upon completion of the inference and tool execution turn.
+
+### 8.2 Explicit IGNORE and COALESCE Rules
+Loss points must be formal rules, not silent drops:
+- `touch.debounce`: Rapid successive touch events within window threshold are marked `state=ignored, reason="debounce"`.
+- `redundant.running`: Ingested event identical to an currently executing action is marked `state=ignored, reason="in_flight"`.
+- `stale.quiescence`: During thermal or low-power quiescence, non-critical routine sensor polls are coalesced into a single count summary rather than discarded.
+
+### 8.3 Asynchronous Tool Events
+Long-running tools emit structured lifecycle events:
+```text
+NOOBIA P<n> asyncjob <event> job=<id> tool=<name> cause=<origin_event_id> | <message>
+```
+- `<event>` is one of: `started`, `progress`, `done`, `failed`.
+- Every asynchronous result correlates directly to its originating action and parent event ID.
+
+### 8.4 Deterministic Reflex Contracts
+- Reflex definitions: Stored in `/var/lib/noobia/reflex/reflexes.db`.
+- Schema: `(id INTEGER PRIMARY KEY, pattern TEXT, script_path TEXT, enabled INTEGER, author TEXT, version INTEGER, created_at REAL)`.
+- Execution semantics:
+  - Exactly once per event ID (`match_id`).
+  - Strict self-trigger guard: reflex outputs carry `cause=reflex` and cannot trigger the matching rule that generated them.
+  - Principle 10 compliance: Reflex scripts are killed if CPU exceeds thermal ceiling (65°C) or execution time exceeds timeout.
+
+### 8.5 Personal Memory & Rolling Continuity Schemas
+1. Daily Journal: Append-only `JOURNAL.md`. Read and collected by Argus via signed byte-range receipts.
+2. Personal Notes (`notes.db`):
+   - Schema: `(id TEXT PRIMARY KEY, ts REAL, text TEXT, tags TEXT, processed INTEGER)`.
+   - Search: Full-text search via SQLite FTS5; semantic vector search via local Qwen embeddings when Nexus is connected.
+3. Life Story Consolidation:
+   - Rolling state: `Life so far` (milestones) + `Yesterday` (previous day summary) + `AGENTS.md` (permanent core).
+   - Processed atomically at daily boundary rollover (Europe/Sofia timezone).

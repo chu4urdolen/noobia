@@ -139,6 +139,33 @@ class EventStore:
                 for r in rows
             ]
 
+    def mark_unresolved(self, event_ids: List[str], reason: str = "no_pattern") -> None:
+        """Mark events as unresolved when no pattern matches (NA-30)."""
+        if not event_ids:
+            return
+        with self._get_connection() as conn:
+            conn.executemany(
+                "UPDATE events SET state = 'unresolved', reason = ? WHERE event_id = ?;",
+                [(reason, eid) for eid in event_ids]
+            )
+
+    def get_unresolved(self, limit: int = 100) -> List[EventRecord]:
+        """Fetch unresolved events retained for learning or review (NA-30)."""
+        with self._get_connection() as conn:
+            cur = conn.execute(
+                """SELECT event_id, timestamp, raw_text, state, origin, priority, reason, batch_id
+                   FROM events WHERE state = 'unresolved' ORDER BY rowid ASC LIMIT ?;""",
+                (limit,)
+            )
+            rows = cur.fetchall()
+            return [
+                EventRecord(
+                    event_id=r[0], timestamp=r[1], raw_text=r[2], state=r[3],
+                    origin=r[4], priority=r[5], reason=r[6], batch_id=r[7]
+                )
+                for r in rows
+            ]
+
     def count_by_state(self) -> Dict[str, int]:
         with self._get_connection() as conn:
             cur = conn.execute("SELECT state, COUNT(*) FROM events GROUP BY state;")

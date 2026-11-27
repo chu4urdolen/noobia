@@ -245,4 +245,44 @@ class Router:
                 return backend
 
         _log_decision(task, "none", "none", status="exhausted")
+        # NA-50: Record durable unavailable state
+        state_dir = Path("/var/lib/noobia/autonomy")
+        try:
+            state_dir.mkdir(parents=True, exist_ok=True)
+            (state_dir / "brain_state.json").write_text(
+                json.dumps({"status": "unavailable", "task": task, "time": time.time()}),
+                encoding="utf-8"
+            )
+        except OSError:
+            pass
         raise RoutingError(f"all backends exhausted or unhealthy for task: {task}")
+
+
+class BrainConfig:
+    """Compatibility bridge for Lynx agent and other Noobs (NA-50)."""
+
+    def __init__(self, config_path: Path | str | None = None):
+        self.router = Router(config_path)
+
+    @property
+    def backends(self) -> list[dict]:
+        task_backends = self.router._backends.get("inference", [])
+        return [
+            {
+                "name": b.name,
+                "tier": b.tier,
+                "base_url": b.endpoint,
+                "model": "qwen3.8:27b" if "qwen" in b.name else "gpt-5.4-mini",
+                "key_path": b.key_file,
+                "timeout_s": b.timeout_s
+            }
+            for b in task_backends
+        ]
+
+    def select_backend(self, health_checker=None, key_reader=None) -> tuple[str, str, str]:
+        """Select healthy backend in tier order (nexus -> local -> cloud)."""
+        backend = self.router.route("inference")
+        base_url = backend.endpoint
+        model = "qwen3.8:27b" if "qwen" in backend.name else "gpt-5.4-mini"
+        key = backend.get_key()
+        return base_url, model, key

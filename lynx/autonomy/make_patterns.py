@@ -278,6 +278,18 @@ PATTERNS = [
       ["NOOBIA P20 security integrity.changed path=/etc/passwd | System file integrity change detected in /etc/passwd"],
       ["NOOBIA P0 security status.sample listeners=3 | sample"],
       cooldown=120),
+    P("asyncjob-done", "asyncjob", "job.done",
+      "Background diagnostic {tool} ({action}) finished: {summary}",
+      "A background diagnostic finished.",
+      ["NOOBIA P20 asyncjob job.done job=job-1234 tool=netdiag action=lan-sweep | Discovered 3 live devices on local subnet."],
+      ["NOOBIA P20 asyncjob job.failed job=job-1234 tool=netdiag action=lan-sweep | error"],
+      regex=r"\| (?P<summary>.+)$"),
+    P("asyncjob-failed", "asyncjob", "job.failed",
+      "Background diagnostic {tool} ({action}) failed: {error}",
+      "A background diagnostic failed.",
+      ["NOOBIA P20 asyncjob job.failed job=job-1234 tool=netdiag action=lan-sweep | network unreachable"],
+      ["NOOBIA P20 asyncjob job.done job=job-1234 tool=netdiag action=lan-sweep | success"],
+      regex=r"\| (?P<error>.+)$"),
 ]
 
 def main():

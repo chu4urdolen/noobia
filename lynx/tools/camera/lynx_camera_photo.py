@@ -49,6 +49,43 @@ def main() -> int:
     if camera not in frame.CAMERAS:
         print(json.dumps({"ok": False, "error": f"unknown camera {camera!r}; use back or wide"}))
         return 1
+
+    is_async = bool(args.get("async", False))
+    if is_async:
+        try:
+            sys.path.insert(0, "/usr/local/lib/noobia/autonomy")
+            sys.path.insert(0, str(Path(os.environ.get("NOOBIA", "/noobia")) / "common" / "autonomy"))
+            import uuid
+            from asyncjob import AsyncJobManager
+            cap_id = f"cap-{uuid.uuid4().hex[:8]}"
+
+            def _async_look():
+                res = frame.look(wait_s=10.0, camera=camera)
+                if not res.get("ok"):
+                    raise RuntimeError(res.get("error", "camera capture failed"))
+                labels = [o["label"].replace("_", " ") for o in res["objects"]]
+                clean = ", ".join(dict.fromkeys(frame.clean_label(l).replace("_", " ") for l in labels)) or "nothing recognized"
+                log_self_look(res)
+                return f"camera objects.seen capture={cap_id} cam={camera} n={len(res['objects'])} | {clean}"
+
+            manager = AsyncJobManager()
+            run_res = manager.run_async("camera", "look", _async_look, cause=cap_id, use_fork=True)
+            if not run_res.get("ok"):
+                print(json.dumps({"ok": False, "busy": True, "error": run_res.get("error")}))
+                return 1
+            print(json.dumps({
+                "ok": True,
+                "async": True,
+                "capture_id": cap_id,
+                "camera": camera,
+                "job_id": run_res.get("job_id"),
+                "sentence": f"Camera capture {cap_id} started in the background; objects will stream into your senses."
+            }))
+            return 0
+        except Exception as exc:
+            print(json.dumps({"ok": False, "error": f"async camera look failed: {exc}"}))
+            return 1
+
     result = frame.look(wait_s=10.0, camera=camera)
     if not result.get("ok"):
         print(json.dumps({"ok": False, "error": result.get("error", "camera unavailable")}))

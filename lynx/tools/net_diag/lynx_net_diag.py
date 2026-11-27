@@ -653,9 +653,25 @@ def main():
         print(json.dumps({"ok": False, "refused": True, "action": action, "reason": reason,
                           "sentence": f"I did not run {action}: {reason}"}, indent=2))
         sys.exit(3)
-    lock = ActionLock(f"netdiag_{action}")
 
-    # Check lock: She should not run two of the same forked tool at once
+    if args.fork:
+        try:
+            sys.path.insert(0, "/usr/local/lib/noobia/autonomy")
+            sys.path.insert(0, str(Path(os.environ.get("NOOBIA", "/noobia")) / "common" / "autonomy"))
+            from asyncjob import AsyncJobManager
+            manager = AsyncJobManager()
+            res = manager.run_async("netdiag", action, run_diagnostic, args=(action, args), use_fork=True)
+            if not res.get("ok"):
+                msg = f"Diagnostic '{action}' is already in progress in the background; skipping duplicate run."
+                print(json.dumps({"ok": False, "busy": True, "sentence": msg}, indent=2))
+                sys.exit(0)
+            msg = f"Diagnostic '{action}' started in the background (job {res.get('job_id')}); findings will stream into your senses."
+            print(json.dumps({"ok": True, "forked": True, "job_id": res.get("job_id"), "sentence": msg}, indent=2))
+            sys.exit(0)
+        except Exception:
+            pass
+
+    lock = ActionLock(f"netdiag_{action}")
     if not lock.acquire():
         msg = f"Diagnostic '{action}' is already in progress in the background; skipping duplicate run."
         print(json.dumps({"ok": False, "busy": True, "sentence": msg}, indent=2))

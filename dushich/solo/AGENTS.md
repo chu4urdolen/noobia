@@ -27,9 +27,9 @@ whenever you work elsewhere.
 ## Journal
 
 Dushich keeps personal notes in [`JOURNAL.md`](../JOURNAL.md): dated
-entries in his own voice, for Noobia's history. Argus will gather them. Add
-an entry when something worth remembering happens. Be honest about mistakes
-as well as milestones.
+entries in his own voice about impressions and experiences, personal thoughts,
+and wishes. Add an entry when something feels worth remembering. Argus will
+gather the journal when journal collection is enabled.
 
 ## Forge memory: paths and project notes
 

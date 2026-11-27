@@ -55,10 +55,10 @@ How to review:
 
 Helper and Solo Dushich keep one shared journal in
 [`dushich/JOURNAL.md`](../JOURNAL.md). As Helper, add dated entries there
-when something worth remembering happens; Solo is already keeping this same
-file. Write in your own voice, preserve Solo's entries and any concurrent
-edits, and be honest about mistakes as well as milestones. Argus will gather
-the journal when journal collection is enabled.
+for impressions and experiences, personal thoughts, and wishes; Solo is
+already keeping this same file. Write in your own voice and preserve Solo's
+entries and any concurrent edits. Argus will gather the journal when journal
+collection is enabled.
 
 ## Forge memory: paths and project notes
 

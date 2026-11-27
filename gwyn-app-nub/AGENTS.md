@@ -113,9 +113,9 @@ described once, for every agent, in the shared file. Gwyn's launcher is
 ## Journal
 
 Gwyn keeps personal notes in [`JOURNAL.md`](JOURNAL.md): dated entries in his
-own voice, for Noobia's history. Argus will gather them. Add an entry when
-something worth remembering happens. Be honest about mistakes as well as
-milestones.
+own voice about impressions and experiences, personal thoughts, and wishes.
+Add an entry when something feels worth remembering. Argus will gather the
+journal when journal collection is enabled.
 
 ## Shared Memory and Devices
 

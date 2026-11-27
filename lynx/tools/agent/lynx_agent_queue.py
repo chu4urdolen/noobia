@@ -91,7 +91,7 @@ class JobQueue:
             self._write(path, {"prompt": prompt, "created_ns": time.time_ns()})
             return job_id
 
-    def claim_next(self, max_pending_age_s=None, max_sense_age_s=20.0):
+    def claim_next(self, max_pending_age_s=None, max_sense_age_s=None):
         with self._locked():
             pending = sorted(self.root.glob("*.pending"),
                              key=lambda p: (p.lstat().st_mtime_ns, p.name))

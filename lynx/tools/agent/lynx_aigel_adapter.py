@@ -134,6 +134,12 @@ class LynxAdapter(agent_link.Adapter):
         super().__init__(state_dir, **kwargs)
         self.state_dir = self.state
 
+    def is_busy(self) -> bool:
+        """True if worker is currently executing or queueing for inference."""
+        if not self.jobs.is_dir():
+            return False
+        return bool(list(self.jobs.glob("*.running")) or list(self.jobs.glob("*.pending")))
+
     def _is_redundant_with_running(self, message):
         """Check if message matches what is currently executing in *.running."""
         if not self.jobs.is_dir():
@@ -141,20 +147,12 @@ class LynxAdapter(agent_link.Adapter):
         running_files = list(self.jobs.glob("*.running"))
         if not running_files:
             return False
-        incoming_kind = str(message.get("kind", "")).strip()
         incoming_text = str(message.get("text", "")).strip()
-        incoming_evidence = set(message.get("evidence", []))
         for rf in running_files:
             try:
                 content = rf.read_text(encoding="utf-8", errors="replace")
                 if incoming_text and incoming_text in content:
                     return True
-                if incoming_kind and f'"kind": "{incoming_kind}"' in content:
-                    if any(k in incoming_kind for k in ("touch", "camera", "light", "proximity", "wifi", "power")):
-                        return True
-                for ev in incoming_evidence:
-                    if ev and ev in content:
-                        return True
             except OSError:
                 continue
         return False

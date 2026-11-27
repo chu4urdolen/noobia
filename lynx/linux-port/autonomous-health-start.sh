@@ -140,7 +140,7 @@ cooling_temperature_ready() {
         case "$kind" in soc_max) soc=$((soc+1));; cpu_*) cpu=$((cpu+1));; *) continue;; esac
         value=$(cat "$zone/temp") || return 1
         case "$value" in ''|*[!0-9]*) return 1;; esac
-        [ "$value" -gt 0 ] && [ "$value" -lt 48000 ] || return 1
+        [ "$value" -gt 0 ] && [ "$value" -lt 65000 ] || return 1
     done
     [ "$soc" -ge 1 ] && [ "$cpu" -ge 2 ]
 }

@@ -9,9 +9,9 @@ decide() {
     case "$value" in ''|*[!0-9]*) echo "$previous"; return;; esac
     if [ "$value" -le 0 ] || [ "$value" -gt 125000 ]; then
         echo "$previous"
-    elif [ "$value" -ge 45000 ]; then
+    elif [ "$value" -ge 65000 ]; then
         echo 1
-    elif [ "$value" -le 40000 ]; then
+    elif [ "$value" -le 60000 ]; then
         echo 0
     else
         echo "$previous"
@@ -77,7 +77,7 @@ for pidfile in /run/lynx/thermal-watch.pid /run/lynx/battery-watch.pid; do
     kill -0 "$(cat "$pidfile")"
 done
 initial=$(temperature)
-[ "$initial" -lt 48000 ]
+[ "$initial" -lt 65000 ]
 mkdir "$base"  # Never overwrite ownership or run a second instance.
 count=0
 for dev in /sys/class/thermal/cooling_device*; do

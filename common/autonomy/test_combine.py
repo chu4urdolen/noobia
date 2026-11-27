@@ -88,6 +88,26 @@ class CombineTest(unittest.TestCase):
         self.assertNotIn("routine", self.adapter.messages[0]["text"])   # P0 and P20 samples
         self.assertEqual(self.aigel.chunks, [])
 
+    def test_window_expands_and_buffers_while_agent_is_busy(self):
+        busy = [True]
+        h = self.make(aigel_enabled=False)
+        h.chunker.is_busy = lambda: busy[0]
+        # Arrive while busy
+        self.feed.append("NOOBIA P1 mystery thing x=1 | event one")
+        h.step()
+        self.t[0] += 30  # Wait beyond 15s window while busy
+        self.feed.append("NOOBIA P1 mystery thing x=2 | event two")
+        h.step()
+        # Should not have delivered yet because agent is busy queueing
+        self.assertEqual(len(self.adapter.messages), 0)
+        # Agent becomes ready
+        busy[0] = False
+        h.step()
+        # Window closed and delivered both events together!
+        self.assertEqual(len(self.adapter.messages), 1)
+        self.assertIn("event one", self.adapter.messages[0]["text"])
+        self.assertIn("event two", self.adapter.messages[0]["text"])
+
     def test_aigel_on_gets_the_unexplained(self):
         h = self.make(aigel_enabled=True)
         self.feed.append("NOOBIA P1 mystery thing x=1 | something strange happened")

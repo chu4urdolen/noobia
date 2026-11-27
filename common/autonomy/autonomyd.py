@@ -206,12 +206,14 @@ class Daemon:
                                    kill, self.log)
 
         t = config.get("trigger", {})
+        is_busy = getattr(adapter, "is_busy", lambda: False)
         chunker = trigger.Chunker(
             window_s=float(t.get("window_s", 60)), max_lines=int(t.get("max_lines", 15)),
             volume_resets_priority=bool(t.get("volume_resets_priority", True)),
             uniform_priority=int(t.get("uniform_priority", 0)),
             carry_priority=bool(t.get("carry_priority", True)),
-            disabled=kill.exists)
+            disabled=kill.exists,
+            is_busy=is_busy)
         h = config.get("harness", {})
         self.harness = harness_mod.Harness(
             host=config["host"], read_new=self.reader.read_new, chunker=chunker,

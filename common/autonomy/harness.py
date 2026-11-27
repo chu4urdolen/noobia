@@ -33,6 +33,7 @@ Bounds:
 from __future__ import annotations
 
 from collections import deque
+import sys
 import time
 
 try:
@@ -186,10 +187,16 @@ class Harness:
         if not self.aigel_enabled:
             # Routine samples are not events: since every line is P20 (Tom,
             # 2026-11-24), skip them by name or the Noob drowns in "sample" lines.
-            direct = [l for l in result["unexplained"]
-                      if l.get("p", 0) >= 1 and not l.get("self_caused") and l.get("text")
-                      and not str(l.get("event", "")).endswith(("status.sample", "heartbeat"))]
-            raw_texts += [str(l["text"]).strip() for l in direct]
+            for l in result["unexplained"]:
+                if (l.get("p", 0) >= 1 and not l.get("self_caused")
+                        and not str(l.get("event", "")).endswith(("status.sample", "heartbeat"))):
+                    direct.append(l)
+                    if l.get("text"):
+                        raw_texts.append(str(l["text"]).strip())
+                    else:
+                        sense_ev = f"{l.get('sense', '')} {l.get('event', '')}".strip()
+                        if sense_ev:
+                            raw_texts.append(sense_ev)
         texts = list(dict.fromkeys(t for t in raw_texts if t))
         delivered = 0
         if texts:

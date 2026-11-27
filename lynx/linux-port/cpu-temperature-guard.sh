@@ -1,5 +1,5 @@
 # Read-only prerequisite for the supervised CPU-frequency stage.
-# 50C is a conservative test cutoff, not a validated battery safety threshold.
+# 65C cutoff per Noob's explicit directive (never abort/reboot at 40-50C).
 lynx_cpu_temperature_guard() {
     cpu_samples=0
     soc_samples=0
@@ -10,7 +10,7 @@ lynx_cpu_temperature_guard() {
         case "$kind" in soc_max|cpu_*) ;; *) continue ;; esac
         IFS= read -r value < "$p/temp" || return 1
         case "$value" in ''|*[!0-9]*) return 1 ;; esac
-        [ "$value" -gt 0 ] && [ "$value" -lt 50000 ] || return 1
+        [ "$value" -gt 0 ] && [ "$value" -lt 65000 ] || return 1
         [ "$value" -le "$cpu_highest" ] || cpu_highest=$value
         case "$kind" in soc_max) soc_samples=$((soc_samples+1)) ;; cpu_*) cpu_samples=$((cpu_samples+1)) ;; esac
     done

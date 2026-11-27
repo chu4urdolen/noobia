@@ -43,6 +43,7 @@ class Chunker:
         silence_s: float = 900.0,
         heartbeat_s: float = 300.0,
         disabled: Callable[[], bool] = lambda: False,
+        is_busy: Callable[[], bool] = lambda: False,
     ):
         self.window_s = float(window_s)
         self.max_lines = int(max_lines)
@@ -59,6 +60,7 @@ class Chunker:
         self.silence_s = float(silence_s)
         self.heartbeat_s = float(heartbeat_s)
         self.disabled = disabled
+        self.is_busy = is_busy
 
         # Carried lines: list of (arrival_time, parsed_dict)
         self._carried: list[tuple[float, dict]] = []
@@ -122,6 +124,10 @@ class Chunker:
             parsed = dict(parsed, p=self.uniform_priority)
         self._current.append((now, parsed))
 
+        # While busy (e.g. agent queueing on GPU), expand the window and do not close early
+        if self.is_busy():
+            return []
+
         # Check PRIORITY trigger
         p_counts: dict[int, int] = {}
         for _, l in self._carried:
@@ -180,6 +186,10 @@ class Chunker:
     def tick(self, now: float) -> list[dict]:
         """Tick the chunker clock to `now` to process timeouts and silence."""
         if self.disabled():
+            return []
+
+        # While busy (e.g. agent queueing on GPU), expand the window and do not close early
+        if self.is_busy():
             return []
 
         # E3b: Silence detection

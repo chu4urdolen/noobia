@@ -1,0 +1,35 @@
+{
+  "name": "lynx_reflex",
+  "description": "Manage and create deterministic autonomous reflexes that fire immediately without waiting for model inference.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["list", "add", "enable", "disable", "test"],
+        "description": "Action to perform: 'list', 'add', 'enable', 'disable', or 'test'"
+      },
+      "pattern": {
+        "type": "string",
+        "description": "Regex pattern to match against incoming sense events (e.g. 'touch.*hold', 'magnet.*wand')"
+      },
+      "command": {
+        "type": "string",
+        "description": "Command or script to execute when the pattern matches (e.g. '/usr/local/bin/lynx-agent-haptic --pulse 120')"
+      },
+      "description": {
+        "type": "string",
+        "description": "Optional human explanation of what the reflex does"
+      },
+      "id": {
+        "type": "integer",
+        "description": "Reflex ID (for enable or disable actions)"
+      },
+      "event": {
+        "type": "string",
+        "description": "Event line to test against reflexes"
+      }
+    },
+    "required": ["action"]
+  }
+}

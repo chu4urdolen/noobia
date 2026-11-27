@@ -318,6 +318,9 @@
 !/tools/agent/lynx_codex_tool.py
 !/tools/agent/test_agent_cancel_contract.py
 !/tools/agent/deploy_native_mcp_catalog.py
+!/tools/agent/lynx_reflex.py
+!/tools/agent/lynx_reflex.json
+!/tools/agent/lynx_reflex.sh
 !/tools/agent/test_deploy_native_mcp_catalog.py
 !/tools/agent/install_haptic_agent_tools.py
 !/tools/agent/install_media_agent_tools.py

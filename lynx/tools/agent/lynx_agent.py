@@ -79,7 +79,7 @@ SENSE_EXCLUDED_TOOLS = frozenset({'lynx_codex'})
 # prompt tokens per call, and Qwen re-reads it every time.
 SENSE_TOOLS = frozenset({'lynx_speech', 'lynx_haptic_pulse', 'lynx_flashlight_pulse',
                          'lynx_display_pose', 'lynx_media_play', 'lynx_net_diag',
-                         'lynx_cellular_diag', 'lynx_note'})
+                         'lynx_cellular_diag', 'lynx_note', 'lynx_reflex'})
 
 
 def key_from(path):

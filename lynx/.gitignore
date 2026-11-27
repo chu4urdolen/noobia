@@ -350,3 +350,9 @@
 !/tools/netintel/*.py
 !/tools/local_calls/lynx_netintel.json
 !/tools/local_calls/lynx_netintel.sh
+!/tools/operator/
+/tools/operator/*
+!/tools/operator/*.py
+!/tools/operator/*.c
+!/tools/operator/README.md
+

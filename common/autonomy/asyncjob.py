@@ -84,7 +84,7 @@ def emit_job_sense(event_type: str, job_id: str, tool: str, action: str,
         emitter(payload)
         return
 
-    # Try standard sense.emit or syslog
+    # Try standard sense.emit or viewlog
     try:
         from common.autonomy import sense
         sense.emit(20, "asyncjob", f"job.{event_type}", fields=f, text=text or None)
@@ -93,10 +93,8 @@ def emit_job_sense(event_type: str, job_id: str, tool: str, action: str,
         pass
 
     try:
-        import syslog
-        syslog.openlog("noobia-sense", syslog.LOG_PID, syslog.LOG_DAEMON)
-        syslog.syslog(syslog.LOG_NOTICE, payload)
-        syslog.closelog()
+        from common.autonomy import viewlog
+        viewlog.write("noobia-sense", payload)
     except Exception:
         pass
 

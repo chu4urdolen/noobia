@@ -1,0 +1,236 @@
+"""Private, durable job spool for any Noob's supervised agent worker (NA-81).
+
+Generic implementation of the durable filesystem queue with lock serialization,
+atomic file swaps, event ID preservation, reply outbox, and crash-safe fsyncs.
+"""
+
+from __future__ import annotations
+
+from contextlib import contextmanager
+import fcntl
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import time
+import uuid
+from typing import Any, Dict, List, Optional, Tuple
+
+ID = re.compile(r"[0-9a-f]{32}\Z")
+
+
+class QueueError(RuntimeError):
+    pass
+
+
+class JobQueue:
+    def __init__(self, root: str | Path):
+        self.root = Path(root)
+        if self.root.is_symlink():
+            raise QueueError("queue directory is a symlink")
+        self.root.mkdir(parents=True, mode=0o700, exist_ok=True)
+        mode = self.root.lstat().st_mode
+        if not stat.S_ISDIR(mode) or stat.S_IMODE(mode) != 0o700:
+            raise QueueError("queue directory must be a private directory")
+
+    @staticmethod
+    def _id(job_id: str) -> str:
+        if not isinstance(job_id, str) or not ID.fullmatch(job_id):
+            raise QueueError("invalid job ID")
+        return job_id
+
+    def _path(self, job_id: str, suffix: str) -> Path:
+        return self.root / (self._id(job_id) + "." + suffix)
+
+    @contextmanager
+    def _locked(self):
+        flags = os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW
+        fd = os.open(self.root / ".lock", flags, 0o600)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise QueueError("invalid queue lock")
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+
+    def _sync_dir(self) -> None:
+        fd = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+
+    def _write(self, path: Path, data: Dict[str, Any]) -> None:
+        temporary = self.root / (".tmp-" + uuid.uuid4().hex)
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                json.dump(data, stream, separators=(",", ":"))
+                stream.write("\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, path)
+            self._sync_dir()
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    @staticmethod
+    def _regular(path: Path) -> bool:
+        try:
+            return stat.S_ISREG(path.lstat().st_mode)
+        except FileNotFoundError:
+            return False
+
+    def create_job(self, prompt: str, event_ids: Optional[List[str]] = None) -> str:
+        if not isinstance(prompt, str) or not 1 <= len(prompt.encode("utf-8")) <= 8000:
+            raise QueueError("prompt must be 1..8000 UTF-8 bytes")
+        with self._locked():
+            job_id = uuid.uuid4().hex
+            path = self._path(job_id, "pending")
+            if any(self._path(job_id, suffix).exists() or
+                   self._path(job_id, suffix).is_symlink()
+                   for suffix in ("pending", "running", "done")):
+                raise QueueError("job ID collision")
+            payload = {"prompt": prompt, "created_ns": time.time_ns()}
+            if event_ids:
+                payload["event_ids"] = list(event_ids)
+            self._write(path, payload)
+            return job_id
+
+    def get_event_ids(self, job_id: str) -> List[str]:
+        for suffix in ("running", "pending", "done"):
+            p = self._path(job_id, suffix)
+            if p.exists():
+                try:
+                    with p.open("r", encoding="utf-8") as stream:
+                        return json.load(stream).get("event_ids", [])
+                except Exception:
+                    pass
+        return []
+
+    def claim_next(self, max_pending_age_s: Optional[float] = None, max_sense_age_s: Optional[float] = None) -> Optional[Tuple[str, str]]:
+        with self._locked():
+            pending = sorted(self.root.glob("*.pending"),
+                             key=lambda p: (p.lstat().st_mtime_ns, p.name))
+            now_ns = time.time_ns()
+            for path in pending:
+                self._id(path.stem)
+                if not self._regular(path):
+                    raise QueueError("invalid pending job file")
+                target = self._path(path.stem, "running")
+                if target.exists() or target.is_symlink():
+                    raise QueueError("job already claimed")
+                with path.open("r", encoding="utf-8") as stream:
+                    payload = json.load(stream)
+                prompt = payload.get("prompt")
+                if not isinstance(prompt, str):
+                    raise QueueError("malformed job prompt")
+
+                created_ns = payload.get("created_ns", path.lstat().st_mtime_ns)
+                age_s = (now_ns - created_ns) / 1e9
+                is_sense = prompt.lstrip().startswith(("SENSE:", "[sense]"))
+                if (max_pending_age_s is not None and age_s > max_pending_age_s) or \
+                   (max_sense_age_s is not None and is_sense and age_s > max_sense_age_s):
+                    path.unlink(missing_ok=True)
+                    self._sync_dir()
+                    continue
+
+                os.replace(path, target)
+                self._sync_dir()
+                return path.stem, prompt
+            return None
+
+    def finish(self, job_id: str, ok: bool, text: str, reply_pending: bool = False) -> None:
+        if (not isinstance(ok, bool) or not isinstance(text, str) or len(text) > 8000
+                or not isinstance(reply_pending, bool)):
+            raise QueueError("invalid job result")
+        with self._locked():
+            running = self._path(job_id, "running")
+            if not self._regular(running):
+                raise QueueError("job is not running")
+            done = self._path(job_id, "done")
+            if done.exists() or done.is_symlink():
+                raise QueueError("job already finished")
+            event_ids = []
+            try:
+                with running.open("r", encoding="utf-8") as stream:
+                    event_ids = json.load(stream).get("event_ids", [])
+            except Exception:
+                pass
+            if reply_pending:
+                reply = self._path(job_id, "reply")
+                if reply.exists() or reply.is_symlink():
+                    raise QueueError("reply already queued")
+                self._write(reply, {"text": text, "created_ns": time.time_ns()})
+            done_payload = {"ok": ok, "text": text, "finished_ns": time.time_ns(),
+                            "reply_pending": reply_pending}
+            if event_ids:
+                done_payload["event_ids"] = event_ids
+            self._write(done, done_payload)
+            running.unlink()
+            self._sync_dir()
+
+    def pending_replies(self, limit: int = 2) -> List[Tuple[str, str]]:
+        with self._locked():
+            replies = []
+            for path in sorted(self.root.glob("*.reply")):
+                self._id(path.stem)
+                if not self._regular(path):
+                    os.replace(path, self._path(path.stem, "reply.bad"))
+                    self._sync_dir()
+                    raise QueueError("invalid reply quarantined")
+                try:
+                    with path.open("r", encoding="utf-8") as stream:
+                        data = json.load(stream)
+                    if not isinstance(data.get("text"), str):
+                        raise ValueError("invalid queued reply")
+                except (OSError, ValueError):
+                    os.replace(path, self._path(path.stem, "reply.bad"))
+                    self._sync_dir()
+                    raise QueueError("malformed reply quarantined") from None
+                replies.append((path.stem, data["text"]))
+                if len(replies) >= limit:
+                    break
+            return replies
+
+    def mark_reply_sent(self, job_id: str) -> None:
+        with self._locked():
+            reply = self._path(job_id, "reply")
+            if not self._regular(reply):
+                raise QueueError("reply is not queued")
+            done = self._path(job_id, "done")
+            if self._regular(done):
+                with done.open("r", encoding="utf-8") as stream:
+                    data = json.load(stream)
+                data["reply_pending"] = False
+                data["reply_sent_ns"] = time.time_ns()
+                self._write(done, data)
+            reply.unlink()
+            self._sync_dir()
+
+    def cancel(self, job_id: str) -> bool:
+        with self._locked():
+            pending = self._path(job_id, "pending")
+            if pending.is_symlink():
+                raise QueueError("invalid pending job file")
+            if not self._regular(pending):
+                return False
+            pending.unlink()
+            self._sync_dir()
+            return True
+
+    def status(self, job_id: str) -> Dict[str, Any]:
+        with self._locked():
+            for suffix in ("done", "running", "pending"):
+                path = self._path(job_id, suffix)
+                if path.is_symlink():
+                    raise QueueError("invalid job file")
+                if self._regular(path):
+                    if suffix == "done":
+                        with path.open("r", encoding="utf-8") as stream:
+                            return {"status": "finished", "ok": json.load(stream)["ok"]}
+                    return {"status": suffix}
+            raise QueueError("job not found")

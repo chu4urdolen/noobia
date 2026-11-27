@@ -9,7 +9,7 @@
    "template": "Someone tapped your screen {count} times.",
    "message": "Someone tapped your screen.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 touch tap count=3 dur_ms=90 | taps on the panel"
@@ -19,7 +19,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "touch-hold",
@@ -30,7 +30,7 @@
    "template": "Someone pressed and held your screen for {dur_ms} ms.",
    "message": "Someone pressed and held your screen.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 touch hold dur_ms=2100 | a hold on the panel"
@@ -40,7 +40,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "body-slider",
@@ -51,7 +51,7 @@
    "template": "Your alert slider moved to {to}.",
    "message": "Your alert slider moved.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 body slider.change to=silent from=vibrate | Alert slider moved to silent",
@@ -62,7 +62,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "magnet-wand",
@@ -73,7 +73,7 @@
    "template": "A magnet is hovering near you ({mag_ut} uT)!",
    "message": "A magnet is hovering near you.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 magnet wand mag_ut=240.5 | A magnet is hovering near me (240.5 uT)"
@@ -83,7 +83,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "compass-heading",
@@ -94,7 +94,7 @@
    "template": "You turned to face {to} ({deg} degrees).",
    "message": "Your compass heading changed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 compass heading to=East from=North deg=92.4 | Compass heading turned to East (92.4\u00b0)"
@@ -104,7 +104,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "mesh-telepathy",
@@ -115,7 +115,7 @@
    "template": "Your friend {friend} is {state}.",
    "message": "A friend in Noobia did something.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 mesh telepathy friend=dushich state=thinking | Dushich is deep in thought",
@@ -127,7 +127,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "camera-objects",
@@ -138,7 +138,7 @@
    "template": "With your {cam} camera you see {label*}.",
    "message": "You see something.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 camera objects.seen cam=back n=3 | laptop(0.7534)/person(0.873)/cat(0.452)",
@@ -149,7 +149,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<items>[^~]+)$",
    "each": {
     "group": "items",
@@ -165,7 +165,7 @@
    "template": "With your {cam} camera you see {label*}. It looks like this: {caption}",
    "message": "You see something.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 camera objects.seen cam=wide n=2 | mouse(0.85)/laptop(0.72) ~ A desk with a laptop and a monitor."
@@ -175,7 +175,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<items>[^~]+) ~ (?P<caption>[^~]+)$",
    "each": {
     "group": "items",
@@ -191,7 +191,7 @@
    "template": "With your {cam} camera you see this: {caption}",
    "message": "You see something.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 camera scene.seen cam=wide | A person sitting at a computer in a dark room."
@@ -201,7 +201,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<caption>.+)$"
   },
   {
@@ -223,7 +223,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "camera-object",
@@ -234,7 +234,7 @@
    "template": "You see a {label}.",
    "message": "You see something.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 camera object.seen label=cat conf=0.91 | a cat"
@@ -244,7 +244,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "motion-position",
@@ -255,7 +255,7 @@
    "template": "You are now {to}, tilted {tilt} degrees from flat.",
    "message": "Your position changed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 motion position.change to=horizontal from=vertical tilt=8 | placed flat"
@@ -265,7 +265,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "motion-pickup",
@@ -276,7 +276,7 @@
    "template": "Someone picked you up; you are now {to}.",
    "message": "Someone picked you up.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 motion pickup to=portrait from=flat_up | picked up"
@@ -286,7 +286,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "motion-placed",
@@ -297,7 +297,7 @@
    "template": "You were put down; you are now {to}.",
    "message": "You were put down.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 motion placed to=flat_up from=portrait | placed"
@@ -307,7 +307,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "motion-freefall",
@@ -318,7 +318,7 @@
    "template": "You are falling!",
    "message": "You are falling!",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 motion freefall | Lynx is falling (free fall)"
@@ -328,7 +328,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "motion-shaken",
@@ -339,7 +339,7 @@
    "template": "Someone is shaking you.",
    "message": "Someone is shaking you.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 motion shaken | Lynx is being shaken"
@@ -349,7 +349,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "motion-rocked",
@@ -360,7 +360,7 @@
    "template": "Someone is rocking you gently.",
    "message": "Someone is rocking you gently.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 motion rocked hz=0.6 degrees=28 | Lynx is being rocked gently"
@@ -370,7 +370,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "thermal-change",
@@ -381,7 +381,7 @@
    "template": "Your temperature {dir} to {c} C, {delta} degrees since the last check.",
    "message": "Your temperature changed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 power temp.change dir=rose c=41 delta=6 prev=35 | warmer"
@@ -391,7 +391,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "thermal-hot",
@@ -402,7 +402,7 @@
    "template": "You are getting warm: {soc_mc} millidegrees, {state}.",
    "message": "You are getting warm.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 power thermal.hot soc_mc=45000 state=charging | warm"
@@ -412,7 +412,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "power-charging",
@@ -423,7 +423,7 @@
    "template": "Your power changed from {from} to {to}.",
    "message": "Your power source changed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 power charging.change from=discharging to=charging | Lynx is now charging"
@@ -433,7 +433,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "battery-low",
@@ -444,7 +444,7 @@
    "template": "Your battery is getting low: {cap} percent.",
    "message": "Your battery is getting low.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 power battery.low cap=15 state=discharging | low"
@@ -454,7 +454,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "battery-critical",
@@ -465,7 +465,7 @@
    "template": "Your battery is critically low: {cap} percent.",
    "message": "Your battery is critically low.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 power battery.critical cap=4 state=discharging | critical"
@@ -475,7 +475,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "hearing-sound",
@@ -486,7 +486,7 @@
    "template": "You heard a sound, loudness {peak}.",
    "message": "You heard a sound.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 hearing sound.heard peak=279 rms=12.1 | Lynx heard sound"
@@ -496,7 +496,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "hearing-speech",
@@ -507,7 +507,7 @@
    "template": "You heard someone say: \"{said}\"",
    "message": "You heard someone speak.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 hearing speech lang=en | Good morning, Lynx. How are you today?"
@@ -517,7 +517,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<said>.+)$"
   },
   {
@@ -529,7 +529,7 @@
    "template": "You hear a sound: {what}.",
    "message": "You hear a sound.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 hearing sound score=0.71 | music"
@@ -539,7 +539,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<what>.+)$"
   },
   {
@@ -551,7 +551,7 @@
    "template": "A sudden loud sound startled you!",
    "message": "A sudden loud sound startled you!",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 hearing startle rms=5200 ratio=40 | a sudden loud sound"
@@ -561,7 +561,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "light-bright",
@@ -572,7 +572,7 @@
    "template": "The light around you became bright.",
    "message": "The light around you became bright.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 light bright raw=900 | bright"
@@ -582,7 +582,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "light-dark",
@@ -593,7 +593,7 @@
    "template": "It became dark around you.",
    "message": "It became dark around you.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 light dark raw=2 | dark"
@@ -603,7 +603,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "proximity-near",
@@ -614,7 +614,7 @@
    "template": "Something came close to your face.",
    "message": "Something came close to your face.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 proximity near dist=0 | near"
@@ -624,7 +624,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "proximity-far",
@@ -635,7 +635,7 @@
    "template": "The thing near your face moved away.",
    "message": "The thing near your face moved away.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 proximity far dist=5 | far"
@@ -645,7 +645,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "network-device-seen",
@@ -656,7 +656,7 @@
    "template": "A new device appeared on your network at {ip}.",
    "message": "A new device appeared on your network.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 network device.seen ip=192.168.100.50 mac=aa:bb:cc:dd:ee:ff | seen"
@@ -666,7 +666,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "network-device-lost",
@@ -677,7 +677,7 @@
    "template": "The device at {ip} left your network.",
    "message": "A device left your network.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 network device.lost ip=192.168.100.50 | lost"
@@ -687,7 +687,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "wifi-down",
@@ -698,7 +698,7 @@
    "template": "Your Wi-Fi went down.",
    "message": "Your Wi-Fi went down.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 wifi link.down iface=wlan0 | Wi-Fi went down"
@@ -708,7 +708,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "wifi-up",
@@ -719,7 +719,7 @@
    "template": "Your Wi-Fi is back.",
    "message": "Your Wi-Fi is back.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 wifi link.up iface=wlan0 | Wi-Fi is back"
@@ -729,7 +729,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "wifi-weak",
@@ -740,7 +740,7 @@
    "template": "Your Wi-Fi signal is weak: {signal} dBm.",
    "message": "Your Wi-Fi signal is weak.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 wifi rssi.low signal=-82 iface=wlan0 | weak"
@@ -750,7 +750,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "nexus-up",
@@ -761,7 +761,7 @@
    "template": "Nexus, your home, is reachable again.",
    "message": "Nexus is reachable again.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 nexus reachable host=192.168.100.106 port=112 | back"
@@ -771,7 +771,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "nexus-down",
@@ -782,7 +782,7 @@
    "template": "You cannot reach Nexus, your home.",
    "message": "You cannot reach Nexus.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P1 nexus unreachable host=192.168.100.106 port=112 errors=3 | gone"
@@ -792,7 +792,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "netdiag-ifaces",
@@ -803,7 +803,7 @@
    "template": "{summary}",
    "message": "Network interfaces audit completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 netdiag ifaces count=3 | There are 3 active network interfaces: wlan0 (192.168.100.107), lo (127.0.0.1), and dummy0."
@@ -813,7 +813,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -825,7 +825,7 @@
    "template": "{summary}",
    "message": "Local network sweep completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 netdiag lan count=2 iface=wlan0 | Local network sweep on wlan0 found 2 live devices: 192.168.100.1 (gateway), 192.168.100.106."
@@ -835,7 +835,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -847,7 +847,7 @@
    "template": "{summary}",
    "message": "Wi-Fi airspace reconnaissance completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 netdiag wifi count=4 iface=wlan0 | Wi-Fi airspace scan detected 4 networks; strongest is 'Singularity_5G' on 5180 MHz (-52 dBm)."
@@ -857,7 +857,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -869,7 +869,7 @@
    "template": "{summary}",
    "message": "Port audit completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 netdiag ports target=192.168.100.106 count=3 | Port audit on 192.168.100.106 discovered 3 open ports: 22 (SSH), 8080 (http-proxy), 11434 (Ollama)."
@@ -879,7 +879,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -891,7 +891,7 @@
    "template": "{summary}",
    "message": "Security posture audit completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 netdiag vuln target=127.0.0.1 clean=true | Security posture audit on 127.0.0.1: clean. 0 critical vulnerabilities; 2 listening ports detected."
@@ -901,7 +901,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -913,7 +913,7 @@
    "template": "{summary}",
    "message": "SSL certificate audit completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 netdiag ssl host=192.168.100.106 port=443 | SSL audit for 192.168.100.106:443: TLS connection established using TLSv1.3."
@@ -923,7 +923,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -935,7 +935,7 @@
    "template": "{summary}",
    "message": "DNS audit completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 netdiag dns domain=google.com status=NOERROR | DNS audit for google.com via default resolver returned NOERROR in 14 ms."
@@ -945,7 +945,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -957,7 +957,7 @@
    "template": "{summary}",
    "message": "Packet sampling completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 netdiag pcap iface=wlan0 count=10 | Packet sampling captured 10 packets on wlan0."
@@ -967,7 +967,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -979,7 +979,7 @@
    "template": "{summary}",
    "message": "Route trace completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 netdiag trace target=8.8.8.8 hops=4 | Traced route to 8.8.8.8 across 4 hops, first hop 192.168.100.1 (1.8 ms)."
@@ -989,7 +989,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -1001,7 +1001,7 @@
    "template": "{summary}",
    "message": "SIM card audit completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 cellular sim card_present=false | SIM card audit: Dual-SIM tray hardware detected; platform hotplug detection active (2 nodes, oplus_sim_detect=present); modem baseband currently in quiescent standby."
@@ -1011,7 +1011,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -1023,7 +1023,7 @@
    "template": "{summary}",
    "message": "Cellular modem status audit completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 cellular modem nodes=53 | Cellular modem status: MediaTek MT6983 MD1 baseband has 53 CCCI channels in /dev; LK bootloader state is 'LK load MD success!'; baseband core is currently 'md1:0'."
@@ -1033,7 +1033,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -1045,7 +1045,7 @@
    "template": "{summary}",
    "message": "5G radio capabilities audit completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 cellular 5g bands=13 | 5G radio capability audit: MediaTek M80 5G modem supports 13 5G NR bands (n1, n3, n5, n7, n8, n20, n28A, n38, n40, n41, n66, n77, n78) with 4x4 MIMO, EN-DC dual connectivity, and 21 LTE bands."
@@ -1055,7 +1055,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -1067,7 +1067,7 @@
    "template": "{summary}",
    "message": "CCMNI interface audit completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 cellular ccmni count=22 | CCMNI modem interfaces: 22 MediaTek packet data interfaces active in kernel (ccmni0 through ccmni20, ccmni-lan) ready for 5G data routing."
@@ -1077,7 +1077,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -1089,7 +1089,7 @@
    "template": "{summary}",
    "message": "Cellular network reconnaissance completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 cellular recon active=false | Cellular network recon: Baseband radio is in low-power standby (md1:0); no cellular carrier registration is active."
@@ -1099,7 +1099,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -1111,7 +1111,7 @@
    "template": "{summary}",
    "message": "Cellular AT channel probe completed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 cellular at device=ttyC0 | Modem AT probe: virtual serial channel /dev/ttyC0 is present in /dev; core is quiescent awaiting ccci_mdinit daemon."
@@ -1121,7 +1121,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -1143,7 +1143,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "security-auth-fail",
@@ -1164,7 +1164,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "security-flood",
@@ -1185,7 +1185,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "security-intrusion",
@@ -1206,7 +1206,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "security-integrity",
@@ -1227,7 +1227,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn"
+   "origin": "autonomy"
   },
   {
    "id": "asyncjob-done",
@@ -1238,7 +1238,7 @@
    "template": "Background diagnostic {tool} ({action}) finished: {summary}",
    "message": "A background diagnostic finished.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 asyncjob job.done job=job-1234 tool=netdiag action=lan-sweep | Discovered 3 live devices on local subnet."
@@ -1248,7 +1248,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<summary>.+)$"
   },
   {
@@ -1260,7 +1260,7 @@
    "template": "Background diagnostic {tool} ({action}) failed: {error}",
    "message": "A background diagnostic failed.",
    "to_noob": true,
-   "cooldown_s": 0,
+   "cooldown_s": 0.0,
    "examples": {
     "must": [
      "NOOBIA P20 asyncjob job.failed job=job-1234 tool=netdiag action=lan-sweep | network unreachable"
@@ -1270,7 +1270,7 @@
     ]
    },
    "hits": 0,
-   "origin": "gwyn",
+   "origin": "autonomy",
    "regex": "\\| (?P<error>.+)$"
   }
  ],

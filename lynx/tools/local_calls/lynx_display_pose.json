@@ -1,0 +1,21 @@
+{
+  "name": "lynx_display_pose",
+  "description": "Entity: Lynx. View or select Lynx's portrait pose or animation on the screen. Poses: 01_standing_smile, 02_talking, 03_look_left, 04_look_right, 05_using_device, 06_singing, 07_dance_000deg... or animation 'dance'.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "Action: 'status' (current selection), 'list' (available poses), 'pose' (set static pose), 'animate' (set animation)",
+        "enum": ["status", "list", "pose", "animate"]
+      },
+      "pose": {
+        "type": "string",
+        "description": "Pose name or animation name"
+      }
+    },
+    "required": ["action"],
+    "additionalProperties": false
+  },
+  "timeout": 10
+}

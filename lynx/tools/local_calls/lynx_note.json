@@ -1,0 +1,24 @@
+{
+  "name": "lynx_note",
+  "description": "Write or search personal memories and notes in your private notes database.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["write", "search"],
+        "description": "'write' to record a thought or experience, 'search' to recall"
+      },
+      "text": {
+        "type": "string",
+        "description": "Note content to write, or query to search"
+      },
+      "tags": {
+        "type": "string",
+        "description": "Optional comma-separated tags"
+      }
+    },
+    "required": ["action", "text"]
+  },
+  "timeout": 15
+}

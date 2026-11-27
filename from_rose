@@ -1,0 +1,154 @@
+Lynx: Consolidated development backlog
+
+Capability classes:
+
+    A: Autonomous agent tool or sense.
+    O: Operator-only tool.
+    I: Deterministic infrastructure or background service.
+
+A. Cellular connectivity and perception
+ID	Feature task	Class
+LNX-01	SIM initialization and PIN management	O
+LNX-02	Cellular registration and carrier configuration	O
+LNX-03	Mobile internet, APN and IP configuration	O
+LNX-04	Cellular radio measurements (RSRP, RSRQ, SINR, RSSI)	A
+LNX-05	Non-disruptive serving and neighboring cell discovery	A
+LNX-06	Cell handover monitoring	A
+LNX-07	LTE, 5G NSA and 5G SA identification	A
+LNX-08	SMS interface	O
+LNX-09	Voice telephony	O
+LNX-10	GNSS positioning	A
+LNX-11	Cellular coverage mapping for Bee	A
+LNX-12	Cellular data usage monitoring	A
+B. Advanced network intelligence
+ID	Feature task	Class
+LNX-13	Authorized network topology discovery	A
+LNX-14	mDNS, SSDP and service discovery	A
+LNX-15	Traffic statistics and protocol classification	A
+LNX-16	Authorized vulnerability auditing	A
+LNX-17	Network anomaly detection	A
+LNX-18	Bluetooth and BLE discovery	A
+LNX-19	WiFi and cellular routing configuration	O
+LNX-20	Connection continuity and session recovery	I
+LNX-21	Encrypted tunnel to Noobia	I
+LNX-22	Direct Noob-to-Noob mesh communication	I
+LNX-23	Mobile hotspot configuration	O
+LNX-24	Bluetooth tethering configuration	O
+LNX-25	Network tool authorization enforcement	I
+C. Autonomous radio senses
+ID	Feature task	Sensory event
+LNX-26	Cell discovery	cell.tower.discovered
+LNX-27	Cell handover	cell.handover
+LNX-28	Cellular technology change	cell.technology.change
+LNX-29	Cellular signal change	cell.signal.change
+LNX-30	Bluetooth discovery	bluetooth.device.discovered
+LNX-31	Network topology change	network.topology.change
+LNX-32	Network anomaly	network.anomaly
+LNX-33	Routing change	network.route.change
+LNX-34	Geographical movement	location.change
+LNX-35	Connectivity quality change	network.quality.change
+LNX-36	Cellular registration change	cell.registration.change
+
+All senses are observational and classified as A.
+D. Radio visualization
+ID	Feature task	Class
+LNX-37	RADIO display page	A
+LNX-38	WiFi visualization	A
+LNX-39	Cellular visualization	A
+LNX-40	Bluetooth visualization	A
+LNX-41	Network topology visualization	A
+LNX-42	Live network activity visualization	A
+LNX-43	Bee's Singularity Map integration	I
+E. Independent operation
+ID	Feature task	Class
+LNX-44	On-device offline intelligence	I
+LNX-45	Offline event journal and synchronization	I
+LNX-46	Remote inference failover	I
+LNX-47	Reflex inference priority	I
+LNX-48	Noob communication discovery	A
+LNX-49	Connectivity failure diagnosis and reporting	A
+LNX-50	Radio capability registry	I
+F. Persistent cellular infrastructure
+ID	Feature task	Class
+LNX-51	Static IP or alternative persistent endpoint	O
+LNX-52	Cellular connection establishment at boot	I
+LNX-53	Non-disruptive cellular health monitoring	I
+LNX-54	Modem AT command permission enforcement	I
+LNX-55	Cellular route protection during WiFi experiments	I
+LNX-56	WiFi-independent Nexus connectivity	I
+LNX-57	Separate WiFi and cellular diagnostic interfaces	I
+LNX-58	Restricted cellular administration toolset	O
+G. Cybersecurity and attack resilience
+
+These tasks focus on threats originating from other phones and ordinary network-connected computers.
+ID	Feature task	Class
+LNX-59	Port scanning detection	I
+LNX-60	Service fingerprinting detection	I
+LNX-61	TCP/UDP flood detection	I
+LNX-62	Application-layer DoS protection	I
+LNX-63	Exposed service vulnerability audit	O
+LNX-64	Kernel vulnerability audit	O
+LNX-65	Stateful IPv4 and IPv6 firewall	I
+LNX-66	Network intrusion detection	I
+LNX-67	SSH brute-force protection	I
+LNX-68	Cryptographic Nexus authentication	I
+LNX-69	Agent prompt injection protection	I
+LNX-70	Network resource exhaustion protection	I
+LNX-71	Unauthorized configuration change detection	I
+LNX-72	Filesystem integrity monitoring	I
+LNX-73	Agent privilege isolation	I
+LNX-74	Security incident journal	I
+LNX-75	Security incident perception	A
+LNX-76	Sensitive information exposure audit	O
+LNX-77	Modem device-node access isolation	I
+LNX-78	Public network service exposure audit	O
+LNX-79	Malformed packet protection	I
+LNX-80	Malicious SMS filtering	I
+LNX-81	Incoming call abuse protection	I
+LNX-82	Noob identity authentication	I
+LNX-83	Replay attack protection	I
+LNX-84	API authentication and rate limiting	I
+LNX-85	DNS manipulation protection	I
+LNX-86	Network credential protection	I
+LNX-87	Security configuration audit tool	O
+LNX-88	Read-only agent security diagnostic tool	A
+LNX-89	Authorized security regression testing suite	O
+LNX-90	Security event reporting to Aigel	I
+LNX-91	Security incident synchronization with Argus	I
+LNX-92	Cellular inbound reachability assessment	O
+LNX-93	Upstream DDoS mitigation assessment	O
+LNX-94	Firewall configuration rollback protection	I
+H. Autonomous security senses
+ID	Feature task	Sensory event
+LNX-95	Port scan perception	security.portscan.detected
+LNX-96	Authentication failure perception	security.authentication.failed
+LNX-97	Flood attack perception	security.flood.detected
+LNX-98	Intrusion perception	security.intrusion.suspected
+LNX-99	Integrity violation perception	security.integrity.changed
+LNX-100	Prompt injection perception	security.prompt.injection.suspected
+LNX-101	Untrusted endpoint perception	security.endpoint.untrusted
+LNX-102	Malicious message perception	security.message.suspicious
+LNX-103	Resource exhaustion perception	security.resource.exhaustion
+
+All classified as A.
+Mandatory implementation rules
+1. Cellular connectivity is protected infrastructure.
+2. Autonomous tools must not reconfigure the cellular modem.
+3. Cellular diagnostic queries must be non-disruptive.
+4. Security reactions must preserve legitimate Noobia connectivity.
+5. Firewall changes must be recoverable.
+6. External network data must be treated as untrusted.
+7. Security testing requires authorized targets.
+8. Suspicious observations are not proof of an attack.
+9. No autonomous retaliation against suspected attackers.
+10. Security observations must be traceable.
+Tomorrow's priorities
+Priority	Tasks
+P0	SIM, cellular registration and mobile internet
+P0	Firewall and exposed service audit
+P0	Encrypted tunnel and Nexus authentication
+P1	Persistent cellular route protection
+P1	Agent privilege isolation
+P1	Intrusion detection and security perception
+P2	Remaining network intelligence and radio senses
+P3	Visualization and extended capabilities

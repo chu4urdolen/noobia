@@ -350,6 +350,16 @@
 !/tools/netintel/*.py
 !/tools/local_calls/lynx_netintel.json
 !/tools/local_calls/lynx_netintel.sh
+!/tools/local_calls/lynx_camera_photo.json
+!/tools/local_calls/lynx_camera_photo.sh
+!/tools/local_calls/lynx_display_pose.json
+!/tools/local_calls/lynx_display_pose.sh
+!/tools/local_calls/lynx_note.json
+!/tools/local_calls/lynx_note.sh
+!/tools/local_calls/lynx_reflex.json
+!/tools/local_calls/lynx_reflex.sh
+!/tools/local_calls/lynx_speech.json
+!/tools/local_calls/lynx_speech.sh
 !/tools/operator/
 /tools/operator/*
 !/tools/operator/*.py

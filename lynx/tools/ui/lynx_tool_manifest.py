@@ -102,6 +102,15 @@ TOOLS = {
     "lynx_magnetometer_read": ("read_only", "sensors", ("platform", "sensorhub"), False),
     "lynx_light_read": ("read_only", "sensors", ("platform", "sensorhub"), False),
     "lynx_proximity_read": ("read_only", "sensors", ("platform", "sensorhub"), False),
+    "lynx_cellular_diag": ("runs_task", "radio", ("platform", "cellular"), False),
+    "lynx_net_diag": ("runs_task", "radio", ("platform", "wifi"), False),
+    "lynx_netintel": ("read_only", "radio", ("platform", "wifi"), False),
+    "lynx_security_status": ("read_only", "system", None, False),
+    "lynx_camera_photo": ("runs_task", "camera", ("hardware", "camera"), False),
+    "lynx_display_pose": ("actuates", "display", ("platform", "display"), False),
+    "lynx_speech": ("actuates", "sound", ("platform", "audio"), False),
+    "lynx_note": ("runs_task", "agent", None, False),
+    "lynx_reflex": ("runs_task", "agent", None, False),
 }
 
 # Tools that also act on or read a second component. The media tools take

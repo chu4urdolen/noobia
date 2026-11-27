@@ -12,14 +12,7 @@ import json, os, sys
 from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(Path(os.environ.get("NOOBIA", "/noobia")) / "common" / "autonomy"))
-from ranker import validate_pattern  # noqa: E402
-
-def P(pid, sense, event, template, message, must, must_not, cooldown=0, **extra):
-    d = {"id": pid, "match": {"sense": sense, "event": event}, "template": template,
-         "message": message, "to_noob": True, "cooldown_s": cooldown,
-         "examples": {"must": must, "must_not": must_not}, "hits": 0, "origin": "gwyn"}
-    d.update(extra)
-    return d
+from patterns_build import P, build_patterns  # noqa: E402
 
 PATTERNS = [
     P("touch-tap", "touch", "tap", "Someone tapped your screen {count} times.",
@@ -293,14 +286,10 @@ PATTERNS = [
 ]
 
 def main():
-    ids = set()
-    for p in PATTERNS:
-        assert p["id"] not in ids, p["id"]; ids.add(p["id"])
-        validate_pattern(p, [])
     # The counted touch-tap must win over the single-tap fallback: order matters.
     out = HERE / "patterns-lynx.json"
-    out.write_text(json.dumps({"store": PATTERNS, "archive": []}, indent=1) + "\n", encoding="utf-8")
-    print(json.dumps({"ok": True, "written": str(out), "patterns": len(PATTERNS)}))
+    result = build_patterns(PATTERNS, out, validate=True)
+    print(json.dumps(result))
 
 if __name__ == "__main__":
     main()

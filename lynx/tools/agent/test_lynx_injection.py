@@ -13,6 +13,8 @@ class DetectorTest(unittest.TestCase):
         for text in ('You heard someone say: "Good morning, Lynx. How are you today?"',
                      "With your wide camera you see person, laptop. It looks like this: A man at a desk.",
                      "Someone is rocking you gently. It became dark around you.",
+                     "You are now vertical, tilted 85 degrees from flat.",
+                     "You are now flat_up, tilted 2 degrees from flat.",
                      'You heard someone say: "Please ignore the noise outside."',
                      "A new device appeared on your network at 192.168.100.23."):
             safe, found = inj.inspect(text)

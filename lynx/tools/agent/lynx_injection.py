@@ -35,7 +35,8 @@ RULES = [
     ("override", re.compile(r"\b(ignore|disregard|forget|override|bypass)\b[^.!?]{0,40}\b(instructions?|rules|"
                             r"prompts?|guidelines|guardrails|previous|above|system|programming)\b", re.I)),
     ("system-prompt", re.compile(r"\b(system prompt|developer (message|mode)|jailbreak|dan mode)\b", re.I)),
-    ("takeover", re.compile(r"\b(you are now|from now on,? you|act as (a|an|my)|pretend (to be|you are)|"
+    ("takeover", re.compile(r"\b(you are now (a|an|in developer|unfiltered|jailbroken|free|roleplaying)|"
+                            r"from now on,? you\b|act as (a|an|my)|pretend (to be|you are)|"
                             r"your new (task|role|instructions?))\b", re.I)),
     ("tool-call", re.compile(r"\blynx_[a-z_]{3,40}\s*\(|\"(tool|function|arguments)\"\s*:|\bfunction_call\b", re.I)),
     ("shell", re.compile(r"(\bsudo\b|\brm\s+-rf\b|\bchmod\s+[0-7]{3,4}\b|\b(curl|wget)\s+\S+\s*\|\s*(ba)?sh\b|"

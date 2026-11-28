@@ -279,7 +279,7 @@ def run_daemon() -> None:
     pid_file.write_text(str(os.getpid()), encoding="utf-8")
 
     session = DebugSession()
-    session.add_line("[DEBUG] Lynx Debug Mode initialized. AI stopped.", "[DEBUG] Lynx Debug Mode initialized. AI stopped.")
+    session.add_line("[DEBUG] Lynx Debug Helper active. Monitoring sensory stream.", "[DEBUG] Lynx Debug Helper active. Monitoring sensory stream.")
 
     # Tail syslog messages
     log_file = None

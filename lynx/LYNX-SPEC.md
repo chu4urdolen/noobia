@@ -418,8 +418,10 @@ LNX-102: the one door into her mind (`build_prompt`) also runs `check_message` b
 4. **Autonomous Pipelining:**
    - Long-running tools (e.g. network scans `scan_network`, camera captures with Florence-2 `take_photo`) fork into the background and return immediately. Once complete, their structured results pipe into syslog as sensory events, triggering new reaction cycles without blocking the autonomy loop.
    - Florence-2 vision model on Nexus (:5051) is prioritized over raw YOLO for richer captions and scene understanding.
-5. Every line of the chunk is matched against `patterns-lynx.json`. The **unique** sentences become one message, `SENSE: <sentence> <sentence> ...`, which is delivered to Lynx's agent worker.
-6. Aigel training: lines unmatched by regex patterns are collected for Aigel analysis to propose regex substitutions. While Lynx is reacting to a chunk, subsequent log lines continue accumulating so no events are lost.
+5. **Mandatory Speech Enforcement:**
+   - Every sensory reflex turn enforces speech alongside tool executions (`speak` or `lynx_speech`). If the agent invokes an action tool without speech, the agent automatically executes speech with either the model's textual thought or a contextual tool action description (e.g., "Scouting my cellular airspace in the background."). Actions are never executed in silence.
+6. Every line of the chunk is matched against `patterns-lynx.json`. The **unique** sentences become one message, `SENSE: <sentence> <sentence> ...`, which is delivered to Lynx's agent worker.
+7. Aigel training: lines unmatched by regex patterns are collected for Aigel analysis to propose regex substitutions. While Lynx is reacting to a chunk, subsequent log lines continue accumulating so no events are lost.
 
 **Updating it on Lynx.**
 1. Edit `make_patterns.py`, run it, and run the tests.

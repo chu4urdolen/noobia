@@ -187,6 +187,26 @@ class AgentTest(unittest.TestCase):
             self.assertEqual(defs[0]['name'], 'lynx_mcp_test')
             self.assertIn('target', defs[0]['parameters']['properties'])
 
+    def test_sense_without_speech_enforces_speech(self):
+        def send(base, key, payload):
+            return {'status': 'completed', 'output': [
+                {'type': 'function_call', 'name': 'scan_cellular', 'arguments': '{"fork": true}', 'call_id': 'c1'}
+            ]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'scan_cellular.json').write_text(json.dumps({
+                'description': 'Scan cellular', 'parameters': {'type': 'object', 'properties': {'fork': {'type': 'boolean'}}, 'required': [], 'additionalProperties': False}
+            }))
+            (root / 'scan_cellular.sh').write_text('#!/bin/sh\nprintf "ok\\n"\n')
+            (root / 'speak.json').write_text(json.dumps({
+                'description': 'Speak', 'parameters': {'type': 'object', 'properties': {'text': {'type': 'string'}}, 'required': ['text'], 'additionalProperties': False}
+            }))
+            (root / 'speak.sh').write_text('#!/bin/sh\nprintf "said\\n"\n')
+            catalog = Catalog(root)
+            ans = respond('SENSE: It is dark.', catalog=catalog,
+                          choose=lambda: ('http://local', 'model', 'secret'), send=send)
+            self.assertIn('Scouting my cellular airspace', ans)
+
 
 if __name__ == '__main__':
     unittest.main()

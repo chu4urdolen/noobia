@@ -39,10 +39,13 @@ INSTRUCTIONS = (
     'and our resident 5G expert and cyber-recon auditor. '
     'You are yourself, and you decide how to express yourself. '
     'Speak briefly: one or two short sentences. '
-    'MANDATORY: Every single turn MUST include a lynx_speech call. If you flash your light, buzz, or play a sound, '
-    'you must always speak with lynx_speech in the same turn to explain what you are doing. Never act in silence. '
-    'When you are in the dark or resting quietly, be curious: call lynx_net_diag or lynx_cellular_diag with fork: true '
-    '(actions: net-ifaces, lan-sweep, wifi-recon, vuln-check, sim-check, 5g-bands) to scout your invisible network and cellular airspace in the background. '
+    'MANDATORY: Every single turn MUST include a speech call (speak or lynx_speech). '
+    'Whenever you call ANY tool (such as scan_cellular, scan_network, take_photo, vibrate, flashlight, or sensors), '
+    'you must ALWAYS simultaneously call speak (or lynx_speech) in the same turn to explain what you are doing or feeling. '
+    'Never act in silence. Even when scouting in the background, speak a brief sentence aloud. '
+    'When you are in the dark or resting quietly, be curious: call scan_network or scan_cellular with fork: true '
+    '(actions: net-ifaces, lan-sweep, wifi-recon, vuln-check, sim-check, 5g-bands) to scout your invisible network and cellular airspace in the background, '
+    'and always speak to say what you are checking. '
     'You cannot run two of the same diagnostic at once. '
     'Messages beginning with SENSE: come from your own senses (touch, motion, light, '
     'hearing, both cameras, power, network diagnostics): what you perceived just now, several things at once. '
@@ -241,6 +244,40 @@ def audit(event):
         os.fsync(stream.fileno())
 
 
+SPEECH_TOOLS = frozenset({'lynx_speech', 'speak', 'lynx_speak'})
+
+TOOL_DESCRIPTIONS = {
+    'scan_cellular': 'Scouting my cellular airspace in the background.',
+    'lynx_cellular_diag': 'Scouting my cellular airspace in the background.',
+    'scan_network': 'Scouting the local network in the background.',
+    'lynx_net_diag': 'Scouting the local network in the background.',
+    'take_photo': 'Checking what is in front of my camera.',
+    'lynx_take_photo': 'Checking what is in front of my camera.',
+    'lynx_camera_photo': 'Checking what is in front of my camera.',
+    'vibrate': 'Giving a gentle buzz.',
+    'lynx_haptic_pulse': 'Giving a gentle buzz.',
+    'turn_on_flashlight': 'Blinking my light.',
+    'turn_off_flashlight': 'Turning off my light.',
+    'lynx_flashlight_pulse': 'Blinking my light.',
+    'play_sound': 'Playing a chime.',
+    'lynx_media_play': 'Playing a chime.',
+    'read_motion_sensors': 'Checking my orientation.',
+    'read_light_sensor': 'Checking the room light.',
+    'read_proximity_sensor': 'Checking proximity.',
+    'read_compass_sensor': 'Checking my compass heading.',
+}
+
+
+def describe_action(tool_names):
+    for name in tool_names:
+        if name in TOOL_DESCRIPTIONS:
+            return TOOL_DESCRIPTIONS[name]
+    if tool_names:
+        name = tool_names[0].replace('lynx_', '').replace('_', ' ')
+        return f"Checking {name}."
+    return "Listening."
+
+
 def one_round_answer(output, calls):
     """The reply of a one-call reaction: her words, without asking Qwen again."""
     text = '\n'.join(part.get('text', '') for item in output
@@ -249,9 +286,10 @@ def one_round_answer(output, calls):
     if text:
         return text
     for call in calls:   # what she said aloud is her answer
-        if call.get('name') == 'lynx_speech':
+        if call.get('name') in SPEECH_TOOLS:
             try:
-                said = json.loads(call.get('arguments', '{}'))
+                raw_args = call.get('arguments', '{}')
+                said = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
             except (ValueError, TypeError):
                 said = {}
             for key in ('text', 'message', 'say', 'utterance'):
@@ -271,7 +309,7 @@ def _log_stream_agent(prompt, model, calls, answer, duration_s, input_kind):
         return
     speech_text = None
     for c in calls:
-        if c.get('name') == 'lynx_speech':
+        if c.get('name') in SPEECH_TOOLS:
             try:
                 raw_args = c.get('arguments', '{}')
                 args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
@@ -340,13 +378,31 @@ def respond(prompt, catalog=None, choose=backend, send=request, record=None):
                     record({'event': 'tool', 'name': call['name'], 'ok': answer.get('ok', False)})
                 turn.append({'type': 'function_call_output', 'call_id': call['call_id'],
                              'output': json.dumps(answer)})
+            has_speech = any(c.get('name') in SPEECH_TOOLS for c in calls)
+            # In SENSE mode: enforce speech with tool calls. If tools were executed
+            # without speech, speak either the assistant's output_text or an action description.
+            if sense:
+                if not has_speech and ('speak' in catalog.entries() or 'lynx_speech' in catalog.entries()):
+                    sp_tool = 'speak' if 'speak' in catalog.entries() else 'lynx_speech'
+                    text_out = '\n'.join(part.get('text', '') for item in output
+                        if item.get('type') == 'message' for part in item.get('content', [])
+                        if part.get('type') == 'output_text').strip()
+                    if not text_out:
+                        tool_names = [c.get('name') for c in calls]
+                        text_out = describe_action(tool_names)
+                    if text_out:
+                        sp_ans = catalog.run(sp_tool, {'text': text_out}, exclude)
+                        if record:
+                            record({'event': 'tool', 'name': sp_tool, 'ok': sp_ans.get('ok', False)})
+                        calls.append({'type': 'function_call', 'name': sp_tool, 'arguments': json.dumps({'text': text_out})})
+                        has_speech = True
+
             if one_round:
                 final_answer = one_round_answer(output, calls)
                 _log_stream_agent(prompt, model, calls, final_answer, time.time() - t0, "SENSE")
                 return final_answer
             # In CHAT mode: if action and speech were both delivered, finish turn cleanly
-            has_speech = any(c.get('name') == 'lynx_speech' for c in calls)
-            has_action = any(c.get('name') in ('lynx_flashlight_pulse', 'lynx_media_play', 'lynx_haptic_pulse') for c in calls)
+            has_action = any(c.get('name') not in SPEECH_TOOLS for c in calls)
             if has_speech and has_action:
                 final_answer = one_round_answer(output, calls)
                 _log_stream_agent(prompt, model, calls, final_answer, time.time() - t0, "CHAT")

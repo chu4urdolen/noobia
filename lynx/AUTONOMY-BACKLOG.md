@@ -247,6 +247,7 @@ From Rose's backlog and the spec's open issues, excluding cellular and tools:
 | Spec #5 front camera | open | rotation check with a face; add `front` to `lynx_camera_photo` |
 | Spec #6 recursive grep/find watchdog | lore | get a reproducible receipt |
 | `lynx-bluetooth` restarts every ~21 min | open | find the cause |
+| `capture_air_traffic` tool | done | Deployed `capture_air_traffic` (wi-fi & cellular packet capture + multi-channel sweep) |
 
 ## 6. Decisions for Tom
 

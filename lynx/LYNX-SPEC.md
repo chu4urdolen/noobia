@@ -235,6 +235,7 @@ To give Lynx's local LLM agent clear self-evident understanding of each tool fro
 | `set_display_pose` | `lynx_display_pose` | ★ | Update display portrait expression or animation |
 | `scan_network` | `lynx_net_diag` | - | Network interface, ping, ARP, and LAN discovery diagnostics |
 | `scan_cellular` | `lynx_cellular_diag` | - | Cellular SIM state, APN, signal, and radio bearer diagnostics |
+| `capture_air_traffic` | `lynx_capture_air_traffic` | - | Over-the-air packet capture (Wi-Fi & cellular ccmni0) and multi-channel sweep without dropping connection |
 | `read_light_sensor` | `lynx_light_read` | - | Read ambient light sensor (TCS3408) |
 | `read_motion_sensors` | `lynx_motion_read` | - | Read accelerometer or gyroscope motion vectors |
 | `read_compass_sensor` | `lynx_magnetometer_read` | - | Read magnetic compass sensor (AK09918) |
@@ -334,6 +335,7 @@ Lynx's code-writing personality. It is set up on its own now. The button that le
 | --- | --- | --- | --- |
 | `lynx_net_diag` | `action=net-ifaces|lan-sweep|wifi-recon|port-scan|vuln-check|ssl-audit|dns-audit|traceroute|packet-sample*, target, host, port, ports, domain, count, iface, fork` | 20 s | `net-ifaces`, `lan-sweep` (ARP neighbours), `wifi-recon` (APs nearby), `port-scan`, `vuln-check`, `ssl-audit`, `dns-audit`, `traceroute`, `packet-sample` (tcpdump). `fork:true` runs it in the background and the findings come back as sense lines. See Open Issues on scope. |
 | `lynx_cellular_diag` | `action=sim-check|modem-status|5g-bands|ccmni-stats|cell-recon|at-probe*, fork` | 18 s | `sim-check`, `modem-status`, `5g-bands`, `ccmni-stats`, `cell-recon`, `at-probe` (writes AT commands to the modem: treat as a physical action). `fork:true` as above. |
+| `lynx_capture_air_traffic` | `seconds=1..60, interface=any|wlan0|ccmni0` | 70 s | Bounded packet capture (`air_capture.pcap`) and simultaneous multi-channel beacon sweep. Captures cellular (`ccmni0`), Wi-Fi (`wlan0`), or all interfaces (`any`) concurrently while preserving Nexus connection. Prepends capture summary to response. |
 | `lynx_netintel` | `action=stats|doctor|discover|radios|ble-scan|cell*, seconds` | 30 s | (Gwyn, 2026-11-25) `stats`: traffic, protocol counters, connections by service, mobile data. `doctor`: the first broken layer (Wi-Fi, address, route, gateway, Nexus, each DNS server). `discover`: gateway, neighbours, mDNS/SSDP services, reachable Noobs. `radios`: the radio registry (also `/run/lynx/radios.json`). `ble-scan`: a bounded Bluetooth scan (the controller currently refuses). `cell`: measurements from `/run/lynx/cell.json`. All gated by the tool policy. |
 
 ## 13. Every Sense

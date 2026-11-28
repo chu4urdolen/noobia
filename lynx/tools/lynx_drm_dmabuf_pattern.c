@@ -985,10 +985,11 @@ static void nav_buttons(uint32_t *pixels, enum lynx_page page)
 static void status_item(uint32_t *pixels, unsigned int column,
 			unsigned int row, const char *label, const char *value)
 {
-	unsigned int x = column ? 660 : 75;
+	unsigned int x = column ? 650 : 60;
 	unsigned int y = 370 + row * 195;
-	draw_text(pixels, label, x, y, 4, 0x007d94a5);
-	draw_text(pixels, value, x, y + 55, 5, 0x00f5f8fa);
+	unsigned int val_scale = (strlen(value) > 28) ? 2 : 3;
+	draw_text(pixels, label, x, y, 3, 0x007d94a5);
+	draw_text(pixels, value, x, y + 42, val_scale, 0x00f5f8fa);
 }
 
 static time_t get_thought_mtime(void)
@@ -2516,10 +2517,10 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 	rectangle(pixels, 0, 0, WIDTH, 28, teal);
 	draw_text(pixels, "STATUS & RADIOS", 85, 145, 10, white);
 	draw_text(pixels, "SYSTEM HEALTH, HARDWARE & WIRELESS INTERFACES", 85, 230, 3, teal);
-	rectangle(pixels, 75, 270, 1090, 4, teal);
+	rectangle(pixels, 60, 270, 1120, 4, teal);
 
-	draw_text(pixels, "1. SYSTEM & POWER", 75, 310, 4, amber);
-	draw_text(pixels, "2. RADIOS & NETWORK", 660, 310, 4, amber);
+	draw_text(pixels, "1. SYSTEM & POWER", 60, 310, 3, amber);
+	draw_text(pixels, "2. RADIOS & NETWORK", 650, 310, 3, amber);
 
 	/* Left Column: System & Hardware */
 	int pack_capacity, pack_temp, pack_current, pack_voltage;

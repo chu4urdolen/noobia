@@ -129,7 +129,7 @@ class AgentBusy(RuntimeError):
 
 
 class LynxAdapter(agent_link.Adapter):
-    def __init__(self, state_dir=STATE, *, jobs=JOBS, stop=STOP, max_pending=10, **kwargs):
+    def __init__(self, state_dir=STATE, *, jobs=JOBS, stop=STOP, max_pending=1, **kwargs):
         self.jobs, self.stop, self.max_pending = Path(jobs), Path(stop), max_pending
         super().__init__(state_dir, **kwargs)
         self.state_dir = self.state

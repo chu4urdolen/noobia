@@ -244,7 +244,7 @@ From Rose's backlog and the spec's open issues, excluding cellular and tools:
 | LNX-91 security sync with Argus | waits for Argus | with NA-64 |
 | Spec #1 reaction latency | open | Ollama single slot; NA-40 reflexes take the fast path |
 | Spec #4 net_diag scope | open | limit targets to Noobia; ask before packet capture |
-| Spec #5 front camera | open | rotation check with a face; add `front` to `lynx_camera_photo` |
+| Spec #5 front camera | done | Dual-camera capture (both front S5K3P9SP & rear) deployed to `lynx_camera_photo` |
 | Spec #6 recursive grep/find watchdog | lore | get a reproducible receipt |
 | `lynx-bluetooth` restarts every ~21 min | open | find the cause |
 | `capture_air_traffic` tool | done | Deployed `capture_air_traffic` (wi-fi & cellular packet capture + multi-channel sweep) |

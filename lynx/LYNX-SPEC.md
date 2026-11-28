@@ -208,7 +208,7 @@ Autonomous cellular auditing suite for the MediaTek M80 5G modem:
 2. ~~Boot runlevel vs START~~ - resolved (Tom: "enable everything"): the services stay in `default`, and `lynx-power-boot` now boots `active` when they are there (else `saving boot` with START). Also fixed: POWER SAVE used to stop `lynx-noobd` (it needs `lynx-media`); media and noobd now stay on in both modes.
 3. ~~Guard switch~~ - resolved: the watchers act with it set; it only disables the old in-tool guards (keep it).
 4. **`lynx_net_diag` / `lynx_cellular_diag`** include `port-scan`, `vuln-check`, `packet-sample` (tcpdump) and `at-probe`. They are not offered to SENSE calls, but CHAT can use them. Suggested: limit targets to Noobia's own LAN and devices, and ask before a packet capture (other people's traffic - Principle 8). `at-probe` writes to the modem: treat it like a physical action.
-5. **Front camera rotation and mirroring** not yet checked with a face (detector rotates by 270 degrees; the front camera may need 90). `lynx_camera_photo` offers only `back`/`wide` - add `front`.
+5. ~~Front camera~~ - resolved: `lynx_camera_photo` / `take_photo` updated to capture both front (S5K3P9SP) and rear cameras simultaneously by default, returning detections in front and behind.
 7. ~~Flashlight feedback loop~~ - fixed by Banshee (`ebe26d3`): light changes within 3.5 s of her own flash are ignored. Magnet wand recalibrated (150 uT jump / 450 uT absolute).
 6. The recursive-`grep`/`find` watchdog rule is Banshee's field observation; worth a reproducible receipt before it hardens into lore.
 
@@ -225,7 +225,7 @@ To give Lynx's local LLM agent clear self-evident understanding of each tool fro
 | Intuitive Alias | Canonical Tool | SENSE Call | What it does |
 | --- | --- | --- | --- |
 | `speak` / `lynx_speak` | `lynx_speech` | ★ | Speak aloud with Flite TTS & display thought on screen |
-| `take_photo` / `lynx_take_photo` | `lynx_camera_photo` | ★ | Capture picture with camera & analyze via Florence-2 object detection |
+| `take_photo` / `lynx_take_photo` | `lynx_camera_photo` | ★ | Capture picture with cameras (default: both front & rear) & analyze via vision models |
 | `turn_on_flashlight` | `lynx_flashlight_pulse` | ★ | Pulse rear flashlight LED (100 ms) |
 | `turn_off_flashlight` | `lynx_flashlight_stop` | ★ | Ensure flashlight LED is turned off |
 | `vibrate` | `lynx_haptic_pulse` | ★ | Haptic pulse (80 ms tactile buzz) |
@@ -266,7 +266,7 @@ To give Lynx's local LLM agent clear self-evident understanding of each tool fro
 
 | Tool | Arguments | Timeout | What it does |
 | --- | --- | --- | --- |
-| `lynx_camera_photo` | `camera=back|wide` | 45 s | Takes one picture with a rear camera (`back` = 2 MP macro, `wide` = 8 MP IMX355) and returns what Nexus detects; also writes a `cause=self` sense line so her senses know she looked. *The front camera is not offered here yet* (it is in the camera sense). |
+| `lynx_camera_photo` | `camera=both|front|wide|back` | 45 s | Takes pictures with cameras (default `both`: front S5K3P9SP and rear IMX355) and returns what Nexus detects; also writes `cause=self` sense lines so her senses know she looked. |
 | `lynx_microphone_level` | - | 10 s | One bounded 1 s microphone level sample (late RMS and peak), keeps no audio, restores the mixer. |
 | `lynx_motion_read` | `choice=accel|gyro*` | 5 s | One raw accelerometer or gyroscope vector (driver units). |
 | `lynx_light_read` | - | 5 s | One raw ambient-light sample (TCS3408; raw units, not lux). |

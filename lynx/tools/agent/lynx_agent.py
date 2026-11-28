@@ -98,6 +98,7 @@ SENSE_TOOLS = frozenset({
     'manage_reflexes',
     'scan_network',
     'scan_cellular',
+    'capture_air_traffic', 'lynx_capture_air_traffic',
 })
 
 
@@ -269,6 +270,8 @@ TOOL_DESCRIPTIONS = {
     'read_light_sensor': 'Checking the room light.',
     'read_proximity_sensor': 'Checking proximity.',
     'read_compass_sensor': 'Checking my compass heading.',
+    'capture_air_traffic': 'Capturing air traffic and inspecting radio packets.',
+    'lynx_capture_air_traffic': 'Capturing air traffic and inspecting radio packets.',
 }
 
 

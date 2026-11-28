@@ -387,6 +387,8 @@
 !/tools/local_calls/lynx_gps_status.*
 !/tools/local_calls/lynx_mic_status.*
 !/tools/local_calls/lynx_sample_audio_level.*
+!/tools/local_calls/capture_air_traffic.*
+!/tools/local_calls/lynx_capture_air_traffic.*
 !/tools/operator/
 /tools/operator/*
 !/tools/operator/*.py

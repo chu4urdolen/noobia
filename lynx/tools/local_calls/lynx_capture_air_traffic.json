@@ -1,0 +1,24 @@
+{
+  "name": "lynx_capture_air_traffic",
+  "description": "Entity: Lynx. Capture over-the-air packets across all channels and interfaces into a temporary pcap file for 30s without disrupting the active connection, parse packet records, and sweep all Wi-Fi airspace channels.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "seconds": {
+        "type": "integer",
+        "description": "Duration to sniff air packets (5..60, default 30)"
+      },
+      "interface": {
+        "type": "string",
+        "description": "Interface to sniff on ('any', 'wlan0', 'ccmni0', default 'any')"
+      },
+      "fork": {
+        "type": "boolean",
+        "description": "Detach into the background so the autonomy loop is not blocked"
+      }
+    },
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 65
+}

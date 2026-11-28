@@ -31,7 +31,9 @@
     "window_s": 20,
     "max_lines": 15,
     "uniform_priority": 20,
-    "carry_priority": false
+    "carry_priority": false,
+    "priority_mode": "sum",
+    "priority_threshold": 20
   },
   "harness": {
     "heartbeat_s": 300,

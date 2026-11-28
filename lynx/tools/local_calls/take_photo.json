@@ -1,14 +1,16 @@
 {
   "name": "take_photo",
-  "description": "Entity: Lynx. Capture a photo using your camera and analyze visible objects and scene description via Florence-2 vision model.",
+  "description": "Entity: Lynx. Capture photos using your cameras (default 'both' front and rear) and analyze visible objects and scene description via vision models.",
   "inputSchema": {
     "type": "object",
     "properties": {
       "camera": {
         "type": "string",
         "enum": [
-          "back",
-          "wide"
+          "both",
+          "front",
+          "wide",
+          "back"
         ]
       }
     },

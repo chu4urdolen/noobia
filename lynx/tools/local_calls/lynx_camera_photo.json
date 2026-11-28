@@ -1,14 +1,16 @@
 {
   "name": "lynx_camera_photo",
-  "description": "Entity: Lynx. Look with one of your two rear cameras: take one picture and learn what objects you see (detected on Nexus). camera: 'back' (2 MP macro, default) or 'wide' (8 MP ultrawide, wider view, a little slower). Takes a few seconds. Your camera sense also looks once a minute on its own, alternating both.",
+  "description": "Entity: Lynx. Look with your cameras: capture pictures and learn what objects you see (detected on Nexus). camera: 'both' (default, captures front and rear to see you and your surroundings), 'front' (front camera), 'wide' (rear ultrawide), or 'back' (rear macro).",
   "inputSchema": {
     "type": "object",
     "properties": {
       "camera": {
         "type": "string",
         "enum": [
-          "back",
-          "wide"
+          "both",
+          "front",
+          "wide",
+          "back"
         ]
       }
     },

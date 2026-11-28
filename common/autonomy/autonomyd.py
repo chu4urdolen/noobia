@@ -221,6 +221,8 @@ class Daemon:
             volume_resets_priority=bool(t.get("volume_resets_priority", True)),
             uniform_priority=int(t.get("uniform_priority", 0)),
             carry_priority=bool(t.get("carry_priority", True)),
+            priority_threshold=int(t.get("priority_threshold", 20)),
+            priority_mode=str(t.get("priority_mode", "legacy")),
             disabled=kill.exists,
             is_busy=is_busy)
         h = config.get("harness", {})

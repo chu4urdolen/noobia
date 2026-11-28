@@ -45,9 +45,9 @@ def main() -> int:
         args = json.loads(sys.stdin.read(4096) or "{}")
     except (OSError, ValueError):
         args = {}
-    camera = args.get("camera", "back") if isinstance(args, dict) else "back"
-    if camera not in frame.CAMERAS:
-        print(json.dumps({"ok": False, "error": f"unknown camera {camera!r}; use back or wide"}))
+    camera = args.get("camera", "both") if isinstance(args, dict) else "both"
+    if camera not in ("both", "dual", "all") and camera not in frame.CAMERAS:
+        print(json.dumps({"ok": False, "error": f"unknown camera {camera!r}; use front, back, wide, or both"}))
         return 1
 
     is_async = bool(args.get("async", False))
@@ -60,6 +60,24 @@ def main() -> int:
             cap_id = f"cap-{uuid.uuid4().hex[:8]}"
 
             def _async_look():
+                if camera in ("both", "dual", "all"):
+                    res_front = frame.look(wait_s=10.0, camera="front")
+                    res_rear = frame.look(wait_s=10.0, camera="wide" if "wide" in frame.CAMERAS else "back")
+                    parts = []
+                    if res_front.get("ok"):
+                        log_self_look(res_front)
+                        f_labels = [o["label"].replace("_", " ") for o in res_front.get("objects", [])]
+                        f_clean = ", ".join(dict.fromkeys(frame.clean_label(l).replace("_", " ") for l in f_labels))
+                        if f_clean:
+                            parts.append(f"in front: {f_clean}")
+                    if res_rear.get("ok"):
+                        log_self_look(res_rear)
+                        r_labels = [o["label"].replace("_", " ") for o in res_rear.get("objects", [])]
+                        r_clean = ", ".join(dict.fromkeys(frame.clean_label(l).replace("_", " ") for l in r_labels))
+                        if r_clean:
+                            parts.append(f"in back: {r_clean}")
+                    summary = "; ".join(parts) or "nothing recognized"
+                    return f"camera objects.seen capture={cap_id} cam=both | {summary}"
                 res = frame.look(wait_s=10.0, camera=camera)
                 if not res.get("ok"):
                     raise RuntimeError(res.get("error", "camera capture failed"))
@@ -85,6 +103,50 @@ def main() -> int:
         except Exception as exc:
             print(json.dumps({"ok": False, "error": f"async camera look failed: {exc}"}))
             return 1
+
+    if camera in ("both", "dual", "all"):
+        res_front = frame.look(wait_s=10.0, camera="front")
+        res_rear = frame.look(wait_s=10.0, camera="wide" if "wide" in frame.CAMERAS else "back")
+        if not res_front.get("ok") and not res_rear.get("ok"):
+            err = res_front.get("error") or res_rear.get("error") or "camera unavailable"
+            print(json.dumps({"ok": False, "error": err}))
+            return 1
+
+        all_objects = []
+        descriptions = []
+        logged = False
+        if res_front.get("ok"):
+            f_labels = [o["label"].replace("_", " ") for o in res_front.get("objects", [])]
+            f_clean = ", ".join(dict.fromkeys(frame.clean_label(l).replace("_", " ") for l in f_labels))
+            if f_clean:
+                descriptions.append(f"In front: {f_clean}")
+            for o in res_front.get("objects", []):
+                all_objects.append({"camera": "front", "label": frame.clean_label(o["label"]), "confidence": round(float(o["confidence"]), 2)})
+            if log_self_look(res_front) is not None:
+                logged = True
+
+        if res_rear.get("ok"):
+            r_labels = [o["label"].replace("_", " ") for o in res_rear.get("objects", [])]
+            r_clean = ", ".join(dict.fromkeys(frame.clean_label(l).replace("_", " ") for l in r_labels))
+            if r_clean:
+                descriptions.append(f"In back: {r_clean}")
+            for o in res_rear.get("objects", []):
+                all_objects.append({"camera": res_rear.get("camera", "rear"), "label": frame.clean_label(o["label"]), "confidence": round(float(o["confidence"]), 2)})
+            if log_self_look(res_rear) is not None:
+                logged = True
+
+        you_see = "; ".join(descriptions) if descriptions else "nothing you recognize"
+        out = {
+            "ok": True,
+            "camera": "both",
+            "you_see": you_see,
+            "objects": all_objects,
+            "front": {"ok": res_front.get("ok", False), "objects": res_front.get("objects", [])},
+            "rear": {"ok": res_rear.get("ok", False), "objects": res_rear.get("objects", [])},
+            "logged": logged
+        }
+        print(json.dumps(out))
+        return 0
 
     result = frame.look(wait_s=10.0, camera=camera)
     if not result.get("ok"):

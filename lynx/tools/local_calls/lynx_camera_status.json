@@ -1,0 +1,11 @@
+{
+  "name": "lynx_camera_status",
+  "description": "Entity: Lynx. Check camera hardware readiness and interface validation status without taking a photo.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 10
+}

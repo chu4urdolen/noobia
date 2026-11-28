@@ -1,0 +1,61 @@
+{
+  "name": "scan_network",
+  "description": "Entity: Lynx. Perform network diagnostics and scans (net-ifaces, lan-sweep, ping, port-scan, traceroute).",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "net-ifaces",
+          "lan-sweep",
+          "wifi-recon",
+          "port-scan",
+          "vuln-check",
+          "ssl-audit",
+          "dns-audit",
+          "traceroute",
+          "packet-sample"
+        ],
+        "description": "Diagnostic action to execute"
+      },
+      "target": {
+        "type": "string",
+        "description": "Target IP or hostname (for port-scan, vuln-check, or traceroute)"
+      },
+      "host": {
+        "type": "string",
+        "description": "Host for ssl-audit (default: 192.168.100.106)"
+      },
+      "port": {
+        "type": "integer",
+        "description": "Port for ssl-audit (default: 443)"
+      },
+      "ports": {
+        "type": "string",
+        "description": "Comma-separated ports for port-scan (default: 22,80,443,112,5050,8080,11434)"
+      },
+      "domain": {
+        "type": "string",
+        "description": "Domain name for dns-audit (default: google.com)"
+      },
+      "count": {
+        "type": "integer",
+        "description": "Number of packets for packet-sample (default: 10)"
+      },
+      "iface": {
+        "type": "string",
+        "description": "Network interface (default: wlan0)"
+      },
+      "fork": {
+        "type": "boolean",
+        "description": "If true, forks execution into background immediately; findings stream into senses log"
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "additionalProperties": false
+  },
+  "timeout": 20
+}

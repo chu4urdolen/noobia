@@ -1,0 +1,21 @@
+{
+  "name": "read_motion_sensors",
+  "description": "Entity: Lynx. Sample motion sensors (accelerometer or gyroscope) to detect movement, orientation, or tilt.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "choice": {
+        "type": "string",
+        "enum": [
+          "accel",
+          "gyro"
+        ]
+      }
+    },
+    "required": [
+      "choice"
+    ],
+    "additionalProperties": false
+  },
+  "timeout": 5
+}

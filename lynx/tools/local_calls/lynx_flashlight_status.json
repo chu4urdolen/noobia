@@ -1,0 +1,11 @@
+{
+  "name": "lynx_flashlight_status",
+  "description": "Entity: Lynx. Check flashlight driver and hardware readiness status without pulsing the LED.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 10
+}

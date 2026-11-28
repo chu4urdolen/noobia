@@ -1,0 +1,21 @@
+{
+  "name": "stop_sound",
+  "description": "Entity: Lynx. Stop playing the current sound or clear the active image.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string",
+        "enum": [
+          "sound",
+          "image"
+        ]
+      }
+    },
+    "required": [
+      "kind"
+    ],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

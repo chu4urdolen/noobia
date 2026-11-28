@@ -1,0 +1,11 @@
+{
+  "name": "vibrate",
+  "description": "Entity: Lynx. Trigger a tactile haptic vibration pulse (80 ms) through the vibration motor.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 6
+}

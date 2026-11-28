@@ -1,0 +1,11 @@
+{
+  "name": "lynx_gps_status",
+  "description": "Entity: Lynx. Check GNSS / GPS interface status and receiver readiness.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 10
+}

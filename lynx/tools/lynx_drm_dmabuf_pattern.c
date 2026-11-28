@@ -1499,12 +1499,12 @@ static void get_running_job_snippet(char *buf, size_t sz)
 	snprintf(buf, sz, "COGNITIVE TURN IN PROGRESS");
 }
 
-static unsigned int inputs_scroll_offset = 0;
-static unsigned int inputs_line_count = 0;
-static unsigned int outputs_scroll_offset = 0;
-static unsigned int outputs_line_count = 0;
-static unsigned int radio_scroll_offset = 0;
-static unsigned int radio_line_count = 0;
+static unsigned int __attribute__((unused)) inputs_scroll_offset = 0;
+static unsigned int __attribute__((unused)) inputs_line_count = 0;
+static unsigned int __attribute__((unused)) outputs_scroll_offset = 0;
+static unsigned int __attribute__((unused)) outputs_line_count = 0;
+static unsigned int __attribute__((unused)) radio_scroll_offset = 0;
+static unsigned int __attribute__((unused)) radio_line_count = 0;
 
 struct text_row {
 	char text[64];
@@ -1554,7 +1554,7 @@ static void add_scroll_row(struct text_row *rows, unsigned int *count, unsigned 
 	}
 }
 
-static void paint_inputs(uint32_t *pixels)
+static void __attribute__((unused)) paint_inputs(uint32_t *pixels)
 {
 	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa, teal = 0x0009dcc4;
 	const uint32_t amber = 0x00edb961, green = 0x002aa860, gray = 0x007d94a5;
@@ -1685,7 +1685,7 @@ static void paint_inputs(uint32_t *pixels)
 	rectangle(pixels, sb_x, sb_y + pos, 45, thumb, teal);
 }
 
-static void paint_outputs(uint32_t *pixels)
+static void __attribute__((unused)) paint_outputs(uint32_t *pixels)
 {
 	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa, teal = 0x0009dcc4;
 	const uint32_t green = 0x002aa860, amber = 0x00edb961;
@@ -1841,7 +1841,7 @@ static void paint_outputs(uint32_t *pixels)
  * by lynx-radio-snapshot. Rows: "H|header", "W|text" (G green, A amber,
  * R red, M muted), "B|<0-100>|label" (a bar). */
 #define RADIO_FILE "/run/lynx/radio.txt"
-static void paint_radio(uint32_t *pixels)
+static void __attribute__((unused)) paint_radio(uint32_t *pixels)
 {
 	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa, teal = 0x0009dcc4;
 	const uint32_t green = 0x002aa860, amber = 0x00edb961, red = 0x00e05a5a, gray = 0x007d94a5;

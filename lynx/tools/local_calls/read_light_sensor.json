@@ -1,0 +1,11 @@
+{
+  "name": "read_light_sensor",
+  "description": "Entity: Lynx. Sample the ambient optical light sensor (TCS3408) to measure surrounding brightness.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 5
+}

@@ -1,0 +1,11 @@
+{
+  "name": "turn_off_flashlight",
+  "description": "Entity: Lynx. Turn off the rear flashlight LED and verify it is stopped.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 5
+}

@@ -1,0 +1,11 @@
+{
+  "name": "read_proximity_sensor",
+  "description": "Entity: Lynx. Sample the optical proximity sensor (TCS3701) to detect nearby objects.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 5
+}

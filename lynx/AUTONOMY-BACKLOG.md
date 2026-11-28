@@ -29,7 +29,7 @@ compatibility link.
 | ID | Capability | Measured | Evidence / Verification |
 |---|---|---|---|
 | B01 | Physical host, permissions | **PASS** | Native Alpine Linux on OnePlus Nord 3; noninteractive broker execution with SO_PEERCRED verified. |
-| B02 | Hardware coverage | **PASS** | Cellular (Vivacom 5G data active), wifi, sensors, display, speech, haptics, flashlight, camera, audio tools live. |
+| B02 | Hardware coverage | **PASS** | Cellular (Vivacom 5G data active), wifi, sensors, display, speech, haptics, flashlight, camera, audio tools live. Intuitive tool aliases (speak, take_photo, turn_on_flashlight, vibrate, play_sound, scan_network, scan_cellular, save_memory_note, manage_reflexes) deployed for agent clarity. |
 | B03 | Sensory translation | **PASS** | `sense.parse_line` + `ranker.py` with 59 patterns turning perceptions into conversational sentences. |
 | B04 | Window policies | **PASS** | `trigger.py` configured with `priority_mode='sum'`, `priority_threshold=20`, `window_s=60.0`, `max_lines=15`. Sum >= 20 triggers immediate chunk delivery; P4 background senses accumulate; P20 senses trigger instantly; chat author formatting `{author} says: {said}` live. |
 | B05 | GPU backlog | **PASS** | Buffer-while-busy hook in `trigger.py` expands window during inference; zero events dropped. |

@@ -1,0 +1,11 @@
+{
+  "name": "turn_on_flashlight",
+  "description": "Entity: Lynx. Turn on the rear flashlight LED for a short pulse (100 ms).",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

@@ -1,0 +1,28 @@
+{
+  "name": "set_display_pose",
+  "description": "Entity: Lynx. Set or change your display expression, pose, or portrait animation on the screen.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "Action: 'status' (current selection), 'list' (available poses), 'pose' (set static pose), 'animate' (set animation)",
+        "enum": [
+          "status",
+          "list",
+          "pose",
+          "animate"
+        ]
+      },
+      "pose": {
+        "type": "string",
+        "description": "Pose name or animation name"
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "additionalProperties": false
+  },
+  "timeout": 10
+}

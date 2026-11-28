@@ -1,0 +1,11 @@
+{
+  "name": "read_compass_sensor",
+  "description": "Entity: Lynx. Sample the magnetometer compass sensor (AK09918) to measure magnetic fields.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 5
+}

@@ -1,0 +1,30 @@
+{
+  "name": "scan_cellular",
+  "description": "Entity: Lynx. Perform cellular modem and 5G diagnostics (sim-check, 5g-bands, ccci-trace).",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "sim-check",
+          "modem-status",
+          "5g-bands",
+          "ccmni-stats",
+          "cell-recon",
+          "at-probe"
+        ],
+        "description": "Cellular diagnostic action to execute"
+      },
+      "fork": {
+        "type": "boolean",
+        "description": "If true, forks execution into background immediately; findings stream into senses log"
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "additionalProperties": false
+  },
+  "timeout": 18
+}

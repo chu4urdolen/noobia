@@ -1,0 +1,11 @@
+{
+  "name": "lynx_bluetooth_status",
+  "description": "Entity: Lynx. Check Bluetooth controller (HCI0) readiness and interface validation status.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 10
+}

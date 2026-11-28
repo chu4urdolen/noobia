@@ -1,0 +1,11 @@
+{
+  "name": "lynx_mic_status",
+  "description": "Entity: Lynx. Check microphone hardware readiness and audio interface status without recording.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 10
+}

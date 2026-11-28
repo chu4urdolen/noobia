@@ -1,0 +1,11 @@
+{
+  "name": "lynx_sample_audio_level",
+  "description": "Entity: Lynx. Sample microphone audio RMS and peak loudness levels for 1 second without storing any audio.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 10
+}

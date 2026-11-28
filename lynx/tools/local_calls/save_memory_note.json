@@ -1,0 +1,30 @@
+{
+  "name": "save_memory_note",
+  "description": "Entity: Lynx. Save a personal thought, observation, or memory note to your persistent memory database.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "write",
+          "search"
+        ],
+        "description": "'write' to record a thought or experience, 'search' to recall"
+      },
+      "text": {
+        "type": "string",
+        "description": "Note content to write, or query to search"
+      },
+      "tags": {
+        "type": "string",
+        "description": "Optional comma-separated tags"
+      }
+    },
+    "required": [
+      "action",
+      "text"
+    ]
+  },
+  "timeout": 15
+}

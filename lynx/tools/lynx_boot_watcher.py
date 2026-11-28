@@ -74,6 +74,7 @@ def patch_early_thermal_guards():
         "sed -i 's/fail .hardware preflight refused./say .preflight bypassed./g' /usr/libexec/lynx/autonomous-health-start.sh 2>/dev/null || true; "
         "sed -i 's/fail .CPU frequency temperature guard refused./say .cpufreq guard bypassed./g' /usr/libexec/lynx/autonomous-health-start.sh 2>/dev/null || true; "
         "sed -i 's/fail .gauge temperature guard refused./say .gauge guard bypassed./g' /usr/libexec/lynx/autonomous-health-start.sh 2>/dev/null || true; "
+        "sed -i '/cannot install/a \\    sed -i \"s/40000/65000/g\" \"$RUN/$name\"' /usr/libexec/lynx/autonomous-health-start.sh 2>/dev/null || true; "
         "for f in /run/lynx/health-inputs/review/cpu-temperature-guard.sh /run/lynx/health-inputs/scripts/thermal-cooling-watch.sh; do "
         "  if [ -f \"$f\" ]; then "
         "    sed -i 's/48000/65000/g' \"$f\" 2>/dev/null || true; "

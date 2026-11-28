@@ -216,7 +216,37 @@ Autonomous cellular auditing suite for the MediaTek M80 5G modem:
 
 ## 12. Every Agent Tool
 
-All 44 live in `/usr/local/share/lynx/agent-tools/` as a manifest (`<name>.json`: description, JSON-schema arguments, timeout) plus a script (`<name>.sh`, JSON on stdin). `lynx-agent` turns them into function tools for Qwen. Arguments: `*` = required, `a|b` = allowed values.
+All tools live in `/usr/local/share/lynx/agent-tools/` as a manifest (`<name>.json`: description, JSON-schema arguments, timeout) plus a script (`<name>.sh`, JSON on stdin). `lynx-agent` turns them into function tools for Qwen. Arguments: `*` = required, `a|b` = allowed values.
+
+### Intuitive Agent Tool Aliases (2026-11-28)
+
+To give Lynx's local LLM agent clear self-evident understanding of each tool from its name, intuitive action-oriented aliases are deployed alongside canonical tools (full backward compatibility preserved):
+
+| Intuitive Alias | Canonical Tool | SENSE Call | What it does |
+| --- | --- | --- | --- |
+| `speak` / `lynx_speak` | `lynx_speech` | ★ | Speak aloud with Flite TTS & display thought on screen |
+| `take_photo` / `lynx_take_photo` | `lynx_camera_photo` | ★ | Capture picture with camera & analyze via Florence-2 object detection |
+| `turn_on_flashlight` | `lynx_flashlight_pulse` | ★ | Pulse rear flashlight LED (100 ms) |
+| `turn_off_flashlight` | `lynx_flashlight_stop` | ★ | Ensure flashlight LED is turned off |
+| `vibrate` | `lynx_haptic_pulse` | ★ | Haptic pulse (80 ms tactile buzz) |
+| `stop_vibration` | `lynx_haptic_stop` | ★ | Ensure haptic motor is stopped |
+| `play_sound` | `lynx_media_play` | ★ | Play sound (beep, chime, double_beep) or display image |
+| `stop_sound` | `lynx_media_stop` | ★ | Stop audio playback or clear image |
+| `set_display_pose` | `lynx_display_pose` | ★ | Update display portrait expression or animation |
+| `scan_network` | `lynx_net_diag` | - | Network interface, ping, ARP, and LAN discovery diagnostics |
+| `scan_cellular` | `lynx_cellular_diag` | - | Cellular SIM state, APN, signal, and radio bearer diagnostics |
+| `read_light_sensor` | `lynx_light_read` | - | Read ambient light sensor (TCS3408) |
+| `read_motion_sensors` | `lynx_motion_read` | - | Read accelerometer or gyroscope motion vectors |
+| `read_compass_sensor` | `lynx_magnetometer_read` | - | Read magnetic compass sensor (AK09918) |
+| `read_proximity_sensor` | `lynx_proximity_read` | - | Read optical proximity sensor (TCS3701) |
+| `save_memory_note` | `lynx_note` | ★ | Save personal memory note to persistent FTS5 database |
+| `manage_reflexes` | `lynx_reflex` | ★ | Inspect or register autonomous sensory-action reflex rules |
+| `lynx_camera_status` | `lynx_camera` | - | Check camera ISP and hardware validation status (read-only) |
+| `lynx_flashlight_status` | `lynx_flashlight` | - | Check flashlight driver and hardware state (read-only) |
+| `lynx_bluetooth_status` | `lynx_bluetooth` | - | Check Bluetooth controller (HCI0) readiness (read-only) |
+| `lynx_gps_status` | `lynx_gnss` | - | Check GNSS receiver interface status (read-only) |
+| `lynx_mic_status` | `lynx_microphone` | - | Check microphone hardware interface status (read-only) |
+| `lynx_sample_audio_level` | `lynx_microphone_level` | - | Sample bounded 1s microphone audio level (RMS & peak) |
 
 ### Expressive (what she uses to react; the only tools a `SENSE:` call is offered are marked ★)
 
@@ -374,11 +404,22 @@ LNX-102: the one door into her mind (`build_prompt`) also runs `check_message` b
 * `origin`: `gwyn` means written in the repo; `aigel` means learned by Aigel.
 * `examples`: `must` and `must_not` lines, checked before a pattern is accepted.
 
-**What happens to a chunk.**
-1. `noobia-autonomyd` reads syslog every second and collects lines into a chunk.
-2. The chunk closes after 20 s, or earlier when more than 15 lines arrive.
-3. Every line of the chunk is matched. The **unique** sentences become one message, `SENSE: <sentence> <sentence> ...`, which goes to her agent as one job.
-4. Lines no pattern explains go to Aigel when she is on. While Aigel is off, they go to Lynx as their own human text, except routine samples.
+**What happens to a chunk (Sensory Trigger Architecture - 2026-11-28).**
+1. `noobia-autonomyd` reads syslog lines and feeds them into `trigger.py`.
+2. **Sum Priority Triggering:**
+   - Priority threshold: `sum(priorities) >= 20`.
+   - Normal background senses (e.g. routine status changes, slow scans) carry Priority 4 (`P4`), accumulating over time until reaching the sum threshold (e.g., 5 occurrences: 4+4+4+4+4=20).
+   - High-granularity or urgent senses (e.g. screen tap, hold, button press, sudden motion) carry Priority 20 (`P20`), immediately triggering chunk closure and instant delivery.
+   - Timeout trigger: 60.0 seconds maximum window if the threshold is not reached.
+   - Volume trigger: 15 lines maximum per chunk to bound context size.
+3. **Chat Author Formatting:**
+   - Chat is integrated as a top-priority (P20) immediate sensory input.
+   - Format: `{author} says: "{said}"`. On-device screen chat defaults to `Noob says: "{said}"`. Network messages resolve the author by IP and Noobia contact book (`<Sender> says: "{said}"`).
+4. **Autonomous Pipelining:**
+   - Long-running tools (e.g. network scans `scan_network`, camera captures with Florence-2 `take_photo`) fork into the background and return immediately. Once complete, their structured results pipe into syslog as sensory events, triggering new reaction cycles without blocking the autonomy loop.
+   - Florence-2 vision model on Nexus (:5051) is prioritized over raw YOLO for richer captions and scene understanding.
+5. Every line of the chunk is matched against `patterns-lynx.json`. The **unique** sentences become one message, `SENSE: <sentence> <sentence> ...`, which is delivered to Lynx's agent worker.
+6. Aigel training: lines unmatched by regex patterns are collected for Aigel analysis to propose regex substitutions. While Lynx is reacting to a chunk, subsequent log lines continue accumulating so no events are lost.
 
 **Updating it on Lynx.**
 1. Edit `make_patterns.py`, run it, and run the tests.

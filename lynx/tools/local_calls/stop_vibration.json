@@ -1,0 +1,11 @@
+{
+  "name": "stop_vibration",
+  "description": "Entity: Lynx. Stop the vibration motor immediately.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "timeout": 6
+}

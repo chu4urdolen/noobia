@@ -1,0 +1,26 @@
+{
+  "name": "play_sound",
+  "description": "Entity: Lynx. Play a sound (beep, chime, double_beep) or display an image from your catalog.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string",
+        "enum": [
+          "sound",
+          "image"
+        ]
+      },
+      "item": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]{1,63}$"
+      }
+    },
+    "required": [
+      "kind",
+      "item"
+    ],
+    "additionalProperties": false
+  },
+  "timeout": 8
+}

@@ -77,9 +77,21 @@ SENSE_EXCLUDED_TOOLS = frozenset({'lynx_codex'})
 # Tom 2026-11-24, one call per sense: a reflex is expressed, not looked up. Only
 # these tools are offered (and allowed); the full 60-tool catalogue was ~7k
 # prompt tokens per call, and Qwen re-reads it every time.
-SENSE_TOOLS = frozenset({'lynx_speech', 'lynx_haptic_pulse', 'lynx_flashlight_pulse',
-                         'lynx_display_pose', 'lynx_media_play', 'lynx_net_diag',
-                         'lynx_cellular_diag', 'lynx_note', 'lynx_reflex'})
+SENSE_TOOLS = frozenset({
+    'lynx_speech', 'lynx_haptic_pulse', 'lynx_flashlight_pulse',
+    'lynx_display_pose', 'lynx_media_play', 'lynx_net_diag',
+    'lynx_cellular_diag', 'lynx_note', 'lynx_reflex',
+    'speak', 'lynx_speak',
+    'take_photo', 'lynx_take_photo',
+    'turn_on_flashlight', 'turn_off_flashlight',
+    'vibrate', 'stop_vibration',
+    'play_sound', 'stop_sound',
+    'set_display_pose',
+    'save_memory_note',
+    'manage_reflexes',
+    'scan_network',
+    'scan_cellular',
+})
 
 
 def key_from(path):
@@ -293,6 +305,8 @@ def respond(prompt, catalog=None, choose=backend, send=request, record=None):
         exclude = frozenset(catalog.entries()) - SENSE_TOOLS
         if 'lynx_media_play' not in exclude:
             notes['lynx_media_play'] = catalog.media_note()
+        if 'play_sound' not in exclude:
+            notes['play_sound'] = catalog.media_note()
     else:
         exclude = frozenset()
     first_round = True

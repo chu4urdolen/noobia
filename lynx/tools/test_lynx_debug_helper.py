@@ -14,6 +14,7 @@ class TestLynxDebugHelper(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         self.run_dir = Path(self.tmpdir.name)
         helper.RUN_DIR = self.run_dir
+        helper.STOP_FILE = self.run_dir / "stop"
 
     def tearDown(self):
         self.tmpdir.cleanup()
@@ -79,6 +80,23 @@ class TestLynxDebugHelper(unittest.TestCase):
         # Unknown tool
         raw_unk, trans_unk = helper.run_tool("nonexistent", "{}", tools_map)
         self.assertIn("unknown tool", raw_unk)
+
+    @patch("subprocess.run")
+    def test_ai_toggle_commands(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0)
+        session = helper.DebugSession()
+
+        # AI_OFF
+        session.handle_command("AI_OFF")
+        self.assertTrue(any("AI turned OFF" in line for line in session.raw_lines))
+
+        # AI_ON
+        session.handle_command("AI_ON")
+        self.assertTrue(any("AI turned ON" in line for line in session.raw_lines))
+
+        # CLEAR
+        session.handle_command("CLEAR")
+        self.assertEqual(len(session.raw_lines), 0)
 
 
 if __name__ == "__main__":

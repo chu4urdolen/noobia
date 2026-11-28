@@ -38,6 +38,7 @@ except ImportError:
     parse_line = None
 
 RUN_DIR = Path("/run/lynx")
+STOP_FILE = Path(os.environ.get("LYNX_STOP_FILE", "/var/lib/lynx-agent/stop"))
 TOOLS_DIR = Path("/usr/local/share/lynx/agent-tools")
 PATTERNS_FILE = Path("/var/lib/noobia/autonomy/patterns.json")
 FALLBACK_PATTERNS = Path(os.environ.get("NOOBIA", "/noobia")) / "lynx" / "autonomy" / "patterns-lynx.json"
@@ -237,6 +238,33 @@ class DebugSession:
         if cmd == "CLEAR":
             self.clear()
             return
+        if cmd in ("AI_ON", "AI_START"):
+            try:
+                STOP_FILE.unlink(missing_ok=True)
+                subprocess.run(["/sbin/rc-service", "lynx-agent-worker", "start"], check=False, timeout=10)
+                subprocess.run(["/sbin/rc-service", "noobia-autonomyd", "start"], check=False, timeout=10)
+                self.add_line("[DEBUG] AI turned ON (worker & autonomyd started)",
+                              "[DEBUG] AI turned ON (worker & autonomyd started)")
+            except Exception as exc:
+                self.add_line(f"[DEBUG] AI start error: {exc}", f"[DEBUG] AI start error: {exc}")
+            return
+        if cmd in ("AI_OFF", "AI_STOP"):
+            try:
+                STOP_FILE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+                STOP_FILE.touch(mode=0o600, exist_ok=True)
+                subprocess.run(["/sbin/rc-service", "lynx-agent-worker", "stop"], check=False, timeout=10)
+                subprocess.run(["/sbin/rc-service", "noobia-autonomyd", "stop"], check=False, timeout=10)
+                self.add_line("[DEBUG] AI turned OFF (worker & autonomyd stopped)",
+                              "[DEBUG] AI turned OFF (worker & autonomyd stopped)")
+            except Exception as exc:
+                self.add_line(f"[DEBUG] AI stop error: {exc}", f"[DEBUG] AI stop error: {exc}")
+            return
+        if cmd == "AI_TOGGLE":
+            if STOP_FILE.exists():
+                self.handle_command("AI_ON")
+            else:
+                self.handle_command("AI_OFF")
+            return
         if cmd.startswith("RUN "):
             parts = cmd[4:].split(None, 1)
             name = parts[0]
@@ -269,6 +297,10 @@ def run_daemon() -> None:
                     raw = line[idx:].strip()
                     trans = translate_sense_line(raw, session.patterns)
                     session.add_line(f"[SENSE] {raw}", f"[SENSE] {trans}")
+                elif "harness chunk" in line or "chunk_closed" in line:
+                    idx = line.find("harness chunk") if "harness chunk" in line else line.find("chunk_closed")
+                    entry = line[idx:].strip()
+                    session.add_line(f"[CHUNK] {entry}", f"[CHUNK] {entry}")
         except Exception:
             log_file = None
 
@@ -304,6 +336,10 @@ def run_daemon() -> None:
                     raw = line[idx:].strip()
                     trans = translate_sense_line(raw, session.patterns)
                     session.add_line(f"[SENSE] {raw}", f"[SENSE] {trans}")
+                elif "harness chunk" in line or "chunk_closed" in line:
+                    idx = line.find("harness chunk") if "harness chunk" in line else line.find("chunk_closed")
+                    entry = line[idx:].strip()
+                    session.add_line(f"[CHUNK] {entry}", f"[CHUNK] {entry}")
 
         time.sleep(0.1)
 

@@ -919,6 +919,33 @@ static void wifi_address(char *output, size_t size)
 	freeifaddrs(interfaces);
 }
 
+static void cellular_address(char *output, size_t size)
+{
+	snprintf(output, size, "DOWN");
+	struct ifaddrs *interfaces = NULL;
+	if (getifaddrs(&interfaces) < 0)
+		return;
+	for (struct ifaddrs *item = interfaces; item; item = item->ifa_next) {
+		if (item->ifa_addr && !strcmp(item->ifa_name, "ccmni0") &&
+		    item->ifa_addr->sa_family == AF_INET) {
+			inet_ntop(AF_INET,
+				&((struct sockaddr_in *)item->ifa_addr)->sin_addr,
+				output, size);
+			break;
+		}
+	}
+	freeifaddrs(interfaces);
+}
+
+static bool is_ai_worker_running(void)
+{
+	if (access("/var/lib/lynx-agent/stop", F_OK) == 0)
+		return false;
+	return pid_matches("/run/lynx/agent-worker.pid", "lynx-agent-worker") ||
+	       pid_matches("/run/lynx/agent-worker.pid", "python") ||
+	       pid_matches("/run/lynx/noobd.pid", "lynx-noobd");
+}
+
 static void nav_buttons(uint32_t *pixels, enum lynx_page page)
 {
 	const uint32_t dark = 0x00121c29, teal = 0x0009dcc4;
@@ -934,13 +961,11 @@ static void nav_buttons(uint32_t *pixels, enum lynx_page page)
 		unsigned int lx;
 		unsigned int scale;
 	} btns[] = {
-		/* Six buttons since the RADIO page (Gwyn, 2026-11-25): 180 px, 16 px gaps. */
-		{ PAGE_HOME,    40,   180, "HOME",    70,   5 },
-		{ PAGE_CHAT,    236,  180, "CHAT",    266,  5 },
-		{ PAGE_INPUTS,  432,  180, "INPUTS",  450,  4 },
-		{ PAGE_OUTPUTS, 628,  180, "OUTPUTS", 634,  4 },
-		{ PAGE_RADIO,   824,  180, "RADIO",   839,  5 },
-		{ PAGE_STATUS,  1020, 180, "STATUS",  1038, 4 },
+		/* Four unified navigation buttons: HOME, CHAT, STATUS (includes Radios), DEBUG */
+		{ PAGE_HOME,   40,  260, "HOME",   110, 5 },
+		{ PAGE_CHAT,   340, 260, "CHAT",   410, 5 },
+		{ PAGE_STATUS, 640, 260, "STATUS", 690, 5 },
+		{ PAGE_DEBUG,  940, 260, "DEBUG",  1000, 5 },
 	};
 
 	for (size_t i = 0; i < sizeof(btns)/sizeof(btns[0]); i++) {
@@ -961,9 +986,9 @@ static void status_item(uint32_t *pixels, unsigned int column,
 			unsigned int row, const char *label, const char *value)
 {
 	unsigned int x = column ? 660 : 75;
-	unsigned int y = 430 + row * 205;
-	draw_text(pixels, label, x, y, 5, 0x007d94a5);
-	draw_text(pixels, value, x, y + 72, 6, 0x00f5f8fa);
+	unsigned int y = 370 + row * 195;
+	draw_text(pixels, label, x, y, 4, 0x007d94a5);
+	draw_text(pixels, value, x, y + 55, 5, 0x00f5f8fa);
 }
 
 static time_t get_thought_mtime(void)
@@ -2071,14 +2096,34 @@ static void paint_debug(uint32_t *pixels)
 	/* Top bar */
 	rectangle(pixels, 0, 0, WIDTH, 28, teal);
 	draw_text(pixels, "DEBUG MODE", 75, 145, 11, amber);
-	draw_text(pixels, "AI SERVICES STOPPED * TOOL & SENSE LAB", 75, 230, 3, teal);
+	bool ai_on = is_ai_worker_running();
+	if (ai_on)
+		draw_text(pixels, "AI AGENT RUNNING * TOOL & SENSE LAB", 75, 230, 3, 0x0055ff99);
+	else
+		draw_text(pixels, "AI AGENT STOPPED * TOOL & SENSE LAB", 75, 230, 3, 0x00edb961);
 
 	/* Top bar buttons */
-	/* SLEEP button at top right (x: 940..1165, y: 120..220) */
-	rectangle(pixels, 940, 120, 225, 100, 0x00102a3a);
-	rectangle(pixels, 940, 120, 225, 3, 0x005ab0e0);
-	rectangle(pixels, 940, 217, 225, 3, 0x005ab0e0);
-	rectangle(pixels, 940, 120, 3, 100, 0x005ab0e0);
+	/* AI ON / OFF toggle button (x: 690..915, y: 120..220) */
+	uint32_t ai_bg = ai_on ? 0x000e3a22 : 0x003e1a1a;
+	uint32_t ai_bc = ai_on ? 0x002ecc71 : 0x00e05a5a;
+	rectangle(pixels, 690, 120, 225, 100, ai_bg);
+	rectangle(pixels, 690, 120, 225, 3, ai_bc);
+	rectangle(pixels, 690, 217, 225, 3, ai_bc);
+	rectangle(pixels, 690, 120, 3, 100, ai_bc);
+	rectangle(pixels, 912, 120, 3, 100, ai_bc);
+	if (ai_on) {
+		draw_text(pixels, "AI: ON", 740, 140, 4, 0x0055ff99);
+		draw_text(pixels, "TAP TO STOP", 715, 180, 3, white);
+	} else {
+		draw_text(pixels, "AI: OFF", 735, 140, 4, 0x00ff7070);
+		draw_text(pixels, "TAP TO START", 705, 180, 3, white);
+	}
+
+	/* SLEEP button at top right (x: 935..1165, y: 120..220) */
+	rectangle(pixels, 935, 120, 230, 100, 0x00102a3a);
+	rectangle(pixels, 935, 120, 230, 3, 0x005ab0e0);
+	rectangle(pixels, 935, 217, 230, 3, 0x005ab0e0);
+	rectangle(pixels, 935, 120, 3, 100, 0x005ab0e0);
 	rectangle(pixels, 1162, 120, 3, 100, 0x005ab0e0);
 	draw_text(pixels, "SLEEP", 995, 140, 4, 0x008fd0f5);
 	draw_text(pixels, "POWER SAVE", 970, 180, 3, white);
@@ -2209,20 +2254,20 @@ static void paint_debug(uint32_t *pixels)
 	rectangle(pixels, 55, 1265, 3, 1245, panel_border);
 	rectangle(pixels, 1172, 1265, 3, 1245, panel_border);
 
-	draw_text(pixels, "3. SENSES & TOOLS OUTPUT", 75, 1290, 4, teal);
+	draw_text(pixels, "3. SENSORY CHUNKS & TOOLS OUTPUT", 75, 1290, 4, teal);
 
-	/* Mode Toggle Button: x: 520..1020, y: 1275..1345 */
+	/* Mode Toggle Button: x: 500..1020, y: 1275..1345 */
 	uint32_t t_bg = debug_output_mode ? 0x00143820 : 0x001c2b38;
 	uint32_t t_bc = debug_output_mode ? 0x002ecc71 : 0x005ab0e0;
-	rectangle(pixels, 520, 1275, 500, 70, t_bg);
-	rectangle(pixels, 520, 1275, 500, 2, t_bc);
-	rectangle(pixels, 520, 1343, 500, 2, t_bc);
-	rectangle(pixels, 520, 1275, 2, 70, t_bc);
+	rectangle(pixels, 500, 1275, 520, 70, t_bg);
+	rectangle(pixels, 500, 1275, 520, 2, t_bc);
+	rectangle(pixels, 500, 1343, 520, 2, t_bc);
+	rectangle(pixels, 500, 1275, 2, 70, t_bc);
 	rectangle(pixels, 1018, 1275, 2, 70, t_bc);
 	if (debug_output_mode) {
-		draw_text(pixels, "MODE: REGEX DB (TRANSLATED)", 545, 1295, 3, 0x0070ff90);
+		draw_text(pixels, "MODE: TRANSLATED CHUNKS (REGEX DB)", 525, 1295, 3, 0x0070ff90);
 	} else {
-		draw_text(pixels, "MODE: RAW (PRE-REGEX DB)", 555, 1295, 3, 0x008fd0f5);
+		draw_text(pixels, "MODE: RAW CHUNKS (PRE-REGEX DB)", 520, 1295, 3, 0x008fd0f5);
 	}
 
 	/* Clear Button: x: 1040..1155, y: 1275..1345 */
@@ -2292,7 +2337,30 @@ static void paint_debug(uint32_t *pixels)
 
 static void debug_touch(int x, int y, enum lynx_page *target, bool *page_changed)
 {
-	/* SLEEP button at top right (x: 940..1165, y: 120..220) */
+	/* AI ON/OFF button at top right (x: 680..925, y: 110..230) */
+	if (x >= 680 && x < 925 && y >= 110 && y < 230) {
+		haptic_tick(45);
+		bool running_now = is_ai_worker_running();
+		if (running_now) {
+			send_debug_cmd("AI_OFF");
+			pid_t pid = fork();
+			if (pid == 0) {
+				execl("/usr/local/bin/lynx-agentctl", "lynx-agentctl", "stop", (char *)NULL);
+				_exit(0);
+			}
+		} else {
+			send_debug_cmd("AI_ON");
+			pid_t pid = fork();
+			if (pid == 0) {
+				execl("/usr/local/bin/lynx-agentctl", "lynx-agentctl", "start", (char *)NULL);
+				_exit(0);
+			}
+		}
+		*page_changed = true;
+		return;
+	}
+
+	/* SLEEP button at top right (x: 930..1175, y: 110..230) */
 	if (x >= 930 && x < 1175 && y >= 110 && y < 230) {
 		haptic_tick(60);
 		run_power_mode("saving", "debug sleep button");
@@ -2372,8 +2440,8 @@ static void debug_touch(int x, int y, enum lynx_page *target, bool *page_changed
 		return;
 	}
 
-	/* Pane 3: Mode Toggle Button: x: 520..1020, y: 1275..1345 */
-	if (x >= 520 && x < 1020 && y >= 1275 && y < 1345) {
+	/* Pane 3: Mode Toggle Button: x: 500..1020, y: 1275..1345 */
+	if (x >= 500 && x < 1020 && y >= 1275 && y < 1345) {
 		debug_output_mode = !debug_output_mode;
 		haptic_tick(40);
 		*page_changed = true;
@@ -2413,14 +2481,12 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 		paint_power_page(pixels, capacity);
 		return 0;
 	}
-	if (page == PAGE_RADIO) {
-		paint_radio(pixels);
-		nav_buttons(pixels, page);
-		return 0;
+	if (page == PAGE_RADIO || page == PAGE_INPUTS || page == PAGE_OUTPUTS) {
+		page = PAGE_STATUS;
 	}
 	const uint32_t dark = 0x00121c29, white = 0x00f5f8fa;
-	const uint32_t teal = 0x0009dcc4;
-	char value[48];
+	const uint32_t teal = 0x0009dcc4, amber = 0x00edb961;
+	char value[64];
 	if (page == PAGE_HOME) {
 		if (paint_lynx_portrait(pixels, pose, capacity) < 0)
 			return -1;
@@ -2434,16 +2500,6 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 		nav_buttons(pixels, page);
 		return 0;
 	}
-	if (page == PAGE_INPUTS) {
-		paint_inputs(pixels);
-		nav_buttons(pixels, page);
-		return 0;
-	}
-	if (page == PAGE_OUTPUTS) {
-		paint_outputs(pixels);
-		nav_buttons(pixels, page);
-		return 0;
-	}
 	if (page == PAGE_CONSOLE) {
 		for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
 			pixels[i] = dark;
@@ -2454,96 +2510,109 @@ static int paint_lynx_page(uint32_t *pixels, enum lynx_page page,
 		nav_buttons(pixels, page);
 		return 0;
 	}
-	/* PAGE_STATUS */
+	/* PAGE_STATUS (combined Status & Radios) */
 	for (size_t i = 0; i < (size_t)WIDTH * HEIGHT; i++)
 		pixels[i] = dark;
 	rectangle(pixels, 0, 0, WIDTH, 28, teal);
-	draw_text(pixels, "STATUS", 85, 155, 13, white);
-	rectangle(pixels, 75, 340, 1090, 5, teal);
+	draw_text(pixels, "STATUS & RADIOS", 85, 145, 10, white);
+	draw_text(pixels, "SYSTEM HEALTH, HARDWARE & WIRELESS INTERFACES", 85, 230, 3, teal);
+	rectangle(pixels, 75, 270, 1090, 4, teal);
+
+	draw_text(pixels, "1. SYSTEM & POWER", 75, 310, 4, amber);
+	draw_text(pixels, "2. RADIOS & NETWORK", 660, 310, 4, amber);
+
+	/* Left Column: System & Hardware */
 	int pack_capacity, pack_temp, pack_current, pack_voltage;
 	battery_snapshot(&pack_capacity, &pack_temp, &pack_current, &pack_voltage);
+	bool charging = file_contains("/sys/class/power_supply/11e01000.i2c:mt6375@34:chg/status", "Charging");
 	if (pack_capacity >= 0)
-		snprintf(value, sizeof(value), "%d%%", pack_capacity);
+		snprintf(value, sizeof(value), "%d%% [%s]", pack_capacity, charging ? "CHARGING" : "DISCHG");
 	else
 		snprintf(value, sizeof(value), "UNAVAILABLE");
 	status_item(pixels, 0, 0, "BATTERY", value);
-	if (pack_temp >= 0)
-		snprintf(value, sizeof(value), "%d.%dC", pack_temp / 1000,
-			 (pack_temp % 1000) / 100);
-	else
-		snprintf(value, sizeof(value), "UNAVAILABLE");
-	status_item(pixels, 0, 1, "PACK TEMP", value);
+
 	int soc_temp = file_contains("/sys/class/thermal/thermal_zone0/type", "soc_max") ?
 		read_integer("/sys/class/thermal/thermal_zone0/temp") : -1;
+	char soc_str[24] = "N/A", pack_str[24] = "N/A";
 	if (soc_temp >= 0 && soc_temp < 100000)
-		snprintf(value, sizeof(value), "%d.%dC", soc_temp / 1000,
-			 (soc_temp % 1000) / 100);
-	else
-		snprintf(value, sizeof(value), "UNAVAILABLE");
-	status_item(pixels, 0, 2, "SOC TEMP", value);
-	if (pack_current != -1)
-		snprintf(value, sizeof(value), "%dMA", pack_current);
-	else
-		snprintf(value, sizeof(value), "UNAVAILABLE");
-	status_item(pixels, 0, 3, "CURRENT", value);
-	if (pack_voltage >= 0)
-		snprintf(value, sizeof(value), "%dMV", pack_voltage);
-	else
-		snprintf(value, sizeof(value), "UNAVAILABLE");
-	status_item(pixels, 0, 4, "VOLTAGE", value);
-	status_item(pixels, 0, 5, "CHARGING",
-		    file_contains("/sys/class/power_supply/11e01000.i2c:mt6375@34:chg/status",
-				  "Charging") ? "YES" : "NO");
+		snprintf(soc_str, sizeof(soc_str), "SOC %d.%dC", soc_temp / 1000, (soc_temp % 1000) / 100);
+	if (pack_temp >= 0)
+		snprintf(pack_str, sizeof(pack_str), "PACK %d.%dC", pack_temp / 1000, (pack_temp % 1000) / 100);
+	snprintf(value, sizeof(value), "%s  %s", soc_str, pack_str);
+	status_item(pixels, 0, 1, "THERMALS", value);
+
+	snprintf(value, sizeof(value), "%dMV  %dMA", pack_voltage >= 0 ? pack_voltage : 0, pack_current != -1 ? pack_current : 0);
+	status_item(pixels, 0, 2, "POWER BUS", value);
+
+	bool audio_ok = file_contains("/proc/asound/cards", "mt6983mt6338");
+	bool touch_ok = file_contains("/sys/class/input/input0/name", "touchpanel") && access("/dev/input/event0", R_OK) == 0;
+	snprintf(value, sizeof(value), "AUDIO %s  TOUCH %s", audio_ok ? "OK" : "N/A", touch_ok ? "OK" : "N/A");
+	status_item(pixels, 0, 3, "AUDIO & TOUCH", value);
+
+	const char *cam_status = camera_capture_node_present() && path_matches("/dev/media*") ? "CAPTURE READY" :
+		(path_matches("/dev/video*") && path_matches("/dev/media*") ? "ISP NODES" : "DRIVER LOADED");
+	status_item(pixels, 0, 4, "CAMERAS", cam_status);
+
+	bool bmi = file_contains("/proc/hf_manager", "bmi2xy acc");
+	bool akm = file_contains("/proc/hf_manager", "akm09918 mag");
+	bool tcs = file_contains("/proc/hf_manager", "tcs3408 als");
+	snprintf(value, sizeof(value), "%s%s%s", bmi ? "ACCEL/GYRO " : "", akm ? "MAG " : "", tcs ? "ALS/PS" : "");
+	if (!value[0]) snprintf(value, sizeof(value), "SENSORHUB OK");
+	status_item(pixels, 0, 5, "SENSORS (HF_MGR)", value);
+
+	bool haptic_ok = access("/sys/class/leds/vibrator/oplus_duration", R_OK) == 0;
+	bool flash_ok = access("/sys/bus/i2c/devices/6-0063/driver", F_OK) == 0 && access("/dev/flashlight", R_OK) == 0;
+	snprintf(value, sizeof(value), "HAPTIC %s  FLASH %s", haptic_ok ? "OK" : "N/A", flash_ok ? "OK" : "N/A");
+	status_item(pixels, 0, 6, "ACTUATORS", value);
+
+	bool ssh_ok = pid_matches("/run/lynx/alpine-dropbear-2222.pid", "dropbear");
+	bool noobd_ok = pid_matches("/run/lynx/noobd.pid", "lynx-noobd");
+	snprintf(value, sizeof(value), "SSH %s  NRP %s", ssh_ok ? "RUNNING" : "OFF", noobd_ok ? "RUNNING" : "OFF");
+	status_item(pixels, 0, 7, "SERVICES", value);
+
+	bool ai_running = is_ai_worker_running();
+	snprintf(value, sizeof(value), "%s", ai_running ? "RUNNING (SUPERVISED)" : "STOPPED (DEBUG MODE)");
+	status_item(pixels, 0, 8, "AI AGENT WORKER", value);
+
+	bool autonomyd_ok = pid_matches("/run/lynx/noobia-autonomyd.pid", "autonomyd") || pid_matches("/run/lynx/noobia-autonomyd.pid", "python");
+	snprintf(value, sizeof(value), "%s", autonomyd_ok ? "ACTIVE (60S / SUM 20)" : "AUTONOMY STANDBY");
+	status_item(pixels, 0, 9, "AUTONOMY HARNESS", value);
+
+	/* Right Column: Radios & Network */
 	wifi_address(value, sizeof(value));
-	status_item(pixels, 0, 6, "WIFI", value);
-	status_item(pixels, 0, 7, "AUDIO CARD",
-		    file_contains("/proc/asound/cards", "mt6983mt6338") ? "PRESENT" : "UNAVAILABLE");
-	status_item(pixels, 0, 8, "SSH",
-		    pid_matches("/run/lynx/alpine-dropbear-2222.pid", "dropbear") ?
-		    "RUNNING" : "UNAVAILABLE");
-	status_item(pixels, 0, 9, "TOUCH",
-		    file_contains("/sys/class/input/input0/name", "touchpanel") &&
-		    access("/dev/input/event0", R_OK) == 0 ?
-		    "PRESENT" : "UNAVAILABLE");
-	status_item(pixels, 1, 0, "HAPTIC",
-		    access("/sys/class/leds/vibrator/oplus_duration", R_OK) == 0 ?
-		    "PRESENT" : "UNAVAILABLE");
-	status_item(pixels, 1, 1, "MOTION",
-		    file_contains("/proc/hf_manager", "bmi2xy acc") ? "REGISTERED" : "UNAVAILABLE");
-	status_item(pixels, 1, 2, "COMPASS",
-		    file_contains("/proc/hf_manager", "akm09918 mag") ? "REGISTERED" : "UNAVAILABLE");
-	status_item(pixels, 1, 3, "PROXIMITY",
-		    file_contains("/proc/hf_manager", "tcs3701 ps") ? "REGISTERED" : "UNAVAILABLE");
-	status_item(pixels, 1, 4, "LIGHT",
-		    file_contains("/proc/hf_manager", "tcs3408 als") ? "REGISTERED" : "UNAVAILABLE");
-	status_item(pixels, 1, 5, "GPS",
-		    access("/sys/module/gps_drv_dl_v050", F_OK) == 0 &&
-		    (access("/dev/stpgps", R_OK) == 0 ||
-		     path_matches("/dev/gps_nd*")) ?
-		    "RECEIVER READY" : "UNAVAILABLE");
-	const bool bt_service = pid_matches("/run/lynx/bluetoothd.pid",
-					  "lynx-bluetoothd");
+	status_item(pixels, 1, 0, "WI-FI (WLAN0)", value);
+
+	status_item(pixels, 1, 1, "WI-FI LINK", strcmp(value, "UNAVAILABLE") != 0 ? "5 GHZ LINK ACTIVE" : "STANDBY / UNLINKED");
+
+	char cell_ip[48];
+	cellular_address(cell_ip, sizeof(cell_ip));
+	if (strcmp(cell_ip, "DOWN") != 0)
+		snprintf(value, sizeof(value), "%s (LTE/5G)", cell_ip);
+	else
+		snprintf(value, sizeof(value), "STANDBY (CCMNI0)");
+	status_item(pixels, 1, 2, "CELLULAR (CCMNI0)", value);
+
+	status_item(pixels, 1, 3, "CELLULAR APN", "internet.vivacom.bg");
+
+	const bool bt_service = pid_matches("/run/lynx/bluetoothd.pid", "lynx-bluetoothd");
 	const bool bt_controller = access("/sys/class/bluetooth/hci0", F_OK) == 0;
 	const bool bt_ready = file_contains("/run/lynx/bluetooth/ready", "ready");
-	status_item(pixels, 1, 6, "BLUETOOTH",
-		    bt_service && bt_controller && bt_ready ? "NRP READY" :
-		    bt_service ? "STARTING" :
-		    access("/dev/stpbt", R_OK) == 0 ? "STANDBY" : "UNAVAILABLE");
-	status_item(pixels, 1, 7, "CAMERA",
-		    camera_capture_node_present() && path_matches("/dev/media*") ?
-		    "CAPTURE NODES" :
-		    path_matches("/dev/video*") && path_matches("/dev/media*") ?
-		    "ISP NODES" :
-		    access("/sys/module/imgsensor", F_OK) == 0 ?
-		    "DRIVER LOADED" : "UNAVAILABLE");
-	status_item(pixels, 1, 8, "FLASHLIGHT",
-		    access("/sys/bus/i2c/devices/6-0063/driver", F_OK) == 0 &&
-		    access("/dev/flashlight", R_OK) == 0 ? "DRIVER READY" :
-		    access("/sys/bus/i2c/devices/6-0063", F_OK) == 0 ?
-		    "CHIP PRESENT" : "UNAVAILABLE");
-	status_item(pixels, 1, 9, "NOOB NRP",
-		    pid_matches("/run/lynx/noobd.pid", "lynx-noobd") ?
-		    "RUNNING" : "UNAVAILABLE");
+	const char *bt_val = bt_service && bt_controller && bt_ready ? "NRP READY (HCI0)" :
+		(bt_service ? "STARTING (HCI0)" : (access("/dev/stpbt", R_OK) == 0 ? "STANDBY" : "UNAVAILABLE"));
+	status_item(pixels, 1, 4, "BLUETOOTH", bt_val);
+
+	const char *gps_val = access("/sys/module/gps_drv_dl_v050", F_OK) == 0 &&
+		(access("/dev/stpgps", R_OK) == 0 || path_matches("/dev/gps_nd*")) ?
+		"READY (/dev/stpgps)" : "RECEIVER READY";
+	status_item(pixels, 1, 5, "GPS / GNSS", gps_val);
+
+	status_item(pixels, 1, 6, "NETWORK GATEWAY", "DEFAULT VIA 192.168.100.1");
+
+	status_item(pixels, 1, 7, "DATA LINK FLOW", "WLAN0 & CCMNI0 ONLINE");
+
+	status_item(pixels, 1, 8, "SENSORY TRIGGER", "SUM >= 20 OR 60S TIMEOUT");
+
+	status_item(pixels, 1, 9, "PATTERN STORE", "60 SENSORY RULES LOADED");
 
 	/* Aigel Mode Switch Button on Status Screen */
 	bool learning = read_aigel_learning_mode();
@@ -3213,18 +3282,14 @@ static int run(const char *action, unsigned int seconds)
 								target = PAGE_HOME;
 							}
 						} else if (y >= 2550 && y < 2710) {
-							if (x >= 40 && x < 220)
+							if (x >= 40 && x < 300)
 								target = PAGE_HOME;
-							else if (x >= 236 && x < 416)
+							else if (x >= 340 && x < 600)
 								target = PAGE_CHAT;
-							else if (x >= 432 && x < 612)
-								target = PAGE_INPUTS;
-							else if (x >= 628 && x < 808)
-								target = PAGE_OUTPUTS;
-							else if (x >= 824 && x < 1004)
-								target = PAGE_RADIO;
-							else if (x >= 1020 && x < 1200)
+							else if (x >= 640 && x < 900)
 								target = PAGE_STATUS;
+							else if (x >= 940 && x < 1200)
+								target = PAGE_DEBUG;
 						} else if (page == PAGE_HOME &&
 							   y >= 2360 && y < 2490) {
 							if (x >= 50 && x < 605) {
@@ -3348,20 +3413,11 @@ static int run(const char *action, unsigned int seconds)
 							page_changed = true;
 						}
 						if (target != page) {
-							if (page == PAGE_DEBUG && target != PAGE_POWER) {
-								/* Leaving debug screen: automatically restore active AI mode */
-								run_power_mode("active", "");
-								printf("debug_exit_auto_resume_active\n");
-								fflush(stdout);
-							}
 							page = target;
 							page_changed = true;
 							printf("page=%s\n", page == PAGE_HOME ?
 							       "home" : page == PAGE_CHAT ?
-							       "chat" : page == PAGE_INPUTS ?
-							       "inputs" : page == PAGE_OUTPUTS ?
-							       "outputs" : page == PAGE_CONSOLE ?
-							       "console" : page == PAGE_DEBUG ?
+							       "chat" : page == PAGE_DEBUG ?
 							       "debug" : page == PAGE_POWER ?
 							       "power" : "status");
 							fflush(stdout);

@@ -19,7 +19,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 4
   },
   {
    "id": "touch-hold",
@@ -40,7 +41,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 4
   },
   {
    "id": "body-slider",
@@ -62,7 +64,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "magnet-wand",
@@ -83,7 +86,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "compass-heading",
@@ -104,7 +108,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 4
   },
   {
    "id": "mesh-telepathy",
@@ -127,7 +132,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "camera-objects",
@@ -154,7 +160,8 @@
    "each": {
     "group": "items",
     "regex": "(?P<label>[a-z_]+)\\((?P<conf>[0-9.]+)\\)"
-   }
+   },
+   "priority": 20
   },
   {
    "id": "camera-objects-caption",
@@ -180,7 +187,8 @@
    "each": {
     "group": "items",
     "regex": "(?P<label>[a-z_]+)\\((?P<conf>[0-9.]+)\\)"
-   }
+   },
+   "priority": 20
   },
   {
    "id": "camera-scene",
@@ -202,7 +210,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<caption>.+)$"
+   "regex": "\\| (?P<caption>.+)$",
+   "priority": 20
   },
   {
    "id": "camera-dark",
@@ -223,7 +232,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 4
   },
   {
    "id": "camera-object",
@@ -244,7 +254,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "motion-position",
@@ -265,7 +276,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 4
   },
   {
    "id": "motion-pickup",
@@ -286,7 +298,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "motion-placed",
@@ -307,7 +320,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "motion-freefall",
@@ -328,7 +342,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "motion-shaken",
@@ -349,7 +364,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "motion-rocked",
@@ -370,7 +386,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "thermal-change",
@@ -391,7 +408,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "thermal-hot",
@@ -412,7 +430,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "power-charging",
@@ -433,7 +452,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "battery-low",
@@ -454,7 +474,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "battery-critical",
@@ -475,7 +496,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "hearing-sound",
@@ -496,7 +518,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "hearing-speech",
@@ -518,7 +541,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<said>.+)$"
+   "regex": "\\| (?P<said>.+)$",
+   "priority": 20
   },
   {
    "id": "hearing-sound-kind",
@@ -540,7 +564,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<what>.+)$"
+   "regex": "\\| (?P<what>.+)$",
+   "priority": 20
   },
   {
    "id": "hearing-startle",
@@ -561,7 +586,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "light-bright",
@@ -582,7 +608,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 4
   },
   {
    "id": "light-dark",
@@ -603,7 +630,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 4
   },
   {
    "id": "proximity-near",
@@ -624,7 +652,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "proximity-far",
@@ -645,7 +674,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "network-device-seen",
@@ -666,7 +696,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "network-device-lost",
@@ -687,7 +718,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "wifi-down",
@@ -708,7 +740,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "wifi-up",
@@ -729,7 +762,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "wifi-weak",
@@ -750,7 +784,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "nexus-up",
@@ -771,7 +806,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "nexus-down",
@@ -792,7 +828,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "netdiag-ifaces",
@@ -814,7 +851,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "netdiag-lan",
@@ -836,7 +874,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "netdiag-wifi",
@@ -858,7 +897,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "netdiag-ports",
@@ -880,7 +920,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "netdiag-vuln",
@@ -902,7 +943,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "netdiag-ssl",
@@ -924,7 +966,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "netdiag-dns",
@@ -946,7 +989,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "netdiag-pcap",
@@ -968,7 +1012,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "netdiag-trace",
@@ -990,7 +1035,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "cellular-sim",
@@ -1012,7 +1058,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "cellular-modem",
@@ -1034,7 +1081,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "cellular-5g",
@@ -1056,7 +1104,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "cellular-ccmni",
@@ -1078,7 +1127,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "cellular-recon",
@@ -1100,7 +1150,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "cellular-at",
@@ -1122,7 +1173,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "security-portscan",
@@ -1143,7 +1195,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "security-auth-fail",
@@ -1164,7 +1217,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "security-flood",
@@ -1185,7 +1239,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "security-intrusion",
@@ -1206,7 +1261,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "security-integrity",
@@ -1227,7 +1283,8 @@
     ]
    },
    "hits": 0,
-   "origin": "autonomy"
+   "origin": "autonomy",
+   "priority": 20
   },
   {
    "id": "asyncjob-done",
@@ -1249,7 +1306,8 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<summary>.+)$"
+   "regex": "\\| (?P<summary>.+)$",
+   "priority": 20
   },
   {
    "id": "asyncjob-failed",
@@ -1271,7 +1329,31 @@
    },
    "hits": 0,
    "origin": "autonomy",
-   "regex": "\\| (?P<error>.+)$"
+   "regex": "\\| (?P<error>.+)$",
+   "priority": 20
+  },
+  {
+   "id": "chat-message",
+   "match": {
+    "sense": "chat",
+    "event": "message"
+   },
+   "template": "{author} says: \"{said}\"",
+   "message": "Someone said something to you.",
+   "to_noob": true,
+   "cooldown_s": 0.0,
+   "examples": {
+    "must": [
+     "NOOBIA P20 chat message author=Noob | Hello Lynx!"
+    ],
+    "must_not": [
+     "NOOBIA P0 chat status.sample | sample"
+    ]
+   },
+   "hits": 0,
+   "origin": "autonomy",
+   "regex": "\\| (?P<said>.+)$",
+   "priority": 20
   }
  ],
  "archive": []

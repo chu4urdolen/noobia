@@ -21,9 +21,11 @@ DEFAULT_PROFILE_PATH = Path("/etc/noobia/noob.json")
 class WindowConfig:
     window_s: float = 60.0
     max_lines: int = 15
-    carry_priority: bool = True
+    carry_priority: bool = False
     volume_resets_priority: bool = True
     uniform_priority: int = 0
+    priority_mode: str = "sum"
+    priority_threshold: int = 20
 
 
 @dataclass
@@ -49,9 +51,11 @@ class Profile:
         window = WindowConfig(
             window_s=float(win_data.get("window_s", 60.0)),
             max_lines=int(win_data.get("max_lines", 15)),
-            carry_priority=bool(win_data.get("carry_priority", True)),
+            carry_priority=bool(win_data.get("carry_priority", False)),
             volume_resets_priority=bool(win_data.get("volume_resets_priority", True)),
-            uniform_priority=int(win_data.get("uniform_priority", 0))
+            uniform_priority=int(win_data.get("uniform_priority", 0)),
+            priority_mode=str(win_data.get("priority_mode", "sum")),
+            priority_threshold=int(win_data.get("priority_threshold", 20)),
         )
 
         return cls(
@@ -77,6 +81,8 @@ class Profile:
                 "carry_priority": self.window.carry_priority,
                 "volume_resets_priority": self.window.volume_resets_priority,
                 "uniform_priority": self.window.uniform_priority,
+                "priority_mode": self.window.priority_mode,
+                "priority_threshold": self.window.priority_threshold,
             },
             "brain": self.brain,
         }

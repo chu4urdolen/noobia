@@ -40,6 +40,8 @@ class Chunker:
         volume_resets_priority: bool = True,
         uniform_priority: int = 0,
         carry_priority: bool = True,
+        priority_threshold: int = 20,
+        priority_mode: str = "legacy",
         silence_s: float = 900.0,
         heartbeat_s: float = 300.0,
         disabled: Callable[[], bool] = lambda: False,
@@ -52,11 +54,12 @@ class Chunker:
         self.carry_max_lines = int(carry_max_lines)
         self.carry_max_age_s = float(carry_max_age_s)
         self.volume_resets_priority = bool(volume_resets_priority)
-        # Tom 2026-11-23: every reaction at one level (e.g. 5): five such
-        # lines of ANY kind close the chunk; fewer wait for window_s.
+        # Tom 2026-11-23: uniform priority override (0 = respect line's own priority)
         self.uniform_priority = int(uniform_priority)
         # False: a timeout sends priority lines too instead of carrying them.
         self.carry_priority = bool(carry_priority)
+        self.priority_threshold = int(priority_threshold)
+        self.priority_mode = str(priority_mode)
         self.silence_s = float(silence_s)
         self.heartbeat_s = float(heartbeat_s)
         self.disabled = disabled
@@ -129,18 +132,26 @@ class Chunker:
             return []
 
         # Check PRIORITY trigger
-        p_counts: dict[int, int] = {}
-        for _, l in self._carried:
-            if l.get("p", 0) >= 1 and not l.get("self_caused", False):
-                p_val = l["p"]
-                p_counts[p_val] = p_counts.get(p_val, 0) + 1
+        if self.priority_mode == "sum":
+            # Tom 2026-11-28: sum of priorities of non-self-caused events >= threshold (default 20)
+            priority_sum = sum(
+                l.get("p", 0) for _, l in (self._carried + self._current)
+                if not l.get("self_caused", False)
+            )
+            priority_triggered = (priority_sum >= self.priority_threshold)
+        else:
+            p_counts: dict[int, int] = {}
+            for _, l in self._carried:
+                if l.get("p", 0) >= 1 and not l.get("self_caused", False):
+                    p_val = l["p"]
+                    p_counts[p_val] = p_counts.get(p_val, 0) + 1
 
-        for _, l in self._current:
-            if l.get("p", 0) >= 1 and not l.get("self_caused", False):
-                p_val = l["p"]
-                p_counts[p_val] = p_counts.get(p_val, 0) + 1
+            for _, l in self._current:
+                if l.get("p", 0) >= 1 and not l.get("self_caused", False):
+                    p_val = l["p"]
+                    p_counts[p_val] = p_counts.get(p_val, 0) + 1
 
-        priority_triggered = any(count >= p_val for p_val, count in p_counts.items())
+            priority_triggered = any(count >= p_val for p_val, count in p_counts.items())
 
         if priority_triggered:
             all_lines = (
@@ -191,6 +202,33 @@ class Chunker:
         # While busy (e.g. agent queueing on GPU), expand the window and do not close early
         if self.is_busy():
             return []
+
+        # Check if priority or volume trigger was reached while busy
+        if self._current:
+            if self.priority_mode == "sum":
+                priority_sum = sum(
+                    l.get("p", 0) for _, l in (self._carried + self._current)
+                    if not l.get("self_caused", False)
+                )
+                if priority_sum >= self.priority_threshold:
+                    all_lines = (
+                        list(self._overflow_carried)
+                        + [l for _, l in self._carried]
+                        + [l for _, l in self._current]
+                    )
+                    self._overflow_carried = []
+                    self._carried = []
+                    self._current = []
+                    self._chunk_open_time = None
+                    return [{"reason": "priority", "lines": all_lines}]
+
+            non_self_caused = sum(1 for _, l in self._current if not l.get("self_caused", False))
+            if non_self_caused > self.max_lines:
+                all_lines = list(self._overflow_carried) + [l for _, l in self._current]
+                self._overflow_carried = []
+                self._current = []
+                self._chunk_open_time = None
+                return [{"reason": "volume", "lines": all_lines}]
 
         # E3b: Silence detection
         if (

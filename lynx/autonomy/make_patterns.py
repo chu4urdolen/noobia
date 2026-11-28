@@ -283,7 +283,17 @@ PATTERNS = [
       ["NOOBIA P20 asyncjob job.failed job=job-1234 tool=netdiag action=lan-sweep | network unreachable"],
       ["NOOBIA P20 asyncjob job.done job=job-1234 tool=netdiag action=lan-sweep | success"],
       regex=r"\| (?P<error>.+)$"),
+    P("chat-message", "chat", "message",
+      '{author} says: "{said}"',
+      "Someone said something to you.",
+      ["NOOBIA P20 chat message author=Noob | Hello Lynx!"],
+      ["NOOBIA P0 chat status.sample | sample"],
+      regex=r"\| (?P<said>.+)$"),
 ]
+
+P4_PIDS = {"touch-tap", "touch-hold", "compass-heading", "motion-position", "light-bright", "light-dark", "camera-dark"}
+for _p in PATTERNS:
+    _p["priority"] = 4 if _p["id"] in P4_PIDS else 20
 
 def main():
     # The counted touch-tap must win over the single-tap fallback: order matters.
